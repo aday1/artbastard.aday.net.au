@@ -2,10 +2,10 @@ FROM node:20-alpine AS build
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci --silent
+RUN npm install --silent
 
 COPY react-app/package.json react-app/package-lock.json ./react-app/
-RUN cd react-app && npm ci --silent
+RUN cd react-app && npm install --silent
 
 COPY . .
 RUN npm run build
