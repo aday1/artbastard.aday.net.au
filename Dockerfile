@@ -1,13 +1,9 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-RUN npm install --silent
-
-COPY react-app/package.json react-app/package-lock.json ./react-app/
-RUN cd react-app && npm install --silent
-
 COPY . .
+RUN npm install --silent
+RUN cd react-app && npm install --silent
 RUN npm run build
 
 FROM node:20-alpine
