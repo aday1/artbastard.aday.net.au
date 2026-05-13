@@ -1,0 +1,24 @@
+name: deploy-linode
+
+on:
+  workflow_dispatch:
+    inputs:
+      track:
+        description: "Track to deploy (test|live|aday)"
+        required: true
+        default: "test"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger remote compose refresh
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.LINODE_HOST }}
+          username: ${{ secrets.LINODE_USER }}
+          key: ${{ secrets.LINODE_SSH_KEY }}
+          script: |
+            cd ~/compose/macroverse.aday.net.au
+            docker compose pull
+            docker compose up -d
