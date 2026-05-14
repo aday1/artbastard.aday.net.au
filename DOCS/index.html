@@ -3,19 +3,80 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>artbastard.aday.net.au</title>
+  <title>ArtBastard // GitHub Showcase Page</title>
+  <meta name="description" content="ArtBastard GitHub showcase page. Demo and links for the browser DMX control stack.">
   <style>
-    body { font-family: Arial, sans-serif; margin: 2rem; background: #0d1117; color: #e6edf3; }
-    a { color: #7db4ff; }
-    code { background: #1f2937; padding: 2px 6px; border-radius: 4px; }
+    :root {
+      --bg: #0b1018;
+      --panel: #101b2b;
+      --line: #3a5a88;
+      --text: #d8e8ff;
+      --accent: #93d6ff;
+      --warn: #ffd58c;
+    }
+    body {
+      font-family: "IBM Plex Mono", "Cascadia Mono", "Segoe UI", sans-serif;
+      margin: 0;
+      background: radial-gradient(circle at 15% 10%, #19263b 0%, var(--bg) 55%);
+      color: var(--text);
+      line-height: 1.55;
+    }
+    main {
+      max-width: 820px;
+      margin: 28px auto;
+      padding: 20px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(16, 27, 43, 0.96), rgba(11, 16, 24, 0.96));
+      box-shadow: 0 0 22px rgba(100, 170, 255, 0.2);
+    }
+    .showcase-chip {
+      display: inline-block;
+      padding: 5px 10px;
+      border: 1px solid #4f7fb5;
+      color: var(--accent);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      background: rgba(18, 35, 56, 0.9);
+    }
+    h1 {
+      margin: 14px 0 10px;
+      font-size: 1.8rem;
+      letter-spacing: 0.04em;
+    }
+    .notice {
+      border-left: 3px solid var(--warn);
+      background: rgba(35, 29, 16, 0.42);
+      padding: 10px 12px;
+      margin: 12px 0 16px;
+      color: #ffe6b6;
+    }
+    ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+    li { margin: 8px 0; }
+    a { color: var(--accent); }
+    a:hover { color: #c4ebff; }
+    .hint {
+      margin-top: 16px;
+      color: #a9bbd3;
+      font-size: 0.88rem;
+    }
   </style>
 </head>
 <body>
-  <h1>ArtBastard Deploy Portal</h1>
-  <p>Hosted browser DMX control deployment (edge Art-Net architecture under active evaluation).</p>
-  <ul>
-    <li>Live: <a href="https://artbastard.aday.net.au">artbastard.aday.net.au</a></li>
-    <li>Test: <a href="https://test.artbastard.aday.net.au">test.artbastard.aday.net.au</a></li>
-  </ul>
+  <main>
+    <span class="showcase-chip">GitHub Showcase Page</span>
+    <h1>ArtBastard // Browser DMX Control</h1>
+    <p>Showcase landing page for the ArtBastard project and deployment targets.</p>
+    <p class="notice">This is a showcase page, not the primary app runtime.</p>
+    <ul>
+      <li>Live app: <a href="https://artbastard.aday.net.au">artbastard.aday.net.au</a></li>
+      <li>Test app: <a href="https://test.artbastard.aday.net.au">test.artbastard.aday.net.au</a></li>
+      <li>Source repo: <a href="https://github.com/aday1/artbastard.aday.net.au">github.com/aday1/artbastard.aday.net.au</a></li>
+    </ul>
+    <p class="hint">Use this page as the public project overview and quick-jump hub.</p>
+  </main>
 </body>
 </html>
