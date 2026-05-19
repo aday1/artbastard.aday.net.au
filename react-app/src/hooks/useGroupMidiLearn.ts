@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useStore } from '../store'
 import { MidiMapping } from '../store'
+import { debugLog } from '../utils/debugLog';
 
 export const useGroupMidiLearn = () => {
   const {
@@ -26,7 +27,7 @@ export const useGroupMidiLearn = () => {
   const startLearn = useCallback((groupId: string) => {
     if (midiLearnTarget !== null) {
       cancelMidiLearn()
-      console.log(`[GroupMidiLearn] Canceled previous learn to start group ${groupId}`);
+      debugLog.log(`[GroupMidiLearn] Canceled previous learn to start group ${groupId}`);
     }
     
     startGroupMidiLearn(groupId)
@@ -36,7 +37,7 @@ export const useGroupMidiLearn = () => {
       type: 'info',
       priority: 'normal'
     });
-    console.log(`[GroupMidiLearn] Started for group ${groupId}. Status: learning.`);
+    debugLog.log(`[GroupMidiLearn] Started for group ${groupId}. Status: learning.`);
     
     if (timeoutId) {
       window.clearTimeout(timeoutId);
@@ -52,7 +53,7 @@ export const useGroupMidiLearn = () => {
           type: 'error',
           priority: 'high'
         });
-        console.log(`[GroupMidiLearn] Timed out for group ${groupId}. Status: timeout.`);
+        debugLog.log(`[GroupMidiLearn] Timed out for group ${groupId}. Status: timeout.`);
       }
     }, 30000)
     
@@ -62,7 +63,7 @@ export const useGroupMidiLearn = () => {
   // Cancel MIDI learn mode
   const cancelLearn = useCallback(() => {
     if (midiLearnTarget !== null) {
-      console.log(`[GroupMidiLearn] Cancelling learn for target:`, midiLearnTarget);
+      debugLog.log(`[GroupMidiLearn] Cancelling learn for target:`, midiLearnTarget);
       cancelMidiLearn()
       addNotification({
         message: `MIDI Learn cancelled.`,
@@ -82,10 +83,10 @@ export const useGroupMidiLearn = () => {
   useEffect(() => {
     let resetTimer: number | null = null;
     if (learnStatus === 'success' || learnStatus === 'timeout') {
-      console.log(`[GroupMidiLearn] Learn status is ${learnStatus}. Will reset to idle in 3 seconds.`);
+      debugLog.log(`[GroupMidiLearn] Learn status is ${learnStatus}. Will reset to idle in 3 seconds.`);
       resetTimer = window.setTimeout(() => {
         setLearnStatus('idle');
-        console.log('[GroupMidiLearn] Learn status reset to idle.');
+        debugLog.log('[GroupMidiLearn] Learn status reset to idle.');
       }, 3000);
     }
     return () => {
@@ -103,7 +104,7 @@ export const useGroupMidiLearn = () => {
 
     const latestMessage = midiMessages[midiMessages.length - 1] as any;
     const groupId = midiLearnTarget.groupId;
-    console.log('[GroupMidiLearn] In learn mode. Processing message:', latestMessage, `for group ${groupId}`);
+    debugLog.log('[GroupMidiLearn] In learn mode. Processing message:', latestMessage, `for group ${groupId}`);
     
     // Handle both CC and Note messages for groups
     const createMapping = () => {
@@ -115,13 +116,19 @@ export const useGroupMidiLearn = () => {
           channel: latestMessage.channel,
           controller: latestMessage.controller
         };
-        console.log(`[GroupMidiLearn] Creating CC mapping for group ${groupId}:`, mapping);
+        debugLog.log(`[GroupMidiLearn] Creating CC mapping for group ${groupId}:`, mapping);
       } else if (messageType === 'noteon' && latestMessage.note !== undefined) {
         mapping = {
           channel: latestMessage.channel,
           note: latestMessage.note
         };
-        console.log(`[GroupMidiLearn] Creating Note mapping for group ${groupId}:`, mapping);
+        debugLog.log(`[GroupMidiLearn] Creating Note mapping for group ${groupId}:`, mapping);
+      } else if (messageType === 'pitch' && latestMessage.value !== undefined) {
+        mapping = {
+          channel: latestMessage.channel,
+          pitch: true
+        };
+        debugLog.log(`[GroupMidiLearn] Creating Pitch mapping for group ${groupId}:`, mapping);
       }
 
       if (mapping) {
@@ -129,13 +136,15 @@ export const useGroupMidiLearn = () => {
         
         setLearnStatus('success')
         addNotification({
-          message: mapping.controller !== undefined
-            ? `Group mapped to MIDI CC ${mapping.controller} on CH ${mapping.channel}.`
-            : `Group mapped to MIDI Note ${mapping.note} on CH ${mapping.channel}.`,
+          message: mapping.pitch
+            ? `Group mapped to MIDI Pitch on CH ${mapping.channel}.`
+            : mapping.controller !== undefined
+              ? `Group mapped to MIDI CC ${mapping.controller} on CH ${mapping.channel}.`
+              : `Group mapped to MIDI Note ${mapping.note} on CH ${mapping.channel}.`,
           type: 'success',
           priority: 'normal'
         });
-        console.log(`[GroupMidiLearn] Success for group ${groupId}. Status: success.`);
+        debugLog.log(`[GroupMidiLearn] Success for group ${groupId}. Status: success.`);
         
         if (timeoutId) {
           window.clearTimeout(timeoutId)
@@ -144,10 +153,10 @@ export const useGroupMidiLearn = () => {
       }
     }
 
-    if ((latestMessage.type || latestMessage._type) === 'cc' || (latestMessage.type || latestMessage._type) === 'noteon') {
+    if ((latestMessage.type || latestMessage._type) === 'cc' || (latestMessage.type || latestMessage._type) === 'noteon' || (latestMessage.type || latestMessage._type) === 'pitch') {
       createMapping();
     } else {
-      console.log('[GroupMidiLearn] Ignoring message:', latestMessage.type || latestMessage._type);
+      debugLog.log('[GroupMidiLearn] Ignoring message:', latestMessage.type || latestMessage._type);
     }
   }, [midiMessages, midiLearnTarget, learnStatus, setGroupMidiMapping, timeoutId, addNotification, cancelMidiLearn]);
   

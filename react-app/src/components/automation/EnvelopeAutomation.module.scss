@@ -1,10 +1,25 @@
 .envelopeAutomation {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  background: var(--card-bg, #1a1a1a);
-  border-radius: 8px;
-  padding: 1.5rem;
+  min-height: 0;
+  padding: 0.5rem 0;
+}
+
+.remasterRoot {
+  min-height: 0;
+}
+
+.easeBadge {
+  margin-left: 0.5rem;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  color: var(--color-accent, #f8dd36);
+  background: color-mix(in srgb, var(--color-primary, #d68706) 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-primary, #d68706) 40%, transparent);
 }
 
 .header {
@@ -93,7 +108,7 @@
 
 .addButton {
   padding: 0.5rem 1rem;
-  background: var(--accent-color, #4a9eff);
+  background: linear-gradient(90deg, var(--color-primary, #d68706), var(--color-accent, #f8dd36));
   color: white;
   border: none;
   border-radius: 4px;
@@ -120,6 +135,11 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.waveformPreview {
+  cursor: crosshair;
+  position: relative;
 }
 
 .envelopeCard {
@@ -464,6 +484,22 @@
   }
 }
 
+.cardCanvas {
+  flex: 0 0 auto;
+}
+
+.playbackBadge {
+  margin-left: auto;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: 3px;
+  color: var(--color-accent, #f8dd36);
+  border: 1px solid color-mix(in srgb, var(--color-primary, #d68706) 45%, transparent);
+  background: color-mix(in srgb, var(--color-primary, #d68706) 15%, transparent);
+}
+
 .editor {
   background: var(--input-bg, #2a2a2a);
   border: 1px solid var(--border-color, #333);
@@ -475,9 +511,65 @@
   overflow-y: auto;
 
   h3 {
-    margin: 0 0 1.5rem 0;
+    margin: 0 0 1rem 0;
     color: var(--text-primary, #fff);
   }
+}
+
+.editorLayout {
+  display: grid;
+  grid-template-columns: 1fr minmax(240px, 300px);
+  gap: 1rem;
+  align-items: start;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.drawStage {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 0;
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+.editorSidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.segmentRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.segmentBtn {
+  flex: 1;
+  min-width: 4.5rem;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.75rem;
+  border-radius: 4px;
+  border: 1px solid var(--border-color, #444);
+  background: var(--secondary-bg, #1e293b);
+  color: var(--text-secondary, #cbd5e1);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+
+  &:hover {
+    border-color: var(--color-primary, #d68706);
+    color: var(--text-primary, #fff);
+  }
+}
+
+.segmentActive {
+  background: color-mix(in srgb, var(--color-primary, #d68706) 28%, transparent);
+  border-color: var(--color-accent, #f8dd36);
+  color: var(--color-accent, #f8dd36);
 }
 
 .editorForm {

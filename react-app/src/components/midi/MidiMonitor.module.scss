@@ -4,6 +4,14 @@
   bottom: 20px;
   width: 500px; /* Increased width to accommodate DMX info */
   max-height: 500px; /* Increased to show more messages with scrolling */
+
+  /* The floating monitors do not fit on a phone or iPad screen and
+   * collide with the new MobileTopBar and bottom-centre toasts. Hide
+   * the floating instances below the desktop breakpoint (1280px) -
+   * the embedded copies inside the Help overlay remain reachable. */
+  @media (max-width: 1279px) {
+    display: none !important;
+  }
   background-color: #2a2a2a;
   border: 2px solid #555;
   border-radius: 6px;
@@ -98,6 +106,16 @@
   margin-right: 10px; /* Adjusted margin */
   font-size: 0.9em;
   color: #aaa;
+}
+
+.filterBadge {
+  margin-right: 10px;
+  font-size: 0.8em;
+  color: #ffaa00;
+  background: rgba(255, 170, 0, 0.15);
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 170, 0, 0.3);
 }
 
 .controls {
@@ -306,4 +324,80 @@
 .argValue {
   color: #f0f0f0;
   word-break: break-all;
+}
+
+.filterPanel {
+  background-color: #333;
+  border-top: 1px solid #555;
+  padding: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.filterHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 0.9em;
+  
+  strong {
+    color: #00ff66;
+  }
+  
+  button {
+    background: rgba(0, 123, 255, 0.2);
+    border: 1px solid rgba(0, 123, 255, 0.4);
+    color: #66ccff;
+    padding: 4px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.85em;
+    
+    &:hover {
+      background: rgba(0, 123, 255, 0.3);
+    }
+    
+    &.active {
+      background: #007bff;
+      color: #fff;
+    }
+  }
+}
+
+.filterOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  
+  button {
+    background: rgba(0, 255, 102, 0.1);
+    border: 1px solid rgba(0, 255, 102, 0.3);
+    color: #00ff66;
+    padding: 6px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    text-align: left;
+    font-size: 0.85em;
+    transition: all 0.2s;
+    
+    &:hover {
+      background: rgba(0, 255, 102, 0.2);
+      border-color: rgba(0, 255, 102, 0.5);
+    }
+    
+    &.active {
+      background: rgba(0, 255, 102, 0.3);
+      border-color: #00ff66;
+      font-weight: bold;
+    }
+  }
+}
+
+.noSources {
+  color: #888;
+  font-style: italic;
+  font-size: 0.85em;
+  padding: 8px;
+  text-align: center;
 }

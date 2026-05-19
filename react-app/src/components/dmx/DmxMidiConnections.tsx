@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { LucideIcon } from '../ui/LucideIcon';
 import smx from './SmxSuperPanel.module.scss';
 
@@ -44,14 +44,9 @@ export const DmxMidiConnections: React.FC<DmxMidiConnectionsProps> = ({
   onConnectMidiDevice,
   onDisconnectMidiDevice,
 }) => {
-  const [expanded, setExpanded] = useState(false);
   const activeCount = activeBrowserInputs.length;
   const linkLed =
     browserMidiSupported && browserInputs.length > 0 && activeCount > 0;
-
-  const summary = browserMidiSupported
-    ? `${browserInputs.length} input${browserInputs.length === 1 ? '' : 's'}, ${activeCount} linked`
-    : 'Web MIDI unavailable';
 
   return (
     <div className={smx.rackFrame}>
@@ -61,138 +56,120 @@ export const DmxMidiConnections: React.FC<DmxMidiConnectionsProps> = ({
         <span className={`${smx.screw} ${smx.screwBl}`} />
         <span className={`${smx.screw} ${smx.screwBr}`} />
 
-        <button
-          type="button"
-          className={smx.rackHeaderButton}
-          onClick={() => setExpanded((v) => !v)}
-          aria-expanded={expanded}
-          title={expanded ? 'Collapse MIDI input list' : 'Expand MIDI input list'}
-        >
+        <div className={smx.rackHeader}>
           <h3 className={smx.rackTitle}>
             <LucideIcon name="Music" />
             Super-Control / MIDI I/O
           </h3>
-          <div className={smx.headerRight}>
-            <span className={smx.collapsedSummary}>{summary}</span>
-            <div className={smx.ledRow}>
-              <span className={smx.ledLabel}>Bus</span>
-              <div className={smx.ledCluster} title="MIDI stack status">
-                <span
-                  className={`${smx.led} ${browserMidiSupported ? smx.ledOn : ''}`}
-                  title="Web MIDI available"
-                />
-                <span
-                  className={`${smx.led} ${browserInputs.length > 0 ? smx.ledWarn : ''}`}
-                  title="Inputs detected"
-                />
-                <span
-                  className={`${smx.led} ${linkLed ? smx.ledOn : ''}`}
-                  title="At least one port linked"
-                />
-              </div>
+          <div className={smx.ledRow}>
+            <span className={smx.ledLabel}>Bus</span>
+            <div className={smx.ledCluster} title="MIDI stack status">
+              <span
+                className={`${smx.led} ${browserMidiSupported ? smx.ledOn : ''}`}
+                title="Web MIDI available"
+              />
+              <span
+                className={`${smx.led} ${browserInputs.length > 0 ? smx.ledWarn : ''}`}
+                title="Inputs detected"
+              />
+              <span
+                className={`${smx.led} ${linkLed ? smx.ledOn : ''}`}
+                title="At least one port linked"
+              />
             </div>
-            <LucideIcon name={expanded ? 'ChevronUp' : 'ChevronDown'} />
           </div>
-        </button>
+        </div>
 
-        {expanded ? (
-          <div className={smx.rackBody}>
-            {browserMidiError && (
-              <div className={smx.alertErr} role="alert">
-                <LucideIcon name="AlertCircle" />
-                <span>MIDI error: {browserMidiError}</span>
+        <div className={smx.rackBody}>
+          {browserMidiError && (
+            <div className={smx.alertErr} role="alert">
+              <LucideIcon name="AlertCircle" />
+              <span>MIDI error: {browserMidiError}</span>
+            </div>
+          )}
+
+          {!browserMidiSupported && (
+            <div className={smx.alertWarn} role="status">
+              <LucideIcon name="AlertTriangle" />
+              <span>Web MIDI is not available in this browser or context.</span>
+            </div>
+          )}
+
+          {browserMidiSupported && (
+            <div className={smx.subPanel}>
+              <div className={smx.ioToolbar}>
+                <span className={smx.ioLabel}>Input matrix</span>
+                <button
+                  type="button"
+                  className={smx.punchButton}
+                  onClick={onRefreshMidiDevices}
+                  title="Rescan MIDI inputs"
+                >
+                  <LucideIcon name="RefreshCw" />
+                  Scan
+                </button>
               </div>
-            )}
 
-            {!browserMidiSupported && (
-              <div className={smx.alertWarn} role="status">
-                <LucideIcon name="AlertTriangle" />
-                <span>Web MIDI is not available in this browser or context.</span>
-              </div>
-            )}
-
-            {browserMidiSupported && (
-              <div className={smx.subPanel}>
-                <div className={smx.ioToolbar}>
-                  <span className={smx.ioLabel}>Input matrix</span>
-                  <button
-                    type="button"
-                    className={smx.punchButton}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onRefreshMidiDevices();
-                    }}
-                    title="Rescan MIDI inputs"
-                  >
-                    <LucideIcon name="RefreshCw" />
-                    Scan
-                  </button>
+              {browserInputs.length === 0 ? (
+                <div className={smx.emptyState}>
+                  No inputs detected. Connect a controller or virtual cable, then Scan.
                 </div>
-
-                {browserInputs.length === 0 ? (
-                  <div className={smx.emptyState}>
-                    No inputs detected. Connect a controller or virtual cable, then Scan.
-                  </div>
-                ) : (
-                  <div className={smx.channelStripList}>
-                    {browserInputs.map((input) => {
-                      const isConnected = activeBrowserInputs.includes(input.id);
-                      const lit = isConnected ? 5 : 0;
-                      return (
-                        <div
-                          key={input.id}
-                          className={`${smx.channelStrip} ${isConnected ? smx.stripHot : ''}`}
-                        >
-                          <SegmentLadder litCount={lit} />
-                          <div className={smx.stripText}>
-                            <span className={smx.stripName}>
-                              {input.name || 'MIDI input'}
-                            </span>
-                            <span className={smx.stripMeta} title={input.id}>
-                              {input.id}
-                            </span>
-                          </div>
-                          <div className={smx.stripAction}>
-                            {isConnected ? (
-                              <button
-                                type="button"
-                                className={smx.toggleDisconnect}
-                                onClick={() => onDisconnectMidiDevice(input.id)}
-                                title="Disconnect this input"
-                              >
-                                <LucideIcon name="X" />
-                                Off
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                className={smx.toggleConnect}
-                                onClick={() => onConnectMidiDevice(input.id)}
-                                title="Arm this input for MIDI learn and DMX"
-                              >
-                                <LucideIcon name="Link" />
-                                Link
-                              </button>
-                            )}
-                          </div>
+              ) : (
+                <div className={smx.channelStripList}>
+                  {browserInputs.map((input) => {
+                    const isConnected = activeBrowserInputs.includes(input.id);
+                    const lit = isConnected ? 5 : 0;
+                    return (
+                      <div
+                        key={input.id}
+                        className={`${smx.channelStrip} ${isConnected ? smx.stripHot : ''}`}
+                      >
+                        <SegmentLadder litCount={lit} />
+                        <div className={smx.stripText}>
+                          <span className={smx.stripName}>
+                            {input.name || 'MIDI input'}
+                          </span>
+                          <span className={smx.stripMeta} title={input.id}>
+                            {input.id}
+                          </span>
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
+                        <div className={smx.stripAction}>
+                          {isConnected ? (
+                            <button
+                              type="button"
+                              className={smx.toggleDisconnect}
+                              onClick={() => onDisconnectMidiDevice(input.id)}
+                              title="Disconnect this input"
+                            >
+                              <LucideIcon name="X" />
+                              Off
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className={smx.toggleConnect}
+                              onClick={() => onConnectMidiDevice(input.id)}
+                              title="Arm this input for MIDI learn and DMX"
+                            >
+                              <LucideIcon name="Link" />
+                              Link
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
-            <p className={smx.privacyNote}>
-              MIDI uses the Web MIDI API in your browser only. Ports and learn data stay on this
-              device.
-            </p>
-          </div>
-        ) : (
-          <div className={smx.rackBodyCollapsed}>
-            <span className={smx.expandHint}>Click header to expand ports and link devices.</span>
-          </div>
-        )}
+          <p className={smx.privacyNote}>
+            MIDI uses the Web MIDI API in your browser only. Ports and learn data stay on this
+            device; nothing is uploaded to the Art Bastard server for MIDI. For cloud AI or other
+            APIs, paste keys only in client-side fields; do not route secrets through the sync API.
+          </p>
+        </div>
       </div>
     </div>
   );

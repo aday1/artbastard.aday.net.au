@@ -35,6 +35,9 @@ export const AutoSceneControlMini: React.FC<AutoSceneControlMiniProps> = ({
     autoSceneMode,
     midiClockIsPlaying,
     midiClockCurrentBeat,
+    midiClockBpm,
+    abletonLinkPeers,
+    abletonLinkAvailable,
     scenes,
   } = useStore(state => ({
     autoSceneEnabled: state.autoSceneEnabled,
@@ -48,6 +51,9 @@ export const AutoSceneControlMini: React.FC<AutoSceneControlMiniProps> = ({
     autoSceneMode: state.autoSceneMode || 'forward',
     midiClockIsPlaying: state.midiClockIsPlaying,
     midiClockCurrentBeat: state.midiClockCurrentBeat,
+    midiClockBpm: state.midiClockBpm,
+    abletonLinkPeers: state.abletonLinkPeers,
+    abletonLinkAvailable: state.abletonLinkAvailable,
     scenes: state.scenes,
   }));
   const {
@@ -126,8 +132,8 @@ export const AutoSceneControlMini: React.FC<AutoSceneControlMiniProps> = ({
 
   // Beat tracking for internal_clock mode (syncs with master clock)
   useEffect(() => {
-    if (autoSceneTempoSource !== 'internal_clock') {
-      // Reset master clock tracking when not using internal clock
+    if (autoSceneTempoSource !== 'internal_clock' && autoSceneTempoSource !== 'ableton_link') {
+      // Reset master clock tracking when not using server clock
       prevBeatRef.current = null;
       return;
     }
@@ -151,8 +157,8 @@ export const AutoSceneControlMini: React.FC<AutoSceneControlMiniProps> = ({
     const shouldTriggerChange = localBeatCounter >= autoSceneBeatDivision && 
                                autoSceneEnabled && 
                                autoSceneList.length > 0 &&
-                               ((autoSceneTempoSource === 'internal_clock' && midiClockIsPlaying) ||
-                                (autoSceneTempoSource !== 'internal_clock' && isLocalClockPlaying));
+                               (((autoSceneTempoSource === 'internal_clock' || autoSceneTempoSource === 'ableton_link') && midiClockIsPlaying) ||
+                                (autoSceneTempoSource !== 'internal_clock' && autoSceneTempoSource !== 'ableton_link' && isLocalClockPlaying));
 
     if (shouldTriggerChange) {
       triggerAutoSceneFlash();
@@ -166,8 +172,8 @@ export const AutoSceneControlMini: React.FC<AutoSceneControlMiniProps> = ({
     const shouldLoadScene = autoSceneEnabled && 
                            autoSceneCurrentIndex !== -1 && 
                            autoSceneList.length > 0 &&
-                           ((autoSceneTempoSource === 'internal_clock' && midiClockIsPlaying) ||
-                            (autoSceneTempoSource !== 'internal_clock' && isLocalClockPlaying));
+                           (((autoSceneTempoSource === 'internal_clock' || autoSceneTempoSource === 'ableton_link') && midiClockIsPlaying) ||
+                            (autoSceneTempoSource !== 'internal_clock' && autoSceneTempoSource !== 'ableton_link' && isLocalClockPlaying));
 
     if (shouldLoadScene) {
       const sceneToLoad = autoSceneList[autoSceneCurrentIndex];
@@ -180,7 +186,7 @@ export const AutoSceneControlMini: React.FC<AutoSceneControlMiniProps> = ({
 
   // Handle play/pause for different tempo sources
   const handlePlayPauseToggle = () => {
-    if (autoSceneTempoSource === 'internal_clock') {
+    if (autoSceneTempoSource === 'internal_clock' || autoSceneTempoSource === 'ableton_link') {
       requestToggleMasterClockPlayPause();
     } else {
       setIsLocalClockPlaying(!isLocalClockPlaying);
@@ -195,10 +201,16 @@ export const AutoSceneControlMini: React.FC<AutoSceneControlMiniProps> = ({
         return autoSceneManualBpm;
       case 'tap_tempo':
         return autoSceneTapTempoBpm;
+      case 'ableton_link':
+      case 'internal_clock':
+        return midiClockBpm;
       default:
         return 120;
     }
   };
+
+  const usesServerClock =
+    autoSceneTempoSource === 'internal_clock' || autoSceneTempoSource === 'ableton_link';
 
   // Helper functions for scene management
   const isSceneInAutoList = (sceneName: string) => {
@@ -242,9 +254,16 @@ export const AutoSceneControlMini: React.FC<AutoSceneControlMiniProps> = ({
             className={styles.tempoSelect}
           >
             <option value="internal_clock">Internal Clock</option>
+            <option value="ableton_link">Ableton Link</option>
             <option value="manual_bpm">Manual BPM</option>
             <option value="tap_tempo">Tap Tempo</option>
           </select>
+
+          {autoSceneTempoSource === 'ableton_link' && (
+            <span className={styles.linkStatus} title="Ableton Link session peers">
+              {abletonLinkAvailable ? `Link: ${abletonLinkPeers} peer${abletonLinkPeers === 1 ? '' : 's'}` : 'Link unavailable'}
+            </span>
+          )}
 
           {autoSceneTempoSource === 'manual_bpm' && (
             <input
@@ -368,7 +387,7 @@ export const AutoSceneControlMini: React.FC<AutoSceneControlMiniProps> = ({
               name="Play" 
               size={12} 
               className={`${styles.playingIcon} ${
-                (autoSceneTempoSource === 'internal_clock' ? midiClockIsPlaying : isLocalClockPlaying) ? styles.active : ''
+                (usesServerClock ? midiClockIsPlaying : isLocalClockPlaying) ? styles.active : ''
               }`} 
             />
           )}

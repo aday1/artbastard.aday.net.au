@@ -4,73 +4,90 @@
   --navbar-collapsed-width: 64px;
 }
 
+/* Desktop: floating top bar (not a full-height right rail) */
 .navbarContainer {
   position: fixed;
-  right: 0;
-  top: 0;
-  height: 100vh;
-  width: var(--navbar-expanded-width);
+  top: max(8px, var(--safe-top, 0px));
+  left: calc(var(--pinned-channels-width, 0px) + 12px);
+  right: 12px;
+  width: auto;
+  height: auto;
+  max-height: min(50vh, 360px);
   z-index: var(--z-fixed);
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: var(--space-sm);
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0.5rem;
   font-family: var(--font-body);
   letter-spacing: -0.2px;
   background: var(--color-surface);
   backdrop-filter: blur(15px);
   -webkit-backdrop-filter: blur(15px);
-  border-left: 1px solid var(--color-border);
-  box-shadow: var(--shadow-xl);
-  transition: width var(--transition-normal);
-  padding: var(--space-sm);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0.5rem 0.6rem;
+  overflow-x: auto;
+  overflow-y: auto;
+  scrollbar-width: thin;
 }
 
-.navBarCollapsedState { /* New class for controlling overall navbar width */
-  width: var(--navbar-collapsed-width);
+.navBarCollapsedState {
+  max-height: 58px;
+  overflow-y: hidden;
+  align-items: center;
+
+  .navButtons {
+    flex-wrap: nowrap;
+  }
 }
 
 .navContent {
   display: flex;
-  flex-direction: column; /* Stack items vertically */
-  justify-content: flex-start; /* Align items to top */
+  flex-direction: column;
+  justify-content: flex-start;
   align-items: stretch;
-  gap: 0.5rem;
-  flex-grow: 1;
+  gap: 0.4rem;
+  flex: 1;
+  min-width: 0;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow-x: hidden; /* Hide horizontal overflow */
-  overflow-y: auto; /* Allow vertical scrolling if content exceeds height */  &.navContentCollapsed {
-    /* display: none;  Replaced: Now controls content visibility within buttons */
-    /* Instead of hiding the whole content, we hide text in buttons and center icons */
+  overflow-x: visible;
+  overflow-y: visible;
+
+  &.navContentCollapsed {
     .navButton {
       span {
         display: none !important;
       }
       svg {
-        margin: 0 auto !important; /* Center icon when text is hidden */
-        width: 24px !important; /* Larger icon size when collapsed */
-        height: 24px !important;
-        opacity: 1 !important; /* Ensure full opacity when collapsed */
+        margin: 0 auto !important;
+        width: 22px !important;
+        height: 22px !important;
+        opacity: 1 !important;
       }
-      justify-content: center !important; /* Center the icon */
-      padding: 0.75rem !important; /* Increase padding for better touch target */
-      min-height: 48px !important; /* Larger minimum height for better visibility */
-      width: 100% !important; /* Ensure button takes full width */
-      background: rgba(255, 255, 255, 0.08) !important;
-      border: 1px solid rgba(255, 255, 255, 0.15) !important;
-      border-radius: 8px !important;
-      margin-bottom: 6px !important;
+      justify-content: center !important;
+      padding: 0.5rem 0.6rem !important;
+      min-height: 40px !important;
+      width: auto !important;
+      min-width: 40px !important;
+      margin-bottom: 0 !important;
     }
-    .networkStatusContainer { /* Example: if NetworkStatus has its own container */
-      /* Potentially hide or change NetworkStatus rendering in collapsed state */
-      span { display: none; } /* Hide text part of network status */
-       /* Adjust padding or margins as needed */
+    .resetLayoutButton span {
+      display: none !important;
+    }
+    .toolbarExtras {
+      display: none;
+    }
+    .networkStatusContainer span {
+      display: none;
     }
   }
 }
 
 .collapseToggle {
   @extend .touch-target !optional;
+  flex: 0 0 auto;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   color: var(--color-text-primary);
@@ -83,9 +100,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%; /* Full width of navbar */
-  height: var(--touch-target-comfortable);
-  margin-top: auto; /* Push to bottom of sidebar */
+  width: 40px;
+  height: 40px;
+  margin-top: 0;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   
@@ -114,25 +131,23 @@
 
 .navButtons {
   display: flex;
-  flex-direction: column; /* Stack buttons vertically */
-  gap: 0.375rem;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.35rem 0.5rem;
   pointer-events: auto;
-  width: 100%; /* Take full width of sidebar */
+  width: 100%;
 }
 
 .navItemContainer {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  flex: 0 0 auto;
 }
 
 .itemStatusIndicators {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-  margin-left: 0.5rem;
-  padding-left: 0.5rem;
-  border-left: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
+  display: none;
 }
 
 .itemStatusIcon {
@@ -173,7 +188,8 @@
   line-height: var(--leading-tight);
   font-weight: var(--font-medium);
   cursor: pointer;
-  width: 100%;
+  width: auto;
+  min-width: min(160px, 100%);
   justify-content: flex-start;
   transition: all var(--transition-fast);
   text-rendering: optimizeLegibility;
@@ -188,9 +204,9 @@
     &:hover::after {
       content: attr(data-tooltip);
       position: absolute;
-      right: calc(100% + 10px);
-      top: 50%;
-      transform: translateY(-50%);
+      left: 50%;
+      top: calc(100% + 8px);
+      transform: translateX(-50%);
       background: var(--color-surface-elevated);
       color: var(--color-text-primary);
       padding: var(--space-sm) var(--space-md);
@@ -199,22 +215,11 @@
       white-space: pre-wrap;
       box-shadow: var(--shadow-lg);
       opacity: 0;
-      animation: fadeIn var(--transition-fast) ease-out forwards;
+      animation: fadeInTooltipTop var(--transition-fast) ease-out forwards;
       font-style: italic;
       max-width: 300px;
       z-index: var(--z-tooltip);
       border: 1px solid var(--color-border);
-    }
-  }
-
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translate(-10px, -50%);
-    }
-    to {
-      opacity: 1;
-      transform: translate(0, -50%);
     }
   }
 
@@ -285,7 +290,7 @@
   .navButton {
     background: rgba(255, 255, 255, 0.08) !important;
     border: 1px solid rgba(255, 255, 255, 0.15) !important;
-    margin-bottom: 6px !important;
+    margin-bottom: 0 !important;
     border-radius: 8px !important;
     
     svg {
@@ -675,16 +680,30 @@
   }
 }
 
+// Extras row (sparkles / reset) under main nav buttons
+.toolbarExtras {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  border-top: 1px solid var(--color-border, rgba(71, 85, 105, 0.3));
+  padding-top: 0.4rem;
+  margin-top: 0.1rem;
+}
+
 // Reset Layout Section
 .resetLayoutSection {
-  margin-top: auto;
-  padding-top: var(--space-md);
-  border-top: 1px solid var(--color-border, rgba(71, 85, 105, 0.3));
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+  flex: 0 0 auto;
 }
 
 .resetLayoutButton {
   @extend .navButton !optional;
-  width: 100%;
+  width: auto;
+  min-width: 120px;
   background: rgba(139, 92, 246, 0.1);
   border: 1px solid rgba(139, 92, 246, 0.3);
   color: #a78bfa;
@@ -731,4 +750,120 @@
   span {
     white-space: nowrap;
   }
+}
+
+@keyframes fadeInTooltipTop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -6px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+// =====================================================================
+// DRAWER VARIANT
+// =====================================================================
+//
+// Used inside the right-side mobile/tablet Drawer. Flat vertical list
+// with no per-item activity indicators (those live elsewhere in the
+// mobile chrome) and no popup launcher behaviour (popups are blocked
+// on iOS Safari and untrustworthy on Android).
+
+.drawerNav {
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+}
+
+.drawerNavList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.drawerNavSection {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border, rgba(71, 85, 105, 0.25));
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.drawerNavItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--color-text-primary, #fff);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  min-height: 56px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 120ms ease, border-color 120ms ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  &:active {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  &:focus-visible {
+    outline: none;
+    border-color: var(--color-border-focus, #fb923c);
+  }
+}
+
+.drawerNavItemActive {
+  background: rgba(var(--color-primary-500-rgb, 249, 115, 22), 0.16);
+  color: var(--color-primary-400, #fb923c);
+}
+
+.drawerNavIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: inherit;
+  flex-shrink: 0;
+}
+
+.drawerNavText {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.drawerNavTitle {
+  font-weight: 600;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.drawerNavDesc {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary, #94a3b8);
+  margin-top: 2px;
+  line-height: 1.35;
+  white-space: normal;
 }

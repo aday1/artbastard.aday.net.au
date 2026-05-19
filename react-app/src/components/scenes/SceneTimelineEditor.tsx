@@ -7,6 +7,17 @@ import { TimelineRuler } from '../timeline/TimelineRuler';
 import { TimelinePlayhead } from '../timeline/TimelinePlayhead';
 import { TimelineGrid } from '../timeline/TimelineGrid';
 import { formatTime as formatTimeUtil, getChannelsFromKeyframes } from '../../utils/timelineHelpers';
+import {
+  SCENE_TIMELINE_PLAYHEAD_EVENT,
+  SCENE_TIMELINE_START_EVENT,
+  SCENE_TIMELINE_STOP_EVENT,
+} from '../../utils/sceneTimelinePlayback';
+import {
+  clientEventToEnvelopeCoords,
+  dmxValueToViewBoxY,
+  isNearKeyframe,
+} from '../../utils/timelineEnvelope';
+import { DmxFaderRow, HorizontalFader } from '../ui/controls';
 import styles from './SceneTimelineEditor.module.scss';
 
 interface SceneTimelineEditorProps {
@@ -110,7 +121,6 @@ export const SceneTimelineEditor: React.FC<SceneTimelineEditorProps> = ({ scene,
   const [playbackDirection, setPlaybackDirection] = useState<1 | -1>(1); // 1 = forward, -1 = backward
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [waveformData, setWaveformData] = useState<number[]>([]);
-  const playbackIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const { generateWaveform } = useAudioWaveform();
   
   // Initialize timeline defaults
@@ -145,30 +155,32 @@ export const SceneTimelineEditor: React.FC<SceneTimelineEditorProps> = ({ scene,
   // Playback controls
   const handlePlay = () => {
     if (!timeline) return;
-    setIsPlaying(true);
     setPlaybackDirection(1);
-    // Dispatch event to start timeline playback for DMX updates
-    window.dispatchEvent(new CustomEvent('startSceneTimeline', { detail: { sceneName: scene.name } }));
+    window.dispatchEvent(
+      new CustomEvent(SCENE_TIMELINE_START_EVENT, {
+        detail: {
+          sceneName: scene.name,
+          timelineOverride: timeline,
+          startAtMs: playheadPosition,
+        },
+      })
+    );
     if (audioRef.current && timeline.audioTrack) {
       audioRef.current.play().catch(console.error);
     }
   };
-  
+
   const handlePause = () => {
-    setIsPlaying(false);
-    // Dispatch event to stop timeline playback
-    window.dispatchEvent(new CustomEvent('stopSceneTimeline'));
+    window.dispatchEvent(new CustomEvent(SCENE_TIMELINE_STOP_EVENT));
     if (audioRef.current) {
       audioRef.current.pause();
     }
   };
-  
+
   const handleStop = () => {
-    setIsPlaying(false);
     setPlayheadPosition(0);
     setPlaybackDirection(1);
-    // Dispatch event to stop timeline playback
-    window.dispatchEvent(new CustomEvent('stopSceneTimeline'));
+    window.dispatchEvent(new CustomEvent(SCENE_TIMELINE_STOP_EVENT));
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
@@ -229,163 +241,30 @@ export const SceneTimelineEditor: React.FC<SceneTimelineEditorProps> = ({ scene,
     }
   };
   
-  // Playback engine
+  // Single global playback engine (useSceneTimelinePlayback) drives DMX + playhead.
   useEffect(() => {
-    if (!isPlaying) {
-      if (playbackIntervalRef.current) {
-        clearInterval(playbackIntervalRef.current);
-        playbackIntervalRef.current = null;
+    const onPlayhead = (event: Event) => {
+      const detail = (event as CustomEvent<{ sceneName: string; timeMs: number; isPlaying: boolean }>).detail;
+      if (!detail || detail.sceneName !== scene.name) {
+        return;
       }
+      setPlayheadPosition(detail.timeMs);
+      setIsPlaying(detail.isPlaying);
+    };
+    window.addEventListener(SCENE_TIMELINE_PLAYHEAD_EVENT, onPlayhead);
+    return () => window.removeEventListener(SCENE_TIMELINE_PLAYHEAD_EVENT, onPlayhead);
+  }, [scene.name]);
+
+  useEffect(() => {
+    if (!isPlaying || !audioRef.current || !timeline.audioTrack) {
       return;
     }
-    
-    const playbackMode = timeline.playbackMode || 'loop';
     const playbackSpeed = timeline.playbackSpeed || 1.0;
-    const updateInterval = 16; // ~60fps
-    
-    // Sync audio playback
-    if (audioRef.current && timeline.audioTrack) {
-      if (playbackDirection === 1) {
-        audioRef.current.playbackRate = playbackSpeed;
-        if (audioRef.current.paused) {
-          audioRef.current.play().catch(console.error);
-        }
-      } else {
-        // Reverse playback (not natively supported, would need custom implementation)
-        audioRef.current.pause();
-      }
+    audioRef.current.playbackRate = playbackSpeed;
+    if (audioRef.current.paused) {
+      audioRef.current.play().catch(console.error);
     }
-    
-    playbackIntervalRef.current = setInterval(() => {
-      setPlayheadPosition(prev => {
-        const speedAdjustedDelta = (updateInterval * playbackSpeed * playbackDirection);
-        let newPosition = prev + speedAdjustedDelta;
-        
-        // Apply timeline values at current position for DMX updates
-        if (timeline.enabled) {
-          const normalizedTime = timeline.loop ? newPosition % effectiveDuration : Math.min(newPosition, effectiveDuration);
-          const { prev: prevKf, next: nextKf, progress } = (() => {
-            let prev: SceneTimelineKeyframe | null = null;
-            let next: SceneTimelineKeyframe | null = null;
-            
-            for (let i = 0; i < timeline.keyframes.length; i++) {
-              const kf = timeline.keyframes[i];
-              if (kf.time <= normalizedTime) {
-                prev = kf;
-              }
-              if (kf.time >= normalizedTime && !next) {
-                next = kf;
-                break;
-              }
-            }
-            
-            if (!next && prev) {
-              next = prev;
-            }
-            
-            let progress = 0;
-            if (prev && next && prev.id !== next.id) {
-              const timeDiff = next.time - prev.time;
-              const elapsed = normalizedTime - prev.time;
-              progress = timeDiff > 0 ? elapsed / timeDiff : 0;
-            }
-            
-            return { prev, next, progress };
-          })();
-          
-          if (prevKf && nextKf) {
-            const hasSoloedChannels = timeline.channelLanes 
-              ? Object.values(timeline.channelLanes).some(lane => lane.soloed)
-              : false;
-            
-            const allChannels = new Set([
-              ...Object.keys(prevKf.channelValues).map(Number),
-              ...Object.keys(nextKf.channelValues).map(Number)
-            ]);
-            
-            allChannels.forEach(channelIndex => {
-              const laneState = timeline.channelLanes?.[channelIndex];
-              const isMuted = laneState?.muted || false;
-              const isSoloed = laneState?.soloed || false;
-              
-              if (isMuted || (hasSoloedChannels && !isSoloed)) {
-                return;
-              }
-              
-              const startValue = prevKf.channelValues[channelIndex] || 0;
-              const endValue = nextKf.channelValues[channelIndex] || 0;
-              
-              // Interpolate value
-              let easedProgress = progress;
-              const easing = prevKf.easing || 'linear';
-              switch (easing) {
-                case 'smooth':
-                  easedProgress = progress * progress * (3 - 2 * progress);
-                  break;
-                case 'ease-in':
-                  easedProgress = progress * progress;
-                  break;
-                case 'ease-out':
-                  easedProgress = 1 - (1 - progress) * (1 - progress);
-                  break;
-                case 'ease-in-out':
-                  easedProgress = progress < 0.5
-                    ? 2 * progress * progress
-                    : 1 - Math.pow(-2 * progress + 2, 2) / 2;
-                  break;
-                case 'step':
-                  easedProgress = progress >= 1 ? 1 : 0;
-                  break;
-              }
-              
-              const interpolatedValue = Math.round(startValue + (endValue - startValue) * easedProgress);
-              // setDmxChannel already respects min/max ranges, so we can pass the interpolated value directly
-              setDmxChannel(channelIndex, interpolatedValue);
-            });
-          }
-        }
-        
-        // Handle different playback modes
-        if (playbackMode === 'once') {
-          if (newPosition >= effectiveDuration) {
-            setIsPlaying(false);
-            return effectiveDuration;
-          }
-          return Math.min(newPosition, effectiveDuration);
-        } else if (playbackMode === 'loop') {
-          if (newPosition >= effectiveDuration) {
-            return 0; // Loop back to start
-          }
-          return newPosition;
-        } else if (playbackMode === 'pingpong') {
-          if (newPosition >= effectiveDuration) {
-            setPlaybackDirection(-1);
-            return effectiveDuration;
-          } else if (newPosition <= 0) {
-            setPlaybackDirection(1);
-            return 0;
-          }
-          return newPosition;
-        } else if (playbackMode === 'forward') {
-          return Math.min(newPosition, effectiveDuration);
-        } else if (playbackMode === 'backward') {
-          if (newPosition <= 0) {
-            setIsPlaying(false);
-            return 0;
-          }
-          return newPosition;
-        }
-        
-        return newPosition;
-      });
-    }, updateInterval);
-    
-    return () => {
-      if (playbackIntervalRef.current) {
-        clearInterval(playbackIntervalRef.current);
-      }
-    };
-  }, [isPlaying, playbackDirection, timeline.playbackMode, timeline.playbackSpeed, effectiveDuration, timeline.audioTrack]);
+  }, [isPlaying, timeline.audioTrack, timeline.playbackSpeed]);
   
   // Sync audio position with playhead
   useEffect(() => {
@@ -400,6 +279,7 @@ export const SceneTimelineEditor: React.FC<SceneTimelineEditorProps> = ({ scene,
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      window.dispatchEvent(new CustomEvent(SCENE_TIMELINE_STOP_EVENT));
       if (audioRef.current) {
         audioRef.current.pause();
         if (timeline.audioTrack?.url) {
@@ -407,7 +287,7 @@ export const SceneTimelineEditor: React.FC<SceneTimelineEditorProps> = ({ scene,
         }
       }
     };
-  }, []);
+  }, [timeline.audioTrack?.url]);
 
   // Convert time to pixel position
   const timeToPixels = useCallback((timeMs: number) => {
@@ -1663,14 +1543,15 @@ export const SceneTimelineEditor: React.FC<SceneTimelineEditorProps> = ({ scene,
           
           <div className={styles.speedControl}>
             <label>Speed:</label>
-            <input
-              type="range"
-              min="0.1"
-              max="4.0"
-              step="0.1"
-              value={timeline.playbackSpeed || 1.0}
-              onChange={(e) => setTimeline(prev => ({ ...prev, playbackSpeed: Number(e.target.value) }))}
-            />
+            <div className={styles.speedFader}>
+              <HorizontalFader
+                min={0.1}
+                max={4.0}
+                step={0.1}
+                value={timeline.playbackSpeed || 1.0}
+                onChange={(v) => setTimeline(prev => ({ ...prev, playbackSpeed: v }))}
+              />
+            </div>
             <span>{timeline.playbackSpeed?.toFixed(1) || '1.0'}x</span>
           </div>
           
@@ -1794,19 +1675,16 @@ export const SceneTimelineEditor: React.FC<SceneTimelineEditorProps> = ({ scene,
               >
                 <LucideIcon name="ChevronDown" size={14} />
               </button>
-              <input
-                type="range"
-                min="150"
-                max="600"
-                step="25"
+              <HorizontalFader
+                min={150}
+                max={600}
+                step={25}
                 value={trackHeight}
-                onChange={(e) => {
-                  const newHeight = Number(e.target.value);
-                  setTrackHeight(newHeight);
-                  localStorage.setItem('timelineTrackHeight', String(newHeight));
+                onChange={(newHeight) => {
+                  const h = Math.round(newHeight);
+                  setTrackHeight(h);
+                  localStorage.setItem('timelineTrackHeight', String(h));
                 }}
-                className={styles.trackHeightSlider}
-                title={`Track Height: ${trackHeight}px`}
               />
               <span className={styles.trackHeightValue} title={`Track Height: ${trackHeight}px`}>
                 {trackHeight}px
@@ -2646,33 +2524,28 @@ export const SceneTimelineEditor: React.FC<SceneTimelineEditorProps> = ({ scene,
                                 
                                 if (!timelineRect) return;
                                 
-                                // Convert mouse coordinates to SVG viewBox coordinates
-                                const svgPoint = svg.createSVGPoint();
-                                svgPoint.x = e.clientX;
-                                svgPoint.y = e.clientY;
-                                const svgCTM = svg.getScreenCTM();
-                                if (!svgCTM) return;
-                                const svgCoords = svgPoint.matrixTransform(svgCTM.inverse());
-                                
-                                // SVG X coordinate is already in timeline pixels (viewBox matches timeline width)
-                                // But we need to account for scroll position
-                                const svgXInTimeline = svgCoords.x + scrollPosition;
-                                const clickTime = Math.max(0, Math.min(pixelsToTime(svgXInTimeline), effectiveDuration));
-                                
-                                // SVG Y coordinate is in viewBox (0-100), convert to DMX value
-                                const mouseYInViewBox = svgCoords.y; // Already 0-100 from viewBox
-                                const rawValue = Math.max(0, Math.min(255, 255 - (mouseYInViewBox / 100) * 255));
-                                
-                                // Check if clicking near an existing keyframe (within 10px in timeline coordinates)
-                                const nearbyKeyframe = channelKeyframes.find(kf => {
-                                  const kfX = timeToPixels(kf.time);
-                                  const kfYInViewBox = 100 - ((kf.channelValues[channelIndex] || 0) / 255) * 100;
-                                  const distX = Math.abs(kfX - svgXInTimeline);
-                                  const distY = Math.abs(kfYInViewBox - mouseYInViewBox);
-                                  // Convert viewBox Y distance to pixels for comparison
-                                  const distYPixels = (distY / 100) * trackHeight;
-                                  return distX < 10 && distYPixels < 10;
-                                });
+                                const coords = clientEventToEnvelopeCoords(
+                                  e,
+                                  svg,
+                                  scrollPosition,
+                                  pixelsToTime,
+                                  effectiveDuration,
+                                  trackHeight
+                                );
+                                if (!coords) return;
+                                const { svgXInTimeline, mouseYInViewBox, clickTime, rawDmxValue } = coords;
+                                const rawValue = rawDmxValue;
+
+                                const nearbyKeyframe = channelKeyframes.find((kf) =>
+                                  isNearKeyframe(
+                                    kf.time,
+                                    kf.channelValues[channelIndex] || 0,
+                                    svgXInTimeline,
+                                    mouseYInViewBox,
+                                    timeToPixels,
+                                    trackHeight
+                                  )
+                                );
                                 
                                 if (nearbyKeyframe) {
                                   // Start dragging this keyframe
@@ -2689,7 +2562,9 @@ export const SceneTimelineEditor: React.FC<SceneTimelineEditorProps> = ({ scene,
                                   
                                   // Calculate drag offset in timeline coordinates
                                   const kfX = timeToPixels(nearbyKeyframe.time);
-                                  const kfYInViewBox = 100 - ((nearbyKeyframe.channelValues[channelIndex] || 0) / 255) * 100;
+                                  const kfYInViewBox = dmxValueToViewBoxY(
+                                    nearbyKeyframe.channelValues[channelIndex] || 0
+                                  );
                                   setDragOffset({ 
                                     x: svgXInTimeline - kfX, 
                                     y: mouseYInViewBox - kfYInViewBox 
@@ -3628,14 +3503,15 @@ export const SceneTimelineEditor: React.FC<SceneTimelineEditorProps> = ({ scene,
               <div className={styles.channelList}>
                 {Object.entries(selectedKeyframe.channelValues).slice(0, 20).map(([channelIndex, value]) => (
                   <div key={channelIndex} className={styles.channelItem}>
-                    <span>CH {parseInt(channelIndex) + 1}</span>
-                    <input
-                      type="range"
-                      min="0"
-                      max="255"
+                    <DmxFaderRow
+                      compact
+                      label={`CH ${parseInt(channelIndex, 10) + 1}`}
+                      controlName={`timeline-kf-ch-${channelIndex}`}
                       value={value}
-                      onChange={(e) => {
-                        const newValue = Number(e.target.value);
+                      showOsc={false}
+                      showMidi={false}
+                      onChange={(newValue) => {
+                        const v = Math.round(newValue);
                         setTimeline(prev => ({
                           ...prev,
                           keyframes: prev.keyframes.map(kf =>
@@ -3644,7 +3520,7 @@ export const SceneTimelineEditor: React.FC<SceneTimelineEditorProps> = ({ scene,
                                   ...kf,
                                   channelValues: {
                                     ...kf.channelValues,
-                                    [channelIndex]: newValue
+                                    [channelIndex]: v
                                   }
                                 }
                               : kf
@@ -3652,11 +3528,10 @@ export const SceneTimelineEditor: React.FC<SceneTimelineEditorProps> = ({ scene,
                         }));
                         setEditingChannels(prev => ({
                           ...prev,
-                          [channelIndex]: newValue
+                          [channelIndex]: v
                         }));
                       }}
                     />
-                    <span>{value}</span>
                   </div>
                 ))}
                 {Object.keys(selectedKeyframe.channelValues).length > 20 && (

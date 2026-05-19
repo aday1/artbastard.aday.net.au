@@ -10,7 +10,7 @@ export const useTimelinePlayback = () => {
   const {
     timelinePlayback,
     timelineSequences,
-    setDmxChannel,
+    setMultipleDmxChannels,
     stopTimelinePlayback
   } = useStore();
   
@@ -68,21 +68,24 @@ export const useTimelinePlayback = () => {
 
       // Update DMX values based on timeline position
       const currentTime = position * sequence.duration;
-      
+      const updates: Record<number, number> = {};
+
       sequence.channels.forEach(channelData => {
         const value = interpolateValue(channelData.keyframes, currentTime);
         if (value !== undefined) {
           const dmxValue = Math.round(Math.max(0, Math.min(255, value)));
           // Channel numbers in timeline are 1-based (DMX address), convert to 0-based index
           const channelIndex = channelData.channel >= 1 ? channelData.channel - 1 : channelData.channel;
-          // Use setDmxChannel to actually send DMX values
-          setDmxChannel(channelIndex, dmxValue, true);
+          updates[channelIndex] = dmxValue;
         }
       });
 
-      // Throttle updates to ~60fps
+      // Throttle updates to ~30fps to avoid backend flooding
       const timeSinceLastUpdate = now - lastUpdateTimeRef.current;
-      if (timeSinceLastUpdate >= 16) { // ~60fps
+      if (timeSinceLastUpdate >= 33) {
+        if (Object.keys(updates).length > 0) {
+          setMultipleDmxChannels(updates, true);
+        }
         lastUpdateTimeRef.current = now;
       }
 
@@ -106,7 +109,7 @@ export const useTimelinePlayback = () => {
     timelinePlayback.speed,
     timelinePlayback.loop,
     timelineSequences,
-    setDmxChannel,
+    setMultipleDmxChannels,
     stopTimelinePlayback
   ]);
 };

@@ -16,7 +16,28 @@
     box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4);
     transform: translateY(-2px);
   }
-  
+}
+
+.touchLayout {
+  padding: var(--space-md);
+
+  .autoLayoutContainer {
+    gap: var(--space-md);
+  }
+
+  :global(.dmx-fader-row) {
+    min-height: 48px;
+  }
+
+  .monitoringSection {
+    --channel-dock-width: clamp(9.5rem, 34vw, 13rem);
+    padding-right: calc(var(--channel-dock-width) + 8px);
+  }
+
+  .channelMonitorDock {
+    top: calc(3.25rem + var(--safe-top, 0px));
+    min-height: 11rem;
+  }
 }
 
 .header {
@@ -79,6 +100,93 @@
   
 }
 
+.faderStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm, 0.75rem);
+}
+
+.panTiltSliders,
+.rgbSliders {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm, 0.75rem);
+  margin-top: var(--space-sm, 0.75rem);
+}
+
+.panTiltSliders {
+  width: 100%;
+}
+
+.xyPadHeading {
+  margin: 0.75rem 0 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary, #9aa3b2);
+}
+
+.panTiltPad {
+  width: 100%;
+}
+
+.colorSection {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+}
+
+.colorWheelWrap {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.colorReadout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 1rem 1.25rem;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.colorSwatch {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.35);
+  flex-shrink: 0;
+}
+
+.colorChannel {
+  color: #e2e8f0;
+  font-weight: 500;
+}
+
+.colorChannelLabel {
+  font-weight: 700;
+  margin-right: 0.15rem;
+}
+
+.rgbSliders {
+  width: 100%;
+}
+
+.goboSectionLabel {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary, #9aa3b2);
+  margin-bottom: 0.5rem;
+}
+
 .controlRow {
   display: flex;
   align-items: center;
@@ -91,7 +199,9 @@
     color: #ddd;
     font-weight: 500;
   }
-    input[type="range"] {
+
+  /* Legacy: only direct child sliders (not DmxFaderRow / MasterStyledSlider) */
+  > input[type="range"] {
     flex: 1;
     height: 6px;
     background: linear-gradient(90deg, #333 0%, #666 100%);
@@ -178,6 +288,25 @@
     padding: 4px 8px;
     border-radius: 4px;
     font-size: 0.85rem;
+  }
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xl);
+  text-align: center;
+  color: var(--color-text-secondary);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--color-border);
+  margin-top: 12px;
+
+  p {
+    margin: 0;
+    font-size: 0.9rem;
   }
 }
 
@@ -408,19 +537,12 @@
 
 .channelControlGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
 }
 
 .dmxChannelControl {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  height: 300px;
+  min-width: 0;
 }
 
 .channelHeader {
@@ -574,35 +696,7 @@
 }
 
 .navBtn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
-  border: none;
-  border-radius: 6px;
-  color: white;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-  
-  &:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
-  }
-  
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
-    background: #666;
-  }
-  
-  svg {
-    width: 16px;
-    height: 16px;
-  }
+  flex: 0 0 auto;
 }
 
 .currentSelection {
@@ -646,34 +740,7 @@
 }
 
 .sceneBtn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
-  border: none;
-  border-radius: 4px;
-  color: white;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  
-  &:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 3px 8px rgba(155, 89, 182, 0.3);
-  }
-  
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
-    background: #666;
-  }
-  
-  svg {
-    width: 14px;
-    height: 14px;
-  }
+  flex: 0 0 auto;
 }
 
 .sceneInfo {
@@ -789,29 +856,7 @@
 }
 
 .loadSceneBtn {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  width: 100%;
-  justify-content: center;
-  padding: 6px;
-  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
-  border: none;
-  border-radius: 4px;
-  color: white;
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 3px 8px rgba(46, 204, 113, 0.3);
-  }
-  
-  svg {
-    width: 12px;
-    height: 12px;
-  }
+  margin-top: 0.35rem;
 }
 
 // Scene Connection Controls
@@ -1356,8 +1401,10 @@
 
 // Color Wheel
 .colorWheel {
-  width: 200px;
-  height: 200px;
+  width: min(100%, 320px);
+  aspect-ratio: 1;
+  min-width: 220px;
+  max-width: 360px;
   border-radius: 50%;
   background: conic-gradient(
     from 0deg,
@@ -1376,34 +1423,43 @@
     #ff0000 360deg
   );
   position: relative;
-  margin: 10px auto;
   cursor: crosshair !important;
-  border: 3px solid rgba(255, 255, 255, 0.2);
-  
+  border: 3px solid rgba(255, 255, 255, 0.25);
+  touch-action: none;
+  user-select: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+
   .colorSaturation {
     width: 100%;
     height: 100%;
     border-radius: 50%;
-    background: radial-gradient(circle, transparent 0%, rgba(255, 255, 255, 0.8) 100%);
+    background: radial-gradient(circle, transparent 0%, rgba(255, 255, 255, 0.85) 100%);
     position: relative;
   }
-  
+
   .colorHandle {
-    width: 16px;
-    height: 16px;
+    width: 22px;
+    height: 22px;
     background: #ffffff;
-    border: 2px solid #000000;
+    border: 3px solid #0f172a;
     border-radius: 50%;
     position: absolute;
     transform: translate(-50%, -50%);
     cursor: grab !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-    
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85), 0 2px 10px rgba(0, 0, 0, 0.55);
+    pointer-events: none;
+
     &:active {
       cursor: grabbing !important;
-      transform: translate(-50%, -50%) scale(1.3);
+      transform: translate(-50%, -50%) scale(1.15);
     }
   }
+}
+
+.colorWheelDisabled {
+  opacity: 0.45;
+  pointer-events: none;
+  cursor: not-allowed !important;
 }
 
 // Fixture Selection
@@ -1412,28 +1468,10 @@
   
   .selectionTabs {
     display: flex;
-    gap: 8px;
+    flex-wrap: wrap;
+    gap: 0.35rem;
     margin-bottom: 12px;
-    
-    button {
-      padding: 8px 16px;
-      border: none;
-      border-radius: 6px;
-      background: rgba(255, 255, 255, 0.1);
-      color: #ffffff;
-      cursor: pointer !important;
-      transition: all 0.2s ease;
-      font-size: 0.9rem;
-      
-      &.active {
-        background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
-        box-shadow: 0 2px 6px rgba(0, 212, 255, 0.3);
-      }
-      
-      &:hover:not(.active) {
-        background: rgba(255, 255, 255, 0.2);
-      }
-    }
+    width: 100%;
   }
   
   .fixtureList {
@@ -1638,8 +1676,8 @@
   50% { opacity: 0.6; }
 }
 
-// Special styling for color-specific controls
-.controlRow input[type="range"] {
+// Legacy color-specific direct sliders
+.controlRow > input[type="range"] {
   &[style*="accentColor: #ff0000"] {
     &::-webkit-slider-track {
       background: linear-gradient(90deg, #333 0%, #ff4444 100%);
@@ -1661,10 +1699,13 @@
 
 // Channel and Fixture Monitoring Section
 .monitoringSection {
+  --channel-dock-width: clamp(12rem, 22vw, 20rem);
+  position: relative;
   background: rgba(0, 212, 255, 0.05);
   border: 1px solid rgba(0, 212, 255, 0.2);
   border-radius: 10px;
   padding: 16px;
+  padding-right: calc(var(--channel-dock-width) + 12px);
   margin-bottom: 20px;
   
   .sectionHeader {
@@ -1700,13 +1741,70 @@
     }
   }
   
-  .channelMonitor {
+  .channelMonitorDock {
+    position: fixed;
+    top: calc(4.5rem + var(--safe-top, 0px));
+    right: var(--safe-right, 0px);
+    bottom: calc(1rem + var(--safe-bottom, 0px));
+    width: var(--channel-dock-width);
+    z-index: 120;
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid rgba(0, 212, 255, 0.35);
+    background: linear-gradient(
+      90deg,
+      rgba(8, 12, 22, 0.72) 0%,
+      rgba(12, 18, 32, 0.96) 18%,
+      rgba(12, 18, 32, 0.98) 100%
+    );
+    backdrop-filter: blur(14px);
+    box-shadow: -8px 0 28px rgba(0, 0, 0, 0.45);
+    resize: vertical;
+    overflow: hidden;
+    min-height: 14rem;
+    max-height: calc(100vh - 6rem - var(--safe-top, 0px) - var(--safe-bottom, 0px));
+  }
+
+  .dockResizeGrip {
+    flex: 0 0 auto;
+    height: 6px;
+    cursor: ns-resize;
+    background: linear-gradient(
+      180deg,
+      rgba(0, 212, 255, 0.15) 0%,
+      rgba(0, 212, 255, 0.45) 50%,
+      rgba(0, 212, 255, 0.15) 100%
+    );
+  }
+
+  .channelMonitorScroll {
+    flex: 1 1 auto;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     gap: 12px;
-    margin-bottom: 16px;
+    padding: 10px 8px 12px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 212, 255, 0.45) rgba(255, 255, 255, 0.06);
+
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 999px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: rgba(0, 212, 255, 0.45);
+      border-radius: 999px;
+    }
   }
-  
+
   .fixtureMonitor {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -1743,67 +1841,15 @@
       }
     }
     
-    .channelGrid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 8px;
-    }
-    
-    .channelItem {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 6px;
-      padding: 8px;
-      transition: all 0.2s ease;
-      
-      &.controlled {
-        border-color: rgba(0, 212, 255, 0.5);
-        background: rgba(0, 212, 255, 0.1);
-        box-shadow: 0 0 8px rgba(0, 212, 255, 0.3);
-      }
-      
-      .channelInfo {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 6px;
-        
-        .channelType {
-          font-size: 0.75rem;
-          font-weight: 600;
-          color: #00d4ff;
-          text-transform: uppercase;
-        }
-        
-        .channelAddress {
-          font-size: 0.7rem;
-          color: #999;
-          font-family: monospace;
-        }
-      }
-      
-      .channelValue {
-        position: relative;
-        
-        .dmxValue {
-          font-size: 0.9rem;
-          font-weight: bold;
-          color: #ffffff;
-          font-family: monospace;
-          position: relative;
-          z-index: 2;
-        }
-        
-        .valueBar {
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          height: 3px;
-          border-radius: 2px;
-          transition: all 0.2s ease;
-          opacity: 0.8;
-        }
-      }
+    .channelStripRow {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: stretch;
+      justify-content: flex-start;
+      gap: 6px;
+      min-height: 9.5rem;
+      overflow: hidden;
     }
   }
   
@@ -2098,30 +2144,33 @@
 }
 
 .gridItem {
-  background: var(--color-surface);
-  border-radius: var(--radius-md);
-  border: 2px solid var(--color-border);
   padding: 0;
   min-height: 200px;
   display: flex;
   flex-direction: column;
-  transition: all var(--transition-normal);
-  
-  // Explicitly disable drag/resize
+  border-radius: 14px;
+  border: 1px solid rgb(255 255 255 / 0.14);
+  background: linear-gradient(155deg, hsl(220deg 14% 24%), hsl(220deg 16% 14%));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.12),
+    inset 0 -10px 24px rgb(0 0 0 / 0.28),
+    0 12px 28px -10px rgb(0 0 0 / 0.55);
+  transition: box-shadow var(--transition-normal), border-color var(--transition-normal);
   user-select: none;
   pointer-events: auto;
   position: relative;
-  
-  // Hide any react-grid-layout handles that might appear
+
   .react-resizable-handle,
   .react-draggable-handle {
     display: none !important;
   }
-  
+
   &:hover {
-    border-color: var(--color-interactive);
-    box-shadow: var(--shadow-md);
-    transform: translateY(-2px);
+    border-color: rgba(0, 212, 255, 0.35);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.14),
+      inset 0 -10px 24px rgb(0 0 0 / 0.3),
+      0 14px 32px -8px rgb(0 0 0 / 0.6);
   }
 }
 
@@ -2144,4 +2193,16 @@
   flex: 1;
   overflow-y: auto;
   min-height: 150px;
+}
+
+.envelopePanelStack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.envelopeMoreHint {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary, #94a3b8);
 }

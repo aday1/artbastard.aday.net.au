@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useStore, Act, ActStep } from '../../store';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import { HorizontalFader } from '../ui/controls';
 import styles from './ActEditor.module.scss';
 
 interface ActEditorProps {
@@ -323,27 +324,25 @@ export const ActEditor: React.FC<ActEditorProps> = ({ act, onClose }) => {
                           <option value="custom">Custom</option>
                         </select>
                         
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
+                        <HorizontalFader
+                          min={0}
+                          max={100}
                           value={group.intensity}
-                          onChange={(e) => {
+                          onChange={(v) => {
                             const updated = [...newStepAutopilotGroups];
-                            updated[index].intensity = Number(e.target.value);
+                            updated[index].intensity = Math.round(v);
                             setNewStepAutopilotGroups(updated);
                           }}
                         />
                         <span>{group.intensity}%</span>
                         
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
+                        <HorizontalFader
+                          min={0}
+                          max={100}
                           value={group.speed}
-                          onChange={(e) => {
+                          onChange={(v) => {
                             const updated = [...newStepAutopilotGroups];
-                            updated[index].speed = Number(e.target.value);
+                            updated[index].speed = Math.round(v);
                             setNewStepAutopilotGroups(updated);
                           }}
                         />

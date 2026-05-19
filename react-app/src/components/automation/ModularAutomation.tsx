@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { useStore } from '../../store/store';
+import { HorizontalFader, RangeWindowControl } from '../ui/controls';
+import { RemasterPanel } from '../ui/remaster/RemasterPanel';
 import styles from './ModularAutomation.module.scss';
 
 const ModularAutomation: React.FC = () => {
@@ -450,14 +452,15 @@ const ModularAutomation: React.FC = () => {
   }, []);
 
   return (
-    <div className={styles.modularAutomation}>
-      <div className={styles.header}>
-        <h3>Modular Automation</h3>
-        <div className={styles.subtitle}>
-          Control different aspects independently • BPM: {midiClockBpm} • Playing: {midiClockIsPlaying ? '▶️' : '⏸️'}
-        </div>
-      </div>
-
+    <RemasterPanel
+      className={styles.modularAutomation}
+      title="Modular Automation"
+      actions={
+        <span className={styles.subtitle}>
+          BPM {midiClockBpm} · {midiClockIsPlaying ? 'Playing' : 'Paused'}
+        </span>
+      }
+    >
       {selectedFixtures.length === 0 && (
         <div className={styles.noSelection}>
           Select fixtures to enable automation
@@ -502,13 +505,12 @@ const ModularAutomation: React.FC = () => {
 
             <div className={styles.controlRow}>
               <label>Speed:</label>
-              <input
-                type="range"
-                min="0.1"
-                max="5.0"
-                step="0.1"
+              <HorizontalFader
+                min={0.1}
+                max={5}
+                step={0.1}
                 value={modularAutomation.color.speed}
-                onChange={(e) => setColorAutomation({ speed: parseFloat(e.target.value) })}
+                onChange={(v) => setColorAutomation({ speed: v })}
                 disabled={selectedFixtures.length === 0}
               />
               <span className={styles.value}>{modularAutomation.color.speed.toFixed(1)}x</span>
@@ -516,12 +518,11 @@ const ModularAutomation: React.FC = () => {
 
             <div className={styles.controlRow}>
               <label>Intensity:</label>
-              <input
-                type="range"
-                min="0"
-                max="100"
+              <HorizontalFader
+                min={0}
+                max={100}
                 value={modularAutomation.color.intensity}
-                onChange={(e) => setColorAutomation({ intensity: parseInt(e.target.value) })}
+                onChange={(v) => setColorAutomation({ intensity: Math.round(v) })}
                 disabled={selectedFixtures.length === 0}
               />
               <span className={styles.value}>{modularAutomation.color.intensity}%</span>
@@ -575,13 +576,12 @@ const ModularAutomation: React.FC = () => {
 
             <div className={styles.controlRow}>
               <label>Speed:</label>
-              <input
-                type="range"
-                min="0.1"
-                max="5.0"
-                step="0.1"
+              <HorizontalFader
+                min={0.1}
+                max={5}
+                step={0.1}
                 value={modularAutomation.dimmer.speed}
-                onChange={(e) => setDimmerAutomation({ speed: parseFloat(e.target.value) })}
+                onChange={(v) => setDimmerAutomation({ speed: v })}
                 disabled={selectedFixtures.length === 0}
               />
               <span className={styles.value}>{modularAutomation.dimmer.speed.toFixed(1)}x</span>
@@ -614,6 +614,16 @@ const ModularAutomation: React.FC = () => {
                   className={styles.rangeInput}
                 />
               </div>
+              <RangeWindowControl
+                min={0}
+                max={255}
+                minValue={modularAutomation.dimmer.range.min}
+                maxValue={modularAutomation.dimmer.range.max}
+                disabled={selectedFixtures.length === 0}
+                onChange={(minV, maxV) =>
+                  setDimmerAutomation({ range: { min: minV, max: maxV } })
+                }
+              />
             </div>
 
             <div className={styles.controlRow}>
@@ -664,13 +674,12 @@ const ModularAutomation: React.FC = () => {
 
             <div className={styles.controlRow}>
               <label>Speed:</label>
-              <input
-                type="range"
-                min="0.1"
-                max="3.0"
-                step="0.1"
+              <HorizontalFader
+                min={0.1}
+                max={3}
+                step={0.1}
                 value={modularAutomation.panTilt.speed}
-                onChange={(e) => setPanTiltAutomation({ speed: parseFloat(e.target.value) })}
+                onChange={(v) => setPanTiltAutomation({ speed: v })}
                 disabled={selectedFixtures.length === 0}
               />
               <span className={styles.value}>{modularAutomation.panTilt.speed.toFixed(1)}x</span>
@@ -678,12 +687,11 @@ const ModularAutomation: React.FC = () => {
 
             <div className={styles.controlRow}>
               <label>Size:</label>
-              <input
-                type="range"
-                min="10"
-                max="100"
+              <HorizontalFader
+                min={10}
+                max={100}
                 value={modularAutomation.panTilt.size}
-                onChange={(e) => setPanTiltAutomation({ size: parseInt(e.target.value) })}
+                onChange={(v) => setPanTiltAutomation({ size: Math.round(v) })}
                 disabled={selectedFixtures.length === 0}
               />
               <span className={styles.value}>{modularAutomation.panTilt.size}%</span>
@@ -736,13 +744,12 @@ const ModularAutomation: React.FC = () => {
 
             <div className={styles.controlRow}>
               <label>Speed:</label>
-              <input
-                type="range"
-                min="0.1"
-                max="3.0"
-                step="0.1"
+              <HorizontalFader
+                min={0.1}
+                max={3}
+                step={0.1}
                 value={modularAutomation.effects.speed}
-                onChange={(e) => setEffectsAutomation({ speed: parseFloat(e.target.value) })}
+                onChange={(v) => setEffectsAutomation({ speed: v })}
                 disabled={selectedFixtures.length === 0}
               />
               <span className={styles.value}>{modularAutomation.effects.speed.toFixed(1)}x</span>
@@ -826,7 +833,7 @@ const ModularAutomation: React.FC = () => {
           Stop All
         </button>
       </div>
-    </div>
+    </RemasterPanel>
   );
 };
 

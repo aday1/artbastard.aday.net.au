@@ -4,9 +4,11 @@ import { useClipLauncherStore, ClipCell } from '../../store/clipLauncherStore';
 import { ClipCell as ClipCellComponent } from './ClipCell';
 import { LucideIcon } from '../ui/LucideIcon';
 import styles from './ClipLauncher.module.scss';
+import { useSceneCapture } from '../../hooks/useSceneCapture';
 
 export const ClipLauncher: React.FC = () => {
-  const { scenes, saveScene, loadScene } = useStore();
+  const { scenes, loadScene } = useStore();
+  const { captureScene, sceneNameToOscPath } = useSceneCapture();
   const {
     gridSize,
     clips,
@@ -117,12 +119,15 @@ export const ClipLauncher: React.FC = () => {
 
     // If clip already has a scene, update it; otherwise create new
     const sceneName = clip.sceneName || `Scene ${row + 1}-${column + 1}`;
-    const oscAddress = `/scene/${sceneName.toLowerCase().replace(/\s+/g, '_')}`;
-    
-    // Save current DMX state as scene
-    saveScene(sceneName, oscAddress);
+    captureScene({
+      name: sceneName,
+      oscAddress: sceneNameToOscPath(sceneName),
+      allowOverwrite: true,
+      notify: true,
+    });
     
     // Update clip with new scene
+    const oscAddress = sceneNameToOscPath(sceneName);
     const updatedScene = scenes.find(s => s.name === sceneName) || { name: sceneName, channelValues: [], oscAddress };
     setClip(row, column, {
       sceneName,
@@ -262,10 +267,14 @@ export const ClipLauncher: React.FC = () => {
                 onClick={() => {
                   if (selectedCell) {
                     const sceneName = prompt('Enter scene name:');
-                    if (sceneName) {
-                      const oscAddress = `/scene/${sceneName.toLowerCase().replace(/\s+/g, '_')}`;
-                      saveScene(sceneName, oscAddress);
-                      handleAssignScene(sceneName);
+                    if (sceneName?.trim()) {
+                      captureScene({
+                        name: sceneName.trim(),
+                        oscAddress: sceneNameToOscPath(sceneName),
+                        allowOverwrite: true,
+                        notify: true,
+                      });
+                      handleAssignScene(sceneName.trim());
                     }
                   }
                 }}

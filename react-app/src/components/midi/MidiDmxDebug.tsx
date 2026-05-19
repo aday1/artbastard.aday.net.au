@@ -163,7 +163,9 @@ const MidiDmxDebug: React.FC = () => {
     addLog(`Found ${Object.keys(midiMappings).length} MIDI mappings`);
     Object.entries(midiMappings).forEach(([dmxChannel, mapping]) => {
       if (mapping) {
-        addLog(`DMX ${dmxChannel} → ${mapping.controller !== undefined ? 
+        addLog(`DMX ${dmxChannel} → ${mapping.pitch ? 
+          `Pitch ${mapping.channel}` :
+          mapping.controller !== undefined ? 
           `CC ${mapping.channel}:${mapping.controller}` : 
           `Note ${mapping.channel}:${mapping.note}`}`);
       }

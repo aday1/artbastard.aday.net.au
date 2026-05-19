@@ -305,10 +305,9 @@ export const DmxControlsPanel: React.FC<DmxControlsPanelProps> = ({
           <button
             className={`${styles.toggleButton} ${showMidiControls ? styles.active : ''}`}
             onClick={onToggleMidiControls}
-            title="Super-Control / MIDI I/O panel (collapsed by default)"
           >
             <LucideIcon name="Music" />
-            MIDI I/O
+            MIDI Controls
           </button>
           <button
             className={`${styles.toggleButton} ${showOscControls ? styles.active : ''}`}
@@ -320,10 +319,9 @@ export const DmxControlsPanel: React.FC<DmxControlsPanelProps> = ({
           <button
             className={`${styles.toggleButton} ${showEnvelopeAutomation ? styles.active : ''}`}
             onClick={onToggleEnvelopeAutomation}
-            title="Envelopes + DMX Tracker (pattern grid)"
           >
             <LucideIcon name="Activity" />
-            Automation
+            Envelope Automation
           </button>
           <button
             className={`${styles.toggleButton} ${showGlobalChannelNames ? styles.active : ''}`}

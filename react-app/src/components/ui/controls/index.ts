@@ -14,8 +14,6 @@ export { DmxVerticalFader } from './DmxVerticalFader';
 export type { DmxVerticalFaderProps } from './DmxVerticalFader';
 export { DmxTickChannelMeter } from './DmxTickChannelMeter';
 export type { DmxTickChannelMeterProps } from './DmxTickChannelMeter';
-export { DmxLedChannelMeter } from './DmxLedChannelMeter';
-export type { DmxLedChannelMeterProps } from './DmxLedChannelMeter';
 export { DmxSteppedVerticalFader } from './DmxSteppedVerticalFader';
 export type { DmxSteppedVerticalFaderProps } from './DmxSteppedVerticalFader';
 export { DmxChannelFader } from './DmxChannelFader';
@@ -32,7 +30,5 @@ export type { ArtbastardXYPadProps } from './ArtbastardXYPad';
 
 export { SkeuoKnobSlider } from './SkeuoKnobSlider';
 export type { SkeuoKnobSliderProps } from './SkeuoKnobSlider';
-export { ColorRangeSlider } from './ColorRangeSlider';
-export type { ColorRangeSliderProps, ColorRangeVariant } from './ColorRangeSlider';
 
 export * from './xyPadPathUtils';

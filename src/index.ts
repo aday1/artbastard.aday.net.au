@@ -1,5 +1,5 @@
 /// <reference path="./types/osc.d.ts" />
-import easymidi, { Input } from 'easymidi';
+import easymidi, { Input, Output } from 'easymidi';
 // Import our adapter types to make TypeScript happy
 import './types/midi-types';
 import { Server, Socket } from 'socket.io';
@@ -9,9 +9,25 @@ import fs from 'fs';
 import path from 'path';
 import EffectsEngine from './effects';
 import ping from 'ping';
+import { loadFixturesData, saveFixturesData } from './fixturesPersistence';
 
 // Import our separate logger to avoid circular dependencies
 import { log } from './logger';
+import {
+  hasActiveBridge,
+  fanOutDmxChannel,
+  fanOutFullUniverse,
+  pushArtNetConfigToBridge,
+} from './bridgeRegistry';
+import {
+  DEFAULT_SESSION_ID,
+  emitDmxUpdate,
+  getDmxChannels as getSessionDmxChannels,
+  getArtNetConfig as getSessionArtNetConfig,
+  setArtNetConfig as setSessionArtNetConfig,
+  setDmxChannels as setSessionDmxChannels,
+  initSessions,
+} from './sessionManager';
 
 // Import dmxnet using ES6 import syntax
 import dmxnet from 'dmxnet';
@@ -21,6 +37,7 @@ export interface MidiMessage {
     channel: number;
     controller?: number;
     value?: number;
+    pitch?: number;
     note?: number;
     velocity?: number;
     number?: number;  // For program change messages
@@ -43,6 +60,7 @@ interface MidiMapping {
     channel: number;
     note?: number;
     controller?: number;
+    pitch?: boolean;
 }
 
 interface Scene {
@@ -84,6 +102,7 @@ let acts: any[] = []; // ACTS data storage
 let sender: any = null;
 let midiMappings: MidiMappings = {};
 let midiInput: Input | null = null;
+let activeMidiOutputs: { [name: string]: Output } = {};
 let currentMidiLearnChannel: number | null = null;
 let currentMidiLearnScene: string | null = null;
 let midiLearnTimeout: NodeJS.Timeout | null = null;
@@ -176,19 +195,27 @@ function loadConfig() {
 }
 
 function saveConfig() {
+    // Load existing config to preserve fields like autoConnectMidiDevices
+    const existingConfig = fs.existsSync(CONFIG_FILE) 
+        ? JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'))
+        : {};
+    
     const configToSave = {
         artNetConfig,
         midiMappings,
         oscAssignments, // Save OSC assignments
         oscConfig, // Save OSC config
-        channelRanges // Save channel ranges
+        channelRanges, // Save channel ranges
+        // Preserve autoConnectMidiDevices if it exists
+        autoConnectMidiDevices: existingConfig.autoConnectMidiDevices || []
     };
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(configToSave, null, 2));
     log('Config saved', 'INFO', { config: configToSave });
 }
 
-export function getDmxChannels(): number[] {
-    return dmxChannels;
+export function getDmxChannels(sessionId: string = DEFAULT_SESSION_ID): number[] {
+    initSessions();
+    return getSessionDmxChannels(sessionId);
 }
 
 export function getChannelNames(): string[] {
@@ -248,7 +275,80 @@ function initializeMidi(io: Server) {
             }
         }
 
-        // Continue with MIDI initialization
+        // Windows-specific MIDI initialization
+        if (process.platform === 'win32') {
+            log('Windows detected - initializing MIDI with Windows API', 'MIDI');
+            
+            // On Windows, easymidi uses native bindings that may require:
+            // 1. Proper native module compilation
+            // 2. Windows MIDI drivers installed
+            // 3. Administrator privileges (sometimes)
+            
+            // Try to get inputs - this will fail if native modules aren't built
+            try {
+                const inputs = easymidi.getInputs();
+                const outputs = easymidi.getOutputs();
+                
+                log(`Windows MIDI: Found ${inputs.length} inputs, ${outputs.length} outputs`, 'MIDI', { 
+                    inputs, 
+                    outputs,
+                    platform: process.platform,
+                    arch: process.arch
+                });
+
+                io.emit('midiStatus', {
+                    status: 'ready',
+                    message: inputs.length > 0 
+                        ? `Hardware MIDI initialized (${inputs.length} device${inputs.length > 1 ? 's' : ''} found)` 
+                        : 'No hardware MIDI devices found - check Windows Device Manager',
+                    inputs,
+                    outputs,
+                    browserMidiOnly: false
+                });
+            } catch (winError: any) {
+                // Windows-specific error handling
+                const errorMsg = winError?.message || String(winError);
+                log('Windows MIDI initialization error', 'ERROR', { 
+                    error: errorMsg,
+                    stack: winError?.stack,
+                    platform: process.platform,
+                    arch: process.arch
+                });
+                
+                // Provide helpful error message for common Windows MIDI issues
+                let userMessage = 'MIDI hardware initialization failed on Windows. ';
+                if (errorMsg.includes('Cannot find module') || errorMsg.includes('native')) {
+                    userMessage += 'Native MIDI module not found. Try running: npm rebuild easymidi';
+                } else if (errorMsg.includes('permission') || errorMsg.includes('access')) {
+                    userMessage += 'Permission denied. Try running as Administrator.';
+                } else if (errorMsg.includes('device') || errorMsg.includes('driver')) {
+                    userMessage += 'MIDI device driver issue. Check Windows Device Manager for MIDI devices.';
+                } else {
+                    userMessage += `Error: ${errorMsg}. Using browser MIDI API as fallback.`;
+                }
+                
+                io.emit('midiStatus', {
+                    status: 'error',
+                    message: userMessage,
+                    error: errorMsg,
+                    browserMidiOnly: true,
+                    troubleshooting: {
+                        platform: 'windows',
+                        suggestions: [
+                            'Check Windows Device Manager for MIDI devices',
+                            'Ensure MIDI drivers are installed',
+                            'Try running as Administrator',
+                            'Run: npm rebuild easymidi',
+                            'Use browser MIDI API as fallback'
+                        ]
+                    }
+                });
+                return;
+            }
+            return; // Successfully initialized on Windows
+        }
+
+        // Continue with MIDI initialization for other platforms
         const inputs = easymidi.getInputs();
         log(`Found ${inputs.length} MIDI inputs`, 'MIDI', { inputs });
 
@@ -259,17 +359,23 @@ function initializeMidi(io: Server) {
             browserMidiOnly: false
         });
 
-    } catch (error) {
-        log('MIDI initialization error', 'ERROR', { error });
+    } catch (error: any) {
+        const errorMsg = error?.message || String(error);
+        log('MIDI initialization error', 'ERROR', { 
+            error: errorMsg,
+            stack: error?.stack,
+            platform: process.platform
+        });
         io.emit('midiStatus', {
             status: 'error',
-            message: 'MIDI hardware initialization failed - using browser MIDI API',
+            message: `MIDI hardware initialization failed: ${errorMsg}. Using browser MIDI API as fallback.`,
+            error: errorMsg,
             browserMidiOnly: true
         });
     }
 }
 
-function connectMidiInput(io: Server, inputName: string, isBrowserMidi = false) {
+async function connectMidiInput(io: Server, inputName: string, isBrowserMidi = false) {
     try {
         // Skip hardware MIDI connection if using browser MIDI
         if (isBrowserMidi) {
@@ -287,18 +393,94 @@ function connectMidiInput(io: Server, inputName: string, isBrowserMidi = false) 
             return;
         }
 
+        // Windows-specific: Verify the input exists before connecting
+        if (process.platform === 'win32') {
+            const availableInputs = easymidi.getInputs();
+            if (!availableInputs.includes(inputName)) {
+                const errorMsg = `MIDI input "${inputName}" not found. Available: ${availableInputs.join(', ') || 'none'}`;
+                log(errorMsg, 'ERROR');
+                io.emit('midiInterfaceError', errorMsg);
+                throw new Error(errorMsg);
+            }
+            
+            // On Windows, try to close any existing connections to this device first
+            // This can help if the device is "stuck" from a previous connection
+            try {
+                // Check if we have a stale connection
+                if (activeMidiInputs[inputName]) {
+                    log(`Closing existing connection to ${inputName} before reconnecting`, 'MIDI');
+                    try {
+                        activeMidiInputs[inputName].close();
+                    } catch (closeError) {
+                        log(`Error closing existing connection: ${closeError}`, 'WARN');
+                    }
+                    delete activeMidiInputs[inputName];
+                    // Give Windows a moment to release the port
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+            } catch (cleanupError) {
+                log(`Error during connection cleanup: ${cleanupError}`, 'WARN');
+            }
+        }
+
         // Connect to the selected MIDI input
-        const newInput = new easymidi.Input(inputName);
-        log(`Successfully created MIDI input for ${inputName}`, 'MIDI');
+        // On Windows, this can fail silently or throw an error
+        let newInput: Input;
+        try {
+            newInput = new easymidi.Input(inputName);
+            log(`Successfully created MIDI input object for ${inputName}`, 'MIDI');
+        } catch (createError: any) {
+            const createErrorMsg = createError?.message || String(createError);
+            log(`Failed to create MIDI input object for ${inputName}`, 'ERROR', { 
+                error: createErrorMsg, 
+                stack: createError?.stack,
+                platform: process.platform 
+            });
+            
+            // Windows-specific error handling
+            if (process.platform === 'win32') {
+                let userMessage = `Cannot create MIDI connection to "${inputName}".\n\n`;
+                if (createErrorMsg.includes('openPort') || createErrorMsg.includes('Windows MM')) {
+                    userMessage += `Windows MIDI port error. Common causes:\n` +
+                        `• Device is in use by another application (close DAWs, MIDI monitors, etc.)\n` +
+                        `• Browser MIDI is using the device (disconnect Browser MIDI first)\n` +
+                        `• Windows MIDI driver issue (unplug/replug device)\n` +
+                        `• Need Administrator privileges (run: .\\start.ps1 -Admin)\n\n` +
+                        `Since Browser MIDI works, try:\n` +
+                        `1. Disconnect Browser MIDI connection first\n` +
+                        `2. Close all other MIDI applications\n` +
+                        `3. Unplug and replug the device\n` +
+                        `4. Run as Administrator`;
+                } else {
+                    userMessage += `Error: ${createErrorMsg}\n\n` +
+                        `Troubleshooting:\n` +
+                        `• Disconnect Browser MIDI first\n` +
+                        `• Close other MIDI applications\n` +
+                        `• Run as Administrator: .\\start.ps1 -Admin`;
+                }
+                
+                io.emit('midiInterfaceError', userMessage);
+                throw new Error(createErrorMsg);
+            } else {
+                io.emit('midiInterfaceError', `Failed to create MIDI input: ${createErrorMsg}`);
+                throw createError;
+            }
+        }
 
         // Set up event listeners for this input with improved error handling
         newInput.on('noteon', (msg: MidiMessage) => {
             try {
                 // Add source information to the message
                 const msgWithSource = { ...msg, source: inputName };
+                // Console output for visibility
+                const channel = (msg.channel !== undefined) ? msg.channel + 1 : '?';
+                const note = msg.note !== undefined ? msg.note : '?';
+                const velocity = msg.velocity !== undefined ? msg.velocity : '?';
+                console.log(`🎹 [${inputName}] Note On: Ch ${channel} | Note ${note} | Vel ${velocity}`);
                 log('MIDI', 'MIDI', { channel: msg.channel, note: msg.note, velocity: msg.velocity });
                 handleMidiMessage(io, 'noteon', msgWithSource as MidiMessage);
             } catch (error) {
+                console.error(`❌ Error handling Note On message from ${inputName}:`, error);
                 log('Error handling noteon message', 'ERROR', { error, inputName });
             }
         });
@@ -307,9 +489,14 @@ function connectMidiInput(io: Server, inputName: string, isBrowserMidi = false) 
             try {
                 // Also forward noteoff events with source information
                 const msgWithSource = { ...msg, source: inputName };
+                // Console output for visibility
+                const channel = (msg.channel !== undefined) ? msg.channel + 1 : '?';
+                const note = msg.note !== undefined ? msg.note : '?';
+                console.log(`🎹 [${inputName}] Note Off: Ch ${channel} | Note ${note}`);
                 log('Received noteoff', 'MIDI', { message: msgWithSource });
                 io.emit('midiMessage', msgWithSource);
             } catch (error) {
+                console.error(`❌ Error handling Note Off message from ${inputName}:`, error);
                 log('Error handling noteoff message', 'ERROR', { error, inputName });
             }
         });
@@ -318,10 +505,30 @@ function connectMidiInput(io: Server, inputName: string, isBrowserMidi = false) 
             try {
                 // Add source information to the message
                 const msgWithSource = { ...msg, source: inputName };
+                // Console output for visibility - this is the main one for knobs
+                const channel = (msg.channel !== undefined) ? msg.channel + 1 : '?';
+                const controller = msg.controller !== undefined ? msg.controller : '?';
+                const value = msg.value !== undefined ? msg.value : '?';
+                console.log(`🎛️  [${inputName}] CC: Ch ${channel} | CC ${controller} | Value ${value}`);
                 log('Received cc', 'MIDI', { message: msgWithSource });
                 handleMidiMessage(io, 'cc', msgWithSource as MidiMessage);
             } catch (error) {
+                console.error(`❌ Error handling CC message from ${inputName}:`, error);
                 log('Error handling cc message', 'ERROR', { error, inputName });
+            }
+        });
+
+        newInput.on('pitch', (msg: MidiMessage) => {
+            try {
+                const msgWithSource = { ...msg, source: inputName };
+                const channel = (msg.channel !== undefined) ? msg.channel + 1 : '?';
+                const value = msg.value !== undefined ? msg.value : '?';
+                console.log(`🎚️  [${inputName}] Pitch: Ch ${channel} | Value ${value}`);
+                log('Received pitch', 'MIDI', { message: msgWithSource });
+                handleMidiMessage(io, 'pitch', msgWithSource as MidiMessage);
+            } catch (error) {
+                console.error(`❌ Error handling Pitch message from ${inputName}:`, error);
+                log('Error handling pitch message', 'ERROR', { error, inputName });
             }
         });
 
@@ -329,25 +536,103 @@ function connectMidiInput(io: Server, inputName: string, isBrowserMidi = false) 
         activeMidiInputs[inputName] = newInput;
         midiInput = newInput; // Keep the last one as default for backward compatibility
 
+        const outputName = findOutputNameForInput(inputName);
+        if (outputName) {
+            try {
+                if (activeMidiOutputs[inputName]) {
+                    activeMidiOutputs[inputName].close();
+                    delete activeMidiOutputs[inputName];
+                }
+                activeMidiOutputs[inputName] = new easymidi.Output(outputName);
+                log(`MIDI output connected: ${outputName}`, 'MIDI');
+            } catch (error) {
+                log('Failed to connect paired MIDI output', 'WARN', { inputName, outputName, error });
+            }
+        }
+
+        console.log(`✅ MIDI input connected and listening: ${inputName}`);
+        console.log(`   Event listeners attached. Move a knob to test!`);
         log(`MIDI input connected: ${inputName}`, 'MIDI');
+        
+        // Verify connection is working (especially important on Windows)
+        // Note: We can't directly test if it's receiving, but we can check if the object is valid
+        if (!newInput) {
+            const errorMsg = `MIDI input object is invalid after creation for ${inputName}`;
+            log(errorMsg, 'ERROR');
+            delete activeMidiInputs[inputName];
+            io.emit('midiInterfaceError', errorMsg);
+            throw new Error(errorMsg);
+        }
+        
         io.emit('midiInterfaceSelected', inputName);
         io.emit('midiInputsActive', Object.keys(activeMidiInputs));
-    } catch (error) {
-        log(`Error connecting to MIDI input ${inputName}`, 'ERROR', { error });
-        io.emit('midiInterfaceError', `Failed to connect to ${inputName}: ${error}`);
+
+        const detectedTemplate = detectControllerTemplateFromDeviceName(inputName);
+        if (detectedTemplate) {
+            const templateResult = applyMidiControllerTemplate(io, detectedTemplate, inputName);
+            io.emit('midiControllerTemplateApplied', {
+                ...templateResult,
+                deviceName: inputName,
+                autoApplied: true
+            });
+            log('Auto-applied MIDI controller template', 'MIDI', {
+                inputName,
+                templateId: detectedTemplate,
+                mappingCount: templateResult.mappingCount
+            });
+        }
+        
+        // Log a helpful message about testing the connection
+        log(`MIDI connection established. Try moving a control on ${inputName} to verify it's working.`, 'MIDI');
+    } catch (error: any) {
+        const errorMsg = error?.message || String(error);
+        log(`Error connecting to MIDI input ${inputName}`, 'ERROR', { error: errorMsg, stack: error?.stack });
+        
+        // Provide Windows-specific troubleshooting for common errors
+        let userMessage = `Failed to connect to ${inputName}`;
+        if (process.platform === 'win32') {
+            if (errorMsg.includes('openPort') || errorMsg.includes('Windows MM')) {
+                userMessage = `Cannot open MIDI port "${inputName}". This usually means:\n` +
+                    `• The device is already in use by another application\n` +
+                    `• Windows MIDI driver issue - try unplugging and replugging the device\n` +
+                    `• Close any other applications using MIDI (DAWs, MIDI monitors, etc.)\n` +
+                    `• Try running as Administrator: .\\start.ps1 -Admin\n` +
+                    `• Check Windows Device Manager for MIDI device status`;
+            } else if (errorMsg.includes('permission') || errorMsg.includes('access')) {
+                userMessage = `Permission denied accessing "${inputName}". Try running as Administrator: .\\start.ps1 -Admin`;
+            } else {
+                userMessage = `Failed to connect to "${inputName}": ${errorMsg}\n\n` +
+                    `Troubleshooting:\n` +
+                    `• Ensure no other app is using this MIDI device\n` +
+                    `• Try unplugging and replugging the device\n` +
+                    `• Run as Administrator: .\\start.ps1 -Admin\n` +
+                    `• Check Windows Device Manager`;
+            }
+        } else {
+            userMessage = `Failed to connect to ${inputName}: ${errorMsg}`;
+        }
+        
+        io.emit('midiInterfaceError', userMessage);
     }
 }
 
 function disconnectMidiInput(io: Server, inputName: string) {
     if (activeMidiInputs[inputName]) {
+        const wasDefaultInput = midiInput === activeMidiInputs[inputName];
         activeMidiInputs[inputName].close();
         delete activeMidiInputs[inputName];
         log(`MIDI input disconnected: ${inputName}`, 'MIDI');
         io.emit('midiInputsActive', Object.keys(activeMidiInputs));
         io.emit('midiInterfaceDisconnected', inputName);
 
+        if (activeMidiOutputs[inputName]) {
+            activeMidiOutputs[inputName].close();
+            delete activeMidiOutputs[inputName];
+            log(`MIDI output disconnected: ${inputName}`, 'MIDI');
+        }
+
         // If this was the default input, set a new default if available
-        if (midiInput === activeMidiInputs[inputName]) {
+        if (wasDefaultInput) {
             const activeInputNames = Object.keys(activeMidiInputs);
             if (activeInputNames.length > 0) {
                 midiInput = activeMidiInputs[activeInputNames[0]];
@@ -394,10 +679,13 @@ function initOsc(io: Server) {
             log('Raw OSC message received', 'OSC', { address: oscMsg.address, args: oscMsg.args, info });
 
             // Emit raw message for general purpose client-side handling if needed
+            // Include source info for filtering by host
+            const sourceHost = info?.address || info?.host || 'unknown';
             io.emit('oscMessage', {
                 address: oscMsg.address,
                 args: oscMsg.args,
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                source: sourceHost // Add source host for filtering
             });
 
             // Process for DMX channel activity
@@ -735,17 +1023,62 @@ function listMidiInterfaces() {
             };
         }
 
+        // Windows-specific error handling
+        if (process.platform === 'win32') {
+            try {
+                const inputs = easymidi.getInputs();
+                const outputs = easymidi.getOutputs();
+                log("Windows MIDI: Available Inputs", 'MIDI', { inputs, count: inputs.length });
+                log("Windows MIDI: Available Outputs", 'MIDI', { outputs, count: outputs.length });
+                return { 
+                    inputs, 
+                    outputs, 
+                    isWsl: false,
+                    platform: 'windows'
+                };
+            } catch (winError: any) {
+                const errorMsg = winError?.message || String(winError);
+                log('Windows MIDI interface listing error', 'ERROR', { 
+                    error: errorMsg,
+                    platform: process.platform,
+                    arch: process.arch
+                });
+                
+                // Provide helpful troubleshooting info
+                return {
+                    inputs: [],
+                    outputs: [],
+                    error: errorMsg,
+                    platform: 'windows',
+                    troubleshooting: {
+                        suggestions: [
+                            'Run: npm rebuild easymidi',
+                            'Check Windows Device Manager for MIDI devices',
+                            'Ensure MIDI drivers are installed',
+                            'Try running as Administrator',
+                            'Use browser MIDI API as fallback'
+                        ]
+                    }
+                };
+            }
+        }
+
         const inputs = easymidi.getInputs();
         const outputs = easymidi.getOutputs();
         log("Available MIDI Inputs", 'MIDI', { inputs });
         log("Available MIDI Outputs", 'MIDI', { outputs });
         return { inputs, outputs, isWsl: false };
-    } catch (error) {
-        log('Error listing MIDI interfaces', 'ERROR', { error });
+    } catch (error: any) {
+        const errorMsg = error?.message || String(error);
+        log('Error listing MIDI interfaces', 'ERROR', { 
+            error: errorMsg,
+            platform: process.platform
+        });
         return {
             inputs: [],
             outputs: [],
-            error: String(error)
+            error: errorMsg,
+            platform: process.platform
         };
     }
 }
@@ -770,11 +1103,145 @@ function simulateMidiInput(io: Server, type: 'noteon' | 'cc', channel: number, n
     handleMidiMessage(io, type, midiMessage);
 }
 
+type MidiControllerTemplateId = 'x_touch_mackie' | 'apc40_mk1';
+
+const normalizeScribbleLabel = (rawLabel: string): number[] => {
+    const label = rawLabel.replace(/[^\x20-\x7E]/g, '').padEnd(7, ' ').slice(0, 7);
+    return label.split('').map((char) => char.charCodeAt(0));
+};
+
+const detectControllerTemplateFromDeviceName = (deviceName: string): MidiControllerTemplateId | null => {
+    const normalized = deviceName.toLowerCase();
+    if (normalized.includes('x-touch') || normalized.includes('x touch') || normalized.includes('xtouch')) {
+        return 'x_touch_mackie';
+    }
+    if (normalized.includes('apc40') || normalized.includes('apc 40')) {
+        return 'apc40_mk1';
+    }
+    return null;
+};
+
+const getControllerTemplateMappings = (templateId: MidiControllerTemplateId): MidiMappings => {
+    const mappings: MidiMappings = {};
+
+    if (templateId === 'x_touch_mackie') {
+        for (let dmxChannel = 0; dmxChannel < 8; dmxChannel++) {
+            mappings[dmxChannel] = {
+                channel: dmxChannel,
+                pitch: true
+            };
+        }
+        return mappings;
+    }
+
+    for (let dmxChannel = 0; dmxChannel < 8; dmxChannel++) {
+        mappings[dmxChannel] = {
+            channel: dmxChannel,
+            controller: 7
+        };
+    }
+    return mappings;
+};
+
+const findOutputNameForInput = (inputName: string): string | null => {
+    const outputs = easymidi.getOutputs();
+    const exact = outputs.find((name) => name === inputName);
+    if (exact) return exact;
+
+    const inputLower = inputName.toLowerCase();
+    const loose = outputs.find((name) => {
+        const outputLower = name.toLowerCase();
+        return outputLower.includes(inputLower) || inputLower.includes(outputLower);
+    });
+    return loose || null;
+};
+
+const rememberAutoConnectDevice = (deviceName: string) => {
+    try {
+        const config = fs.existsSync(CONFIG_FILE)
+            ? JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'))
+            : {};
+        const devices = new Set<string>(Array.isArray(config.autoConnectMidiDevices) ? config.autoConnectMidiDevices : []);
+        devices.add(deviceName);
+        config.autoConnectMidiDevices = Array.from(devices);
+        fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+    } catch (error) {
+        log('Failed to update auto-connect MIDI device list', 'WARN', { deviceName, error });
+    }
+};
+
+const sendXTouchScribbleDisplay = (labels: string[], preferredDeviceName?: string): boolean => {
+    const outputCandidates = Object.entries(activeMidiOutputs).filter(([inputName]) => {
+        const normalized = inputName.toLowerCase();
+        return normalized.includes('x-touch') || normalized.includes('x touch') || normalized.includes('xtouch');
+    });
+
+    if (outputCandidates.length === 0) {
+        return false;
+    }
+
+    const sortedOutputs = outputCandidates.sort(([nameA], [nameB]) => {
+        if (!preferredDeviceName) return 0;
+        if (nameA === preferredDeviceName) return -1;
+        if (nameB === preferredDeviceName) return 1;
+        return 0;
+    });
+
+    const targetOutput = sortedOutputs[0]?.[1];
+    if (!targetOutput) {
+        return false;
+    }
+
+    try {
+        for (let stripIndex = 0; stripIndex < 8; stripIndex++) {
+            const labelBytes = normalizeScribbleLabel(labels[stripIndex] || `DMX ${stripIndex + 1}`);
+            const sysexBytes = [0xF0, 0x00, 0x00, 0x66, 0x14, 0x12, stripIndex, ...labelBytes, 0xF7];
+            targetOutput.send('sysex' as any, sysexBytes as any);
+        }
+        return true;
+    } catch (error) {
+        log('Failed to send X-Touch scribble strip labels', 'WARN', { error });
+        return false;
+    }
+};
+
+export function applyMidiControllerTemplate(io: Server, templateId: MidiControllerTemplateId, preferredDeviceName?: string) {
+    const templateMappings = getControllerTemplateMappings(templateId);
+    const nextMappings: MidiMappings = { ...midiMappings, ...templateMappings };
+    midiMappings = nextMappings;
+    saveConfig();
+
+    if (preferredDeviceName) {
+        rememberAutoConnectDevice(preferredDeviceName);
+    }
+
+    let scribbleUpdated = false;
+    if (templateId === 'x_touch_mackie') {
+        const labels = Array.from({ length: 8 }, (_, index) => {
+            const channelName = channelNames[index];
+            if (channelName && channelName.trim() !== '' && channelName !== `CH ${index + 1}`) {
+                return channelName;
+            }
+            return `DMX ${index + 1}`;
+        });
+        scribbleUpdated = sendXTouchScribbleDisplay(labels, preferredDeviceName);
+    }
+
+    io.emit('midiMappingUpdate', midiMappings);
+
+    return {
+        templateId,
+        mappingCount: Object.keys(templateMappings).length,
+        midiMappings,
+        scribbleUpdated
+    };
+}
+
 function learnMidiMapping(io: Server, dmxChannel: number, midiMapping: MidiMapping) {
     midiMappings[dmxChannel] = midiMapping;
     io.emit('midiMappingLearned', { channel: dmxChannel, mapping: midiMapping });
-    const mappingType = midiMapping.controller !== undefined ? 'CC' : 'Note';
-    const mappingValue = midiMapping.controller !== undefined ? midiMapping.controller : midiMapping.note;
+    const mappingType = midiMapping.pitch ? 'Pitch' : midiMapping.controller !== undefined ? 'CC' : 'Note';
+    const mappingValue = midiMapping.pitch ? 'Pitch Bend' : midiMapping.controller !== undefined ? midiMapping.controller : midiMapping.note;
     log('MIDI learned', 'MIDI', { 
       dmxChannel: dmxChannel + 1, 
       type: mappingType, 
@@ -783,7 +1250,7 @@ function learnMidiMapping(io: Server, dmxChannel: number, midiMapping: MidiMappi
     });
 }
 
-function handleMidiMessage(io: Server, type: 'noteon' | 'cc', msg: MidiMessage) {
+function handleMidiMessage(io: Server, type: 'noteon' | 'cc' | 'pitch', msg: MidiMessage) {
     // Send the raw MIDI message to all clients
     io.emit('midiMessage', msg);
 
@@ -809,6 +1276,12 @@ function handleMidiMessage(io: Server, type: 'noteon' | 'cc', msg: MidiMessage) 
             midiMapping = {
                 channel: msg.channel,
                 controller: msg.controller !== undefined ? msg.controller : 0
+            };
+        } else if (type === 'pitch') {
+            log(`Creating Pitch mapping for channel ${currentMidiLearnChannel}`, 'MIDI');
+            midiMapping = {
+                channel: msg.channel,
+                pitch: true
             };
         } else {
             log(`Ignoring message type ${type} for MIDI learn`, 'MIDI');
@@ -853,11 +1326,18 @@ function handleMidiMessage(io: Server, type: 'noteon' | 'cc', msg: MidiMessage) 
                     channel: msg.channel,
                     note: msg.note !== undefined ? msg.note : 0
                 };
-            } else { // cc
+            } else if (type === 'cc') { // cc
                 midiMapping = {
                     channel: msg.channel,
                     controller: msg.controller !== undefined ? msg.controller : 0
                 };
+            } else if (type === 'pitch') {
+                midiMapping = {
+                    channel: msg.channel,
+                    pitch: true
+                };
+            } else {
+                return;
             }
 
             scene.midiMapping = midiMapping;
@@ -903,6 +1383,11 @@ function handleMidiMessage(io: Server, type: 'noteon' | 'cc', msg: MidiMessage) 
 
             // Batch update all affected channels at once
             if (Object.keys(channelUpdates).length > 0) {
+                const source = (msg as any).source || 'Unknown';
+                const affectedChannels = Object.keys(channelUpdates).map(c => parseInt(c)).sort((a, b) => a - b);
+                // Console output showing which DMX channels are being updated
+                console.log(`  → DMX: ${affectedChannels.join(', ')} = ${Object.values(channelUpdates)[0]} (from CC ${msg.controller})`);
+                
                 log('MIDI CC', 'MIDI', { channel: msg.channel, controller: msg.controller, value: msg.value, dmxChannels: Object.keys(channelUpdates).length, quiet: true });
 
                 // Update each channel and emit a single batch update
@@ -911,6 +1396,27 @@ function handleMidiMessage(io: Server, type: 'noteon' | 'cc', msg: MidiMessage) 
                 });
 
                 // Send a single update to clients with all changed channels
+                io.emit('dmxBatchUpdate', channelUpdates);
+            }
+        }
+    } else if (type === 'pitch') {
+        if (msg.value !== undefined) {
+            const normalizedPitch = msg.value > 127
+                ? Math.max(0, Math.min(1, msg.value / 16383))
+                : Math.max(0, Math.min(1, msg.value / 127));
+            const scaledValue = Math.round(normalizedPitch * 255);
+
+            const channelUpdates: Record<number, number> = {};
+            for (const [dmxChannel, mapping] of Object.entries(midiMappings)) {
+                if (!mapping.pitch) continue;
+                if (mapping.channel !== msg.channel) continue;
+                channelUpdates[parseInt(dmxChannel, 10)] = scaledValue;
+            }
+
+            if (Object.keys(channelUpdates).length > 0) {
+                Object.entries(channelUpdates).forEach(([channelIdx, value]) => {
+                    updateDmxChannel(parseInt(channelIdx, 10), value, io);
+                });
                 io.emit('dmxBatchUpdate', channelUpdates);
             }
         }
@@ -988,16 +1494,26 @@ function updateScene(io: Server, originalName: string, updates: Partial<Scene>) 
     }
 }
 
-function updateDmxChannel(channel: number, value: number, io?: Server) {
+function updateDmxChannel(
+    channel: number,
+    value: number,
+    io?: Server,
+    sessionId: string = DEFAULT_SESSION_ID
+) {
+    initSessions();
+    const channels = getSessionDmxChannels(sessionId);
     // Clamp value to channel range if set
     const range = channelRanges[channel] || { min: 0, max: 255 };
     const clampedValue = Math.max(range.min, Math.min(range.max, value));
 
-    const previousValue = dmxChannels[channel];
+    const previousValue = channels[channel];
+    channels[channel] = clampedValue;
     dmxChannels[channel] = clampedValue;
 
-    // Send to ArtNet
-    if (artnetSender) {
+    // LAN bridge: cloud state only; Art-Net on bridge agent
+    if (hasActiveBridge(sessionId)) {
+        fanOutDmxChannel(sessionId, channel, clampedValue);
+    } else if (artnetSender && sessionId === DEFAULT_SESSION_ID) {
         try {
             artnetSender.setChannel(channel, clampedValue);
             artnetSender.transmit();
@@ -1037,18 +1553,17 @@ function updateDmxChannel(channel: number, value: number, io?: Server) {
         sendOscMessage(`/channel/${channel + 1}`, [{ type: 'f', value: normalizedValue }]);
     }
 
-    // Emit Socket.IO event to notify frontend clients (if io is available)
-    if (io) {
-        io.emit('dmxUpdate', { channel, value: clampedValue });
-    }
+    emitDmxUpdate(sessionId, channel, clampedValue, io);
 }
 
 // Function to set all DMX channels at once (for state restoration)
-function setDmxChannels(channels: number[]) {
+function setDmxChannels(channels: number[], sessionId: string = DEFAULT_SESSION_ID) {
     if (!Array.isArray(channels) || channels.length > 512) {
         log('Invalid channels array for setDmxChannels', 'ERROR', { length: channels?.length });
         return;
     }
+    initSessions();
+    const sessionChannels = getSessionDmxChannels(sessionId);
 
     // Check if this is a "set all to zero" operation
     const isAllZero = channels.every(v => v === 0);
@@ -1061,7 +1576,7 @@ function setDmxChannels(channels: number[]) {
         for (let i = 0; i < channels.length && i < 512; i++) {
             // Only send OSC if channel value actually changed (skip if already 0 for zero operations)
             if (oscAssignments[i]) {
-                const previousValue = dmxChannels[i] || 0; // Get value BEFORE update
+                const previousValue = sessionChannels[i] || 0; // Get value BEFORE update
                 const newValue = Math.max(0, Math.min(255, channels[i] || 0));
 
                 // Skip if value hasn't changed
@@ -1086,11 +1601,15 @@ function setDmxChannels(channels: number[]) {
     // Update all channels
     for (let i = 0; i < Math.min(channels.length, 512); i++) {
         const value = Math.max(0, Math.min(255, channels[i] || 0)); // Ensure value is between 0-255
+        sessionChannels[i] = value;
         dmxChannels[i] = value;
     }
 
-    // Send all channels to ArtNet at once
-    if (artnetSender) {
+    // Send all channels to ArtNet at once (or LAN bridge)
+    if (hasActiveBridge(sessionId)) {
+        fanOutFullUniverse(sessionId, sessionChannels);
+        log(`Set ${channels.length} DMX channels via bridge`, 'DMX', { sessionId });
+    } else if (artnetSender && sessionId === DEFAULT_SESSION_ID) {
         try {
             for (let i = 0; i < channels.length && i < 512; i++) {
                 artnetSender.setChannel(i, dmxChannels[i]);
@@ -1285,67 +1804,21 @@ function loadActs() {
         return acts;
     }
 }
-function getFixturesFilePath() {
-    return path.join(DATA_DIR, 'fixtures.json');
-}
-
-function loadFixturesBundle() {
-    const filePath = getFixturesFilePath();
-    if (fs.existsSync(filePath)) {
-        try {
-            const data = fs.readFileSync(filePath, 'utf-8');
-            const bundle = JSON.parse(data);
-            // If it's the old array format, convert it
-            if (Array.isArray(bundle)) {
-                return {
-                    fixtures: bundle,
-                    groups: [],
-                    fixtureLayout: [],
-                    masterSliders: []
-                };
-            }
-            return {
-                fixtures: bundle.fixtures || [],
-                groups: bundle.groups || [],
-                fixtureLayout: bundle.fixtureLayout || [],
-                masterSliders: bundle.masterSliders || []
-            };
-        } catch (error) {
-            log('Error loading fixtures bundle', 'ERROR', { error });
-        }
-    }
-    return { fixtures: [], groups: [], fixtureLayout: [], masterSliders: [] };
-}
-
-function saveFixturesBundle(bundle: { fixtures: any[], groups: any[], fixtureLayout: any[], masterSliders: any[] }) {
-    try {
-        const filePath = getFixturesFilePath();
-        fs.writeFileSync(filePath, JSON.stringify(bundle, null, 2));
-        log('Fixtures saved', 'INFO', {
-            fixtures: bundle.fixtures.length,
-            groups: bundle.groups.length,
-            quiet: true
-        });
-        return true;
-    } catch (error) {
-        log('Error saving fixtures bundle', 'ERROR', { error });
-        return false;
-    }
-}
-
 function saveFixtures(fixturesToSave?: Fixture[]) {
     if (fixturesToSave) {
         fixtures = fixturesToSave;
     }
-    const bundle = loadFixturesBundle();
-    bundle.fixtures = fixtures;
-    saveFixturesBundle(bundle);
+    const currentData = loadFixturesData();
+    saveFixturesData({
+        ...currentData,
+        fixtures
+    });
 }
 
 function loadFixtures() {
-    const bundle = loadFixturesBundle();
-    fixtures = bundle.fixtures;
-    log('Fixtures loaded from bundle', 'INFO', { numFixtures: fixtures.length });
+    const bundle = loadFixturesData();
+    fixtures = bundle.fixtures as Fixture[];
+    log('Fixtures loaded from fixture data', 'INFO', { numFixtures: fixtures.length });
     return fixtures;
 }
 
@@ -1353,15 +1826,17 @@ function saveGroups(groupsToSave?: Group[]) {
     if (groupsToSave) {
         groups = groupsToSave;
     }
-    const bundle = loadFixturesBundle();
-    bundle.groups = groups;
-    saveFixturesBundle(bundle);
+    const currentData = loadFixturesData();
+    saveFixturesData({
+        ...currentData,
+        groups
+    });
 }
 
 function loadGroups() {
-    const bundle = loadFixturesBundle();
-    groups = bundle.groups;
-    log('Groups loaded from bundle', 'INFO', { numGroups: groups.length });
+    const bundle = loadFixturesData();
+    groups = bundle.groups as Group[];
+    log('Groups loaded from fixture data', 'INFO', { numGroups: groups.length });
     return groups;
 }
 
@@ -1445,7 +1920,7 @@ function loadDmxState() {
     return false;
 }
 
-function startLaserTime(io: Server) {
+async function startLaserTime(io: Server) {
     loadConfig();
     loadScenes();
     
@@ -1459,30 +1934,55 @@ function startLaserTime(io: Server) {
     }
 
     initializeMidi(io);
+    
+    // Auto-connect MIDI devices from config
+    const config = loadConfig();
+    const autoConnectDevices = (config as any).autoConnectMidiDevices || [];
+    if (Array.isArray(autoConnectDevices) && autoConnectDevices.length > 0) {
+        console.log(`\n🎹 Auto-connecting ${autoConnectDevices.length} MIDI device(s) from config:`);
+        autoConnectDevices.forEach((device, idx) => {
+            console.log(`   ${idx + 1}. ${device}`);
+        });
+        log(`Auto-connecting ${autoConnectDevices.length} MIDI device(s) from config`, 'MIDI', { devices: autoConnectDevices });
+        // Wait a moment for MIDI to initialize, then connect devices
+        setTimeout(async () => {
+            for (const deviceName of autoConnectDevices) {
+                try {
+                    console.log(`   Connecting to: ${deviceName}...`);
+                    await connectMidiInput(io, deviceName);
+                    console.log(`   ✅ Successfully connected to: ${deviceName}`);
+                    log(`Auto-connected MIDI device: ${deviceName}`, 'MIDI');
+                } catch (error: any) {
+                    console.log(`   ❌ Failed to connect to: ${deviceName} - ${error?.message || String(error)}`);
+                    log(`Failed to auto-connect MIDI device "${deviceName}": ${error?.message || String(error)}`, 'WARN');
+                }
+            }
+            console.log(`\n🎹 MIDI devices ready! Move a knob to see console output.\n`);
+        }, 500); // Small delay to ensure MIDI is initialized
+    } else {
+        console.log(`\n🎹 No MIDI devices configured for auto-connect. Use the start script menu to configure.\n`);
+    }
+    
     initOsc(io);
     initializeArtNet();
 
     // Start pinging ArtNet device every 5 seconds
     setInterval(() => pingArtNetDevice(io), 5000);
 
-    io.on('connection', (socket: Socket) => {
+    const registerCoreSocketHandlers = (socket: Socket) => {
         log('A user connected', 'SERVER', { socketId: socket.id });
 
-        // Send initial state to the client
-        socket.emit('initialState', {
-            dmxChannels,
-            oscAssignments,
-            channelNames,
-            fixtures,
-            groups,
-            midiMappings,
-            artNetConfig,
-            scenes
-        });
+        // Send available MIDI interfaces
+        const midiInterfaces = listMidiInterfaces();
+        socket.emit('midiInterfaces', midiInterfaces.inputs);
+        
+        // Send currently active MIDI interfaces
+        socket.emit('midiInputsActive', Object.keys(activeMidiInputs));
 
         socket.on('setDmxChannel', ({ channel, value }: { channel: number; value: number }) => {
-            log('Setting DMX channel via socket', 'DMX', { channel, value, socketId: socket.id });
-            updateDmxChannel(channel, value, io);
+            const sessionId = (socket as any).data?.sessionId || DEFAULT_SESSION_ID;
+            log('Setting DMX channel via socket', 'DMX', { channel, value, socketId: socket.id, sessionId });
+            updateDmxChannel(channel, value, io, sessionId);
         });
 
         // Handle batch DMX updates (for Face Tracker and other bulk operations)
@@ -1514,12 +2014,14 @@ function startLaserTime(io: Server) {
                     continue;
                 }
 
-                updateDmxChannel(channel, value, io);
+                const sessionId = (socket as any).data?.sessionId || DEFAULT_SESSION_ID;
+                updateDmxChannel(channel, value, io, sessionId);
                 updateCount++;
             }
 
+            const batchSessionId = (socket as any).data?.sessionId || DEFAULT_SESSION_ID;
             // Final ArtNet transmission after all channel updates
-            if (artnetSender && updateCount > 0) {
+            if (artnetSender && updateCount > 0 && !hasActiveBridge(batchSessionId) && batchSessionId === DEFAULT_SESSION_ID) {
                 try {
                     artnetSender.transmit();
                 } catch (error: any) {
@@ -1619,8 +2121,8 @@ function startLaserTime(io: Server) {
             io.emit('midiMessage', msg);
 
             // Process the message the same way we would for hardware MIDI
-            if (msg._type === 'noteon' || msg._type === 'cc') {
-                handleMidiMessage(io, msg._type as 'noteon' | 'cc', msg);
+            if (msg._type === 'noteon' || msg._type === 'cc' || msg._type === 'pitch') {
+                handleMidiMessage(io, msg._type as 'noteon' | 'cc' | 'pitch', msg);
             }
         });
 
@@ -1717,13 +2219,30 @@ function startLaserTime(io: Server) {
         socket.on('disconnect', () => {
             log('User disconnected', 'SERVER', { socketId: socket.id });
         });
-    });
+    };
+
+    (global as any).__registerCoreSocketHandlers = registerCoreSocketHandlers;
+    const serverOwnsSocketLifecycle = (global as any).__serverOwnsSocketLifecycle === true;
+    if (!serverOwnsSocketLifecycle) {
+        io.on('connection', registerCoreSocketHandlers);
+    } else {
+        log('Core socket handlers ready for server-managed lifecycle', 'SERVER');
+    }
 }
 
 // Add these missing function declarations
-function addSocketHandlers(io: Server) {
-    log('Socket handlers being initialized (via addSocketHandlers)', 'SERVER');
-    // This is just a placeholder - all handlers are set up in startLaserTime
+function addSocketHandlers(io: Server, socket?: Socket) {
+    const registerCoreSocketHandlers = (global as any).__registerCoreSocketHandlers;
+    if (typeof registerCoreSocketHandlers !== 'function') {
+        log('Core socket handlers are not initialized yet', 'WARN');
+        return;
+    }
+
+    if (socket) {
+        registerCoreSocketHandlers(socket);
+    } else {
+        io.on('connection', registerCoreSocketHandlers);
+    }
 }
 
 // Create a clearMidiMappings function
@@ -1740,8 +2259,14 @@ function clearMidiMappings(channelToRemove?: number) {
 }
 
 // Create an updateArtNetConfig function
-function updateArtNetConfig(config: Partial<ArtNetConfig>) {
+function updateArtNetConfig(config: Partial<ArtNetConfig>, sessionId: string = DEFAULT_SESSION_ID) {
     artNetConfig = { ...artNetConfig, ...config };
+    setSessionArtNetConfig(sessionId, config);
+    saveConfig();
+    if (hasActiveBridge(sessionId)) {
+        pushArtNetConfigToBridge(sessionId);
+        return;
+    }
     // Re-initialize ArtNet with new config if needed
     if (artnetSender) {
         try {

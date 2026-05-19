@@ -3,6 +3,7 @@ import { useMidiLearn } from '../../hooks/useMidiLearn'
 import { useStore } from '../../store'
 import useStoreUtils from '../../store/storeUtils'
 import styles from './MidiLearnButton.module.scss'
+import { debugLog } from '../../utils/debugLog';
 
 interface MidiLearnButtonProps {
   channelIndex: number
@@ -28,32 +29,32 @@ export const MidiLearnButton: React.FC<MidiLearnButtonProps> = ({ channelIndex, 
   // Debug log for current state
   React.useEffect(() => {
     if (isChannelLearning) {
-      console.log(`Channel ${channelIndex} is in learn mode. Status: ${learnStatus}`)
-      console.log('Available MIDI messages:', midiMessages.length)
+      debugLog.log(`Channel ${channelIndex} is in learn mode. Status: ${learnStatus}`)
+      debugLog.log('Available MIDI messages:', midiMessages.length)
     }
   }, [isChannelLearning, learnStatus, channelIndex, midiMessages.length])
   
   // Handle learn button click
   const handleClick = () => {
-    console.log(`MIDI Learn button clicked for channel ${channelIndex}`);
-    console.log(`Current learning state: ${isChannelLearning ? 'Learning' : 'Not learning'}`);
-    console.log(`Current MIDI messages in store:`, midiMessages.length);
-    console.log(`MIDI Learn target in store:`, useStore.getState().midiLearnTarget);
+    debugLog.log(`MIDI Learn button clicked for channel ${channelIndex}`);
+    debugLog.log(`Current learning state: ${isChannelLearning ? 'Learning' : 'Not learning'}`);
+    debugLog.log(`Current MIDI messages in store:`, midiMessages.length);
+    debugLog.log(`MIDI Learn target in store:`, useStore.getState().midiLearnTarget);
     
     if (isChannelLearning) {
       // If already learning, cancel
-      console.log(`Cancelling MIDI learn for channel ${channelIndex}`);
+      debugLog.log(`Cancelling MIDI learn for channel ${channelIndex}`);
       cancelLearn()
     } else {
       // Start learning
-      console.log(`Starting MIDI learn for channel ${channelIndex}`);
+      debugLog.log(`Starting MIDI learn for channel ${channelIndex}`);
       startLearn(channelIndex)
     }
   }
 
   // Handle forget button click
   const handleForget = () => {
-    console.log(`MIDI Forget button clicked for channel ${channelIndex}`);
+    debugLog.log(`MIDI Forget button clicked for channel ${channelIndex}`);
     removeMidiMapping(channelIndex);
     addNotification({
       message: `MIDI mapping removed for DMX CH ${channelIndex + 1}`,
@@ -69,7 +70,9 @@ export const MidiLearnButton: React.FC<MidiLearnButtonProps> = ({ channelIndex, 
     }
     
     if (hasMapping) {
-      if (mapping?.controller !== undefined) {
+      if (mapping?.pitch) {
+        return `Pitch ${mapping.channel}`
+      } else if (mapping?.controller !== undefined) {
         return `CC ${mapping.channel}:${mapping.controller}`
       } else if (mapping?.note !== undefined) {
         return `Note ${mapping.channel}:${mapping.note}`

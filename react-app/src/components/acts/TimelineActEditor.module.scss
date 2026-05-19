@@ -146,9 +146,18 @@
     .bpmSync {
       display: flex;
       align-items: center;
+      flex-wrap: wrap;
       gap: 8px;
       font-size: 0.85rem;
       color: var(--text-color, #fff);
+
+      .syncHint {
+        flex: 1 1 100%;
+        font-size: 0.72rem;
+        line-height: 1.35;
+        color: var(--text-secondary, #94a3b8);
+        max-width: 28rem;
+      }
 
       label {
         white-space: nowrap;
@@ -494,6 +503,7 @@
     }
 
     .addStepButton,
+    .clipToolButton,
     .closeButton {
       padding: 8px 16px;
       border: none;
@@ -516,6 +526,21 @@
 
       &:hover {
         background: var(--success-hover-color, #059669);
+      }
+    }
+
+    .clipToolButton {
+      background: var(--secondary-bg, #334155);
+      color: #e2e8f0;
+      border: 1px solid var(--border-color, #475569);
+
+      &:hover:not(:disabled) {
+        border-color: var(--color-accent, #f8dd36);
+      }
+
+      &:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
       }
     }
 
@@ -672,7 +697,8 @@
     width: 2px;
     background: var(--danger-color, #ef4444);
     z-index: 100;
-    pointer-events: none;
+    pointer-events: auto;
+    cursor: ew-resize;
     box-shadow: 0 0 4px rgba(239, 68, 68, 0.6);
 
     &::before {

@@ -1,56 +1,162 @@
-﻿param(
+param(
     [switch]$Clear,
     [switch]$Reset,
-    [switch]$Help
+    [switch]$Help,
+    [switch]$Admin,
+    [int]$Port = 3030
 )
+
+# Validate port range
+if ($Port -lt 1 -or $Port -gt 65535) {
+    Write-Host "[X] Invalid port: $Port. Port must be between 1 and 65535." -ForegroundColor Red
+    exit 1
+}
 
 if ($Help) {
     Write-Host ""
-    Write-Host "╔════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║  🎭 ArtBastard DMX512 - Sophisticated Launch Orchestrator 🎭 ║" -ForegroundColor Cyan
-    Write-Host "╚════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    Write-Host "================================================================" -ForegroundColor Cyan
+    Write-Host "  ArtBastard DMX512 - Sophisticated Launch Orchestrator" -ForegroundColor Cyan
+    Write-Host "================================================================" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "📖 Usage:" -ForegroundColor Yellow
-    Write-Host "  🚀 .\start.ps1           # Fast start (recommended)" -ForegroundColor Green
-    Write-Host "  🧹 .\start.ps1 -Clear    # Full clean rebuild (removes everything, reinstalls, rebuilds)" -ForegroundColor Red
-    Write-Host "  🔄 .\start.ps1 -Reset    # Factory reset - clears all saved state (fixtures, scenes, config)" -ForegroundColor Magenta
-    Write-Host "  ❓ .\start.ps1 -Help     # Display this help" -ForegroundColor White
+    Write-Host "Usage:" -ForegroundColor Yellow
+    Write-Host "  .\start.ps1           # Fast start (recommended)" -ForegroundColor Green
+    Write-Host "  .\start.ps1 -Clear    # DESTRUCTIVE: Removes node_modules, cache, builds - full reinstall" -ForegroundColor Red
+    Write-Host "  .\start.ps1 -Reset    # Factory reset - clears all saved state (fixtures, scenes, config)" -ForegroundColor Magenta
+    Write-Host "  .\start.ps1 -Admin    # Run as Administrator (useful for MIDI and system operations)" -ForegroundColor Yellow
+    Write-Host "  .\start.ps1 -Port 8080 # Specify web server port (default: 3030)" -ForegroundColor Cyan
+    Write-Host "  .\start.ps1 -Help     # Display this help" -ForegroundColor White
     Write-Host ""
-    Write-Host "🎯 Modes:" -ForegroundColor Yellow
-    Write-Host "  🚀 Default: Fast start - preserves cache and dependencies, only rebuilds if needed" -ForegroundColor Green
-    Write-Host "  🧹 -Clear:  Full clean - removes node_modules, cache, and build artifacts, then rebuilds" -ForegroundColor Red
-    Write-Host "  🔄 -Reset:  Factory reset - deletes all saved state files (config, scenes, fixtures, etc.)" -ForegroundColor Magenta
+    Write-Host "Modes:" -ForegroundColor Yellow
+    Write-Host "  Default: Fast start - preserves cache and dependencies, only rebuilds if needed" -ForegroundColor Green
+    Write-Host "  -Clear:  DESTRUCTIVE - Deletes node_modules, all caches, build artifacts, then reinstalls & rebuilds" -ForegroundColor Red
+    Write-Host "  -Reset:  Factory reset - deletes all saved state files (config, scenes, fixtures, etc.)" -ForegroundColor Magenta
+    Write-Host "  -Admin:  Relaunches script as Administrator (required for some MIDI operations on Windows)" -ForegroundColor Yellow
+    Write-Host "  -Port:   Specify web server port (1-65535, default: 3030)" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "✨ May your lights shine bright! ✨" -ForegroundColor Cyan
+    Write-Host "May your lights shine bright!" -ForegroundColor Cyan
     Write-Host ""
     exit 0
 }
 
+# Check if running as Administrator
+function Test-Administrator {
+    $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $principal = New-Object Security.Principal.WindowsPrincipal($currentUser)
+    return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+# If -Admin is specified and we're not running as admin, relaunch with elevation
+if ($Admin) {
+    if (-not (Test-Administrator)) {
+        Write-Host ""
+        Write-Host "=== Relaunching as Administrator ===" -ForegroundColor Yellow
+        Write-Host ""
+        
+        # Build the command with all original parameters
+        $scriptPath = $MyInvocation.MyCommand.Path
+        $scriptDir = Split-Path -Parent $scriptPath
+        $currentDir = Get-Location
+        
+        # Build parameter string
+        $paramParts = @()
+        if ($Clear) { $paramParts += "-Clear" }
+        if ($Reset) { $paramParts += "-Reset" }
+        if ($Help) { $paramParts += "-Help" }
+        if ($Port -ne 3030) { $paramParts += "-Port $Port" }
+        # Don't include -Admin in the relaunch to avoid infinite loop
+        
+        $paramString = $paramParts -join " "
+        
+        # Build argument array properly for Start-Process
+        # PowerShell needs arguments as an array, not a string
+        # Change to script directory first, then run the script
+        # Use -WorkingDirectory to ensure we're in the right directory
+        $argArray = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $scriptPath)
+        if ($paramString) {
+            # Split parameters and add them individually
+            $paramString.Split(' ', [StringSplitOptions]::RemoveEmptyEntries) | ForEach-Object {
+                $argArray += $_
+            }
+        }
+        
+        Write-Host "  Script path: $scriptPath" -ForegroundColor Cyan
+        Write-Host "  Script directory: $scriptDir" -ForegroundColor Cyan
+        Write-Host "  Current directory: $currentDir" -ForegroundColor Cyan
+        Write-Host "  Parameters: $paramString" -ForegroundColor Cyan
+        Write-Host ""
+        Write-Host "  UAC prompt will appear - click Yes to continue" -ForegroundColor Yellow
+        Write-Host "  If you click 'No', the script will exit." -ForegroundColor Yellow
+        Write-Host ""
+        
+        try {
+            # Use Start-Process with proper argument array and working directory
+            # This ensures the script runs from the correct directory
+            $process = Start-Process powershell.exe -Verb RunAs -ArgumentList $argArray -WorkingDirectory $scriptDir -Wait -PassThru
+            
+            if ($process) {
+                if ($process.ExitCode -eq 0) {
+                    Write-Host "  [OK] Script completed successfully as Administrator" -ForegroundColor Green
+                } else {
+                    Write-Host "  [!!] Script completed with exit code: $($process.ExitCode)" -ForegroundColor Yellow
+                    Write-Host "  This may indicate an error occurred. Check the admin PowerShell window for details." -ForegroundColor Yellow
+                }
+                exit $process.ExitCode
+            } else {
+                Write-Host "  [!!] Process started but no process object returned" -ForegroundColor Yellow
+                Write-Host "  This may mean the UAC prompt was cancelled or the window closed." -ForegroundColor Yellow
+                Write-Host "  Check if a new PowerShell window opened." -ForegroundColor Yellow
+                exit 1
+            }
+        } catch {
+            $errorMsg = $_.Exception.Message
+            Write-Host ""
+            Write-Host "[X] Failed to relaunch as Administrator!" -ForegroundColor Red
+            Write-Host "   Error: $errorMsg" -ForegroundColor Red
+            Write-Host "   Error Type: $($_.Exception.GetType().FullName)" -ForegroundColor Red
+            if ($_.Exception.InnerException) {
+                Write-Host "   Inner Error: $($_.Exception.InnerException.Message)" -ForegroundColor Red
+            }
+            Write-Host ""
+            Write-Host "   This usually means:" -ForegroundColor Yellow
+            Write-Host "   - UAC prompt was cancelled" -ForegroundColor Yellow
+            Write-Host "   - Insufficient permissions" -ForegroundColor Yellow
+            Write-Host "   - Script path is invalid" -ForegroundColor Yellow
+            Write-Host ""
+            Write-Host "   Manual alternative:" -ForegroundColor Cyan
+            Write-Host "   1. Right-click PowerShell in Start Menu" -ForegroundColor White
+            Write-Host "   2. Select 'Run as Administrator'" -ForegroundColor White
+            Write-Host "   3. Navigate to: $(Get-Location)" -ForegroundColor White
+            Write-Host "   4. Run: .\start.ps1 $paramString" -ForegroundColor White
+            Write-Host ""
+            exit 1
+        }
+    } else {
+        Write-Host ""
+        Write-Host "[OK] Running as Administrator" -ForegroundColor Green
+        Write-Host ""
+    }
+}
+
 Write-Host ""
-Write-Host "╔══════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║                                                                          ║" -ForegroundColor Cyan
-Write-Host "║     █████╗ ██████╗ ████████╗██████╗  █████╗ ███████╗████████╗          ║" -ForegroundColor Cyan
-Write-Host "║    ██╔══██╗██╔══██╗╚══██╔══╝██╔══██╗██╔══██╗██╔════╝╚══██╔══╝          ║" -ForegroundColor Cyan
-Write-Host "║    ███████║██████╔╝   ██║   ██║  ██║███████║███████╗   ██║             ║" -ForegroundColor Cyan
-Write-Host "║    ██╔══██║██╔══██╗   ██║   ██║  ██║██╔══██║╚════██║   ██║             ║" -ForegroundColor Cyan
-Write-Host "║    ██║  ██║██║  ██║   ██║   ██████╔╝██║  ██║███████║   ██║             ║" -ForegroundColor Cyan
-Write-Host "║    ╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝   ╚═════╝ ╚═╝  ╚═╝╚══════╝   ╚═╝             ║" -ForegroundColor Cyan
-Write-Host "║                                                                          ║" -ForegroundColor Cyan
-Write-Host "║              🎭 DMX512 LIGHTING CONTROL SYSTEM 🎭                       ║" -ForegroundColor Cyan
-Write-Host "╚══════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+Write-Host "========================================================================" -ForegroundColor Cyan
+Write-Host "                    ARTBASTARD DMX512" -ForegroundColor Cyan
+Write-Host "                 LIGHTING CONTROL SYSTEM" -ForegroundColor Cyan
+Write-Host "========================================================================" -ForegroundColor Cyan
 Write-Host ""
 if ($Clear) {
-    Write-Host "🧹 ════════════════════════════════════════════════════════════════ 🧹" -ForegroundColor Red
-    Write-Host "🧹  FULL CLEAN REBUILD MODE: Removing all artifacts and rebuilding" -ForegroundColor Red
-    Write-Host "🧹 ════════════════════════════════════════════════════════════════ 🧹" -ForegroundColor Red
+    Write-Host "=== FULL CLEAN REBUILD MODE ===" -ForegroundColor Red
+    Write-Host "Removing all artifacts and rebuilding" -ForegroundColor Red
 } elseif ($Reset) {
-    Write-Host "🔄 ════════════════════════════════════════════════════════════════ 🔄" -ForegroundColor Magenta
-    Write-Host "🔄  FACTORY RESET MODE: Clearing all saved state files" -ForegroundColor Magenta
-    Write-Host "🔄 ════════════════════════════════════════════════════════════════ 🔄" -ForegroundColor Magenta
+    Write-Host "=== FACTORY RESET MODE ===" -ForegroundColor Magenta
+    Write-Host "Clearing all saved state files" -ForegroundColor Magenta
 } else {
-    Write-Host "🚀 ════════════════════════════════════════════════════════════════ 🚀" -ForegroundColor Green
-    Write-Host "🚀  FAST START MODE: Smart rebuild (only rebuilds if needed)" -ForegroundColor Green
-    Write-Host "🚀 ════════════════════════════════════════════════════════════════ 🚀" -ForegroundColor Green
+    Write-Host "=== FAST START MODE ===" -ForegroundColor Green
+    Write-Host "Smart rebuild (only rebuilds if needed)" -ForegroundColor Green
+}
+
+# Show admin status if running as administrator
+if (Test-Administrator) {
+    Write-Host "=== RUNNING AS ADMINISTRATOR (elevated privileges) ===" -ForegroundColor Yellow
 }
 Write-Host ""
 
@@ -58,58 +164,77 @@ $startTime = Get-Date
 
 # Factory reset - clear all saved state
 if ($Reset) {
-    Write-Host "🔄 ════════════════════════════════════════════════════════════════ 🔄" -ForegroundColor Magenta
-    Write-Host "🔄  FACTORY RESET: Clearing all saved state files..." -ForegroundColor Magenta
-    Write-Host "🔄 ════════════════════════════════════════════════════════════════ 🔄" -ForegroundColor Magenta
+    Write-Host " ================================================================ " -ForegroundColor Magenta
+    Write-Host "  FACTORY RESET: Clearing all saved state files..." -ForegroundColor Magenta
+    Write-Host " ================================================================ " -ForegroundColor Magenta
     Write-Host ""
     
-    # Clear data directory - remove ALL files and subdirectories
+    # Clear data directory - completely remove and recreate for true factory reset
     if (Test-Path "data") {
-        Write-Host "  🗑️  Removing ALL saved state files and directories..." -ForegroundColor Cyan
+        Write-Host "    Removing ALL saved state files and directories..." -ForegroundColor Cyan
         
-        # Remove all files recursively
-        Get-ChildItem -Path "data" -Recurse -File | ForEach-Object {
-            Remove-Item -Force $_.FullName -ErrorAction SilentlyContinue
-            Write-Host "    ✅ Removed: $($_.FullName)" -ForegroundColor Yellow
+        # Remove the entire data directory recursively (this ensures everything is deleted)
+        try {
+            Remove-Item -Path "data" -Recurse -Force -ErrorAction Stop
+            Write-Host "    [OK] Data directory completely removed!" -ForegroundColor Green
+        } catch {
+            Write-Host "    [!]  Some files may be locked, attempting individual removal..." -ForegroundColor Yellow
+            # Fallback: try to remove files individually
+            Get-ChildItem -Path "data" -Recurse -ErrorAction SilentlyContinue | ForEach-Object {
+                try {
+                    Remove-Item -Path $_.FullName -Force -Recurse -ErrorAction Stop
+                } catch {
+                    Write-Host "      [!]  Could not remove: $($_.Name)" -ForegroundColor Yellow
+                }
+            }
+            # Try to remove the directory again
+            if (Test-Path "data") {
+                try {
+                    Remove-Item -Path "data" -Recurse -Force -ErrorAction Stop
+                } catch {
+                    Write-Host "      [!]  Data directory still exists, will be cleared on next startup" -ForegroundColor Yellow
+                }
+            }
         }
-        
-        # Remove all subdirectories
-        Get-ChildItem -Path "data" -Directory | ForEach-Object {
-            Remove-Item -Force -Recurse $_.FullName -ErrorAction SilentlyContinue
-            Write-Host "    ✅ Removed directory: $($_.Name)" -ForegroundColor Yellow
-        }
-        
-        Write-Host "  ✅ All state files cleared!" -ForegroundColor Green
     } else {
-        Write-Host "  ℹ️  No data directory found (already clean)" -ForegroundColor Green
+        Write-Host "  (i)  No data directory found (already clean)" -ForegroundColor Green
+    }
+    
+    # Ensure data directory exists (fresh and empty)
+    if (-not (Test-Path "data")) {
+        New-Item -ItemType Directory -Path "data" -Force | Out-Null
+        Write-Host "  [OK] Fresh data directory created!" -ForegroundColor Green
     }
     
     # Clear logs directory (optional but recommended for true factory reset)
     if (Test-Path "logs") {
-        Write-Host "  🗑️  Clearing log files..." -ForegroundColor Cyan
+        Write-Host "    Clearing log files..." -ForegroundColor Cyan
         Get-ChildItem -Path "logs" -Filter "*.log" -ErrorAction SilentlyContinue | ForEach-Object {
             Remove-Item -Force $_.FullName -ErrorAction SilentlyContinue
         }
-        Write-Host "  ✅ Logs cleared!" -ForegroundColor Green
+        Write-Host "  [OK] Logs cleared!" -ForegroundColor Green
     }
     
     # Create factory reset marker so frontend can clear localStorage
-    if (-not (Test-Path "data")) {
-        New-Item -ItemType Directory -Path "data" -Force | Out-Null
-    }
     $markerContent = @{
         factoryReset = $true
         timestamp = [int][double]::Parse((Get-Date -UFormat %s))
     } | ConvertTo-Json
     $markerContent | Out-File -FilePath "data\.factory-reset-marker.json" -Encoding utf8 -Force
-    Write-Host "  ✅ Factory reset marker created (frontend will clear localStorage)" -ForegroundColor Green
+    Write-Host "  [OK] Factory reset marker created (frontend will clear localStorage)" -ForegroundColor Green
     
     Write-Host ""
-    Write-Host "✨ ════════════════════════════════════════════════════════════════ ✨" -ForegroundColor Green
-    Write-Host "✨  Factory reset complete! ALL saved state has been cleared." -ForegroundColor Green
-    Write-Host "✨  The server will start with default settings (completely fresh)." -ForegroundColor Green
-    Write-Host "✨  Browser localStorage will be automatically cleared on next load." -ForegroundColor Green
-    Write-Host "✨ ════════════════════════════════════════════════════════════════ ✨" -ForegroundColor Green
+    Write-Host " ================================================================ " -ForegroundColor Green
+    Write-Host "  Factory reset complete! ALL saved state has been cleared." -ForegroundColor Green
+    Write-Host "  The server will start with default settings (completely fresh)." -ForegroundColor Green
+    Write-Host "  Browser localStorage will be automatically cleared on next load." -ForegroundColor Green
+    Write-Host "" -ForegroundColor Green
+    Write-Host "[!]  IMPORTANT: If your browser is already open, please:" -ForegroundColor Yellow
+    Write-Host "   1. Close all browser tabs with the application" -ForegroundColor Yellow
+    Write-Host "   2. Or manually refresh the page (F5 or Ctrl+R)" -ForegroundColor Yellow
+    Write-Host "   3. The factory reset marker will persist for 1 minute" -ForegroundColor Yellow
+    Write-Host "   4. A flash banner will appear confirming the reset" -ForegroundColor Yellow
+    Write-Host " ================================================================ " -ForegroundColor Green
     Write-Host ""
 }
 
@@ -309,7 +434,7 @@ function Test-NeedsCacheClear {
 
 # Function to launch browser when server is ready
 function Start-BrowserWhenReady {
-    param([string]$Url = "http://localhost:3030", [int]$MaxAttempts = 45)
+    param([string]$Url = "http://localhost:$Port", [int]$MaxAttempts = 45)
     
     $browserJob = Start-Job -ScriptBlock {
         param($url, $maxAttempts)
@@ -344,148 +469,163 @@ function Start-BrowserWhenReady {
 
 # FULL CLEAN REBUILD PATH: Complete cache clear and rebuild
 if ($Clear) {
-    Write-Host "🧹 ════════════════════════════════════════════════════════════════ 🧹" -ForegroundColor Red
-    Write-Host "🧹  FULL CLEAN REBUILD: Removing all artifacts and rebuilding" -ForegroundColor Red
-    Write-Host "🧹 ════════════════════════════════════════════════════════════════ 🧹" -ForegroundColor Red
+    Write-Host " ================================================================ " -ForegroundColor Red
+    Write-Host "  [!]  DESTRUCTIVE MODE: FULL CLEAN REBUILD" -ForegroundColor Red
+    Write-Host "  This will DELETE:" -ForegroundColor Red
+    Write-Host "    - All node_modules directories" -ForegroundColor Yellow
+    Write-Host "    - All build artifacts (dist folders)" -ForegroundColor Yellow
+    Write-Host "    - All caches (npm, Vite, etc.)" -ForegroundColor Yellow
+    Write-Host "  Then reinstall and rebuild everything from scratch" -ForegroundColor Red
+    Write-Host " ================================================================ " -ForegroundColor Red
+    Write-Host ""
+    
+    # Give user a chance to cancel
+    Write-Host "[!]  Press Ctrl+C within 3 seconds to cancel..." -ForegroundColor Yellow
+    Start-Sleep -Seconds 3
     Write-Host ""
     
     # Kill all processes
     try {
-        Write-Host "⚡ Terminating all Node.js processes..." -ForegroundColor Cyan
+        Write-Host " Terminating all Node.js processes..." -ForegroundColor Cyan
         $nodeProcs = Get-Process -Name "node" -ErrorAction SilentlyContinue
         if ($nodeProcs) {
             $nodeProcs | Stop-Process -Force -ErrorAction SilentlyContinue
-            Write-Host "  ✅ Processes terminated!" -ForegroundColor Green
+            Write-Host "  [OK] Processes terminated!" -ForegroundColor Green
         } else {
-            Write-Host "  ℹ️  No Node.js processes found" -ForegroundColor Green
+            Write-Host "  (i)  No Node.js processes found" -ForegroundColor Green
         }
         $artProcs = Get-Process -Name "ArtBastard*" -ErrorAction SilentlyContinue
         if ($artProcs) {
             $artProcs | Stop-Process -Force -ErrorAction SilentlyContinue
-            Write-Host "  ✅ ArtBastard processes terminated!" -ForegroundColor Green
+            Write-Host "  [OK] ArtBastard processes terminated!" -ForegroundColor Green
         }
     } catch {
         # Continue anyway
     }
     
     Write-Host ""
-    Write-Host "🧹 ════════════════════════════════════════════════════════════════ 🧹" -ForegroundColor Magenta
-    Write-Host "🧹  FORCE CLEARING ALL CACHES..." -ForegroundColor Magenta
-    Write-Host "🧹 ════════════════════════════════════════════════════════════════ 🧹" -ForegroundColor Magenta
+    Write-Host " ================================================================ " -ForegroundColor Magenta
+    Write-Host "  FORCE CLEARING ALL CACHES..." -ForegroundColor Magenta
+    Write-Host " ================================================================ " -ForegroundColor Magenta
     
     # Clear Vite cache
-    Write-Host "  🗑️  Clearing Vite cache..." -ForegroundColor Cyan
+    Write-Host "    Clearing Vite cache..." -ForegroundColor Cyan
     if (Test-Path "react-app/.vite") {
         Remove-Item -Recurse -Force "react-app/.vite" -ErrorAction SilentlyContinue
-        Write-Host "     ✅ Vite cache cleared!" -ForegroundColor Green
+        Write-Host "     [OK] Vite cache cleared!" -ForegroundColor Green
     } else {
-        Write-Host "     ℹ️  No Vite cache found" -ForegroundColor Green
+        Write-Host "     (i)  No Vite cache found" -ForegroundColor Green
     }
     
     # Clear npm cache
-    Write-Host "  🗑️  Clearing npm cache..." -ForegroundColor Cyan
+    Write-Host "    Clearing npm cache..." -ForegroundColor Cyan
     npm cache clean --force 2>$null
     npm cache verify 2>$null
-    Write-Host "     ✅ npm cache cleared!" -ForegroundColor Green
+    Write-Host "     [OK] npm cache cleared!" -ForegroundColor Green
     
     # Remove node_modules
-    Write-Host "  🗑️  Removing node_modules..." -ForegroundColor Cyan
+    Write-Host "    Removing node_modules..." -ForegroundColor Cyan
     if (Test-Path "node_modules") {
         Remove-Item -Recurse -Force "node_modules" -ErrorAction SilentlyContinue
-        Write-Host "     ✅ Root node_modules removed!" -ForegroundColor Green
+        Write-Host "     [OK] Root node_modules removed!" -ForegroundColor Green
     }
     if (Test-Path "react-app/node_modules") {
         Remove-Item -Recurse -Force "react-app/node_modules" -ErrorAction SilentlyContinue
-        Write-Host "     ✅ Frontend node_modules removed!" -ForegroundColor Green
+        Write-Host "     [OK] Frontend node_modules removed!" -ForegroundColor Green
     }
     
     # Remove build artifacts
-    Write-Host "  🗑️  Removing build artifacts..." -ForegroundColor Cyan
+    Write-Host "    Removing build artifacts..." -ForegroundColor Cyan
     if (Test-Path "dist") {
         Remove-Item -Recurse -Force "dist" -ErrorAction SilentlyContinue
-        Write-Host "     ✅ Backend dist removed!" -ForegroundColor Green
+        Write-Host "     [OK] Backend dist removed!" -ForegroundColor Green
     }
     if (Test-Path "react-app/dist") {
         Remove-Item -Recurse -Force "react-app/dist" -ErrorAction SilentlyContinue
-        Write-Host "     ✅ Frontend dist removed!" -ForegroundColor Green
+        Write-Host "     [OK] Frontend dist removed!" -ForegroundColor Green
     }
     
     Write-Host ""
-    Write-Host "✨ Cache and artifacts cleared! ✨" -ForegroundColor Green
+    Write-Host " Cache and artifacts cleared! " -ForegroundColor Green
     Write-Host ""
     
     # Reinstall dependencies
-    Write-Host "📦 ════════════════════════════════════════════════════════════════ 📦" -ForegroundColor Cyan
-    Write-Host "📦  Reinstalling all dependencies..." -ForegroundColor Cyan
-    Write-Host "📦 ════════════════════════════════════════════════════════════════ 📦" -ForegroundColor Cyan
+    Write-Host " ================================================================ " -ForegroundColor Cyan
+    Write-Host "  Reinstalling all dependencies..." -ForegroundColor Cyan
+    Write-Host " ================================================================ " -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "  📥 Installing root dependencies..." -ForegroundColor Cyan
+    Write-Host "   Installing root dependencies..." -ForegroundColor Cyan
     npm install --no-audit --no-fund --legacy-peer-deps
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "  ❌ Root dependency installation failed!" -ForegroundColor Red
+        Write-Host "  [X] Root dependency installation failed!" -ForegroundColor Red
         exit 1
     }
-    Write-Host "  ✅ Root dependencies installed!" -ForegroundColor Green
+    Write-Host "  [OK] Root dependencies installed!" -ForegroundColor Green
     Write-Host ""
     
-    Write-Host "  📥 Installing frontend dependencies..." -ForegroundColor Cyan
+    Write-Host "   Installing frontend dependencies..." -ForegroundColor Cyan
     Push-Location react-app
     npm install --no-audit --no-fund --legacy-peer-deps
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "  ❌ Frontend dependency installation failed!" -ForegroundColor Red
+        Write-Host "  [X] Frontend dependency installation failed!" -ForegroundColor Red
         Pop-Location
         exit 1
     }
     Pop-Location
-    Write-Host "  ✅ Frontend dependencies installed!" -ForegroundColor Green
+    Write-Host "  [OK] Frontend dependencies installed!" -ForegroundColor Green
     Write-Host ""
-    Write-Host "✨ All dependencies installed! ✨" -ForegroundColor Green
+    Write-Host " All dependencies installed! " -ForegroundColor Green
     Write-Host ""
     
     # Force rebuild
-    Write-Host "🔨 ════════════════════════════════════════════════════════════════ 🔨" -ForegroundColor Cyan
-    Write-Host "🔨  FORCE REBUILDING..." -ForegroundColor Cyan
-    Write-Host "🔨 ════════════════════════════════════════════════════════════════ 🔨" -ForegroundColor Cyan
+    Write-Host " ================================================================ " -ForegroundColor Cyan
+    Write-Host "  FORCE REBUILDING..." -ForegroundColor Cyan
+    Write-Host " ================================================================ " -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "  🏗️  Building backend..." -ForegroundColor Cyan
+    Write-Host "    Building backend..." -ForegroundColor Cyan
     npm run build-backend
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "  ❌ Backend build failed!" -ForegroundColor Red
+        Write-Host "  [X] Backend build failed!" -ForegroundColor Red
         exit 1
     }
-    Write-Host "  ✅ Backend build complete!" -ForegroundColor Green
+    Write-Host "  [OK] Backend build complete!" -ForegroundColor Green
     Write-Host ""
     
-    Write-Host "  🏗️  Building frontend..." -ForegroundColor Cyan
+    Write-Host "    Building frontend..." -ForegroundColor Cyan
     Push-Location react-app
     npm run build:vite
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "  ❌ Frontend build failed!" -ForegroundColor Red
+        Write-Host "  [!]  Full build failed, trying vite-only build..." -ForegroundColor Yellow
+        npm run build:skip-ts
+    }
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "  [X] Frontend build failed!" -ForegroundColor Red
         Pop-Location
         exit 1
     }
     Pop-Location
-    Write-Host "  ✅ Frontend build complete!" -ForegroundColor Green
+    Write-Host "  [OK] Frontend build complete!" -ForegroundColor Green
     Write-Host ""
-    Write-Host "✨ Build completed! ✨" -ForegroundColor Green
+    Write-Host " Build completed! " -ForegroundColor Green
     Write-Host ""
     
     # Launch browser when server is ready
-    Write-Host "🌐 ════════════════════════════════════════════════════════════════ 🌐" -ForegroundColor Cyan
-    Write-Host "🌐  Browser will launch automatically when server is ready..." -ForegroundColor Cyan
-    Write-Host "🌐 ════════════════════════════════════════════════════════════════ 🌐" -ForegroundColor Cyan
+    Write-Host " ================================================================ " -ForegroundColor Cyan
+    Write-Host "  Browser will launch automatically when server is ready..." -ForegroundColor Cyan
+    Write-Host " ================================================================ " -ForegroundColor Cyan
     Write-Host ""
     $browserJob = Start-BrowserWhenReady
     
     # Start server
-    Write-Host "🎭 ════════════════════════════════════════════════════════════════ 🎭" -ForegroundColor Green
-    Write-Host "🎭  Starting ArtBastard DMX512 Server..." -ForegroundColor Green
-    Write-Host "🎭 ════════════════════════════════════════════════════════════════ 🎭" -ForegroundColor Green
+    Write-Host " ================================================================ " -ForegroundColor Green
+    Write-Host "  Starting ArtBastard DMX512 Server on port $Port..." -ForegroundColor Green
+    Write-Host " ================================================================ " -ForegroundColor Green
     Write-Host ""
     try {
+        $env:PORT = $Port
         npm start
     } catch {
-        Write-Host "❌ Server deployment encountered complications!" -ForegroundColor Red
+        Write-Host "[X] Server deployment encountered complications!" -ForegroundColor Red
         Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Yellow
     } finally {
         Remove-Job -Job $browserJob -Force -ErrorAction SilentlyContinue
@@ -496,44 +636,44 @@ if ($Clear) {
     Update-ETAMetrics $totalTime
     
     Write-Host ""
-    Write-Host "✨ ════════════════════════════════════════════════════════════════ ✨" -ForegroundColor Cyan
-    Write-Host "✨  ArtBastard DMX512 clean rebuild completed in ${totalTime}s!" -ForegroundColor Cyan
-    Write-Host "✨  May your lights shine bright! ✨" -ForegroundColor Cyan
-    Write-Host "✨ ════════════════════════════════════════════════════════════════ ✨" -ForegroundColor Cyan
+    Write-Host " ================================================================ " -ForegroundColor Cyan
+    Write-Host "  ArtBastard DMX512 clean rebuild completed in ${totalTime}s!" -ForegroundColor Cyan
+    Write-Host "  May your lights shine bright! " -ForegroundColor Cyan
+    Write-Host " ================================================================ " -ForegroundColor Cyan
     exit 0
 }
 
 # FAST START PATH: Smart rebuild (only rebuilds if needed)
 if (-not $Clear) {
-    Write-Host "🚀 ════════════════════════════════════════════════════════════════ 🚀" -ForegroundColor Green
-    Write-Host "🚀  FAST START MODE" -ForegroundColor Green
-    Write-Host "🚀  Smart rebuild - only rebuilds if source files changed" -ForegroundColor Green
-    Write-Host "🚀 ════════════════════════════════════════════════════════════════ 🚀" -ForegroundColor Green
+    Write-Host " ================================================================ " -ForegroundColor Green
+    Write-Host "  FAST START MODE" -ForegroundColor Green
+    Write-Host "  Smart rebuild - only rebuilds if source files changed" -ForegroundColor Green
+    Write-Host " ================================================================ " -ForegroundColor Green
     Write-Host ""
     
     # Elegant process termination (minimal intervention)
     try {
-        Write-Host "⚡ Executing graceful process termination..." -ForegroundColor Cyan
+        Write-Host " Executing graceful process termination..." -ForegroundColor Cyan
         $nodeProcs = Get-Process -Name "node" -ErrorAction SilentlyContinue
         if ($nodeProcs) {
-            Write-Host "  ⚡ Elegantly terminating $($nodeProcs.Count) Node.js processes..." -ForegroundColor Yellow
+            Write-Host "   Elegantly terminating $($nodeProcs.Count) Node.js processes..." -ForegroundColor Yellow
             $nodeProcs | Stop-Process -Force -ErrorAction SilentlyContinue
         }
         
         $artProcs = Get-Process -Name "ArtBastard*" -ErrorAction SilentlyContinue
         if ($artProcs) {
-            Write-Host "  ⚡ Gracefully terminating $($artProcs.Count) ArtBastard processes..." -ForegroundColor Yellow
+            Write-Host "   Gracefully terminating $($artProcs.Count) ArtBastard processes..." -ForegroundColor Yellow
             $artProcs | Stop-Process -Force -ErrorAction SilentlyContinue
         }
-        Write-Host "  ✅ Process termination completed with sophistication!" -ForegroundColor Green
+        Write-Host "  [OK] Process termination completed with sophistication!" -ForegroundColor Green
     } catch {
-        Write-Host "  ✅ Process termination completed (pristine foundation)" -ForegroundColor Green
+        Write-Host "  [OK] Process termination completed (pristine foundation)" -ForegroundColor Green
     }
     
     Write-Host ""
     
     # Intelligent rebuild and cache detection
-    Write-Host "🔍 Conducting architectural analysis..." -ForegroundColor Cyan
+    Write-Host "Conducting architectural analysis..." -ForegroundColor Cyan
     $rebuildCheck = Test-NeedsRebuild
     $cacheCheck = Test-NeedsCacheClear
     
@@ -541,27 +681,27 @@ if (-not $Clear) {
     $shouldClearCache = $rebuildCheck.NeedsCacheClear -or $cacheCheck.NeedsCacheClear
     
     if ($shouldClearCache) {
-        Write-Host "🧹 Cache optimization required (major code changes detected)..." -ForegroundColor Yellow
+        Write-Host " Cache optimization required (major code changes detected)..." -ForegroundColor Yellow
         foreach ($reason in $rebuildCheck.Reasons) {
             if ($reason -like "*config*" -or $reason -like "*package.json*" -or $reason -like "*dependencies*") {
-                Write-Host "  ⚠️  $reason" -ForegroundColor Yellow
+                Write-Host "  [!]  $reason" -ForegroundColor Yellow
             }
         }
         foreach ($reason in $cacheCheck.Reasons) {
-            Write-Host "  ⚠️  $reason" -ForegroundColor Yellow
+            Write-Host "  [!]  $reason" -ForegroundColor Yellow
         }
-        Write-Host "  🗑️  Clearing Vite cache..." -ForegroundColor Cyan
+        Write-Host "    Clearing Vite cache..." -ForegroundColor Cyan
         if (Test-Path "react-app/.vite") {
             Remove-Item -Recurse -Force "react-app/.vite" -ErrorAction SilentlyContinue
-            Write-Host "     ✅ Vite cache cleared!" -ForegroundColor Green
+            Write-Host "     [OK] Vite cache cleared!" -ForegroundColor Green
         } else {
-            Write-Host "     ℹ️  No Vite cache found" -ForegroundColor Green
+            Write-Host "     (i)  No Vite cache found" -ForegroundColor Green
         }
-        Write-Host "  🗑️  Clearing npm cache..." -ForegroundColor Cyan
+        Write-Host "    Clearing npm cache..." -ForegroundColor Cyan
         npm cache clean --force 2>$null
-        Write-Host "  🔍 Verifying npm cache..." -ForegroundColor Cyan
+        Write-Host "  Verifying npm cache..." -ForegroundColor Cyan
         npm cache verify 2>$null
-        Write-Host "  ✅ Cache cleared successfully!" -ForegroundColor Green
+        Write-Host "  [OK] Cache cleared successfully!" -ForegroundColor Green
         Write-Host ""
     }
     
@@ -570,117 +710,171 @@ if (-not $Clear) {
     $needsFrontendInstall = -not (Test-Path "react-app/node_modules")
     
     if ($needsRootInstall -or $needsFrontendInstall) {
-        Write-Host "📦 Dependencies missing - installing..." -ForegroundColor Yellow
+        Write-Host " Dependencies missing - installing..." -ForegroundColor Yellow
         if ($needsRootInstall) {
-            Write-Host "  📥 Installing root dependencies..." -ForegroundColor Cyan
+            Write-Host "   Installing root dependencies..." -ForegroundColor Cyan
             npm install --prefer-offline --no-optional --no-audit --no-fund --legacy-peer-deps
             if ($LASTEXITCODE -ne 0) {
-                Write-Host "  ❌ Root dependency installation failed!" -ForegroundColor Red
+                Write-Host "  [X] Root dependency installation failed!" -ForegroundColor Red
                 exit 1
             }
-            Write-Host "  ✅ Root dependencies installed!" -ForegroundColor Green
+            Write-Host "  [OK] Root dependencies installed!" -ForegroundColor Green
         }
         if ($needsFrontendInstall) {
-            Write-Host "  📥 Installing frontend dependencies..." -ForegroundColor Cyan
+            Write-Host "   Installing frontend dependencies..." -ForegroundColor Cyan
             Push-Location react-app
             npm install --prefer-offline --no-optional --no-audit --no-fund --legacy-peer-deps
             if ($LASTEXITCODE -ne 0) {
-                Write-Host "  ❌ Frontend dependency installation failed!" -ForegroundColor Red
+                Write-Host "  [X] Frontend dependency installation failed!" -ForegroundColor Red
                 Pop-Location
                 exit 1
             }
             Pop-Location
-            Write-Host "  ✅ Frontend dependencies installed!" -ForegroundColor Green
+            Write-Host "  [OK] Frontend dependencies installed!" -ForegroundColor Green
         }
-        Write-Host "✨ Dependencies installed! ✨" -ForegroundColor Green
+        Write-Host " Dependencies installed! " -ForegroundColor Green
         Write-Host ""
     }
     
     if ($rebuildCheck.NeedsRebuild) {
-        Write-Host "🔨 Rebuild required:" -ForegroundColor Yellow
+        Write-Host " Rebuild required:" -ForegroundColor Yellow
         foreach ($reason in $rebuildCheck.Reasons) {
-            Write-Host "  ⚠️  $reason" -ForegroundColor Yellow
+            Write-Host "  [!]  $reason" -ForegroundColor Yellow
         }
         Write-Host ""
-        Write-Host "🔨 Executing intelligent rebuild..." -ForegroundColor Cyan
+        Write-Host " Executing intelligent rebuild..." -ForegroundColor Cyan
         Write-Host ""
         
         # Build backend if needed
         if (-not (Test-Path "dist") -or -not (Test-Path "dist/server.js")) {
-            Write-Host "  🏗️  Building backend..." -ForegroundColor Cyan
+            Write-Host "    Building backend..." -ForegroundColor Cyan
             npm run build-backend
             if ($LASTEXITCODE -ne 0) {
-                Write-Host "  ❌ Backend build failed!" -ForegroundColor Red
+                Write-Host "  [X] Backend build failed!" -ForegroundColor Red
                 exit 1
             }
-            Write-Host "  ✅ Backend build complete!" -ForegroundColor Green
+            Write-Host "  [OK] Backend build complete!" -ForegroundColor Green
         } else {
             $serverBuildTime = (Get-Item "dist/server.js").LastWriteTime
             $sourceFiles = Get-ChildItem -Path "src" -Recurse -File -ErrorAction SilentlyContinue
             $newerSources = $sourceFiles | Where-Object { $_.LastWriteTime -gt $serverBuildTime }
             if ($newerSources) {
-                Write-Host "  🏗️  Building backend (source files modified)..." -ForegroundColor Cyan
+                Write-Host "    Building backend (source files modified)..." -ForegroundColor Cyan
                 npm run build-backend
                 if ($LASTEXITCODE -ne 0) {
-                    Write-Host "  ❌ Backend build failed!" -ForegroundColor Red
+                    Write-Host "  [X] Backend build failed!" -ForegroundColor Red
                     exit 1
                 }
-                Write-Host "  ✅ Backend build complete!" -ForegroundColor Green
+                Write-Host "  [OK] Backend build complete!" -ForegroundColor Green
             }
         }
         
         # Build frontend if needed
         if (-not (Test-Path "react-app/dist") -or -not (Test-Path "react-app/dist/index.html")) {
-            Write-Host "  🏗️  Building frontend..." -ForegroundColor Cyan
+            Write-Host "    Building frontend..." -ForegroundColor Cyan
             Push-Location react-app
             npm run build:vite
             if ($LASTEXITCODE -ne 0) {
-                Write-Host "  ❌ Frontend build failed!" -ForegroundColor Red
+                Write-Host "  [!]  Full build failed, trying vite-only build..." -ForegroundColor Yellow
+                npm run build:skip-ts
+            }
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host "  [X] Frontend build failed!" -ForegroundColor Red
                 Pop-Location
                 exit 1
             }
             Pop-Location
-            Write-Host "  ✅ Frontend build complete!" -ForegroundColor Green
+            Write-Host "  [OK] Frontend build complete!" -ForegroundColor Green
         } else {
             $indexBuildTime = (Get-Item "react-app/dist/index.html").LastWriteTime
             $frontendSources = Get-ChildItem -Path "react-app/src" -Recurse -File -ErrorAction SilentlyContinue
             $newerFrontend = $frontendSources | Where-Object { $_.LastWriteTime -gt $indexBuildTime }
             $packageJsonNewer = (Test-Path "react-app/package.json") -and ((Get-Item "react-app/package.json").LastWriteTime -gt $indexBuildTime)
             if ($newerFrontend -or $packageJsonNewer) {
-                Write-Host "  🏗️  Building frontend (source files or dependencies modified)..." -ForegroundColor Cyan
+                Write-Host "    Building frontend (source files or dependencies modified)..." -ForegroundColor Cyan
                 Push-Location react-app
                 npm run build:vite
                 if ($LASTEXITCODE -ne 0) {
-                    Write-Host "  ❌ Frontend build failed!" -ForegroundColor Red
+                    Write-Host "  [X] Frontend build failed!" -ForegroundColor Red
                     Pop-Location
                     exit 1
                 }
                 Pop-Location
-                Write-Host "  ✅ Frontend build complete!" -ForegroundColor Green
+                Write-Host "  [OK] Frontend build complete!" -ForegroundColor Green
             }
         }
         
         Write-Host ""
-        Write-Host "✨ Intelligent rebuild completed with sophistication! ✨" -ForegroundColor Green
+        Write-Host " Intelligent rebuild completed with sophistication! " -ForegroundColor Green
     } else {
-        Write-Host "✨ Architectural foundation intact - no rebuild required! ✨" -ForegroundColor Green
+        Write-Host " Architectural foundation intact - no rebuild required! " -ForegroundColor Green
     }
     
     Write-Host ""
-    Write-Host "🎭 ════════════════════════════════════════════════════════════════ 🎭" -ForegroundColor Green
-    Write-Host "🎭  Initiating ArtBastard DMX512 server deployment..." -ForegroundColor Green
-    Write-Host "🎭 ════════════════════════════════════════════════════════════════ 🎭" -ForegroundColor Green
+    
+    # MIDI Device Auto-Connect Configuration
+    Write-Host " ================================================================ " -ForegroundColor Magenta
+    Write-Host "  MIDI Device Auto-Connect Configuration" -ForegroundColor Magenta
+    Write-Host " ================================================================ " -ForegroundColor Magenta
+    Write-Host ""
+    Write-Host "  Configure which MIDI devices should auto-connect on startup." -ForegroundColor Cyan
+    Write-Host "  Press Enter to skip and use current configuration." -ForegroundColor Yellow
+    Write-Host ""
+    
+    # Check if Node.js is available
+    $nodeAvailable = $false
+    try {
+        $nodeVersion = node --version 2>$null
+        if ($nodeVersion) {
+            $nodeAvailable = $true
+        }
+    } catch {
+        $nodeAvailable = $false
+    }
+    
+    if ($nodeAvailable) {
+        # Check if the MIDI selector script exists
+        $midiSelectorScript = Join-Path $PSScriptRoot "scripts\select-midi-devices.js"
+        if (Test-Path $midiSelectorScript) {
+            Write-Host "  Running MIDI device selector..." -ForegroundColor Cyan
+            Write-Host ""
+            try {
+                node $midiSelectorScript
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host ""
+                    Write-Host "  [OK] MIDI configuration updated!" -ForegroundColor Green
+                } else {
+                    Write-Host ""
+                    Write-Host "  [!]  MIDI configuration cancelled or failed" -ForegroundColor Yellow
+                }
+            } catch {
+                Write-Host ""
+                Write-Host "  [!]  Could not run MIDI selector: $($_.Exception.Message)" -ForegroundColor Yellow
+                Write-Host "  Continuing with current configuration..." -ForegroundColor Yellow
+            }
+        } else {
+            Write-Host "  (i)  MIDI selector script not found, skipping configuration" -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "  (i)  Node.js not available, skipping MIDI configuration" -ForegroundColor Yellow
+    }
+    
+    Write-Host ""
+    Write-Host " ================================================================ " -ForegroundColor Green
+    Write-Host "  Initiating ArtBastard DMX512 server deployment on port $Port..." -ForegroundColor Green
+    Write-Host " ================================================================ " -ForegroundColor Green
     Write-Host ""
     
     # Launch browser when server is ready
-    Write-Host "🌐 Browser will launch automatically when server is ready..." -ForegroundColor Cyan
+    Write-Host " Browser will launch automatically when server is ready..." -ForegroundColor Cyan
     $browserJob = Start-BrowserWhenReady
     
     # Deploy the server with sophistication
     try {
+        $env:PORT = $Port
         npm start
     } catch {
-        Write-Host "❌ Server deployment encountered complications!" -ForegroundColor Red
+        Write-Host "[X] Server deployment encountered complications!" -ForegroundColor Red
         Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Yellow
         Write-Host "Consider executing with -Clear flag for architectural reconstruction" -ForegroundColor Cyan
     } finally {
@@ -693,15 +887,15 @@ if (-not $Clear) {
     Update-ETAMetrics $totalTime
     
     Write-Host ""
-    Write-Host "✨ ════════════════════════════════════════════════════════════════ ✨" -ForegroundColor Cyan
-    Write-Host "✨  ArtBastard DMX512 session concluded in ${totalTime}s!" -ForegroundColor Cyan
-    Write-Host "✨  May your lights shine bright! ✨" -ForegroundColor Cyan
-    Write-Host "✨ ════════════════════════════════════════════════════════════════ ✨" -ForegroundColor Cyan
+    Write-Host " ================================================================ " -ForegroundColor Cyan
+    Write-Host "  ArtBastard DMX512 session concluded in ${totalTime}s!" -ForegroundColor Cyan
+    Write-Host "  May your lights shine bright! " -ForegroundColor Cyan
+    Write-Host " ================================================================ " -ForegroundColor Cyan
     exit 0
 }
 
 # IMMACULATE RECONSTRUCTION PATH: Only executed when architectural purity is demanded
-Write-Host "🧹 IMMACULATE RECONSTRUCTION MODE: Complete architectural restoration" -ForegroundColor Red
+Write-Host " IMMACULATE RECONSTRUCTION MODE: Complete architectural restoration" -ForegroundColor Red
 Write-Host "This deliberate process ensures pristine foundation and optimal performance" -ForegroundColor Yellow
 Write-Host ""
 
@@ -746,19 +940,19 @@ try {
         Write-Host "  No Node.js processes detected (pristine state)" -ForegroundColor Green
     }
 
-    # Sophisticated port 3030 resolution
-    Write-Host "  Analyzing port 3030 architectural conflicts..." -ForegroundColor Red
-    $connections = Get-NetTCPConnection -LocalPort 3030 -ErrorAction SilentlyContinue
+    # Sophisticated port conflict resolution
+    Write-Host "  Analyzing port $Port architectural conflicts..." -ForegroundColor Red
+    $connections = Get-NetTCPConnection -LocalPort $Port -ErrorAction SilentlyContinue
     if ($connections) {
-        Write-Host "  Resolving port 3030 conflicts with architectural precision..." -ForegroundColor Yellow
+        Write-Host "  Resolving port $Port conflicts with architectural precision..." -ForegroundColor Yellow
         $processes = $connections | Select-Object -ExpandProperty OwningProcess -Unique
         foreach ($processId in $processes) {
             Write-Host "    Elegantly terminating PID: $processId" -ForegroundColor Red
             Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
         }
-        Write-Host "  Port 3030 architectural conflicts resolved" -ForegroundColor Green
+        Write-Host "  Port $Port architectural conflicts resolved" -ForegroundColor Green
     } else {
-        Write-Host "  Port 3030 architecture pristine" -ForegroundColor Green
+        Write-Host "  Port $Port architecture pristine" -ForegroundColor Green
     }
 
     # Sophisticated ArtBastard process management
@@ -1027,6 +1221,10 @@ try {
     Write-Host "  Employing sophisticated frontend build architecture..." -ForegroundColor Yellow
     npm run build:vite
     if ($LASTEXITCODE -ne 0) {
+        Write-Host "  [!]  Full build failed, trying vite-only build..." -ForegroundColor Yellow
+        npm run build:skip-ts
+    }
+    if ($LASTEXITCODE -ne 0) {
         throw "Frontend architectural construction encountered complications with exit code $LASTEXITCODE"
     }
     Pop-Location
@@ -1092,7 +1290,7 @@ Write-Host "Initiating ArtBastard DMX512 web server deployment with architectura
 $browserJob = Start-Job -ScriptBlock {
     $maxAttempts = 45  # Sophisticated wait time for architectural reconstruction
     $attempt = 0
-    $url = "http://localhost:3030"
+    $url = "http://localhost:$Port"
     
     Write-Host "Conducting sophisticated server readiness analysis..." -ForegroundColor Cyan
     
@@ -1119,7 +1317,7 @@ $browserJob = Start-Job -ScriptBlock {
     
     if ($attempt -eq $maxAttempts) {
         Write-Host "Server readiness timeout: Architecture took longer than expected to initialize" -ForegroundColor Yellow
-        Write-Host "   You may manually deploy browser to: http://localhost:3030" -ForegroundColor White
+        Write-Host "   You may manually deploy browser to: http://localhost:$Port" -ForegroundColor White
         Write-Host "   The server architecture may still be initializing..." -ForegroundColor White
     }
 }
@@ -1139,13 +1337,14 @@ Update-ETAMetrics $totalTime
 
 # Deploy the server with sophisticated monitoring
 try {
-    Write-Host "Initiating ArtBastard DMX512 server deployment..." -ForegroundColor Green
+    Write-Host "Initiating ArtBastard DMX512 server deployment on port $Port..." -ForegroundColor Green
+    $env:PORT = $Port
     npm start
 } catch {
     Write-Host "Server deployment encountered architectural complications!" -ForegroundColor Red
     Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Yellow
     Write-Host "Sophisticated troubleshooting protocols:" -ForegroundColor Cyan
-    Write-Host "   1. Verify port 3030 architectural conflicts" -ForegroundColor White
+    Write-Host "   1. Verify port $Port architectural conflicts" -ForegroundColor White
     Write-Host "   2. Confirm Node.js and npm architectural integrity" -ForegroundColor White
     Write-Host "   3. Execute: npm run build-backend && node dist/server.js" -ForegroundColor White
     Write-Host "   4. Review architectural logs in logs/app.log for detailed analysis" -ForegroundColor White

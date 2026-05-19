@@ -1,10 +1,6 @@
 node_modules
 build
 
-# Package lock files
-package-lock.json
-react-app/package-lock.json
-
 # Log files and directories
 logs/
 logs_backup/
@@ -12,6 +8,7 @@ logs_backup/
 
 # Cache and build artifacts
 .cache/
+.tsbuildinfo
 dist/
 react-app/dist/
 react-app/dist-tsc/
@@ -49,8 +46,10 @@ git.sh
 # JSON files (data and config)
 *.json
 !package.json
+!package-lock.json
 !tsconfig.json
 !react-app/package.json
+!react-app/package-lock.json
 !react-app/tsconfig.json
 !react-app/tsconfig.*.json
 

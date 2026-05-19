@@ -49,7 +49,6 @@ export function normalizeChannelEnvelope(raw: Partial<ChannelEnvelope> & { loop?
     min: raw.min ?? 0,
     max: raw.max ?? 255,
     speed: raw.speed ?? 1,
-    trackerSync: raw.trackerSync ?? null,
   };
 }
 

@@ -45,6 +45,15 @@
   background: var(--background-secondary);
   border-radius: 8px 8px 0 0;
   padding: 0.5rem 0.5rem 0 0.5rem;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+  &::-webkit-scrollbar { height: 4px; }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(var(--color-primary-500-rgb, 249, 115, 22), 0.4);
+    border-radius: 2px;
+  }
 }
 
 .tabButton {
@@ -62,6 +71,11 @@
   align-items: center;
   gap: 0.5rem;
   position: relative;
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  white-space: nowrap;
+  min-height: 44px;
+  touch-action: manipulation;
   
   &:hover {
     background: rgba(var(--accent-color-rgb), 0.1);
@@ -137,9 +151,12 @@
 
 .sceneGallerySection {
   flex: 1;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 /* Acts Content */
@@ -171,14 +188,11 @@
   }
   
   .tabButton {
-    padding: 0.5rem 1rem;
-    font-size: 0.8rem;
-    
-    span {
-      display: none;
-    }
+    padding: 0.5rem 0.85rem;
+    font-size: 0.85rem;
+    /* Keep label visible; row scrolls horizontally if needed. */
   }
-  
+
   .autoControlCard {
     padding: 1rem;
   }

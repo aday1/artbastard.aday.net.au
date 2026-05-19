@@ -1,63 +1,93 @@
-// Fetch latest release version from GitHub
+// Fetch latest release version from GitHub.
 async function fetchLatestVersion() {
     try {
-        const response = await fetch('https://api.github.com/repos/aday1/ArtBastard-DMX512/releases/latest');
-        if (response.ok) {
-            const data = await response.json();
-            const versionElement = document.getElementById('latest-version');
-            if (versionElement) {
-                versionElement.textContent = data.tag_name || 'v5.12.0';
-            }
+        const response = await fetch('https://api.github.com/repos/aday1/artbastard.aday.net.au/releases/latest');
+        if (!response.ok) {
+            return;
         }
-    } catch (error) {
-        console.error('Failed to fetch latest version:', error);
+        const data = await response.json();
         const versionElement = document.getElementById('latest-version');
-        if (versionElement) {
-            versionElement.textContent = 'v5.12.0';
+        if (versionElement && data.tag_name) {
+            versionElement.textContent = data.tag_name;
         }
+    } catch (err) {
+        // Network failure / offline - the static fallback in HTML is fine.
+        console.warn('Could not fetch latest version', err);
     }
 }
 
-// Smooth scrolling for anchor links
-document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function (e) {
-        e.preventDefault();
-        const target = document.querySelector(this.getAttribute('href'));
-        if (target) {
-            target.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start'
-            });
-        }
-    });
-});
-
-// Update GitHub username in links
-function updateGitHubLinks() {
-    // GitHub username is already set to 'aday1' in HTML
-    // This function kept for compatibility
-    const username = 'aday1';
-    document.querySelectorAll('a[href*="yourusername"]').forEach(link => {
-        link.href = link.href.replace('yourusername', username);
+// Smooth scrolling for anchor links.
+function setupSmoothScroll() {
+    document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
+        anchor.addEventListener('click', (e) => {
+            const target = document.querySelector(anchor.getAttribute('href'));
+            if (target) {
+                e.preventDefault();
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
     });
 }
 
-// Initialize
-document.addEventListener('DOMContentLoaded', () => {
-    fetchLatestVersion();
-    updateGitHubLinks();
-    
-    // Add scroll effect to navbar
-    let lastScroll = 0;
+// Lazy-load demo videos when their tile scrolls near the viewport. Each
+// <video> tile carries data-src; we copy that into a real <source> on demand.
+function setupLazyVideos() {
+    const videos = document.querySelectorAll('video[data-src]');
+    if (!videos.length) {
+        return;
+    }
+
+    const swap = (video) => {
+        const src = video.getAttribute('data-src');
+        if (!src || video.dataset.loaded === '1') {
+            return;
+        }
+        const source = document.createElement('source');
+        source.src = src;
+        source.type = 'video/webm';
+        video.appendChild(source);
+        video.dataset.loaded = '1';
+        video.load();
+    };
+
+    if (typeof IntersectionObserver === 'undefined') {
+        // Older browsers: just load everything.
+        videos.forEach(swap);
+        return;
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+                swap(entry.target);
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { rootMargin: '300px 0px' });
+
+    videos.forEach((v) => observer.observe(v));
+}
+
+// Subtle navbar darkening on scroll (preserves existing behaviour).
+function setupNavbarScroll() {
     const navbar = document.querySelector('.navbar');
-    window.addEventListener('scroll', () => {
-        const currentScroll = window.pageYOffset;
-        if (currentScroll > 100) {
+    if (!navbar) {
+        return;
+    }
+    const onScroll = () => {
+        if (window.pageYOffset > 100) {
             navbar.style.background = 'rgba(10, 10, 15, 0.95)';
         } else {
             navbar.style.background = 'rgba(10, 10, 15, 0.8)';
         }
-        lastScroll = currentScroll;
-    });
-});
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+}
 
+document.addEventListener('DOMContentLoaded', () => {
+    fetchLatestVersion();
+    setupSmoothScroll();
+    setupLazyVideos();
+    setupNavbarScroll();
+});

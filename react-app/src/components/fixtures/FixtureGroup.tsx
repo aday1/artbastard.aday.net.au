@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useStore, Group } from '../../store';
+import { DmxFaderRow, HorizontalFader } from '../ui/controls';
 import styles from './FixtureGroup.module.scss';
 
 interface FixtureGroupProps {
@@ -168,37 +169,20 @@ export const FixtureGroup: React.FC<FixtureGroupProps> = ({ group, onEdit }) => 
               </button>
             </div>
           </div>
-          <input
-            type="range"
-            min="0"
-            max="255"
+          <DmxFaderRow
+            label="Master"
+            controlName={`group-master-${group.id}`}
             value={group.masterValue}
-            onChange={(e) => handleMasterChange(parseInt(e.target.value))}
-            className={`${styles.slider} ${isFading ? styles.fading : ''}`}
+            meta={`${Math.round((group.masterValue / 255) * 100)}%`}
+            oscAddress={group.oscAddress || `/group/${group.id}/master`}
+            onOscAddressChange={(addr) => updateGroup(group.id, { oscAddress: addr })}
+            isMidiLearning={midiLearnTarget?.type === 'group' && midiLearnTarget.groupId === group.id}
+            isMidiMapped={!!group.midiMapping}
+            midiMappingLabel={getMidiStatusText()}
+            onMidiLearn={handleMidiLearnClick}
+            onMidiForget={() => updateGroup(group.id, { midiMapping: undefined })}
+            onChange={(v) => handleMasterChange(Math.round(v))}
           />
-          <div className={styles.midiOscControls}>
-            <button
-              className={`${styles.midiLearn} ${
-                midiLearnTarget?.type === 'group' && midiLearnTarget.groupId === group.id
-                  ? styles.learning
-                  : ''
-              }`}
-              onClick={handleMidiLearnClick}
-              title="MIDI Learn"
-            >
-              <i className="fas fa-music" />
-              <span>{getMidiStatusText()}</span>
-            </button>
-            <input
-              type="text"
-              value={group.oscAddress || ''}
-              onChange={(e) =>
-                updateGroup(group.id, { oscAddress: e.target.value })
-              }
-              placeholder="OSC Address"
-              className={styles.oscInput}
-            />
-          </div>
         </div>
 
         <div className={styles.buttons}>
@@ -239,38 +223,29 @@ export const FixtureGroup: React.FC<FixtureGroupProps> = ({ group, onEdit }) => 
         <div className={styles.ptzControls}>
           <div className={styles.ptzSliderControl}>
             <label htmlFor={`panOffset-${group.id}`}>Pan Offset: {group.panOffset || 0}</label>
-            <input
-              type="range"
-              id={`panOffset-${group.id}`}
-              min="-127"
-              max="127"
+            <HorizontalFader
+              min={-127}
+              max={127}
               value={group.panOffset || 0}
-              onChange={(e) => setGroupPanOffset(group.id, parseInt(e.target.value))}
-              className={styles.slider}
+              onChange={(v) => setGroupPanOffset(group.id, Math.round(v))}
             />
           </div>
           <div className={styles.ptzSliderControl}>
             <label htmlFor={`tiltOffset-${group.id}`}>Tilt Offset: {group.tiltOffset || 0}</label>
-            <input
-              type="range"
-              id={`tiltOffset-${group.id}`}
-              min="-127"
-              max="127"
+            <HorizontalFader
+              min={-127}
+              max={127}
               value={group.tiltOffset || 0}
-              onChange={(e) => setGroupTiltOffset(group.id, parseInt(e.target.value))}
-              className={styles.slider}
+              onChange={(v) => setGroupTiltOffset(group.id, Math.round(v))}
             />
           </div>
           <div className={styles.ptzSliderControl}>
             <label htmlFor={`zoom-${group.id}`}>Zoom: {group.zoomValue || 0}</label>
-            <input
-              type="range"
-              id={`zoom-${group.id}`}
-              min="0"
-              max="255"
+            <HorizontalFader
+              min={0}
+              max={255}
               value={group.zoomValue || 0}
-              onChange={(e) => setGroupZoomValue(group.id, parseInt(e.target.value))}
-              className={styles.slider}
+              onChange={(v) => setGroupZoomValue(group.id, Math.round(v))}
             />
           </div>
         </div>

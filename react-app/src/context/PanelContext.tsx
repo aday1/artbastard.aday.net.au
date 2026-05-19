@@ -1,34 +1,23 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import {
+  migrateSavedLayoutsStorage,
+  sanitizePanelLayout,
+} from './panelLayoutUtils';
 
-export type PanelId = 'top-left' | 'top-right' | 'bottom' | 'bottom-right' | 'external';
-
-export type LayoutMode = 'single' | 'split-vertical' | 'split-horizontal' | 'grid-3' | 'grid-4';
-
-export interface PanelComponent {
-  id: string;
-  type: string;
-  title: string;
-  props?: Record<string, any>;
-  position?: { x: number; y: number };
-}
-
-export interface PanelState {
-  components: PanelComponent[];
-  size?: { width: string; height: string };
-}
-
-export interface PanelLayout {
-  'top-left': PanelState;
-  'top-right': PanelState;
-  'bottom': PanelState;
-  'bottom-right': PanelState;
-  'external': PanelState;
-  layoutMode: LayoutMode;
-  splitterPositions: {
-    horizontal: number; // Top panels split (percentage)
-    vertical: number;   // Top/bottom split (percentage)
-  };
-}
+export type {
+  PanelId,
+  LayoutMode,
+  PanelComponent,
+  PanelState,
+  PanelLayout,
+} from './panelTypes';
+import type {
+  PanelId,
+  LayoutMode,
+  PanelComponent,
+  PanelState,
+  PanelLayout,
+} from './panelTypes';
 
 export interface PanelContextType {
   layout: PanelLayout;
@@ -92,24 +81,22 @@ const getDefaultLayout = (): PanelLayout => ({
       },
       {
         id: 'default-fixture-control',
-        type: 'chromatic-energy-manipulator',
-        title: 'Fixture Control',
+        type: 'professional-fixture-controller',
+        title: 'Super Control',
         props: { isDockable: false }
       }]
   },
   'bottom-right': {
-    components: []
-  },
-  'external': {
     components: [
       {
-        id: 'default-touch-interface',
+        id: 'default-audio-panel',
         type: 'audio-control-panel',
-        title: 'Touchscreen Interface',
+        title: 'Audio Control',
         props: { touchOptimized: true }
       }
     ]
-  }, splitterPositions: {
+  },
+  splitterPositions: {
     horizontal: 50, // 50% split between top panels
     vertical: 70   // 70% top, 30% bottom
   },
@@ -121,7 +108,6 @@ const getBlankLayout = (): PanelLayout => ({
   'top-right': { components: [] },
   'bottom': { components: [] },
   'bottom-right': { components: [] },
-  'external': { components: [] },
   splitterPositions: {
     horizontal: 50,
     vertical: 70
@@ -131,23 +117,12 @@ const getBlankLayout = (): PanelLayout => ({
 
 export const PanelProvider: React.FC<PanelProviderProps> = ({ children }) => {
   const [layout, setLayout] = useState<PanelLayout>(() => {
+    migrateSavedLayoutsStorage();
     const saved = localStorage.getItem('artbastard-panel-layout');
     if (saved) {
       try {
-        const parsedLayout = JSON.parse(saved);
-        // Ensure all required panel IDs exist with proper structure
-        const defaultLayout = getDefaultLayout(); const safeLayout = {
-          ...defaultLayout,
-          ...parsedLayout,
-          'top-left': { components: [], ...defaultLayout['top-left'], ...parsedLayout['top-left'] },
-          'top-right': { components: [], ...defaultLayout['top-right'], ...parsedLayout['top-right'] },
-          'bottom': { components: [], ...defaultLayout['bottom'], ...parsedLayout['bottom'] },
-          'bottom-right': { components: [], ...defaultLayout['bottom-right'], ...parsedLayout['bottom-right'] },
-          'external': { components: [], ...defaultLayout['external'], ...parsedLayout['external'] },
-          splitterPositions: { ...defaultLayout.splitterPositions, ...parsedLayout.splitterPositions },
-          layoutMode: parsedLayout.layoutMode || 'grid-3'
-        };
-        return safeLayout;
+        const parsedLayout = JSON.parse(saved) as Record<string, unknown>;
+        return sanitizePanelLayout(parsedLayout, getDefaultLayout());
       } catch (error) {
         console.warn('Failed to parse saved panel layout, using defaults', error);
       }
@@ -276,21 +251,12 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({ children }) => {
   const loadLayout = useCallback((name: string) => {
     const savedLayouts = JSON.parse(localStorage.getItem('artbastard-saved-layouts') || '{}');
     if (savedLayouts[name]) {
-      // Ensure loaded layout has all required panels with proper structure
-      const defaultLayout = getDefaultLayout();
-      const loadedLayout = savedLayouts[name];
-      const safeLayout = {
-        ...defaultLayout,
-        ...loadedLayout,
-        'top-left': { components: [], ...defaultLayout['top-left'], ...loadedLayout['top-left'] },
-        'top-right': { components: [], ...defaultLayout['top-right'], ...loadedLayout['top-right'] },
-        'bottom': { components: [], ...defaultLayout['bottom'], ...loadedLayout['bottom'] },
-        'bottom-right': { components: [], ...defaultLayout['bottom-right'], ...loadedLayout['bottom-right'] },
-        'external': { components: [], ...defaultLayout['external'], ...loadedLayout['external'] },
-        splitterPositions: { ...defaultLayout.splitterPositions, ...loadedLayout.splitterPositions },
-        layoutMode: loadedLayout.layoutMode || 'grid-3'
-      };
-      setLayout(safeLayout);
+      setLayout(
+        sanitizePanelLayout(
+          savedLayouts[name] as Record<string, unknown>,
+          getDefaultLayout()
+        )
+      );
     }
   }, []);
   const getSavedLayouts = useCallback((): string[] => {

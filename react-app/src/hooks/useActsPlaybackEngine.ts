@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useStore } from '../store';
 import { TimelineEvent } from '../store';
+import { buildActStepBlocks } from '../utils/actTimelineLayout';
 
 export const useActsPlaybackEngine = () => {
   const store = useStore();
@@ -127,11 +128,9 @@ export const useActsPlaybackEngine = () => {
     const currentStep = act.steps[actPlaybackState.currentStepIndex];
     if (!currentStep) return;
 
-    // Calculate absolute time from act start
-    let absoluteTime = 0;
-    for (let i = 0; i < actPlaybackState.currentStepIndex; i++) {
-      absoluteTime += act.steps[i].duration;
-    }
+    const stepBlocks = buildActStepBlocks(act.steps);
+    const currentBlock = stepBlocks[actPlaybackState.currentStepIndex];
+    const absoluteTime = currentBlock?.startTime ?? 0;
 
     // Reset act start time when playback starts
     if (actStartTimeRef.current === 0) {
@@ -151,8 +150,8 @@ export const useActsPlaybackEngine = () => {
       const stepDuration = currentStep.duration * actPlaybackState.playbackSpeed;
       const progress = Math.min(elapsed / stepDuration, 1);
 
-      // Calculate current absolute time in act
-      const currentAbsoluteTime = absoluteTime + (elapsed / actPlaybackState.playbackSpeed);
+      const currentAbsoluteTime =
+        absoluteTime + elapsed / actPlaybackState.playbackSpeed;
 
       // Check and execute timeline events (respecting mute/solo)
       const timelineEvents = act.timelineEvents || [];
@@ -184,8 +183,12 @@ export const useActsPlaybackEngine = () => {
       // Update progress
       setActStepProgress(progress);
 
-      // Auto-advance to next step when current step completes
+      // Advance when clip ends; wait through gaps before the next clip startTime
       if (progress >= 1) {
+        const nextBlock = stepBlocks[actPlaybackState.currentStepIndex + 1];
+        if (nextBlock && currentAbsoluteTime < nextBlock.startTime) {
+          return;
+        }
         nextActStep();
       }
     }, 50); // Update every 50ms for smooth progress

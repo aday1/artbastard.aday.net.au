@@ -1,14 +1,10 @@
 import type { Fixture } from '../store';
-import { getChannelRoleIconName, type ChannelRoleIconName } from './channelRoleIcons';
 
 export interface FixtureChannelInfo {
   fixtureName?: string;
-  fixtureType?: string;
   channelFunction?: string;
   channelType?: string;
   shortFunction?: string;
-  roleIcon?: ChannelRoleIconName;
-  fixtureTypeIcon?: string;
 }
 
 const FIXTURE_TYPE_COLORS: Record<string, string> = {
@@ -126,12 +122,9 @@ export function getFixtureInfoForChannel(
       if (channel) {
         return {
           fixtureName: fixture.name,
-          fixtureType: fixture.type,
           channelFunction: channel.name || `${channel.type} Channel`,
           channelType: channel.type,
           shortFunction: getShortChannelLabel(channel.type),
-          roleIcon: getChannelRoleIconName(channel.type),
-          fixtureTypeIcon: getFixtureTypeIcon(fixture.type),
         };
       }
     }

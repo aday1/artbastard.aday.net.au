@@ -6,7 +6,7 @@ import { SnapIndicator } from './SnapIndicator';
 interface DockableComponentProps {
   id: string;
   title: string;
-  component: 'midi-monitor' | 'osc-monitor' | 'midi-clock' | 'chromatic-energy-manipulator' | 'master-fader' | 'dmx-channel-grid' | 'professional-fixture-controller';
+  component: 'midi-monitor' | 'osc-monitor' | 'midi-clock' | 'master-fader' | 'dmx-channel-grid' | 'professional-fixture-controller';
   children: ReactNode;
   className?: string;
   style?: React.CSSProperties;

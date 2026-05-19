@@ -19,15 +19,6 @@
   align-items: stretch;
 }
 
-.triple {
-  display: grid;
-  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1fr) minmax(0, 1.12fr);
-  gap: 0.3rem;
-  flex: 1;
-  min-height: 14rem;
-  align-items: stretch;
-}
-
 .single {
   flex: 1;
   display: flex;
@@ -57,35 +48,11 @@
 
 .modeBadge {
   align-self: center;
-  font-family: var(--wb-mono, 'Share Tech Mono', monospace);
   font-size: 0.6rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  padding: 0.15rem 0.45rem;
-  border-radius: 2px;
-  border: 1px solid var(--wb-bevel-dark, #110a25);
-  border-top-color: var(--wb-bevel-light, #5a48a0);
-  border-left-color: var(--wb-bevel-light, #5a48a0);
-  background: var(--wb-surface, #251c44);
-  color: var(--wb-copper, #ffa044);
-  cursor: pointer;
-  touch-action: manipulation;
-
-  &:hover {
-    color: var(--wb-text, #ece4f8);
-    background: var(--wb-panel, #2d2350);
-  }
-}
-
-.modeBadgeActive {
-  background: var(--wb-accent, #6aa6e6);
-  color: var(--wb-bg, #1a1530);
-  border-color: var(--wb-accent, #6aa6e6);
-}
-
-.fullCol {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  min-width: 0;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  border: 1px solid color-mix(in srgb, var(--color-primary, #d68706) 50%, transparent);
+  color: var(--color-accent, #f8dd36);
 }

@@ -2,7 +2,10 @@ import React, { useState, useRef, useEffect } from 'react'
 import axios from 'axios'
 import { useStore } from '../../store'
 import { LucideIcon } from '../ui/LucideIcon'
+import { HorizontalFader } from '../ui/controls';
+import { SceneChannelValueEditor } from './SceneChannelValueEditor';
 import styles from './ScenePanel.module.scss'
+import { useSceneCapture } from '../../hooks/useSceneCapture'
 
 interface ScenePanelProps {
   isDocked?: boolean
@@ -19,57 +22,49 @@ export const ScenePanel: React.FC<ScenePanelProps> = ({
 }) => {
   const {
     scenes,
-    saveScene,
     loadScene,
     deleteScene,
     addNotification,
     activeSceneName,
     updateActiveScene,
-    setTuningScene
+    setTuningScene,
+    transitionDuration,
+    setTransitionDuration,
+    isTransitioning,
   } = useStore()
+
+  const { captureScene, sceneNameToOscPath } = useSceneCapture()
 
   const [sceneNameInput, setSceneNameInput] = useState('')
   const [isExpanded, setIsExpanded] = useState(true)
   const [isDragging, setIsDragging] = useState(false)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const [showTransitionControls, setShowTransitionControls] = useState(false)
-  const [transitionDuration, setTransitionDuration] = useState(1000)
   const [currentSceneIndex, setCurrentSceneIndex] = useState(0)
   const [transitionEasing, setTransitionEasing] = useState('ease-in-out')
-  const [isTransitioning, setIsTransitioning] = useState(false)
   const [editingSceneName, setEditingSceneName] = useState<string | null>(null)
   const [editingChannelValues, setEditingChannelValues] = useState<number[]>([])
   const panelRef = useRef<HTMLDivElement>(null)
 
   const handleSaveScene = () => {
-    if (sceneNameInput.trim()) {
-      const oscAddress = `/scene/${sceneNameInput.trim().toLowerCase().replace(/\s+/g, '_')}`
-      saveScene(sceneNameInput.trim(), oscAddress)
-      addNotification({
-        message: `Scene "${sceneNameInput.trim()}" saved successfully`,
-        type: 'success'
-      })
-      setSceneNameInput('')
-    }
+    if (!sceneNameInput.trim()) return
+    const name = sceneNameInput.trim()
+    captureScene({
+      name,
+      oscAddress: sceneNameToOscPath(name),
+      notify: true,
+    })
+    setSceneNameInput('')
   }
 
-  const handleLoadScene = async (sceneName: string) => {
-    const scene = scenes.find(s => s.name === sceneName)
-    if (scene) {
-      setIsTransitioning(true)
-
-      try {
-        // Simulate smooth transition
-        await new Promise(resolve => setTimeout(resolve, transitionDuration))
-        loadScene(sceneName)
-        addNotification({
-          message: `Scene "${scene.name}" loaded with ${transitionDuration}ms transition`,
-          type: 'success'
-        })
-      } finally {
-        setIsTransitioning(false)
-      }
-    }
+  const handleLoadScene = (sceneName: string) => {
+    const scene = scenes.find((s) => s.name === sceneName)
+    if (!scene) return
+    loadScene(sceneName)
+    addNotification({
+      message: `Scene "${scene.name}" loading (${transitionDuration}ms fade)`,
+      type: 'success',
+    })
   }
 
   const handlePreviousScene = () => {
@@ -263,14 +258,12 @@ export const ScenePanel: React.FC<ScenePanelProps> = ({
               <h4>Transition Settings</h4>
               <div className={styles.transitionRow}>
                 <label>Duration (ms):</label>
-                <input
-                  type="range"
-                  min="0"
-                  max="5000"
-                  step="100"
+                <HorizontalFader
+                  min={0}
+                  max={5000}
+                  step={100}
                   value={transitionDuration}
-                  onChange={(e) => setTransitionDuration(parseInt(e.target.value))}
-                  className={styles.transitionSlider}
+                  onChange={(v) => setTransitionDuration(Math.round(v))}
                 />
                 <span className={styles.transitionValue}>{transitionDuration}ms</span>
               </div>
@@ -487,123 +480,14 @@ export const ScenePanel: React.FC<ScenePanelProps> = ({
                         </button>
                       </div>
 
-                      {/* Inline Channel Editor */}
                       {editingSceneName === scene.name && (
-                        <div style={{
-                          marginTop: '12px',
-                          padding: '12px',
-                          backgroundColor: 'rgba(15, 23, 42, 0.6)',
-                          border: '1px solid rgba(71, 85, 105, 0.5)',
-                          borderRadius: '6px'
-                        }}>
-                          <div style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            marginBottom: '12px'
-                          }}>
-                            <h5 style={{ margin: 0, fontSize: '14px', color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              Edit Channel Values
-                              {(() => {
-                                const modifiedCount = editingChannelValues.filter((val, idx) => val !== scene.channelValues[idx]).length;
-                                return modifiedCount > 0 ? (
-                                  <span style={{
-                                    padding: '2px 8px',
-                                    backgroundColor: '#fbbf24',
-                                    color: '#1e293b',
-                                    borderRadius: '12px',
-                                    fontSize: '11px',
-                                    fontWeight: 'bold'
-                                  }}>
-                                    {modifiedCount} PENDING
-                                  </span>
-                                ) : null;
-                              })()}
-                            </h5>
-                            <button
-                              onClick={handleSaveEdit}
-                              disabled={editingChannelValues.every((val, idx) => val === scene.channelValues[idx])}
-                              style={{
-                                padding: '8px 16px',
-                                backgroundColor: editingChannelValues.some((val, idx) => val !== scene.channelValues[idx]) ? '#10b981' : '#6b7280',
-                                color: 'white',
-                                border: editingChannelValues.some((val, idx) => val !== scene.channelValues[idx]) ? '2px solid #34d399' : 'none',
-                                borderRadius: '4px',
-                                cursor: editingChannelValues.some((val, idx) => val !== scene.channelValues[idx]) ? 'pointer' : 'not-allowed',
-                                fontSize: '13px',
-                                fontWeight: 'bold',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                boxShadow: editingChannelValues.some((val, idx) => val !== scene.channelValues[idx]) ? '0 0 20px rgba(16, 185, 129, 0.5)' : 'none'
-                              }}
-                            >
-                              <LucideIcon name="Save" size={16} />
-                              {editingChannelValues.some((val, idx) => val !== scene.channelValues[idx]) ? 'SAVE CHANGES' : 'No Changes'}
-                            </button>
-                          </div>
-
-                          <div style={{
-                            maxHeight: '400px',
-                            overflowY: 'auto',
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                            gap: '12px'
-                          }}>
-                            {editingChannelValues.map((value, index) => {
-                              // Only show channels with non-zero values
-                              if (value === 0 && scene.channelValues[index] === 0) return null;
-
-                              return (
-                                <div key={index} style={{
-                                  padding: '8px',
-                                  backgroundColor: 'rgba(30, 41, 59, 0.5)',
-                                  borderRadius: '4px',
-                                  border: '1px solid rgba(71, 85, 105, 0.3)'
-                                }}>
-                                  <div style={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    marginBottom: '6px',
-                                    fontSize: '11px',
-                                    color: '#94a3b8'
-                                  }}>
-                                    <span>CH {index + 1}</span>
-                                    <span style={{
-                                      fontWeight: 'bold',
-                                      color: value !== scene.channelValues[index] ? '#fbbf24' : '#e2e8f0'
-                                    }}>
-                                      {value}
-                                    </span>
-                                  </div>
-                                  <input
-                                    type="range"
-                                    min="0"
-                                    max="255"
-                                    value={value}
-                                    onChange={(e) => handleChannelChange(index, parseInt(e.target.value))}
-                                    style={{
-                                      width: '100%',
-                                      accentColor: value !== scene.channelValues[index] ? '#fbbf24' : '#3b82f6'
-                                    }}
-                                  />
-                                </div>
-                              );
-                            })}
-                          </div>
-
-                          <div style={{
-                            marginTop: '12px',
-                            padding: '8px',
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                            borderRadius: '4px',
-                            fontSize: '11px',
-                            color: '#93c5fd'
-                          }}>
-                            💡 <strong>Tip:</strong> Modified channels are highlighted in yellow.
-                            Only non-zero channels are shown.
-                          </div>
-                        </div>
+                        <SceneChannelValueEditor
+                          originalValues={scene.channelValues}
+                          values={editingChannelValues}
+                          onChange={handleChannelChange}
+                          onSave={handleSaveEdit}
+                          controlIdPrefix="scene-panel"
+                        />
                       )}
                     </div>
                   );

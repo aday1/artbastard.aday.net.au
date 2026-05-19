@@ -1,11 +1,16 @@
-import React, { useState } from 'react'
+import React, { Suspense, lazy, useState } from 'react'
 import axios from 'axios'
 import { useStore, SceneTimeline } from '../../store'
 import { useTheme } from '../../context/ThemeContext'
 import { MidiLearnButton } from '../midi/MidiLearnButton'
-import { SceneTimelineEditor } from './SceneTimelineEditor'
+const SceneTimelineEditor = lazy(() =>
+  import('./SceneTimelineEditor').then((m) => ({ default: m.SceneTimelineEditor }))
+)
 import { LucideIcon } from '../ui/LucideIcon'
+import { HorizontalFader } from '../ui/controls';
+import { SceneChannelValueEditor } from './SceneChannelValueEditor';
 import styles from './SceneGallery.module.scss'
+import { useSceneCapture } from '../../hooks/useSceneCapture'
 
 export const SceneGallery: React.FC = () => {
   const { theme } = useTheme()
@@ -18,7 +23,9 @@ export const SceneGallery: React.FC = () => {
     updateScene,
     autoSceneList,
     setAutoSceneList,
-    autoSceneEnabled
+    autoSceneEnabled,
+    transitionDuration,
+    setTransitionDuration,
   } = useStore(state => ({
     scenes: state.scenes,
     dmxChannels: state.dmxChannels,
@@ -28,20 +35,23 @@ export const SceneGallery: React.FC = () => {
     updateScene: state.updateScene,
     autoSceneList: state.autoSceneList,
     setAutoSceneList: state.setAutoSceneList,
-    autoSceneEnabled: state.autoSceneEnabled
+    autoSceneEnabled: state.autoSceneEnabled,
+    transitionDuration: state.transitionDuration,
+    setTransitionDuration: state.setTransitionDuration,
   }))
   const [newSceneName, setNewSceneName] = useState('')
   const [newSceneOsc, setNewSceneOsc] = useState('/scene/new')
   const [activeSceneId, setActiveSceneId] = useState<string | null>(null)
-  const [transitionTime, setTransitionTime] = useState(1) // seconds
+  const transitionTimeSec = transitionDuration / 1000
   const [editingScene, setEditingScene] = useState<string | null>(null)
   const [editOscAddress, setEditOscAddress] = useState('')
   const [editSceneName, setEditSceneName] = useState('')
   const [editingChannelValues, setEditingChannelValues] = useState<string | null>(null)
   const [channelValues, setChannelValues] = useState<number[]>([])
   const [editingTimelineScene, setEditingTimelineScene] = useState<string | null>(null)
-  // Save current DMX state as a new scene
-  const saveScene = () => {
+  const { captureScene, quickCapture, sceneNameToOscPath } = useSceneCapture()
+
+  const handleSaveNewScene = () => {
     if (!newSceneName.trim()) {
       useStore.getState().addNotification({
         message: 'Scene name cannot be empty',
@@ -51,24 +61,15 @@ export const SceneGallery: React.FC = () => {
       return
     }
 
-    // Check for duplicate names
-    if (scenes.some(s => s.name === newSceneName)) {
-      if (!window.confirm(`Scene "${newSceneName}" already exists. Overwrite?`)) {
-        return
-      }
-    }
+    const saved = captureScene({
+      name: newSceneName.trim(),
+      oscAddress: newSceneOsc.trim() || sceneNameToOscPath(newSceneName),
+      notify: true,
+    })
+    if (!saved) return
 
-    useStore.getState().saveScene(newSceneName, newSceneOsc)
-    // Reset form
     setNewSceneName('')
     setNewSceneOsc('/scene/new')
-
-    // Show success message
-    useStore.getState().addNotification({
-      message: `Scene "${newSceneName}" saved`,
-      type: 'success',
-      priority: 'normal'
-    })
   }
 
   // Start editing a scene
@@ -325,7 +326,7 @@ export const SceneGallery: React.FC = () => {
           <div className={styles.buttonGroup}>
             <button
               className={styles.saveButton}
-              onClick={saveScene}
+              onClick={handleSaveNewScene}
               disabled={!newSceneName.trim()}
             >
               <i className="fas fa-save"></i>
@@ -336,16 +337,7 @@ export const SceneGallery: React.FC = () => {
 
             <button
               className={styles.quickSaveButton}
-              onClick={() => {
-                const timestamp = new Date().toISOString().slice(11, 19).replace(/:/g, '-');
-                const quickName = `Quick_${timestamp}`;
-                useStore.getState().saveScene(quickName, `/scene/${quickName.toLowerCase()}`);
-                useStore.getState().addNotification({
-                  message: `Quick saved as "${quickName}"`,
-                  type: 'success',
-                  priority: 'normal'
-                });
-              }}
+              onClick={() => quickCapture()}
               title="Quick save current DMX state with timestamp"
             >
               <i className="fas fa-bolt"></i>
@@ -375,16 +367,16 @@ export const SceneGallery: React.FC = () => {
                 {theme === 'minimal' && 'Time:'}
               </label>
               <div className={styles.timeControl}>
-                <input
-                  type="range"
-                  id="transitionTime"
-                  min="0"
-                  max="60"
-                  step="0.1"
-                  value={transitionTime}
-                  onChange={(e) => setTransitionTime(parseFloat(e.target.value))}
-                />
-                <span className={styles.timeDisplay}>{formatTime(transitionTime)}</span>
+                <div className={styles.timeFader}>
+                  <HorizontalFader
+                    min={0}
+                    max={60}
+                    step={0.1}
+                    value={transitionTimeSec}
+                    onChange={(v) => setTransitionDuration(Math.round(v * 1000))}
+                  />
+                </div>
+                <span className={styles.timeDisplay}>{formatTime(transitionTimeSec)}</span>
               </div>
             </div>
 
@@ -675,133 +667,15 @@ export const SceneGallery: React.FC = () => {
               </div>
             )}
 
-            {/* Inline Channel Editor */}
             {editingChannelValues === scene.name && (
-              <div style={{
-                marginTop: '16px',
-                padding: '16px',
-                backgroundColor: 'rgba(15, 23, 42, 0.8)',
-                border: '2px solid rgba(71, 85, 105, 0.6)',
-                borderRadius: '8px'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '12px'
-                }}>
-                  <h5 style={{ margin: 0, fontSize: '14px', color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <i className="fas fa-sliders-h"></i>
-                    Edit Channel Values
-                    {(() => {
-                      const modifiedCount = channelValues.filter((val, idx) => val !== scene.channelValues[idx]).length;
-                      return modifiedCount > 0 ? (
-                        <span style={{
-                          padding: '3px 10px',
-                          backgroundColor: '#fbbf24',
-                          color: '#1e293b',
-                          borderRadius: '12px',
-                          fontSize: '11px',
-                          fontWeight: 'bold'
-                        }}>
-                          {modifiedCount} PENDING
-                        </span>
-                      ) : null;
-                    })()}
-                  </h5>
-                  <button
-                    onClick={saveChannelEdits}
-                    disabled={channelValues.every((val, idx) => val === scene.channelValues[idx])}
-                    style={{
-                      padding: '8px 16px',
-                      backgroundColor: channelValues.some((val, idx) => val !== scene.channelValues[idx]) ? '#10b981' : '#6b7280',
-                      color: 'white',
-                      border: channelValues.some((val, idx) => val !== scene.channelValues[idx]) ? '2px solid #34d399' : 'none',
-                      borderRadius: '6px',
-                      cursor: channelValues.some((val, idx) => val !== scene.channelValues[idx]) ? 'pointer' : 'not-allowed',
-                      fontSize: '13px',
-                      fontWeight: 'bold',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      boxShadow: channelValues.some((val, idx) => val !== scene.channelValues[idx]) ? '0 0 20px rgba(16, 185, 129, 0.5)' : 'none'
-                    }}
-                  >
-                    <i className="fas fa-save"></i>
-                    {channelValues.some((val, idx) => val !== scene.channelValues[idx]) ? 'SAVE CHANGES' : 'No Changes'}
-                  </button>
-                </div>
-
-                <div style={{
-                  maxHeight: '400px',
-                  overflowY: 'auto',
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-                  gap: '12px',
-                  padding: '4px'
-                }}>
-                  {channelValues.map((value, chIdx) => {
-                    if (value === 0 && scene.channelValues[chIdx] === 0) return null;
-
-                    return (
-                      <div key={chIdx} style={{
-                        padding: '10px',
-                        backgroundColor: 'rgba(30, 41, 59, 0.6)',
-                        borderRadius: '6px',
-                        border: '1px solid rgba(71, 85, 105, 0.4)'
-                      }}>
-                        <div style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          marginBottom: '8px',
-                          fontSize: '11px',
-                          color: '#94a3b8'
-                        }}>
-                          <span style={{ fontWeight: 'bold' }}>
-                            {channelNames[chIdx] && channelNames[chIdx] !== `CH ${chIdx + 1}` && channelNames[chIdx] !== `Channel ${chIdx + 1}`
-                              ? channelNames[chIdx]
-                              : `CH ${chIdx + 1}`
-                            }
-                          </span>
-                          <span style={{
-                            fontWeight: 'bold',
-                            fontSize: '13px',
-                            color: value !== scene.channelValues[chIdx] ? '#fbbf24' : '#e2e8f0'
-                          }}>
-                            {value}
-                          </span>
-                        </div>
-                        <input
-                          type="range"
-                          min="0"
-                          max="255"
-                          value={value}
-                          onChange={(e) => handleChannelChange(chIdx, parseInt(e.target.value))}
-                          style={{
-                            width: '100%',
-                            accentColor: value !== scene.channelValues[chIdx] ? '#fbbf24' : '#3b82f6'
-                          }}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div style={{
-                  marginTop: '12px',
-                  padding: '10px',
-                  backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                  borderRadius: '6px',
-                  fontSize: '11px',
-                  color: '#93c5fd',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
-                  <i className="fas fa-info-circle"></i>
-                  <span><strong>Tip:</strong> Modified channels are highlighted in yellow. Only non-zero channels shown.</span>
-                </div>
-              </div>
+              <SceneChannelValueEditor
+                originalValues={scene.channelValues}
+                values={channelValues}
+                onChange={handleChannelChange}
+                onSave={saveChannelEdits}
+                channelNames={channelNames}
+                controlIdPrefix="scene-gallery"
+              />
             )}
           </div>
         ))}
@@ -814,19 +688,21 @@ export const SceneGallery: React.FC = () => {
         if (!scene) return null;
 
         return (
-          <SceneTimelineEditor
-            scene={scene}
-            onClose={() => setEditingTimelineScene(null)}
-            onSave={(timeline: SceneTimeline) => {
-              updateScene(scene.name, { timeline });
-              setEditingTimelineScene(null);
-              useStore.getState().addNotification({
-                message: `Timeline saved for scene "${scene.name}"`,
-                type: 'success',
-                priority: 'normal'
-              });
-            }}
-          />
+          <Suspense fallback={null}>
+            <SceneTimelineEditor
+              scene={scene}
+              onClose={() => setEditingTimelineScene(null)}
+              onSave={(timeline: SceneTimeline) => {
+                updateScene(scene.name, { timeline });
+                setEditingTimelineScene(null);
+                useStore.getState().addNotification({
+                  message: `Timeline saved for scene "${scene.name}"`,
+                  type: 'success',
+                  priority: 'normal'
+                });
+              }}
+            />
+          </Suspense>
         );
       })()}
     </div>

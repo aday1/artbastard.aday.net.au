@@ -33,6 +33,11 @@ export const MidiMonitor: React.FC = () => {
     const saved = localStorage.getItem('midiMonitorDismissed');
     return saved === 'true';
   });
+  const [filterSource, setFilterSource] = useState<string>(() => {
+    const saved = localStorage.getItem('midiMonitorFilterSource');
+    return saved || 'all'; // 'all' means show all sources
+  });
+  const [showFilter, setShowFilter] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const monitorRef = useRef<HTMLDivElement>(null);
   const lastMessageCountRef = useRef<number>(0);
@@ -68,6 +73,8 @@ export const MidiMonitor: React.FC = () => {
         matches = mapping.channel === msg.channel && mapping.controller === msg.controller;
       } else if (msgType === 'noteon' && mapping.note !== undefined) {
         matches = mapping.channel === msg.channel && mapping.note === msg.note;
+      } else if (msgType === 'pitch' && mapping.pitch) {
+        matches = mapping.channel === msg.channel;
       }
       
       if (matches) {
@@ -84,7 +91,20 @@ export const MidiMonitor: React.FC = () => {
     return affectedChannels;
   };
 
-  // Update displayed messages based on scrollback setting
+  // Get unique MIDI sources from messages
+  const availableSources = React.useMemo(() => {
+    const sources = new Set<string>();
+    midiMessages.forEach(msg => {
+      if (msg.source) {
+        sources.add(msg.source);
+      } else {
+        sources.add('unknown');
+      }
+    });
+    return Array.from(sources).sort();
+  }, [midiMessages]);
+
+  // Update displayed messages based on scrollback setting and filter
   useEffect(() => {
     if (isPaused) {
       // When paused, keep showing the last messages we had - don't update
@@ -93,13 +113,22 @@ export const MidiMonitor: React.FC = () => {
     
     // Only update if we have messages or if we need to clear
     if (midiMessages && midiMessages.length > 0) {
+      // Filter by source if filter is set
+      let filteredMessages = midiMessages;
+      if (filterSource !== 'all') {
+        filteredMessages = midiMessages.filter(msg => {
+          const msgSource = msg.source || 'unknown';
+          return msgSource === filterSource;
+        });
+      }
+      
       // Show last N messages based on scrollback setting
-      const recentMessages = midiMessages.slice(-scrollback);
+      const recentMessages = filteredMessages.slice(-scrollback);
       setLastMessages(recentMessages);
     } else if (midiMessages && midiMessages.length === 0) {
       setLastMessages([]);
     }
-  }, [midiMessages, scrollback, isPaused]);
+  }, [midiMessages, scrollback, isPaused, filterSource]);
 
   // Auto-scroll to bottom when new messages arrive (tail -f behavior)
   useEffect(() => {
@@ -236,10 +265,30 @@ export const MidiMonitor: React.FC = () => {
           </span>
         )}
       </span>
-      {!isCollapsed && <span className={styles.status}>Recent: {midiMessages.length}</span>}
+      {!isCollapsed && (
+        <>
+          <span className={styles.status}>Recent: {midiMessages.length}</span>
+          {filterSource !== 'all' && (
+            <span className={styles.filterBadge} title={`Filtered by: ${filterSource}`}>
+              Filter: {filterSource}
+            </span>
+          )}
+        </>
+      )}
       <div className={styles.controls}>
         {!isCollapsed && (
           <>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowFilter(!showFilter);
+              }}
+              onPointerDown={e => e.stopPropagation()}
+              title="Filter by MIDI device/source"
+              className={filterSource !== 'all' ? styles.active : ''}
+            >
+              <LucideIcon name="Filter" size={14} strokeWidth={1.5} />
+            </button>
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -360,7 +409,15 @@ export const MidiMonitor: React.FC = () => {
                     <span className={styles.source}>{msg.source}</span>
                   </>
                 )}
-                {(msg.type || msg._type) !== 'cc' && (msg.type || msg._type) !== 'noteon' && (
+                {(msg.type || msg._type) === 'pitch' && (
+                  <>
+                    <span className={styles.type}>Pitch</span>
+                    <span className={styles.channel}>Ch {msg.channel + 1}</span>
+                    <span className={styles.value}>Value {msg.value}</span>
+                    <span className={styles.source}>{msg.source}</span>
+                  </>
+                )}
+                {(msg.type || msg._type) !== 'cc' && (msg.type || msg._type) !== 'noteon' && (msg.type || msg._type) !== 'pitch' && (
                   <span>Other: {JSON.stringify(msg)}</span>
                 )}
               </div>
@@ -397,6 +454,42 @@ export const MidiMonitor: React.FC = () => {
         }}
       >
         {renderHeader()}
+        {showFilter && !isCollapsed && (
+          <div className={styles.filterPanel} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.filterHeader}>
+              <strong>Filter by MIDI Source:</strong>
+              <button
+                onClick={() => {
+                  setFilterSource('all');
+                  localStorage.setItem('midiMonitorFilterSource', 'all');
+                  setShowFilter(false);
+                }}
+                className={filterSource === 'all' ? styles.active : ''}
+              >
+                All Sources
+              </button>
+            </div>
+            <div className={styles.filterOptions}>
+              {availableSources.length > 0 ? (
+                availableSources.map(source => (
+                  <button
+                    key={source}
+                    onClick={() => {
+                      setFilterSource(source);
+                      localStorage.setItem('midiMonitorFilterSource', source);
+                      setShowFilter(false);
+                    }}
+                    className={filterSource === source ? styles.active : ''}
+                  >
+                    {source}
+                  </button>
+                ))
+              ) : (
+                <span className={styles.noSources}>No sources detected yet</span>
+              )}
+            </div>
+          </div>
+        )}
         {renderContent()}
       </div>
 
@@ -427,6 +520,12 @@ export const MidiMonitor: React.FC = () => {
               <>
                 <div><strong>Note:</strong> {hoveredMessage.note} ({typeof hoveredMessage.note === 'number' ? getNoteName(hoveredMessage.note) : 'N/A'})</div>
                 <div><strong>Velocity:</strong> {hoveredMessage.velocity} ({(hoveredMessage.velocity / 127 * 100).toFixed(1)}%)</div>
+              </>
+            )}
+            {(hoveredMessage.type || hoveredMessage._type) === 'pitch' && (
+              <>
+                <div><strong>Pitch:</strong> {hoveredMessage.value}</div>
+                <div><strong>Normalized:</strong> {(((hoveredMessage.value || 0) > 127 ? (hoveredMessage.value || 0) / 16383 : (hoveredMessage.value || 0) / 127) * 100).toFixed(1)}%</div>
               </>
             )}
             {hoveredMessage.source && (

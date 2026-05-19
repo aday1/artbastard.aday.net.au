@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useStore } from '../../store';
 import { LucideIcon } from '../ui/LucideIcon';
+import { HorizontalFader } from '../ui/controls';
 import styles from './SceneGroupManager.module.scss';
 
 interface SceneGroup {
@@ -554,28 +555,24 @@ export const SceneGroupManager: React.FC<SceneGroupManagerProps> = ({
                       <div className={styles.durationControls}>
                         <div className={styles.durationControl}>
                           <label>Transition Duration (ms):</label>
-                          <input
-                            type="range"
-                            min="0"
-                            max="5000"
-                            step="100"
+                          <HorizontalFader
+                            min={0}
+                            max={5000}
+                            step={100}
                             value={selectedGroup.autoPilot.transitionDuration}
-                            onChange={(e) => updateGroupAutoPilot(selectedGroup.id, { transitionDuration: parseInt(e.target.value) })}
-                            className={styles.durationSlider}
+                            onChange={(v) => updateGroupAutoPilot(selectedGroup.id, { transitionDuration: Math.round(v) })}
                           />
                           <span>{selectedGroup.autoPilot.transitionDuration}ms</span>
                         </div>
 
                         <div className={styles.durationControl}>
                           <label>Hold Duration (ms):</label>
-                          <input
-                            type="range"
-                            min="1000"
-                            max="30000"
-                            step="500"
+                          <HorizontalFader
+                            min={1000}
+                            max={30000}
+                            step={500}
                             value={selectedGroup.autoPilot.holdDuration}
-                            onChange={(e) => updateGroupAutoPilot(selectedGroup.id, { holdDuration: parseInt(e.target.value) })}
-                            className={styles.durationSlider}
+                            onChange={(v) => updateGroupAutoPilot(selectedGroup.id, { holdDuration: Math.round(v) })}
                           />
                           <span>{selectedGroup.autoPilot.holdDuration}ms</span>
                         </div>

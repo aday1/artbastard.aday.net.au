@@ -1,15 +1,34 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useStore } from '../../store';
 import { LucideIcon } from '../ui/LucideIcon';
 import CustomPathEditor from '../automation/CustomPathEditor';
+import { EnvelopeChannelPanel } from '../automation/EnvelopeChannelPanel';
+import { EnvelopePlaybackControls } from '../automation/EnvelopePlaybackControls';
 import { useSuperControlMidiLearn } from '../../hooks/useSuperControlMidiLearn';
 import { useMobile } from '../../hooks/useMobile';
-import { TouchChannelMatrix } from './TouchChannelMatrix';
+import { useSceneCapture } from '../../hooks/useSceneCapture';
+import { useSuperControlPreferences } from '../../context/SuperControlPreferencesContext';
+import {
+  ArtbastardXYPad,
+  DmxFaderRow,
+  HorizontalFader,
+  RangeWindowControl,
+  SteppedGoboSlider,
+  DmxTickChannelMeter,
+  SkeuoKnobSlider,
+} from '../ui/controls';
+import { SkeuoButton } from '../ui/SkeuoButton';
+import { SelectedChannelsFaderStrip } from './SelectedChannelsFaderStrip';
+import { debugLog } from '../../utils/debugLog';
+import { rangesToTickSteps } from '../../utils/fixtureChannelTicks';
+import type { FixtureChannelRange } from '../../store/types';
 import styles from './SuperControl.module.scss';
 // Removed react-grid-layout - using CSS auto-layout instead
 
 interface SuperControlProps {
   isDockable?: boolean;
+  /** Force touch-oriented spacing when embedded in the touch panel type. */
+  preferTouchLayout?: boolean;
 }
 
 type SelectionMode = 'channels' | 'fixtures' | 'groups' | 'capabilities';
@@ -19,14 +38,74 @@ interface FixtureCapability {
   fixtures: string[];
 }
 
-const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
+function hsvToRgb(h: number, s: number, v: number) {
+  const hn = h / 360;
+  const sn = s / 100;
+  const vn = v / 100;
+  const c = vn * sn;
+  const x = c * (1 - Math.abs(((hn * 6) % 2) - 1));
+  const m = vn - c;
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  if (hn < 1 / 6) {
+    r = c;
+    g = x;
+  } else if (hn < 2 / 6) {
+    r = x;
+    g = c;
+  } else if (hn < 3 / 6) {
+    g = c;
+    b = x;
+  } else if (hn < 4 / 6) {
+    g = x;
+    b = c;
+  } else if (hn < 5 / 6) {
+    r = x;
+    b = c;
+  } else {
+    r = c;
+    b = x;
+  }
+  return {
+    r: Math.round((r + m) * 255),
+    g: Math.round((g + m) * 255),
+    b: Math.round((b + m) * 255),
+  };
+}
+
+function rgbToHsv(r: number, g: number, b: number) {
+  const rn = r / 255;
+  const gn = g / 255;
+  const bn = b / 255;
+  const max = Math.max(rn, gn, bn);
+  const min = Math.min(rn, gn, bn);
+  const delta = max - min;
+  let h = 0;
+  const s = max === 0 ? 0 : (delta / max) * 100;
+  if (delta > 0) {
+    if (max === rn) h = ((gn - bn) / delta) % 6;
+    else if (max === gn) h = (bn - rn) / delta + 2;
+    else h = (rn - gn) / delta + 4;
+    h *= 60;
+    if (h < 0) h += 360;
+  }
+  return { h, s };
+}
+
+const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferTouchLayout = false }) => {
   const { isMobile, isTablet, isTouch } = useMobile();
+  const { settings: superControlPrefs } = useSuperControlPreferences();
+  const touchLayout =
+    preferTouchLayout || isMobile || isTablet || isTouch || superControlPrefs.compactMode;
   const {
     fixtures,
     groups,
     selectedChannels,
     selectedFixtures,
     setSelectedFixtures,
+    selectAllFixtures,
+    deselectAllFixtures,
     getDmxChannelValue,
     setDmxChannelValue,
     getChannelInfo,
@@ -35,26 +114,6 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
     midiMessages,
     // BPM for autopilot timing
     bpm,
-    // Autopilot functions
-    autopilotTrackEnabled,
-    autopilotTrackType,
-    autopilotTrackPosition,
-    autopilotTrackSize,
-    autopilotTrackSpeed,
-    autopilotTrackCenterX,
-    autopilotTrackCenterY,
-    setAutopilotTrackEnabled,
-    setAutopilotTrackType,
-    setAutopilotTrackPosition,
-    setAutopilotTrackSize,
-    setAutopilotTrackSpeed,
-    setAutopilotTrackCenter,
-    autopilotTrackCustomPoints,
-    setAutopilotTrackCustomPoints,
-    updatePanTiltFromTrack,
-    calculateTrackPosition,
-    startAutopilotTrackAnimation,
-    stopAutopilotTrackAnimation,
     // Color Autopilot functions
     colorSliderAutopilot,
     setColorSliderAutopilot,
@@ -63,14 +122,13 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
     panTiltAutopilot,
     setPanTiltAutopilot,
     togglePanTiltAutopilot,
-    // Debug functions
-    debugAutopilotState,
     // Scene functions from global store
     scenes,
-    saveScene,
     deleteScene,
     loadScene: storeLoadScene,
   } = useStore();
+
+  const { captureScene } = useSceneCapture();
 
   // MIDI Learn functionality
   const {
@@ -98,6 +156,44 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
   const [green, setGreen] = useState(255);
   const [blue, setBlue] = useState(255);
   const [gobo, setGobo] = useState(0);
+
+  const defaultGoboSteps = useMemo(
+    () => [
+      { value: 0, min: 0, max: 15, label: 'Open', image: '/gobos/open.svg' },
+      { value: 32, min: 16, max: 47, label: 'Gobo 1', image: '/gobos/gobo1.svg' },
+      { value: 64, min: 48, max: 79, label: 'Gobo 2', image: '/gobos/gobo2.svg' },
+      { value: 96, min: 80, max: 111, label: 'Gobo 3', image: '/gobos/gobo3.svg' },
+      { value: 128, min: 112, max: 143, label: 'Gobo 4', image: '/gobos/gobo4.svg' },
+      { value: 160, min: 144, max: 175, label: 'Gobo 5', image: '/gobos/gobo5.svg' },
+      { value: 192, min: 176, max: 207, label: 'Gobo 6', image: '/gobos/gobo6.svg' },
+      { value: 224, min: 208, max: 255, label: 'Gobo 7', image: '/gobos/gobo7.svg' },
+    ],
+    []
+  );
+
+  const goboSteps = useMemo(() => {
+    let bestRanges: FixtureChannelRange[] | null = null;
+    for (const fixId of selectedFixtures) {
+      const fix = fixtures.find((f) => f.id === fixId);
+      if (!fix) continue;
+      for (const ch of fix.channels) {
+        if (ch.type === 'gobo_wheel' && ch.ranges && ch.ranges.length > 0) {
+          if (!bestRanges || ch.ranges.length > bestRanges.length) {
+            bestRanges = ch.ranges;
+          }
+        }
+      }
+    }
+    if (bestRanges) {
+      return rangesToTickSteps(bestRanges).map((s) => ({
+        value: s.value,
+        min: s.min,
+        max: s.max,
+        label: s.label,
+      }));
+    }
+    return defaultGoboSteps;
+  }, [selectedFixtures, fixtures, defaultGoboSteps]);
   const [shutter, setShutter] = useState(255);
   const [strobe, setStrobe] = useState(0);
   const [lamp, setLamp] = useState(255);
@@ -107,9 +203,6 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
   const [panTiltXY, setPanTiltXY] = useState({ x: 50, y: 50 });
   const xyPadRef = useRef<HTMLDivElement>(null);
   const [isDraggingXY, setIsDraggingXY] = useState(false);
-
-  // Canvas ref for path visualization
-  const pathCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // MIDI Learn Processing
   useEffect(() => {
@@ -160,36 +253,23 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
     }
   }, [midiMessages, processMidiForControl, panValue, tiltValue, red, green, blue]);
 
-  // MIDI Learn Button Component
-  const renderMidiButtons = (controlName: string, displayName: string) => {
-    const isMapped = superControlMappings[controlName];
+  const midiPropsFor = (controlName: string) => {
+    const mapping = superControlMappings[controlName];
     const isCurrentlyLearning = isLearning && currentLearningControlName === controlName;
-
-    return (
-      <div className={styles.midiButtons}>
-        <button
-          className={`${styles.midiLearnButton} ${isCurrentlyLearning ? styles.learning : ''}`}
-          onClick={() => isCurrentlyLearning ? cancelLearn() : startLearn(controlName)}
-          title={isCurrentlyLearning ? 'Cancel MIDI Learn' : `MIDI Learn ${displayName}`}
-        >
-          {isCurrentlyLearning ? 'Cancel' : 'Learn'}
-        </button>
-        {isMapped && (
-          <button
-            className={styles.midiForgetButton}
-            onClick={() => forgetMapping(controlName)}
-            title={`Forget MIDI mapping for ${displayName}`}
-          >
-            Forget
-          </button>
-        )}
-        {isMapped && (
-          <div className={styles.oscAddress} title={`OSC Address: /${controlName}`}>
-            /{controlName}
-          </div>
-        )}
-      </div>
-    );
+    let midiMappingLabel: string | undefined;
+    if (mapping?.controller !== undefined) {
+      midiMappingLabel = `CH${mapping.channel} CC${mapping.controller}`;
+    } else if (mapping?.note !== undefined) {
+      midiMappingLabel = `CH${mapping.channel} Note ${mapping.note}`;
+    }
+    return {
+      controlName,
+      isMidiLearning: isCurrentlyLearning,
+      isMidiMapped: !!mapping,
+      midiMappingLabel,
+      onMidiLearn: () => (isCurrentlyLearning ? cancelLearn() : startLearn(controlName)),
+      onMidiForget: mapping ? () => forgetMapping(controlName) : undefined,
+    };
   };
 
   // Helper functions for MIDI control updates
@@ -221,7 +301,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
   };
 
   // Custom path editor state
-  const [showTrackCustomPathEditor, setShowTrackCustomPathEditor] = useState(false);
+  const [showPanTiltPathEditor, setShowPanTiltPathEditor] = useState(false);
 
   // Color wheel state
   const [colorHue, setColorHue] = useState(0);
@@ -286,10 +366,6 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
   // Get all affected fixtures based on selection mode
   const getAffectedFixtures = () => {
     let targetFixtures: string[] = [];
-    console.log(`getAffectedFixtures called - selectionMode: ${selectionMode}`);
-    console.log(`Selected channels: ${selectedChannels.length}`, selectedChannels);
-    console.log(`Selected fixtures: ${selectedFixtures.length}`, selectedFixtures);
-    console.log(`Selected groups: ${selectedGroups.length}`, selectedGroups);
 
     switch (selectionMode) {
       case 'channels':
@@ -389,7 +465,6 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
   // Apply control value to DMX channels
   const applyControl = (controlType: string, value: number) => {
     const affectedFixtures = getAffectedFixtures();
-    console.log(`applyControl called: type=${controlType}, value=${value}, fixtures=${affectedFixtures.length}`);
 
     affectedFixtures.forEach(({ channels }, index) => {
       let targetChannel: number | undefined;
@@ -428,16 +503,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
           targetChannel = channels['reset'] || channels['reset_control'] || channels['function'];
           break;
       }      if (targetChannel !== undefined) {
-        console.log(`[DMX] Setting channel ${targetChannel} to ${value} for ${controlType}`);
         setDmxChannelValue(targetChannel, value);
-
-        // Additional verification - check if the value was actually set
-        setTimeout(() => {
-          const actualValue = getDmxChannelValue(targetChannel);
-          console.log(`[DMX] Verification: Channel ${targetChannel} is now ${actualValue} (expected ${value})`);
-        }, 100);
-      } else {
-        console.log(`[DMX] ERROR: No target channel found for ${controlType} in fixture ${index}`, channels);
       }
     });
   };
@@ -463,7 +529,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
 
     // If Pan/Tilt autopilot is active, temporarily disable it when user manually controls
     if (panTiltAutopilot.enabled) {
-      console.log('Manual Pan/Tilt control detected - disabling autopilot');
+      debugLog.log('Manual Pan/Tilt control detected - disabling autopilot');
       togglePanTiltAutopilot();
     }
 
@@ -486,7 +552,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
   const resetPanTiltToCenter = () => {
     // If Pan/Tilt autopilot is active, disable it when user manually resets
     if (panTiltAutopilot.enabled) {
-      console.log('Manual Pan/Tilt reset detected - disabling autopilot');
+      debugLog.log('Manual Pan/Tilt reset detected - disabling autopilot');
       togglePanTiltAutopilot();
     }
 
@@ -501,78 +567,69 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
     applyControl('tilt', centerValue);
   };
 
-  // Color wheel handlers
-  const handleColorWheelMouseDown = (e: React.MouseEvent) => {
+  const updateColorPosition = useCallback(
+    (clientX: number, clientY: number) => {
+      if (!colorWheelRef.current) return;
+
+      const rect = colorWheelRef.current.getBoundingClientRect();
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      const x = clientX - rect.left - centerX;
+      const y = clientY - rect.top - centerY;
+
+      const angle = Math.atan2(y, x) * (180 / Math.PI);
+      const hue = (angle + 360) % 360;
+      const distance = Math.min(Math.sqrt(x * x + y * y), centerX);
+      const saturation = (distance / centerX) * 100;
+
+      setColorHue(hue);
+      setColorSaturation(saturation);
+
+      const { r, g, b } = hsvToRgb(hue, saturation, 100);
+      setRed(r);
+      setGreen(g);
+      setBlue(b);
+      applyControl('red', r);
+      applyControl('green', g);
+      applyControl('blue', b);
+    },
+    [applyControl]
+  );
+
+  const handleColorWheelPointerDown = (e: React.PointerEvent) => {
+    if (!hasSelection) return;
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
     setIsDraggingColor(true);
-    updateColorPosition(e);
+    updateColorPosition(e.clientX, e.clientY);
   };
 
-  const handleColorWheelMouseMove = (e: React.MouseEvent) => {
-    if (isDraggingColor) {
-      updateColorPosition(e);
+  const handleColorWheelPointerMove = (e: React.PointerEvent) => {
+    if (!isDraggingColor) return;
+    updateColorPosition(e.clientX, e.clientY);
+  };
+
+  const endColorWheelDrag = (e: React.PointerEvent) => {
+    if (!isDraggingColor) return;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
     }
-  };
-
-  const handleColorWheelMouseUp = () => {
     setIsDraggingColor(false);
   };
 
-  const updateColorPosition = (e: React.MouseEvent) => {
-    if (!colorWheelRef.current) return;
+  useEffect(() => {
+    if (isDraggingColor) return;
+    const { h, s } = rgbToHsv(red, green, blue);
+    setColorHue(h);
+    setColorSaturation(s);
+  }, [red, green, blue, isDraggingColor]);
 
-    const rect = colorWheelRef.current.getBoundingClientRect();
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-    const x = e.clientX - rect.left - centerX;
-    const y = e.clientY - rect.top - centerY;
-
-    const angle = Math.atan2(y, x) * (180 / Math.PI);
-    const hue = (angle + 360) % 360;
-    const distance = Math.min(Math.sqrt(x * x + y * y), centerX);
-    const saturation = (distance / centerX) * 100;
-
-    setColorHue(hue);
-    setColorSaturation(saturation);
-
-    // Convert HSV to RGB
-    const { r, g, b } = hsvToRgb(hue, saturation, 100);
-    setRed(r);
-    setGreen(g);
-    setBlue(b);
-    applyControl('red', r);
-    applyControl('green', g);
-    applyControl('blue', b);
-  };
-
-  // HSV to RGB conversion
-  const hsvToRgb = (h: number, s: number, v: number) => {
-    h = h / 360;
-    s = s / 100;
-    v = v / 100;
-
-    const c = v * s;
-    const x = c * (1 - Math.abs(((h * 6) % 2) - 1));
-    const m = v - c;
-
-    let r = 0, g = 0, b = 0;
-
-    if (h < 1 / 6) { r = c; g = x; b = 0; }
-    else if (h < 2 / 6) { r = x; g = c; b = 0; }
-    else if (h < 3 / 6) { r = 0; g = c; b = x; }
-    else if (h < 4 / 6) { r = 0; g = x; b = c; }
-    else if (h < 5 / 6) { r = x; g = 0; b = c; }
-    else { r = c; g = 0; b = x; }
-
-    return {
-      r: Math.round((r + m) * 255),
-      g: Math.round((g + m) * 255),
-      b: Math.round((b + m) * 255)
-    };
-  };
   // Enhanced MIDI Learn with range support
   const startMidiLearn = (controlType: string, minValue: number = 0, maxValue: number = 255) => {
     setMidiLearnTarget(controlType);
-    console.log(`Starting MIDI learn for ${controlType} (range: ${minValue}-${maxValue})`);
+    debugLog.log(`Starting MIDI learn for ${controlType} (range: ${minValue}-${maxValue})`);
 
     // Listen for MIDI input
     const handleMidiMessage = (event: any) => {
@@ -594,7 +651,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
       }));
 
       setMidiLearnTarget(null);
-      console.log(`MIDI learned for ${controlType}:`, mapping);
+      debugLog.log(`MIDI learned for ${controlType}:`, mapping);
     };
 
     // Add MIDI listener
@@ -649,11 +706,11 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
             mapping.minValue + (midiValue / 127) * (mapping.maxValue - mapping.minValue)
           );
 
-          console.log(`MIDI triggered for ${action}: value=${midiValue}, scaled=${scaledValue}`);
+          debugLog.log(`MIDI triggered for ${action}: value=${midiValue}, scaled=${scaledValue}`);
 
           // Check affected fixtures before applying control
           const affectedFixtures = getAffectedFixtures();
-          console.log(`Affected fixtures for ${action}:`, affectedFixtures.length, affectedFixtures);
+          debugLog.log(`Affected fixtures for ${action}:`, affectedFixtures.length, affectedFixtures);
 
           // Apply the action based on the control type
           switch (action) {
@@ -807,231 +864,6 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
   // Auto-animation for autopilot is now handled in the store
   // This was removed to prevent conflicts with the centralized animation system
 
-  // Path visualization canvas drawing effect
-  useEffect(() => {
-    const canvas = pathCanvasRef.current;
-    if (!canvas) return;
-
-    const drawPath = () => {
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      // Get container dimensions and set canvas size to match
-      const container = canvas.parentElement;
-      if (!container) return;
-
-      const rect = container.getBoundingClientRect();
-      const width = rect.width || 300;
-      const height = rect.height || 200;
-
-      // Set canvas dimensions to match container
-      canvas.width = width;
-      canvas.height = height;
-
-      // Clear canvas with background
-      ctx.fillStyle = '#1a1a1a';
-      ctx.fillRect(0, 0, width, height);
-
-      // Draw grid for reference
-      ctx.strokeStyle = '#2a2a2a';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([2, 2]);
-
-      // Vertical grid lines
-      for (let i = 1; i < 4; i++) {
-        const x = (width / 4) * i;
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, height);
-        ctx.stroke();
-      }
-
-      // Horizontal grid lines  
-      for (let i = 1; i < 3; i++) {
-        const y = (height / 3) * i;
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(width, y);
-        ctx.stroke();
-      }
-
-      ctx.setLineDash([]); // Reset line dash
-
-      // Calculate center position from DMX values (0-255) to canvas coordinates
-      const centerX = (autopilotTrackCenterX / 255) * width;
-      const centerY = (autopilotTrackCenterY / 255) * height;
-
-      // Calculate scale based on track size and canvas dimensions
-      const maxRadius = Math.min(width, height) * 0.35;
-      const scale = maxRadius * (autopilotTrackSize / 100);
-
-      // Draw the path based on type
-      ctx.strokeStyle = '#58a6ff';
-      ctx.lineWidth = 3;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-
-      ctx.beginPath();
-
-      switch (autopilotTrackType) {
-        case 'circle':
-          ctx.arc(centerX, centerY, scale, 0, 2 * Math.PI);
-          break;
-
-        case 'square':
-          const halfScale = scale * 0.707; // Adjust for square inscribed in circle
-          ctx.moveTo(centerX - halfScale, centerY - halfScale);
-          ctx.lineTo(centerX + halfScale, centerY - halfScale);
-          ctx.lineTo(centerX + halfScale, centerY + halfScale);
-          ctx.lineTo(centerX - halfScale, centerY + halfScale);
-          ctx.closePath();
-          break;
-
-        case 'triangle':
-          const triScale = scale * 0.8;
-          ctx.moveTo(centerX, centerY - triScale);
-          ctx.lineTo(centerX + triScale * 0.866, centerY + triScale * 0.5);
-          ctx.lineTo(centerX - triScale * 0.866, centerY + triScale * 0.5);
-          ctx.closePath();
-          break;
-
-        case 'figure8':
-          // Improved figure-8 path with better proportions
-          let firstPoint = true;
-          for (let t = 0; t <= 4 * Math.PI; t += 0.05) {
-            const x = centerX + scale * 0.8 * Math.sin(t);
-            const y = centerY + scale * 0.6 * Math.sin(t * 0.5) * Math.cos(t * 0.5);
-            if (firstPoint) {
-              ctx.moveTo(x, y);
-              firstPoint = false;
-            } else {
-              ctx.lineTo(x, y);
-            }
-          }
-          break;
-
-        case 'linear':
-          ctx.moveTo(centerX - scale, centerY);
-          ctx.lineTo(centerX + scale, centerY);
-          break;
-
-        case 'random':
-          // Draw a wavy random-looking path
-          ctx.moveTo(centerX - scale, centerY);
-          for (let i = 0; i <= 20; i++) {
-            const t = (i / 20) * 2 * Math.PI;
-            const x = centerX + scale * Math.cos(t) + scale * 0.3 * Math.sin(t * 3.7);
-            const y = centerY + scale * Math.sin(t) + scale * 0.2 * Math.cos(t * 2.3);
-            ctx.lineTo(x, y);
-          }
-          break;
-
-        case 'custom':
-          // For now, draw a basic path - could be extended to support user-defined paths
-          ctx.arc(centerX, centerY, scale, 0, 2 * Math.PI);
-          ctx.moveTo(centerX - scale * 0.5, centerY);
-          ctx.lineTo(centerX + scale * 0.5, centerY);
-          ctx.moveTo(centerX, centerY - scale * 0.5);
-          ctx.lineTo(centerX, centerY + scale * 0.5);
-          break;
-
-        default:
-          ctx.arc(centerX, centerY, scale, 0, 2 * Math.PI);
-          break;
-      }
-
-      ctx.stroke();
-
-      // Draw current position indicator if autopilot is active
-      if (autopilotTrackEnabled) {
-        const pos = calculateTrackPosition(
-          autopilotTrackType,
-          autopilotTrackPosition,
-          autopilotTrackSize,
-          autopilotTrackCenterX,
-          autopilotTrackCenterY
-        );
-
-        // Convert DMX values (0-255) to canvas coordinates
-        const posX = (pos.pan / 255) * width;
-        const posY = (pos.tilt / 255) * height;
-
-        // Draw position indicator with glow effect
-        ctx.shadowColor = '#ff6b6b';
-        ctx.shadowBlur = 15;
-        ctx.fillStyle = '#ff6b6b';
-        ctx.beginPath();
-        ctx.arc(posX, posY, 10, 0, 2 * Math.PI);
-        ctx.fill();
-
-        // Reset shadow
-        ctx.shadowBlur = 0;
-
-        // Draw inner dot
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.arc(posX, posY, 4, 0, 2 * Math.PI);
-        ctx.fill();
-
-        // Draw crosshairs
-        ctx.strokeStyle = '#ff6b6b';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(posX - 20, posY);
-        ctx.lineTo(posX + 20, posY);
-        ctx.moveTo(posX, posY - 20);
-        ctx.lineTo(posX, posY + 20);
-        ctx.stroke();
-      }
-
-      // Draw center point indicator
-      ctx.fillStyle = '#ffd93d';
-      ctx.shadowColor = '#ffd93d';
-      ctx.shadowBlur = 8;
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, 6, 0, 2 * Math.PI);
-      ctx.fill();
-
-      // Reset shadow
-      ctx.shadowBlur = 0;
-
-      // Draw center point label
-      ctx.fillStyle = '#ffd93d';
-      ctx.font = '10px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText('CENTER', centerX, centerY - 15);
-    };
-
-    // Draw initial path
-    drawPath();
-
-    // Set up animation frame for smooth updates when autopilot is active
-    let animationFrameId: number;
-
-    if (autopilotTrackEnabled) {
-      const animate = () => {
-        drawPath();
-        animationFrameId = requestAnimationFrame(animate);
-      };
-      animate();
-    }
-
-    // Cleanup function
-    return () => {
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-      }
-    };
-  }, [
-    autopilotTrackType,
-    autopilotTrackSize,
-    autopilotTrackCenterX,
-    autopilotTrackCenterY,
-    autopilotTrackPosition,
-    autopilotTrackEnabled,
-    calculateTrackPosition
-  ]);
-
   const selectNextGroup = () => {
     if (groups.length === 0) return;
     const nextIndex = (currentGroupIndex + 1) % groups.length;
@@ -1050,30 +882,15 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
 
   // Scene Management Functions
   const captureCurrentScene = (name?: string) => {
-    const sceneValues: Record<number, number> = {};
-
-    // Capture all current DMX values
-    for (let i = 1; i <= 512; i++) {
-      const value = getDmxChannelValue(i);
-      if (value > 0) {
-        sceneValues[i] = value;
-      }
-    }
-
-    // Convert to global scene format
-    const channelValues = new Array(512).fill(0);
-    Object.entries(sceneValues).forEach(([ch, val]) => {
-      channelValues[parseInt(ch) - 1] = val; // Convert 1-based to 0-based
+    const result = captureScene({
+      name: name || `Scene ${scenes.length + 1}`,
+      allowOverwrite: true,
+      notify: true,
     });
-
-    const sceneName = name || `Scene ${scenes.length + 1}`;
-    const oscAddress = `/scene/${sceneName.toLowerCase().replace(/\s+/g, '_')}`;
-
-    // Save to global store
-    saveScene(sceneName, oscAddress);
-    setCurrentSceneIndex(scenes.length);
-
-    return { name: sceneName, channelValues, oscAddress };
+    if (result) {
+      setCurrentSceneIndex(scenes.length);
+    }
+    return result;
   };
 
   const loadSceneByIndex = (sceneIndex: number) => {
@@ -1326,7 +1143,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
           if (config.sceneOscAddresses) setSceneOscAddresses(config.sceneOscAddresses);
           // Scenes are managed globally, not loaded here
           // Layouts are now auto-managed, no need to load
-          console.log('Default configuration loaded successfully');
+          debugLog.log('Default configuration loaded successfully');
         }
       }
     } catch (error) {
@@ -1377,6 +1194,19 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
   const hasSelection = getAffectedFixtures().length > 0;
   const capabilities = getFixtureCapabilities();
 
+  const handleSelectAllFixtures = () => {
+    selectAllFixtures();
+    setSelectionMode('fixtures');
+    setSelectedGroups([]);
+    setSelectedCapabilities([]);
+  };
+
+  const handleDeselectAllFixtures = () => {
+    deselectAllFixtures();
+    setSelectedGroups([]);
+    setSelectedCapabilities([]);
+  };
+
   // Global mouse event handlers for drag operations
   useEffect(() => {
     const handleGlobalMouseMove = (e: MouseEvent) => {
@@ -1387,10 +1217,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
         updateXYPosition(mouseEvent);
       }
       if (isDraggingColor) {
-        const mouseEvent = e as any;
-        mouseEvent.clientX = e.clientX;
-        mouseEvent.clientY = e.clientY;
-        updateColorPosition(mouseEvent);
+        updateColorPosition(e.clientX, e.clientY);
       }
     };
 
@@ -1457,19 +1284,47 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
     return () => clearInterval(interval);
   }, [panTiltAutopilot.enabled, panValue, tiltValue, getDmxChannelValue]);
 
+  const getQuickTip = () => {
+    if (fixtures.length === 0) {
+      return 'Add fixtures in Fixture Setup tab to get started';
+    }
+    if (!hasSelection) {
+      if (selectionMode === 'fixtures') return 'Click fixtures below or use Select All';
+      if (selectionMode === 'groups' && groups.length > 0) return 'Click a group to select it';
+      if (selectionMode === 'channels') {
+        return touchLayout
+          ? 'Pin channels on DMX Control (pin icon), or use the faders below once pinned'
+          : 'Select DMX channels from the DMX Control page';
+      }
+      return 'Select fixtures, groups, or channels to control';
+    }
+    return null;
+  };
+
   return (
-    <div className={styles.superControl}>
+    <div
+      className={[styles.superControl, touchLayout ? styles.touchLayout : ''].filter(Boolean).join(' ')}
+    >
       <div className={styles.header}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', flexWrap: 'wrap', gap: '12px' }}>
           <div>
             <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
               <LucideIcon name="Settings" />
               Super Control
             </h3>
-            <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#ccc' }}>{getSelectionInfo()}</p>
+            <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: 'var(--color-text-secondary)' }}>{getSelectionInfo()}</p>
+            {getQuickTip() && (
+              <p style={{ margin: '6px 0 0 0', fontSize: '12px', opacity: 0.85, color: 'var(--color-interactive)' }}>
+                {getQuickTip()}
+              </p>
+            )}
           </div>
         </div>
       </div>
+
+      {touchLayout && selectionMode === 'channels' && (
+        <SelectedChannelsFaderStrip maxVisible={10} />
+      )}
 
       <div className={styles.autoLayoutContainer}>
         <div className={styles.gridItem}>
@@ -1479,38 +1334,69 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
           <div className={styles.gridItemContent}>
             {/* Selection Mode */}
             <div className={styles.fixtureSelection}>
-              <div className={styles.selectionTabs}>
-                <button
-                  className={selectionMode === 'channels' ? styles.active : ''}
+              <div className={`${styles.selectionTabs} ab-skeuo-square-group`}>
+                <SkeuoButton
+                  compact
+                  active={selectionMode === 'channels'}
                   onClick={() => setSelectionMode('channels')}
                 >
                   <LucideIcon name="Radio" />
                   Channels
-                </button>
-                <button
-                  className={selectionMode === 'fixtures' ? styles.active : ''}
+                </SkeuoButton>
+                <SkeuoButton
+                  compact
+                  active={selectionMode === 'fixtures'}
                   onClick={() => setSelectionMode('fixtures')}
                 >
                   <LucideIcon name="Lightbulb" />
                   Fixtures
-                </button>
-                <button
-                  className={selectionMode === 'groups' ? styles.active : ''}
+                </SkeuoButton>
+                <SkeuoButton
+                  compact
+                  active={selectionMode === 'groups'}
                   onClick={() => setSelectionMode('groups')}
                 >
                   <LucideIcon name="Users" />
                   Groups
-                </button>
-                <button
-                  className={selectionMode === 'capabilities' ? styles.active : ''}
+                </SkeuoButton>
+                <SkeuoButton
+                  compact
+                  active={selectionMode === 'capabilities'}
                   onClick={() => setSelectionMode('capabilities')}
                 >
                   <LucideIcon name="Zap" />
                   Capabilities
-                </button>
+                </SkeuoButton>
               </div>
 
-              {selectionMode === 'fixtures' && (
+              {selectionMode === 'fixtures' && fixtures.length > 0 && (
+                <div className={styles.quickActions}>
+                  <button
+                    type="button"
+                    onClick={handleSelectAllFixtures}
+                    title="Select all fixtures"
+                  >
+                    <LucideIcon name="CheckSquare" size={14} />
+                    Select All
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeselectAllFixtures}
+                    title="Deselect all fixtures"
+                  >
+                    <LucideIcon name="Square" size={14} />
+                    Deselect All
+                  </button>
+                </div>
+              )}
+              {selectionMode === 'fixtures' && fixtures.length === 0 && (
+                <div className={styles.emptyState}>
+                  <LucideIcon name="Lightbulb" size={32} style={{ opacity: 0.5 }} />
+                  <p>No fixtures defined yet.</p>
+                  <p style={{ fontSize: '12px', marginTop: '4px' }}>Go to the Fixture Setup tab to add fixtures.</p>
+                </div>
+              )}
+              {selectionMode === 'fixtures' && fixtures.length > 0 && (
                 <div className={styles.fixtureList}>
                   {fixtures.map(fixture => (
                     <div
@@ -1532,7 +1418,14 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
                 </div>
               )}
 
-              {selectionMode === 'groups' && (
+              {selectionMode === 'groups' && groups.length === 0 && (
+                <div className={styles.emptyState}>
+                  <LucideIcon name="Users" size={32} style={{ opacity: 0.5 }} />
+                  <p>No groups defined.</p>
+                  <p style={{ fontSize: '12px', marginTop: '4px' }}>Create groups in Fixture Setup.</p>
+                </div>
+              )}
+              {selectionMode === 'groups' && groups.length > 0 && (
                 <div className={styles.fixtureList}>
                   {groups.map(group => (
                     <div
@@ -1555,8 +1448,16 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
                 </div>
               )}
 
-              {selectionMode === 'capabilities' && (
-                <div className={styles.fixtureList}>            {capabilities.map(capability => (
+              {selectionMode === 'capabilities' && capabilities.length === 0 && (
+                <div className={styles.emptyState}>
+                  <LucideIcon name="Zap" size={32} style={{ opacity: 0.5 }} />
+                  <p>No shared capabilities.</p>
+                  <p style={{ fontSize: '12px', marginTop: '4px' }}>Add fixtures with matching channel types.</p>
+                </div>
+              )}
+              {selectionMode === 'capabilities' && capabilities.length > 0 && (
+                <div className={styles.fixtureList}>
+                  {capabilities.map(capability => (
                   <div
                     key={capability.type}
                     className={`${styles.fixtureItem} ${selectedCapabilities.includes(capability.type) ? styles.selected : ''}`}
@@ -1598,7 +1499,9 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
                   </span>
                 </div>
 
-                <div className={styles.channelMonitor}>
+                <div className={styles.channelMonitorDock} role="region" aria-label="Active channel meters">
+                  <div className={styles.dockResizeGrip} aria-hidden />
+                  <div className={styles.channelMonitorScroll}>
                   {getAffectedFixtures().map(({ fixture, channels }, index) => (
                     <div key={`${fixture.id}-${index}`} className={styles.fixtureMonitor}>
                       <div className={styles.fixtureHeader}>
@@ -1609,7 +1512,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
                         </span>
                       </div>
 
-                      <div className={styles.channelGrid}>
+                      <div className={styles.channelStripRow}>
                         {Object.entries(channels).map(([channelType, dmxAddress]) => {
                           const currentValue = getDmxChannelValue(dmxAddress);
                           const isControlled = (() => {
@@ -1636,7 +1539,8 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
                               case 'gobo_wheel':
                                 return currentValue === gobo;
                               case 'shutter':
-                                return currentValue === shutter; case 'strobe':
+                                return currentValue === shutter;
+                              case 'strobe':
                                 return currentValue === strobe;
                               case 'lamp':
                               case 'lamp_on':
@@ -1652,30 +1556,19 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
                           })();
 
                           return (
-                            <div
+                            <DmxTickChannelMeter
                               key={`${dmxAddress}-${channelType}`}
-                              className={`${styles.channelItem} ${isControlled ? styles.controlled : ''}`}
-                            >
-                              <div className={styles.channelInfo}>
-                                <span className={styles.channelType}>{channelType.toUpperCase()}</span>
-                                <span className={styles.channelAddress}>CH {dmxAddress}</span>
-                              </div>
-                              <div className={styles.channelValue}>
-                                <span className={styles.dmxValue}>{currentValue}</span>
-                                <div
-                                  className={styles.valueBar}
-                                  style={{
-                                    width: `${(currentValue / 255) * 100}%`,
-                                    backgroundColor: isControlled ? '#00d4ff' : '#666'
-                                  }}
-                                />
-                              </div>
-                            </div>
+                              value={currentValue}
+                              label={channelType}
+                              sublabel={`CH ${dmxAddress}`}
+                              active={isControlled}
+                            />
                           );
                         })}
                       </div>
                     </div>
                   ))}
+                  </div>
                 </div>
 
                 {/* Real-time control indicators */}
@@ -1727,26 +1620,28 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
                 <div className={styles.navigationGroup}>
                   <h5>Fixture Navigation</h5>
                   <div className={styles.navigationControls}>
-                    <button
+                    <SkeuoButton
+                      compact
                       className={styles.navBtn}
                       onClick={selectPreviousFixture}
                       disabled={fixtures.length === 0}
                     >
                       <LucideIcon name="ChevronLeft" />
                       Prev
-                    </button>
+                    </SkeuoButton>
                     <div className={styles.currentSelection}>
                       {fixtures.length > 0 ? fixtures[currentFixtureIndex]?.name || 'Unknown' : 'No fixtures'}
                       <span className={styles.indexInfo}>({currentFixtureIndex + 1}/{fixtures.length})</span>
                     </div>
-                    <button
+                    <SkeuoButton
+                      compact
                       className={styles.navBtn}
                       onClick={selectNextFixture}
                       disabled={fixtures.length === 0}
                     >
                       Next
                       <LucideIcon name="ChevronRight" />
-                    </button>
+                    </SkeuoButton>
                   </div>
                   <div className={styles.midiLearnRow}>
                     <button
@@ -1796,26 +1691,28 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
                 <div className={styles.navigationGroup}>
                   <h5>Group Navigation</h5>
                   <div className={styles.navigationControls}>
-                    <button
+                    <SkeuoButton
+                      compact
                       className={styles.navBtn}
                       onClick={selectPreviousGroup}
                       disabled={groups.length === 0}
                     >
                       <LucideIcon name="ChevronLeft" />
                       Prev
-                    </button>
+                    </SkeuoButton>
                     <div className={styles.currentSelection}>
                       {groups.length > 0 ? groups[currentGroupIndex]?.name || 'Unknown' : 'No groups'}
                       <span className={styles.indexInfo}>({currentGroupIndex + 1}/{groups.length})</span>
                     </div>
-                    <button
+                    <SkeuoButton
+                      compact
                       className={styles.navBtn}
                       onClick={selectNextGroup}
                       disabled={groups.length === 0}
                     >
                       Next
                       <LucideIcon name="ChevronRight" />
-                    </button>
+                    </SkeuoButton>
                   </div>
                   <div className={styles.midiLearnRow}>
                     <button
@@ -1875,29 +1772,35 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
               <h5>Scene Controls</h5>
               <div className={styles.sceneControls}>
                 <div className={styles.sceneButtonRow}>
-                  <button
+                  <SkeuoButton
+                    compact
+                    accent="purple"
                     className={styles.sceneBtn}
                     onClick={() => captureCurrentScene()}
                   >
                     <LucideIcon name="Camera" />
                     Save Scene
-                  </button>
-                  <button
+                  </SkeuoButton>
+                  <SkeuoButton
+                    compact
+                    accent="purple"
                     className={styles.sceneBtn}
                     onClick={selectPreviousScene}
                     disabled={scenes.length === 0}
                   >
                     <LucideIcon name="ChevronLeft" />
                     Previous
-                  </button>
-                  <button
+                  </SkeuoButton>
+                  <SkeuoButton
+                    compact
+                    accent="purple"
                     className={styles.sceneBtn}
                     onClick={selectNextScene}
                     disabled={scenes.length === 0}
                   >
                     Next
                     <LucideIcon name="ChevronRight" />
-                  </button>
+                  </SkeuoButton>
                 </div>
                 <div className={styles.sceneInfo}>
                   <span className={styles.currentScene}>
@@ -2014,13 +1917,16 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
                         </div>
                       </div>
 
-                      <button
+                      <SkeuoButton
+                        variant="wide"
+                        accent="green"
+                        compact
                         className={styles.loadSceneBtn}
                         onClick={() => storeLoadScene(scene.name)}
                       >
                         <LucideIcon name="Play" />
                         Load Scene
-                      </button>
+                      </SkeuoButton>
                     </div>
                   ))}
                 </div>
@@ -2035,52 +1941,18 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
           </div>
           <div className={styles.gridItemContent}>
             <div className={styles.section}>
-              <div className={styles.controlRow}>
-                <label>Dimmer</label>
-                {renderMidiButtons('dimmer', 'Dimmer')}
-                <input
-                  type="range"
-                  min="0"
-                  max="255"
-                  value={dimmer}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value);
-                    setDimmer(val);
-                    applyControl('dimmer', val);
-                  }}
-                  disabled={!hasSelection}
-                />
-                <span>{dimmer}</span>
-                <div className={styles.connectionControls}>
-                  <div className={styles.midiRangeSection}>
-                    <button
-                      className={`${styles.midiLearnBtn} ${midiLearnTarget === 'dimmer' ? styles.learning : ''}`}
-                      onClick={() => midiLearnTarget === 'dimmer' ? stopMidiLearn() : startMidiLearn('dimmer')}
-                    >
-                      <LucideIcon name="Music" />
-                      MIDI Learn
-                    </button>
-                    {midiMappings.dimmer && (
-                      <div className={styles.midiInfo}>
-                        <span>CH{midiMappings.dimmer.channel} CC{midiMappings.dimmer.cc}</span>
-                        <button
-                          className={styles.clearBtn}
-                          onClick={() => clearMidiMapping('dimmer')}
-                        >
-                          <LucideIcon name="X" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  <div className={styles.oscSection}>
-                    <input
-                      type="text"
-                      placeholder="OSC Address"
-                      className={styles.oscInput}
-                      defaultValue="/dimmer"
-                    />
-                  </div>
-                </div>
+              <div className={styles.faderStack}>
+                <DmxFaderRow
+                label="Dimmer"
+                value={dimmer}
+                disabled={!hasSelection}
+                oscAddress="/dimmer"
+                onChange={(val) => {
+                  setDimmer(val);
+                  applyControl('dimmer', val);
+                }}
+                {...midiPropsFor('dimmer')}
+              />
               </div>
             </div>
           </div>
@@ -2111,73 +1983,57 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
             <div className={styles.gridItemContent}>
             <div className={styles.section}>
               <div className={styles.panTiltSliders}>
-                <div className={styles.controlRow}>
-                  <label>Pan</label>
-                  {renderMidiButtons('pan', 'Pan')}
-                  <input
-                    type="range"
-                    min="0"
-                    max="255"
-                    value={panValue}
-                    onChange={(e) => {
-                      // If Pan/Tilt autopilot is active, disable it when user manually controls
-                      if (panTiltAutopilot.enabled) {
-                        console.log('Manual Pan slider control detected - disabling autopilot');
-                        togglePanTiltAutopilot();
-                      }
-
-                      const val = parseInt(e.target.value);
-                      setPanValue(val);
-                      applyControl('pan', val);
-                      setPanTiltXY(prev => ({ ...prev, x: (val / 255) * 100 }));
-                    }}
-                    disabled={!hasSelection}
-                  />
-                  <span>{panValue}</span>
-                </div>
-                <div className={styles.controlRow}>
-                  <label>Tilt</label>
-                  {renderMidiButtons('tilt', 'Tilt')}
-                  <input
-                    type="range"
-                    min="0"
-                    max="255"
-                    value={tiltValue}
-                    onChange={(e) => {
-                      // If Pan/Tilt autopilot is active, disable it when user manually controls
-                      if (panTiltAutopilot.enabled) {
-                        console.log('Manual Tilt slider control detected - disabling autopilot');
-                        togglePanTiltAutopilot();
-                      }
-
-                      const val = parseInt(e.target.value);
-                      setTiltValue(val);
-                      applyControl('tilt', val);
-                      setPanTiltXY(prev => ({ ...prev, y: (val / 255) * 100 }));
-                    }}
-                    disabled={!hasSelection}
-                  />
-                  <span>{tiltValue}</span>
-                </div>
-              </div>
-
-              <h5>XY Pad Control</h5>
-              <div
-                className={styles.xyPad}
-                ref={xyPadRef}
-                onMouseDown={handleXYPadMouseDown}
-                onMouseMove={handleXYPadMouseMove}
-                onMouseUp={handleXYPadMouseUp}
-              >
-                <div className={styles.xyGridLines} />
-                <div
-                  className={styles.xyHandle}
-                  style={{
-                    left: `${panTiltXY.x}%`,
-                    top: `${panTiltXY.y}%`
+                <DmxFaderRow
+                  label="Pan"
+                  fullWidth
+                  value={panValue}
+                  disabled={!hasSelection}
+                  oscAddress="/pan"
+                  onChange={(val) => {
+                    if (panTiltAutopilot.enabled) togglePanTiltAutopilot();
+                    setPanValue(val);
+                    applyControl('pan', val);
+                    setPanTiltXY(prev => ({ ...prev, x: (val / 255) * 100 }));
                   }}
+                  {...midiPropsFor('pan')}
+                />
+                <DmxFaderRow
+                  label="Tilt"
+                  fullWidth
+                  value={tiltValue}
+                  disabled={!hasSelection}
+                  oscAddress="/tilt"
+                  onChange={(val) => {
+                    if (panTiltAutopilot.enabled) togglePanTiltAutopilot();
+                    setTiltValue(val);
+                    applyControl('tilt', val);
+                    setPanTiltXY(prev => ({ ...prev, y: (val / 255) * 100 }));
+                  }}
+                  {...midiPropsFor('tilt')}
                 />
               </div>
+
+              <h5 className={styles.xyPadHeading}>XY Pad</h5>
+              <ArtbastardXYPad
+                className={styles.panTiltPad}
+                pan={panValue}
+                tilt={tiltValue}
+                disabled={!hasSelection}
+                onPanTiltChange={(p, t) => {
+                  if (panTiltAutopilot.enabled) {
+                    togglePanTiltAutopilot();
+                  }
+                  setPanValue(p);
+                  setTiltValue(t);
+                  setPanTiltXY({ x: (p / 255) * 100, y: (1 - t / 255) * 100 });
+                  applyControl('pan', p);
+                  applyControl('tilt', t);
+                }}
+                onPathSaved={(points) => {
+                  setPanTiltAutopilot({ customPath: points, pathType: 'custom' });
+                }}
+                onOpenPathEditor={() => setShowPanTiltPathEditor(true)}
+              />
               <div className={styles.panTiltControls}>
                 <button
                   className={styles.centerResetBtn}
@@ -2189,6 +2045,12 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
                   Reset to Center
                 </button>
               </div>
+              <EnvelopePlaybackControls
+                repeatMode={panTiltAutopilot.repeatMode ?? 'loop'}
+                loopDirection={panTiltAutopilot.loopDirection ?? 'forward'}
+                onRepeatModeChange={(repeatMode) => setPanTiltAutopilot({ repeatMode })}
+                onLoopDirectionChange={(loopDirection) => setPanTiltAutopilot({ loopDirection })}
+              />
             </div>
           </div>
         </div>
@@ -2200,80 +2062,87 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
               <LucideIcon name="Palette" /> RGB Color
             </div>
             <div className={styles.gridItemContent}>
-            <div className={styles.section}>
+            <div className={styles.colorSection}>
+              <div className={styles.colorWheelWrap}>
               <div
-                className={styles.colorWheel}
+                className={`${styles.colorWheel} ${!hasSelection ? styles.colorWheelDisabled : ''}`}
                 ref={colorWheelRef}
-                onMouseDown={handleColorWheelMouseDown}
-                onMouseMove={handleColorWheelMouseMove}
-                onMouseUp={handleColorWheelMouseUp}
+                onPointerDown={handleColorWheelPointerDown}
+                onPointerMove={handleColorWheelPointerMove}
+                onPointerUp={endColorWheelDrag}
+                onPointerCancel={endColorWheelDrag}
               >
                 <div className={styles.colorSaturation}>
                   <div
                     className={styles.colorHandle}
                     style={{
-                      left: `${50 + (colorSaturation / 100) * Math.cos(colorHue * Math.PI / 180) * 45}%`,
-                      top: `${50 + (colorSaturation / 100) * Math.sin(colorHue * Math.PI / 180) * 45}%`
+                      left: `${50 + (colorSaturation / 100) * Math.cos((colorHue * Math.PI) / 180) * 50}%`,
+                      top: `${50 + (colorSaturation / 100) * Math.sin((colorHue * Math.PI) / 180) * 50}%`
                     }}
                   />
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: '10px', fontSize: '0.9rem', justifyContent: 'center' }}>
-                <span style={{ color: '#ff0000' }}>R: {red}</span>
-                <span style={{ color: '#00ff00' }}>G: {green}</span>
-                <span style={{ color: '#0000ff' }}>B: {blue}</span>
+              </div>
+              <div className={styles.colorReadout}>
+                <div
+                  className={styles.colorSwatch}
+                  style={{ backgroundColor: `rgb(${red}, ${green}, ${blue})` }}
+                  title="Current color"
+                />
+                <span className={styles.colorChannel}>
+                  <span className={styles.colorChannelLabel} style={{ color: '#f87171' }}>R</span> {red}
+                </span>
+                <span className={styles.colorChannel}>
+                  <span className={styles.colorChannelLabel} style={{ color: '#4ade80' }}>G</span> {green}
+                </span>
+                <span className={styles.colorChannel}>
+                  <span className={styles.colorChannelLabel} style={{ color: '#60a5fa' }}>B</span> {blue}
+                </span>
               </div>
               <div className={styles.rgbSliders}>
-                <div className={styles.controlRow}>
-                  <label style={{ color: '#ff0000' }}>Red</label>
-                  {renderMidiButtons('red', 'Red')}
-                  <input
-                    type="range"
-                    min="0"
-                    max="255"
-                    value={red}
-                    onChange={(e) => {
-                      const val = parseInt(e.target.value);
-                      setRed(val);
-                      applyControl('red', val);
-                    }}
-                    disabled={!hasSelection}
-                  />
-                  <span>{red}</span>
-                </div>
-                <div className={styles.controlRow}>
-                  <label style={{ color: '#00ff00' }}>Green</label>
-                  {renderMidiButtons('green', 'Green')}
-                  <input
-                    type="range"
-                    min="0"
-                    max="255"
-                    value={green}
-                    onChange={(e) => {
-                      const val = parseInt(e.target.value);
-                      setGreen(val);
-                      applyControl('green', val);
-                    }}
-                    disabled={!hasSelection}
-                  />
-                  <span>{green}</span>
-                </div>
-                <div className={styles.controlRow}>
-                  <label style={{ color: '#0000ff' }}>Blue</label>
-                  {renderMidiButtons('blue', 'Blue')}
-                  <input
-                    type="range"
-                    min="0"
-                    max="255"
-                    value={blue}
-                    onChange={(e) => {
-                      const val = parseInt(e.target.value);
-                      setBlue(val);
-                      applyControl('blue', val);
-                    }}
-                    disabled={!hasSelection}
-                  />
-                  <span>{blue}</span>
+                <div className={styles.faderStack}>
+                <DmxFaderRow
+                  label="Red"
+                  fullWidth
+                  value={red}
+                  disabled={!hasSelection}
+                  oscAddress="/red"
+                  labelColor="#ff4444"
+                  accentColor="#ff4444"
+                  onChange={(val) => {
+                    setRed(val);
+                    applyControl('red', val);
+                  }}
+                  {...midiPropsFor('red')}
+                />
+                <DmxFaderRow
+                  label="Green"
+                  fullWidth
+                  value={green}
+                  disabled={!hasSelection}
+                  oscAddress="/green"
+                  labelColor="#44ff44"
+                  accentColor="#44ff44"
+                  onChange={(val) => {
+                    setGreen(val);
+                    applyControl('green', val);
+                  }}
+                  {...midiPropsFor('green')}
+                />
+                <DmxFaderRow
+                  label="Blue"
+                  fullWidth
+                  value={blue}
+                  disabled={!hasSelection}
+                  oscAddress="/blue"
+                  labelColor="#4488ff"
+                  accentColor="#4488ff"
+                  onChange={(val) => {
+                    setBlue(val);
+                    applyControl('blue', val);
+                  }}
+                  {...midiPropsFor('blue')}
+                />
                 </div>
               </div>
             </div>
@@ -2290,25 +2159,18 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
               <div className={styles.section}>
                 {hasControlType('gobo') && (
                   <>
-                    <div className={styles.controlRow}>
-                      <label>GOBO Wheel</label>
-                {renderMidiButtons('gobo', 'GOBO')}
-                <input
-                  type="range"
-                  min="0"
-                  max="255"
-                  value={gobo}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value);
-                    setGobo(val);
-                    applyControl('gobo', val);
-                  }}
-                  disabled={!hasSelection}
-                />
-                <span>{gobo}</span>
-              </div>
+                    <label className={styles.goboSectionLabel}>GOBO Wheel</label>
+              <SteppedGoboSlider
+                value={gobo}
+                disabled={!hasSelection}
+                steps={goboSteps}
+                onChange={(val) => {
+                  setGobo(val);
+                  applyControl('gobo', val);
+                }}
+              />
               <div className={styles.goboVisualSection}>
-                <label>GOBO Visual Selection</label>
+                <label>GOBO quick pick</label>
                 <div className={styles.goboGrid}>
                   {[
                     { value: 0, name: 'Open', image: '/gobos/open.svg' },
@@ -2353,62 +2215,48 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
               </div>
               </>
                 )}
+                <div className={styles.faderStack}>
                 {hasControlType('shutter') && (
-                  <div className={styles.controlRow}>
-                    <label>Shutter</label>
-                    {renderMidiButtons('shutter', 'Shutter')}
-                    <input
-                      type="range"
-                      min="0"
-                      max="255"
-                      value={shutter}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value);
-                        setShutter(val);
-                        applyControl('shutter', val);
-                      }}
-                      disabled={!hasSelection}
-                    />
-                    <span>{shutter}</span>
-                  </div>
+                  <DmxFaderRow
+                    label="Shutter"
+                    value={shutter}
+                    disabled={!hasSelection}
+                    oscAddress="/shutter"
+                    onChange={(val) => {
+                      setShutter(val);
+                      applyControl('shutter', val);
+                    }}
+                    {...midiPropsFor('shutter')}
+                  />
                 )}
                 {hasControlType('strobe') && (
-                  <div className={styles.controlRow}>
-                    <label>Strobe Speed</label>
-                    {renderMidiButtons('strobe', 'Strobe')}
-                    <input
-                      type="range"
-                      min="0"
-                      max="255"
-                      value={strobe}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value);
-                        setStrobe(val);
-                        applyControl('strobe', val);
-                      }}
-                      disabled={!hasSelection}
-                    />
-                    <span>{strobe}</span>
-                  </div>
+                  <SkeuoKnobSlider
+                    label="Strobe Speed"
+                    value={strobe}
+                    min={0}
+                    max={255}
+                    step={1}
+                    disabled={!hasSelection}
+                    onChange={(val) => {
+                      setStrobe(val);
+                      applyControl('strobe', val);
+                    }}
+                  />
                 )}
                 {hasControlType('lamp') && (
-                  <div className={styles.controlRow}>
-                    <label>Lamp Control</label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="255"
-                      value={lamp}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value);
-                        setLamp(val);
-                        applyControl('lamp', val);
-                      }}
-                      disabled={!hasSelection}
-                    />
-                    <span>{lamp}</span>
-                  </div>
+                  <DmxFaderRow
+                    label="Lamp Control"
+                    value={lamp}
+                    disabled={!hasSelection}
+                    oscAddress="/lamp"
+                    onChange={(val) => {
+                      setLamp(val);
+                      applyControl('lamp', val);
+                    }}
+                    {...midiPropsFor('lamp')}
+                  />
                 )}
+                </div>
                 {hasControlType('reset') && (
                   <div className={styles.controlRow}>
                     <label>Reset</label>
@@ -2423,6 +2271,26 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
         )}
 
         {selectionMode === 'channels' && selectedChannels.length > 0 && (
+          <div className={styles.gridItem}>
+            <div className={styles.gridItemHeader}>
+              <LucideIcon name="Activity" /> Channel envelopes
+            </div>
+            <div className={styles.gridItemContent}>
+              <div className={styles.envelopePanelStack}>
+                {selectedChannels.slice(0, touchLayout ? 2 : 4).map((ch) => (
+                  <EnvelopeChannelPanel key={ch} channel={ch} compact={touchLayout} />
+                ))}
+                {selectedChannels.length > (touchLayout ? 2 : 4) && (
+                  <p className={styles.envelopeMoreHint}>
+                    {selectedChannels.length - (touchLayout ? 2 : 4)} more selected — use DMX page for all envelopes.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {selectionMode === 'channels' && selectedChannels.length > 0 && !touchLayout && (
           <div className={styles.gridItem}>
             <div className={styles.gridItemHeader}>
               <LucideIcon name="Sliders" /> Direct DMX
@@ -2458,373 +2326,35 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
                       });
                     });
 
+                    const channelLabel = channelInfo
+                      ? `${channelInfo.name || channelInfo.type}`
+                      : `Channel ${channelAddress}`;
+                    const channelSubtitle = channelInfo
+                      ? `${channelInfo.fixture} · ${channelInfo.type}`
+                      : undefined;
+
                     return (
                       <div key={channelAddress} className={styles.dmxChannelControl}>
-                        <div className={styles.channelHeader}>
-                          <span className={styles.channelNumber}>CH {channelAddress}</span>
-                          {channelInfo && (
-                            <div className={styles.channelDetails}>
-                              <span className={styles.fixtureRef}>{channelInfo.fixture}</span>
-                              <span className={styles.channelType}>{channelInfo.type}</span>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className={styles.channelSliderContainer}>
-                          <input
-                            type="range"
-                            min="0"
-                            max="255"
-                            value={currentValue}
-                            onChange={(e) => {
-                              const val = parseInt(e.target.value);
-                              setDmxChannelValue(channelAddress, val);
-                            }}
-                            className={styles.verticalSlider}
-                          />
-                          <div className={styles.channelValueDisplay}>
-                            <input
-                              type="number"
-                              min="0"
-                              max="255"
-                              value={currentValue}
-                              onChange={(e) => {
-                                const val = Math.max(0, Math.min(255, parseInt(e.target.value) || 0));
-                                setDmxChannelValue(channelAddress, val);
-                              }}
-                              className={styles.valueInput}
-                            />
-                          </div>
-                        </div>
-
-                        <div className={styles.channelQuickActions}>
-                          <button
-                            className={styles.quickBtn}
-                            onClick={() => setDmxChannelValue(channelAddress, 0)}
-                          >
-                            0
-                          </button>
-                          <button
-                            className={styles.quickBtn}
-                            onClick={() => setDmxChannelValue(channelAddress, 127)}
-                          >
-                            50%
-                          </button>
-                          <button
-                            className={styles.quickBtn}
-                            onClick={() => setDmxChannelValue(channelAddress, 255)}
-                          >
-                            100%
-                          </button>
-                        </div>
+                        <DmxFaderRow
+                          compact
+                          label={`CH ${channelAddress}`}
+                          subtitle={channelSubtitle}
+                          meta={channelLabel}
+                          controlName={`dmx-ch-${channelAddress}`}
+                          value={currentValue}
+                          showOsc={false}
+                          showMidi={false}
+                          onChange={(val) => setDmxChannelValue(channelAddress, val)}
+                        />
                       </div>
                     );
+
                   })}
                 </div>
               </div>
             </div>
           </div>
         )}
-
-        {/* Enhanced Autopilot Panel */}
-        <div className={styles.gridItem}>
-          <div className={styles.gridItemHeader}>
-            <LucideIcon name="Navigation" /> Enhanced Autopilot
-          </div>
-          <div className={styles.gridItemContent}>
-            {/* Autopilot Enable/Disable */}
-            <div style={{ marginBottom: '16px' }}>
-              <button
-                onClick={() => {
-                  const newState = !autopilotTrackEnabled;
-                  setAutopilotTrackEnabled(newState);
-
-                  // If enabling autopilot, start animation and apply initial position
-                  if (newState) {
-                    console.log('🤖 Autopilot enabled - starting animation and applying initial position');
-                    // Start the animation loop
-                    startAutopilotTrackAnimation();
-                    // Apply initial position immediately
-                    setTimeout(() => {
-                      updatePanTiltFromTrack();
-                    }, 100);
-                  } else {
-                    console.log('🛑 Autopilot disabled - stopping animation');
-                    // Stop the animation loop
-                    stopAutopilotTrackAnimation();
-                  }
-                }}
-                style={{
-                  background: autopilotTrackEnabled ? '#28a745' : '#6c757d',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '10px 16px',
-                  color: 'white',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  width: '100%',
-                  justifyContent: 'center'
-                }}
-              >
-                <LucideIcon name={autopilotTrackEnabled ? "Play" : "Pause"} />
-                {autopilotTrackEnabled ? 'Autopilot ON' : 'Autopilot OFF'}
-              </button>
-            </div>
-
-            {/* Path Visualization Canvas */}
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '12px', color: '#ccc' }}>
-                Path Visualization
-              </label>
-              <div style={{
-                position: 'relative',
-                width: '100%',
-                height: '200px',
-                background: '#1a1a1a',
-                border: '1px solid #444',
-                borderRadius: '8px',
-                overflow: 'hidden'
-              }}>
-                <canvas
-                  ref={pathCanvasRef}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    display: 'block'
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Track Type Selection with Custom Option */}
-            <div style={{ marginBottom: '12px' }}>
-              <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#ccc' }}>
-                Track Pattern
-              </label>
-              <div style={{ display: 'flex', gap: '4px' }}>
-                <select
-                  value={autopilotTrackType}
-                  onChange={(e) => {
-                    setAutopilotTrackType(e.target.value as any);
-                    // Apply new pattern immediately if autopilot is enabled
-                    if (autopilotTrackEnabled) {
-                      setTimeout(() => updatePanTiltFromTrack(), 50);
-                    }
-                  }}
-                  style={{
-                    flex: 1,
-                    padding: '6px',
-                    borderRadius: '4px',
-                    border: '1px solid #555',
-                    background: '#2a2a2a',
-                    color: '#fff'
-                  }}
-                >
-                  <option value="circle">Circle</option>
-                  <option value="square">Square</option>
-                  <option value="figure8">Figure 8</option>
-                  <option value="triangle">Triangle</option>
-                  <option value="linear">Linear</option>
-                  <option value="random">Random</option>
-                  <option value="custom">Custom Path</option>
-                </select>
-                {autopilotTrackType === 'custom' && (
-                  <button
-                    onClick={() => {
-                      setShowTrackCustomPathEditor(true);
-                    }}
-                    style={{
-                      background: '#7c3aed',
-                      border: 'none',
-                      borderRadius: '4px',
-                      padding: '6px 12px',
-                      color: 'white',
-                      cursor: 'pointer',
-                      fontSize: '11px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    <LucideIcon name="Edit" />
-                    {autopilotTrackCustomPoints && autopilotTrackCustomPoints.length > 0
-                      ? `${autopilotTrackCustomPoints.length} points`
-                      : 'Create Path'
-                    }
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Live Position Sliders - These move automatically when autopilot is running */}
-            <div style={{ marginBottom: '12px' }}>
-              <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#ccc' }}>
-                Position: {autopilotTrackPosition.toFixed(1)}%
-                {autopilotTrackEnabled && <span style={{ color: '#28a745', marginLeft: '8px' }}>● LIVE</span>}
-              </label>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                step="0.1"
-                value={autopilotTrackPosition}
-                onChange={(e) => {
-                  const value = parseFloat(e.target.value);
-                  setAutopilotTrackPosition(value);
-                  if (autopilotTrackEnabled) {
-                    setTimeout(() => updatePanTiltFromTrack(), 10);
-                  }
-                }}
-                style={{
-                  width: '100%',
-                  background: autopilotTrackEnabled ? 'linear-gradient(90deg, #28a745 0%, #28a745 ' + autopilotTrackPosition + '%, #444 ' + autopilotTrackPosition + '%)' : undefined
-                }}
-              />
-            </div>
-
-            {/* Real-time Pan/Tilt Value Display */}
-            {autopilotTrackEnabled && (
-              <div style={{
-                marginBottom: '12px',
-                padding: '8px',
-                background: 'rgba(40, 167, 69, 0.1)',
-                border: '1px solid rgba(40, 167, 69, 0.3)',
-                borderRadius: '4px'
-              }}>
-                <div style={{ fontSize: '11px', color: '#28a745', marginBottom: '4px' }}>
-                  Live DMX Values:
-                </div>
-                {(() => {
-                  const pos = calculateTrackPosition(
-                    autopilotTrackType,
-                    autopilotTrackPosition,
-                    autopilotTrackSize,
-                    autopilotTrackCenterX,
-                    autopilotTrackCenterY
-                  );
-                  return (
-                    <div style={{ fontSize: '12px', color: '#ccc' }}>
-                      Pan: {pos.pan} | Tilt: {pos.tilt}
-                    </div>
-                  );
-                })()}
-              </div>
-            )}
-
-            {/* Size Slider */}
-            <div style={{ marginBottom: '12px' }}>
-              <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#ccc' }}>
-                Size: {autopilotTrackSize}
-              </label>
-              <input
-                type="range"
-                min="10"
-                max="100"
-                value={autopilotTrackSize}
-                onChange={(e) => {
-                  const value = parseInt(e.target.value);
-                  setAutopilotTrackSize(value);
-                  if (autopilotTrackEnabled) {
-                    setTimeout(() => updatePanTiltFromTrack(), 10);
-                  }
-                }}
-                style={{ width: '100%' }}
-              />
-            </div>
-
-            {/* Speed Slider */}
-            <div style={{ marginBottom: '12px' }}>
-              <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#ccc' }}>
-                Speed: {autopilotTrackSpeed}
-              </label>
-              <input
-                type="range"
-                min="1"
-                max="100"
-                value={autopilotTrackSpeed}
-                onChange={(e) => {
-                  const value = parseInt(e.target.value);
-                  setAutopilotTrackSpeed(value);
-                }}
-                style={{ width: '100%' }}
-              />
-            </div>
-
-            {/* Center Position Controls */}
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '12px', color: '#ccc' }}>
-                Center Position
-              </label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                <div>
-                  <label style={{ fontSize: '11px', color: '#aaa' }}>X (Pan): {autopilotTrackCenterX}</label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="255"
-                    value={autopilotTrackCenterX}
-                    onChange={(e) => {
-                      const value = parseInt(e.target.value);
-                      setAutopilotTrackCenter(value, autopilotTrackCenterY);
-                      if (autopilotTrackEnabled) {
-                        setTimeout(() => updatePanTiltFromTrack(), 10);
-                      }
-                    }}
-                    style={{ width: '100%' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: '11px', color: '#aaa' }}>Y (Tilt): {autopilotTrackCenterY}</label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="255"
-                    value={autopilotTrackCenterY}
-                    onChange={(e) => {
-                      const value = parseInt(e.target.value);
-                      setAutopilotTrackCenter(autopilotTrackCenterX, value);
-                      if (autopilotTrackEnabled) {
-                        setTimeout(() => updatePanTiltFromTrack(), 10);
-                      }
-                    }}
-                    style={{ width: '100%' }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Test Button */}
-            <button
-              onClick={() => {
-                if (autopilotTrackEnabled) {
-                  updatePanTiltFromTrack();
-                  console.log('🎯 Manual position update triggered');
-                } else {
-                  alert('Enable autopilot first!');
-                }
-              }}
-              disabled={!autopilotTrackEnabled}
-              style={{
-                background: autopilotTrackEnabled ? '#28a745' : '#6c757d',
-                border: 'none',
-                borderRadius: '4px',
-                padding: '8px 16px',
-                color: 'white',
-                cursor: autopilotTrackEnabled ? 'pointer' : 'not-allowed',
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px'
-              }}
-            >
-              <LucideIcon name="Target" />
-              Test Position
-            </button>
-          </div>
-        </div>
 
         {/* Color Autopilot Panel */}
         <div className={styles.gridItem}>
@@ -2833,26 +2363,15 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
           </div>
           <div className={styles.gridItemContent}>
             <div style={{ marginBottom: '12px' }}>
-              <button
+              <SkeuoButton
+                variant="wide"
+                active={colorSliderAutopilot.enabled}
+                accent="green"
                 onClick={toggleColorSliderAutopilot}
-                style={{
-                  background: colorSliderAutopilot.enabled ? '#10b981' : '#6b7280',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '10px 16px',
-                  color: 'white',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  width: '100%',
-                  justifyContent: 'center',
-                  transition: 'all 0.2s ease'
-                }}
               >
-                <LucideIcon name={colorSliderAutopilot.enabled ? "Palette" : "PaintBucket"} />
+                <LucideIcon name={colorSliderAutopilot.enabled ? 'Palette' : 'PaintBucket'} />
                 {colorSliderAutopilot.enabled ? 'Disable Color Auto' : 'Enable Color Auto'}
-              </button>
+              </SkeuoButton>
             </div>
 
             <div style={{ marginBottom: '12px' }}>
@@ -2885,22 +2404,14 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
             </div>
 
             <div style={{ marginBottom: '12px' }}>
-              <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#ccc' }}>
-                Speed: {colorSliderAutopilot.speed.toFixed(1)}x
-              </label>
-              <input
-                type="range"
-                min="0.1"
-                max="1.0"
-                step="0.1"
+              <SkeuoKnobSlider
+                label="Color autopilot speed"
+                min={0.1}
+                max={1}
+                step={0.1}
                 value={colorSliderAutopilot.speed}
-                onChange={(e) => setColorSliderAutopilot({ speed: parseFloat(e.target.value) })}
                 disabled={!colorSliderAutopilot.enabled}
-                style={{
-                  width: '100%',
-                  cursor: colorSliderAutopilot.enabled ? 'pointer' : 'not-allowed',
-                  opacity: colorSliderAutopilot.enabled ? 1 : 0.5
-                }}
+                onChange={(v) => setColorSliderAutopilot({ speed: v })}
               />
             </div>
 
@@ -2928,40 +2439,26 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
               <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#ccc' }}>
                 Hue Range: {colorSliderAutopilot.range.min}° - {colorSliderAutopilot.range.max}°
               </label>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <input
-                  type="range"
-                  min="0"
-                  max="360"
-                  value={colorSliderAutopilot.range.min}
-                  onChange={(e) => setColorSliderAutopilot({
-                    range: { ...colorSliderAutopilot.range, min: parseInt(e.target.value) }
-                  })}
-                  disabled={!colorSliderAutopilot.enabled}
-                  style={{
-                    flex: 1,
-                    cursor: colorSliderAutopilot.enabled ? 'pointer' : 'not-allowed',
-                    opacity: colorSliderAutopilot.enabled ? 1 : 0.5
-                  }}
-                />
-                <span style={{ color: '#888', fontSize: '10px' }}>to</span>
-                <input
-                  type="range"
-                  min="0"
-                  max="360"
-                  value={colorSliderAutopilot.range.max}
-                  onChange={(e) => setColorSliderAutopilot({
-                    range: { ...colorSliderAutopilot.range, max: parseInt(e.target.value) }
-                  })}
-                  disabled={!colorSliderAutopilot.enabled}
-                  style={{
-                    flex: 1,
-                    cursor: colorSliderAutopilot.enabled ? 'pointer' : 'not-allowed',
-                    opacity: colorSliderAutopilot.enabled ? 1 : 0.5
-                  }}
-                />
-              </div>
+              <RangeWindowControl
+                min={0}
+                max={360}
+                minValue={colorSliderAutopilot.range.min}
+                maxValue={colorSliderAutopilot.range.max}
+                disabled={!colorSliderAutopilot.enabled}
+                onChange={(minV, maxV) =>
+                  setColorSliderAutopilot({
+                    range: { min: minV, max: maxV },
+                  })
+                }
+              />
             </div>
+
+            <EnvelopePlaybackControls
+              repeatMode={colorSliderAutopilot.repeatMode ?? 'loop'}
+              loopDirection={colorSliderAutopilot.loopDirection ?? 'forward'}
+              onRepeatModeChange={(repeatMode) => setColorSliderAutopilot({ repeatMode })}
+              onLoopDirectionChange={(loopDirection) => setColorSliderAutopilot({ loopDirection })}
+            />
 
             {colorSliderAutopilot.enabled ? (
               <div style={{
@@ -2972,7 +2469,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
                 fontSize: '11px',
                 color: '#10b981'
               }}>
-                ✨ Color Autopilot Active! RGB fixtures will cycle through {colorSliderAutopilot.type} pattern.
+                Color autopilot active ({colorSliderAutopilot.type}).
                 {colorSliderAutopilot.syncToBPM && ` Synced to ${bpm} BPM.`}
               </div>
             ) : (
@@ -2992,10 +2489,10 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false }) => {
       </div>
 
       <CustomPathEditor
-        isOpen={showTrackCustomPathEditor}
-        onClose={() => setShowTrackCustomPathEditor(false)}
-        mode="track"
-        initialPoints={autopilotTrackCustomPoints || []}
+        isOpen={showPanTiltPathEditor}
+        onClose={() => setShowPanTiltPathEditor(false)}
+        mode="autopilot"
+        initialPoints={panTiltAutopilot.customPath || []}
       />
     </div>
   );

@@ -51,9 +51,6 @@ export function ContextMenuProvider({ children }: { children: React.ReactNode })
   const jumpToChannel = useStore((s) => s.jumpToChannel);
   const toggleFixtureSelection = useStore((s) => s.toggleFixtureSelection);
   const addNotification = useStore((s) => s.addNotification);
-  const transitionPatterns = useStore((s) => s.transitionPatterns);
-  const activeTransitionPatternId = useStore((s) => s.activeTransitionPatternId);
-  const addPatternChannel = useStore((s) => s.addPatternChannel);
 
   const { isLearning, currentLearningChannel, startLearn, cancelLearn } = useMidiLearn();
 
@@ -131,8 +128,6 @@ export function ContextMenuProvider({ children }: { children: React.ReactNode })
   const openChannelMenu = useCallback(
     (event: React.MouseEvent, channelIndex: number) => {
       const value = dmxChannels[channelIndex] || 0;
-      const patternId =
-        activeTransitionPatternId ?? transitionPatterns[0]?.id ?? null;
       openMenu(
         event,
         buildDmxChannelContextMenu({
@@ -159,16 +154,6 @@ export function ContextMenuProvider({ children }: { children: React.ReactNode })
           selectAllChannels,
           deselectAllChannels,
           dmxChannels,
-          onAddToTracker: patternId
-            ? () => {
-                addPatternChannel(patternId, channelIndex);
-                addNotification({
-                  message: `DMX CH ${channelIndex + 1} added to DMX Tracker`,
-                  type: 'success',
-                  priority: 'normal',
-                });
-              }
-            : undefined,
         })
       );
     },
@@ -191,10 +176,6 @@ export function ContextMenuProvider({ children }: { children: React.ReactNode })
       handleSetOscAddress,
       selectAllChannels,
       deselectAllChannels,
-      activeTransitionPatternId,
-      transitionPatterns,
-      addPatternChannel,
-      addNotification,
     ]
   );
 

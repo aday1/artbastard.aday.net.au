@@ -4,9 +4,26 @@ import { useTheme } from '../../context/ThemeContext';
 import { LucideIcon } from '../ui/LucideIcon';
 import { useRouter } from '../../context/RouterContext';
 import { useSocket } from '../../context/SocketContext';
+import { DmxFaderRow, HorizontalFader, RangeWindowControl } from '../ui/controls';
 import styles from './PinnedChannels.module.scss';
+import { debugLog } from '../../utils/debugLog';
+import { useAppContextMenu } from '../../context/ContextMenuContext';
 
-export const PinnedChannels: React.FC = () => {
+
+export interface PinnedChannelsProps {
+  /**
+   * `sidebar` (default) - the original fixed-position left rail.
+   * `drawer`            - fill the drawer panel: no fixed positioning,
+   *                       no width state, no resize handle, no collapse
+   *                       toggle, and we never publish the
+   *                       `--pinned-channels-width` CSS variable so the
+   *                       Layout's left padding does not shift.
+   */
+  variant?: 'sidebar' | 'drawer'
+}
+
+export const PinnedChannels: React.FC<PinnedChannelsProps> = ({ variant = 'sidebar' }) => {
+  const { openChannelMenu } = useAppContextMenu();
   const { theme } = useTheme();
   const {
     pinnedChannels,
@@ -16,6 +33,7 @@ export const PinnedChannels: React.FC = () => {
     setDmxChannel,
     unpinChannel,
     getChannelRange,
+    setChannelRange,
     envelopeAutomation,
     toggleEnvelope,
     quickSceneSave,
@@ -70,8 +88,11 @@ export const PinnedChannels: React.FC = () => {
     tapTempoMidiMapping,
     tapTempoOscAddress,
     setTapTempoMidiMapping,
-    setTapTempoOscAddress
+    setTapTempoOscAddress,
+    dmxFaderOrientation,
   } = useStore();
+
+  const faderLayout = dmxFaderOrientation === 'vertical' ? 'vertical' : 'horizontal';
 
   const { setCurrentView } = useRouter();
   const { socket, connected: socketConnected } = useSocket();
@@ -156,15 +177,22 @@ export const PinnedChannels: React.FC = () => {
     };
   }, [isResizing]);
 
-  // Set initial CSS variable and update when width/collapse changes
+  // Set initial CSS variable and update when width/collapse changes.
+  // Drawer variant never publishes the width (it lives inside a Drawer
+  // panel, not pinned to the viewport edge) so the Layout's left
+  // padding stays at zero.
   useEffect(() => {
+    if (variant === 'drawer') {
+      document.documentElement.style.setProperty('--pinned-channels-width', '0px');
+      return;
+    }
     if (!pinnedChannels || pinnedChannels.length === 0) {
       document.documentElement.style.setProperty('--pinned-channels-width', '0px');
     } else {
       const currentWidth = isCollapsed ? 64 : width;
       document.documentElement.style.setProperty('--pinned-channels-width', `${currentWidth}px`);
     }
-  }, [width, isCollapsed, pinnedChannels?.length]);
+  }, [variant, width, isCollapsed, pinnedChannels?.length]);
 
   // Auto-select the latest scene when scenes change
   useEffect(() => {
@@ -287,7 +315,7 @@ export const PinnedChannels: React.FC = () => {
           address === '/tempo/toggle' ||
           (address === '/tempo/play' && !midiClockIsPlaying) ||
           (address === '/tempo/stop' && midiClockIsPlaying)) {
-        console.log(`[PinnedChannels] OSC tempo play/pause received: ${address}`);
+        debugLog.log(`[PinnedChannels] OSC tempo play/pause received: ${address}`);
         // Call store functions directly to avoid closure issues
         if (requestToggleMasterClockPlayPause) {
           requestToggleMasterClockPlayPause();
@@ -298,7 +326,7 @@ export const PinnedChannels: React.FC = () => {
       
       // Check if this OSC address matches the configured tap tempo address
       if (address === tapTempoOscAddress || address === '/tempo/tap') {
-        console.log(`[PinnedChannels] OSC tap tempo received: ${address}`);
+        debugLog.log(`[PinnedChannels] OSC tap tempo received: ${address}`);
         recordTapTempo();
         setAutoSceneTempoSource('tap_tempo');
         // Also trigger the visual tap effect
@@ -369,25 +397,55 @@ export const PinnedChannels: React.FC = () => {
   };
 
   if (!pinnedChannels || pinnedChannels.length === 0) {
+    if (variant === 'drawer') {
+      return (
+        <div className={styles.drawerEmpty}>
+          <LucideIcon name="Pin" size={28} />
+          <p>No channels pinned yet.</p>
+          <p className={styles.drawerEmptyHint}>
+            Pin a channel from the DMX page to access it from anywhere.
+          </p>
+        </div>
+      );
+    }
     return null; // Don't show if no channels are pinned
   }
+
+  // Drawer variant: fill the parent panel (no fixed positioning, no
+  // resize handle, no collapse toggle). Force isCollapsed to false at
+  // render time by skipping the collapsed branch in the wrapper class
+  // composition.
+  const isDrawer = variant === 'drawer';
+  const collapsedActive = !isDrawer && isCollapsed;
+  const containerClass = [
+    styles.pinnedChannelsContainer,
+    collapsedActive ? styles.collapsed : '',
+    isDrawer ? styles.drawerVariant : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+  const containerStyle: React.CSSProperties = isDrawer
+    ? { width: '100%', position: 'static' as const, height: 'auto' }
+    : { width: collapsedActive ? '64px' : `${width}px` };
 
   return (
     <div
       ref={containerRef}
-      className={`${styles.pinnedChannelsContainer} ${isCollapsed ? styles.collapsed : ''}`}
-      style={{ width: isCollapsed ? '64px' : `${width}px` }}
+      className={containerClass}
+      style={containerStyle}
     >
       <div className={styles.pinnedContent}>
-        <div className={styles.headerRow}>
-          <button
-            onClick={toggleCollapse}
-            className={styles.collapseToggle}
-            title={isCollapsed ? 'Expand Pinned Channels' : 'Collapse Pinned Channels'}
-          >
-            <LucideIcon name={isCollapsed ? 'ChevronRight' : 'ChevronLeft'} />
-          </button>
-        </div>
+        {!isDrawer && (
+          <div className={styles.headerRow}>
+            <button
+              onClick={toggleCollapse}
+              className={styles.collapseToggle}
+              title={isCollapsed ? 'Expand Pinned Channels' : 'Collapse Pinned Channels'}
+            >
+              <LucideIcon name={isCollapsed ? 'ChevronRight' : 'ChevronLeft'} />
+            </button>
+          </div>
+        )}
 
         {!isCollapsed && (
           <div className={styles.quickSceneControls}>
@@ -1143,22 +1201,12 @@ export const PinnedChannels: React.FC = () => {
                       {autopilotTrackSpeed.toFixed(0)}x
                     </span>
                   </div>
-                  <input
-                    type="range"
-                    min="1"
-                    max="100"
-                    step="1"
+                  <HorizontalFader
+                    min={1}
+                    max={100}
+                    step={1}
                     value={autopilotTrackSpeed}
-                    onChange={(e) => setAutopilotTrackSpeed(parseFloat(e.target.value))}
-                    style={{
-                      width: '100%',
-                      height: '4px',
-                      borderRadius: '2px',
-                      background: `linear-gradient(to right, #10b981 0%, #10b981 ${autopilotTrackSpeed}%, #475569 ${autopilotTrackSpeed}%, #475569 100%)`,
-                      outline: 'none',
-                      cursor: 'pointer'
-                    }}
-                    title={`Autopilot Speed: ${autopilotTrackSpeed}x`}
+                    onChange={setAutopilotTrackSpeed}
                   />
                 </div>
               )}
@@ -1173,22 +1221,12 @@ export const PinnedChannels: React.FC = () => {
                       {colorSliderAutopilot.speed.toFixed(1)}x
                     </span>
                   </div>
-                  <input
-                    type="range"
-                    min="0.1"
-                    max="1.0"
-                    step="0.1"
+                  <HorizontalFader
+                    min={0.1}
+                    max={1}
+                    step={0.1}
                     value={colorSliderAutopilot.speed}
-                    onChange={(e) => setColorSliderAutopilot({ speed: parseFloat(e.target.value) })}
-                    style={{
-                      width: '100%',
-                      height: '4px',
-                      borderRadius: '2px',
-                      background: `linear-gradient(to right, #8b5cf6 0%, #8b5cf6 ${(colorSliderAutopilot.speed / 1.0) * 100}%, #475569 ${(colorSliderAutopilot.speed / 1.0) * 100}%, #475569 100%)`,
-                      outline: 'none',
-                      cursor: 'pointer'
-                    }}
-                    title={`Auto Color Speed: ${colorSliderAutopilot.speed.toFixed(1)}x`}
+                    onChange={(v) => setColorSliderAutopilot({ speed: v })}
                   />
                 </div>
               )}
@@ -1290,6 +1328,7 @@ export const PinnedChannels: React.FC = () => {
                   <div
                     key={channelIndex}
                     className={styles.pinnedChannel}
+                    onContextMenu={(e) => openChannelMenu(e, channelIndex)}
                     style={{
                       borderLeft: channelColor 
                         ? `6px solid ${channelColor}` 
@@ -1399,120 +1438,50 @@ export const PinnedChannels: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className={styles.valueDisplay}>
-                      <span className={styles.value}>{value}</span>
-                      <span className={styles.percent}>{Math.round((value / 255) * 100)}%</span>
-                    </div>
-
-                    <div className={styles.sliderContainer}>
-                      <input
-                        type="range"
-                        min={range.min}
-                        max={range.max}
-                        value={value}
-                        onChange={(e) => setDmxChannel(channelIndex, parseInt(e.target.value))}
-                        className={styles.slider}
-                        style={{
-                          background: channelColor || fixtureColor
-                            ? `linear-gradient(to right, ${channelColor || fixtureColor} 0%, ${channelColor || fixtureColor} ${(value / range.max) * 100}%, rgba(71, 85, 105, 0.3) ${(value / range.max) * 100}%, rgba(71, 85, 105, 0.3) 100%)`
+                    <DmxFaderRow
+                      compact
+                      layout={faderLayout}
+                      label={`CH ${channelIndex + 1}`}
+                      subtitle={channelInfo?.fixtureName}
+                      meta={
+                        hasCustomName
+                          ? `${channelName} · ${Math.round((value / 255) * 100)}%`
+                          : `${channelInfo?.channelName || channelName} · ${Math.round((value / 255) * 100)}%`
+                      }
+                      controlName={`pinned-ch-${channelIndex}`}
+                      min={range.min}
+                      max={range.max}
+                      value={value}
+                      oscAddress={oscAssignments[channelIndex] || `/dmx/channel/${channelIndex + 1}`}
+                      onOscAddressChange={(addr) => setOscAssignment(channelIndex, addr)}
+                      isMidiLearning={
+                        midiLearnTarget?.type === 'dmxChannel' && midiLearnTarget.channelIndex === channelIndex
+                      }
+                      isMidiMapped={!!midiMappings[channelIndex]}
+                      midiMappingLabel={
+                        midiMappings[channelIndex]?.controller !== undefined
+                          ? `CC ${midiMappings[channelIndex].controller}`
+                          : midiMappings[channelIndex]?.note !== undefined
+                            ? `Note ${midiMappings[channelIndex].note}`
                             : undefined
-                        }}
+                      }
+                      onMidiLearn={() => startMidiLearn({ type: 'dmxChannel', channelIndex })}
+                      onMidiForget={() => removeMidiMapping(channelIndex)}
+                      onChange={(v) => setDmxChannel(channelIndex, v)}
+                    />
+                    <div className={styles.pinnedChannelRange}>
+                      <RangeWindowControl
+                        label="Channel window"
+                        showNumericInputs
+                        dense
+                        min={0}
+                        max={255}
+                        minValue={range.min}
+                        maxValue={range.max}
+                        onChange={(newMin, newMax) =>
+                          setChannelRange(channelIndex, newMin, newMax)
+                        }
                       />
-                    </div>
-
-                    <div className={styles.midiControls}>
-                      {midiMappings[channelIndex] ? (
-                        <div className={styles.midiInfo}>
-                          <span className={styles.midiBadge}>
-                            <LucideIcon name="Zap" size={10} />
-                            MIDI: {midiMappings[channelIndex].controller !== undefined
-                              ? `CC ${midiMappings[channelIndex].controller}`
-                              : `Note ${midiMappings[channelIndex].note}`}
-                          </span>
-                          <button
-                            className={styles.forgetMidiButton}
-                            onClick={() => removeMidiMapping(channelIndex)}
-                            title="Forget MIDI mapping"
-                          >
-                            <LucideIcon name="X" size={10} />
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          className={`${styles.learnMidiButton} ${midiLearnTarget?.type === 'dmxChannel' && midiLearnTarget.channelIndex === channelIndex ? styles.flashing : ''}`}
-                          onClick={() => startMidiLearn({ type: 'dmxChannel', channelIndex })}
-                        >
-                          <LucideIcon name="Music" size={10} />
-                          MIDI Learn
-                        </button>
-                      )}
-                    </div>
-                    
-                    {/* OSC Address Display and Edit */}
-                    <div className={styles.oscControls}>
-                      {editingOscAddress === `channel_${channelIndex}` ? (
-                        <div className={styles.oscEditRow}>
-                          <input
-                            type="text"
-                            value={editingOscValue}
-                            onChange={(e) => setEditingOscValue(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                setOscAssignment(channelIndex, editingOscValue.trim());
-                                setEditingOscAddress(null);
-                                setEditingOscValue('');
-                              } else if (e.key === 'Escape') {
-                                setEditingOscAddress(null);
-                                setEditingOscValue('');
-                              }
-                            }}
-                            onBlur={() => {
-                              setOscAssignment(channelIndex, editingOscValue.trim());
-                              setEditingOscAddress(null);
-                              setEditingOscValue('');
-                            }}
-                            className={styles.oscInput}
-                            placeholder="/dmx/channel/12"
-                            autoFocus
-                          />
-                          <button
-                            className={styles.oscSaveButton}
-                            onClick={() => {
-                              setOscAssignment(channelIndex, editingOscValue.trim());
-                              setEditingOscAddress(null);
-                              setEditingOscValue('');
-                            }}
-                            title="Save OSC address"
-                          >
-                            <LucideIcon name="Check" size={12} />
-                          </button>
-                          <button
-                            className={styles.oscCancelButton}
-                            onClick={() => {
-                              setEditingOscAddress(null);
-                              setEditingOscValue('');
-                            }}
-                            title="Cancel editing"
-                          >
-                            <LucideIcon name="X" size={12} />
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          className={styles.oscDisplayButton}
-                          onClick={() => {
-                            setEditingOscAddress(`channel_${channelIndex}`);
-                            setEditingOscValue(oscAssignments[channelIndex] || `/dmx/channel/${channelIndex + 1}`);
-                          }}
-                          title={`OSC: ${oscAssignments[channelIndex] || `/dmx/channel/${channelIndex + 1}`} - Click to edit`}
-                        >
-                          <LucideIcon name="Globe" size={10} />
-                          <span className={styles.oscAddressText}>
-                            {oscAssignments[channelIndex] || `/dmx/channel/${channelIndex + 1}`}
-                          </span>
-                          <LucideIcon name="Edit" size={10} />
-                        </button>
-                      )}
                     </div>
                   </div>
                 );
@@ -1660,7 +1629,7 @@ export const PinnedChannels: React.FC = () => {
           </>
         )}
       </div>
-      {!isCollapsed && (
+      {!isDrawer && !isCollapsed && (
         <div
           ref={resizeHandleRef}
           className={styles.resizeHandle}

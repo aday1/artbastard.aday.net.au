@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useStore } from '../../store';
 import { useMidiScaling, ScalingOptions } from '../../hooks/useMidiScaling';
+import { debugLog } from '../../utils/debugLog';
 
 // Extended mapping interface to include range limits and curve
 interface MidiRangeMapping {
@@ -53,9 +54,124 @@ export const MidiDmxProcessor: React.FC = () => {
 
   // Log when MIDI mappings change, helpful for debugging
   useEffect(() => {
-    console.log('[MidiDmxProcessor] MIDI mappings updated in store:', midiMappings);
+    debugLog.log('[MidiDmxProcessor] MIDI mappings updated in store:', midiMappings);
   }, [midiMappings]);
-    // Process MIDI messages and update DMX channels
+
+  const normalizePitchToMidiValue = useCallback((rawValue: number) => {
+    const normalized = rawValue > 127
+      ? rawValue / 16383
+      : rawValue / 127;
+    const bounded = Math.max(0, Math.min(1, normalized));
+    return Math.round(bounded * 127);
+  }, []);
+
+  // Listen for direct MIDI messages (bypass store for lower latency)
+  useEffect(() => {
+    const handleDirectMidi = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const message = customEvent.detail;
+      
+      // Process high-frequency browser controls directly (CC and pitch)
+      if ((message._type === 'cc' || message._type === 'pitch') && message.source === 'browser') {
+        processMidiMessageDirect(message);
+      }
+    };
+
+    window.addEventListener('midiMessageDirect', handleDirectMidi);
+    return () => {
+      window.removeEventListener('midiMessageDirect', handleDirectMidi);
+    };
+  }, [midiMappings, masterSliders, midiLearnTarget, stableFunctions]);
+
+  // Direct processing function for low-latency browser control messages (bypasses store re-render)
+  const processMidiMessageDirect = useCallback((message: any) => {
+    if (midiLearnTarget !== null) {
+      return; // Skip if in learn mode
+    }
+
+    // Process for Master Sliders first
+    let messageHandledByMasterSlider = false;
+    if (masterSliders && masterSliders.length > 0) {
+      for (const slider of masterSliders) {
+        if (slider.midiMapping && 
+            slider.midiMapping.channel === message.channel &&
+            slider.midiMapping.controller === message.controller) {
+          const scaledValue = Math.round((message.value / 127) * 255);
+          stableFunctions.updateMasterSliderValue(slider.id, scaledValue);
+          messageHandledByMasterSlider = true;
+          break;
+        }
+      }
+    }
+
+    const messageType = message._type || message.type;
+
+    // Process for DMX channels if not handled by master slider
+    if (!messageHandledByMasterSlider && messageType === 'cc' && message.controller !== undefined) {
+      Object.entries(midiMappings).forEach(([dmxChannelStr, mapping]) => {
+        if (!mapping) return;
+        const dmxChannel = parseInt(dmxChannelStr, 10);
+        if (mapping.controller !== undefined &&
+            mapping.channel === message.channel &&
+            mapping.controller === message.controller) {
+          
+          // Get the range mapping for this channel if any
+          const currentRangeMapping = channelRangeMappings[dmxChannel] || {};
+          
+          // Build scaling options with defaults
+          const scalingOptions: Partial<ScalingOptions> = {
+            inputMin: currentRangeMapping.inputMin || 0,
+            inputMax: currentRangeMapping.inputMax || 127,
+            outputMin: currentRangeMapping.outputMin || 0,
+            outputMax: currentRangeMapping.outputMax || 255,
+            curve: currentRangeMapping.curve || 1
+          };
+          
+          // Apply inversion if configured
+          let inputValue = message.value;
+          if (currentRangeMapping.inverted) {
+            inputValue = 127 - inputValue;
+          }
+          
+          // Scale the MIDI value to DMX range using the scaling function
+          const dmxValue = stableFunctions.scaleValue(inputValue, scalingOptions);
+          const roundedDmxValue = typeof dmxValue === 'number' ? Math.round(dmxValue) : 0;
+          const boundedValue = Math.max(0, Math.min(255, roundedDmxValue));
+          
+          // Update the DMX channel directly (bypasses store re-render for this update)
+          stableFunctions.setDmxChannel(dmxChannel, boundedValue);
+        }
+      });
+    } else if (!messageHandledByMasterSlider && messageType === 'pitch' && typeof message.value === 'number') {
+      const pitchAsMidiValue = normalizePitchToMidiValue(message.value);
+      Object.entries(midiMappings).forEach(([dmxChannelStr, mapping]) => {
+        if (!mapping || !mapping.pitch) return;
+        const dmxChannel = parseInt(dmxChannelStr, 10);
+        if (mapping.channel !== message.channel) return;
+
+        const currentRangeMapping = channelRangeMappings[dmxChannel] || {};
+        const scalingOptions: Partial<ScalingOptions> = {
+          inputMin: currentRangeMapping.inputMin || 0,
+          inputMax: currentRangeMapping.inputMax || 127,
+          outputMin: currentRangeMapping.outputMin || 0,
+          outputMax: currentRangeMapping.outputMax || 255,
+          curve: currentRangeMapping.curve || 1
+        };
+
+        let inputValue = pitchAsMidiValue;
+        if (currentRangeMapping.inverted) {
+          inputValue = 127 - inputValue;
+        }
+
+        const dmxValue = stableFunctions.scaleValue(inputValue, scalingOptions);
+        const roundedDmxValue = typeof dmxValue === 'number' ? Math.round(dmxValue) : 0;
+        const boundedValue = Math.max(0, Math.min(255, roundedDmxValue));
+        stableFunctions.setDmxChannel(dmxChannel, boundedValue);
+      });
+    }
+  }, [midiMappings, masterSliders, midiLearnTarget, stableFunctions, channelRangeMappings, normalizePitchToMidiValue]);
+
+  // Process MIDI messages from store (for server MIDI and monitoring)
   useEffect(() => {
     if (!midiMessages || midiMessages.length === 0) {
       return;
@@ -69,11 +185,16 @@ export const MidiDmxProcessor: React.FC = () => {
     }
     setLastProcessedMessageSignature(currentMessageSignature); // Mark as processed early
 
-    console.log(`[MidiDmxProcessor] Attempting to process MIDI message:`, latestMessage);
+    // Skip browser MIDI CC/Pitch messages - they are handled directly
+    if (latestMessage.source === 'browser' && (latestMessage._type === 'cc' || latestMessage._type === 'pitch')) {
+      return;
+    }
+
+    debugLog.log(`[MidiDmxProcessor] Attempting to process MIDI message:`, latestMessage);
 
     // Skip processing if we're in MIDI Learn mode - let the Learn hook handle it
     if (midiLearnTarget !== null) {
-      console.log(`[MidiDmxProcessor] Skipping processing - MIDI Learn mode active for:`, midiLearnTarget);
+      debugLog.log(`[MidiDmxProcessor] Skipping processing - MIDI Learn mode active for:`, midiLearnTarget);
       return;
     }
 
@@ -110,7 +231,7 @@ export const MidiDmxProcessor: React.FC = () => {
             match = true;
             newValueForMaster = 0; // Note Off typically sets value to 0
           }          if (match) {
-            console.log(`[MidiDmxProcessor] Master Slider "${slider.name}" matched MIDI. New value: ${newValueForMaster}`);
+            debugLog.log(`[MidiDmxProcessor] Master Slider "${slider.name}" matched MIDI. New value: ${newValueForMaster}`);
             stableFunctions.updateMasterSliderValue(slider.id, Math.max(0, Math.min(255, newValueForMaster)));
             messageHandledByMasterSlider = true;
             break; // Assuming one MIDI message controls at most one master slider
@@ -129,7 +250,7 @@ export const MidiDmxProcessor: React.FC = () => {
           quickSceneMidiMapping.channel === latestMessage.channel &&
           quickSceneMidiMapping.controller === latestMessage.controller) {
         
-        console.log(`[MidiDmxProcessor] Quick Scene Load triggered by MIDI CC ${quickSceneMidiMapping.controller} on CH ${quickSceneMidiMapping.channel}`);
+        debugLog.log(`[MidiDmxProcessor] Quick Scene Load triggered by MIDI CC ${quickSceneMidiMapping.controller} on CH ${quickSceneMidiMapping.channel}`);
         quickSceneLoad();
         quickSceneTriggered = true;
       }
@@ -139,7 +260,7 @@ export const MidiDmxProcessor: React.FC = () => {
                quickSceneMidiMapping.channel === latestMessage.channel &&
                quickSceneMidiMapping.note === latestMessage.note) {
         
-        console.log(`[MidiDmxProcessor] Quick Scene Load triggered by MIDI Note ${quickSceneMidiMapping.note} on CH ${quickSceneMidiMapping.channel}`);
+        debugLog.log(`[MidiDmxProcessor] Quick Scene Load triggered by MIDI Note ${quickSceneMidiMapping.note} on CH ${quickSceneMidiMapping.channel}`);
         quickSceneLoad();
         quickSceneTriggered = true;
       }
@@ -153,7 +274,7 @@ export const MidiDmxProcessor: React.FC = () => {
     const latestType = (latestMessage as any).type || (latestMessage as any)._type;
 
     if (!messageHandledByMasterSlider && latestType === 'cc' && typeof latestMessage.value === 'number') {
-      console.log('[MidiDmxProcessor] Processing CC for Direct DMX. Mappings:', midiMappings);
+      debugLog.log('[MidiDmxProcessor] Processing CC for Direct DMX. Mappings:', midiMappings);
       let dmxMatchFound = false;
       Object.entries(midiMappings).forEach(([dmxChannelStr, mapping]) => {
         if (!mapping) return;
@@ -163,7 +284,7 @@ export const MidiDmxProcessor: React.FC = () => {
             mapping.controller === latestMessage.controller) {
             dmxMatchFound = true;
           
-          console.log(`[MidiDmxProcessor] Found DMX channel mapping for CC ${mapping.controller} on CH ${mapping.channel} -> DMX CH ${dmxChannel}`);
+          debugLog.log(`[MidiDmxProcessor] Found DMX channel mapping for CC ${mapping.controller} on CH ${mapping.channel} -> DMX CH ${dmxChannel}`);
           
           // Get the range mapping for this channel if any
           const currentRangeMapping = channelRangeMappings[dmxChannel] || {};
@@ -188,7 +309,7 @@ export const MidiDmxProcessor: React.FC = () => {
           const roundedDmxValue = typeof dmxValue === 'number' ? Math.round(dmxValue) : 0;
           const boundedValue = Math.max(0, Math.min(255, roundedDmxValue));
           
-          console.log(`[MidiDmxProcessor] MIDI CC ${mapping.controller} value ${latestMessage.value} -> DMX CH ${dmxChannel} value ${boundedValue}`);
+          debugLog.log(`[MidiDmxProcessor] MIDI CC ${mapping.controller} value ${latestMessage.value} -> DMX CH ${dmxChannel} value ${boundedValue}`);
           
           // Update the DMX channel
           stableFunctions.setDmxChannel(dmxChannel, boundedValue);
@@ -201,11 +322,50 @@ export const MidiDmxProcessor: React.FC = () => {
         }
       });
       if (!dmxMatchFound) {
-        console.log('[MidiDmxProcessor] No DMX channel mapped to received CC (after master slider check).');
+        debugLog.log('[MidiDmxProcessor] No DMX channel mapped to received CC (after master slider check).');
+      }
+    } else if (!messageHandledByMasterSlider && latestType === 'pitch' && typeof latestMessage.value === 'number') {
+      debugLog.log('[MidiDmxProcessor] Processing Pitch for Direct DMX. Mappings:', midiMappings);
+      let dmxMatchFound = false;
+      const pitchAsMidiValue = normalizePitchToMidiValue(latestMessage.value);
+
+      Object.entries(midiMappings).forEach(([dmxChannelStr, mapping]) => {
+        if (!mapping || !mapping.pitch) return;
+        const dmxChannel = parseInt(dmxChannelStr, 10);
+        if (mapping.channel !== latestMessage.channel) return;
+        dmxMatchFound = true;
+
+        const currentRangeMapping = channelRangeMappings[dmxChannel] || {};
+        const scalingOptions: Partial<ScalingOptions> = {
+          inputMin: currentRangeMapping.inputMin || 0,
+          inputMax: currentRangeMapping.inputMax || 127,
+          outputMin: currentRangeMapping.outputMin || 0,
+          outputMax: currentRangeMapping.outputMax || 255,
+          curve: currentRangeMapping.curve || 1
+        };
+
+        let inputValue = pitchAsMidiValue;
+        if (currentRangeMapping.inverted) {
+          inputValue = 127 - inputValue;
+        }
+
+        const dmxValue = stableFunctions.scaleValue(inputValue, scalingOptions);
+        const roundedDmxValue = typeof dmxValue === 'number' ? Math.round(dmxValue) : 0;
+        const boundedValue = Math.max(0, Math.min(255, roundedDmxValue));
+
+        stableFunctions.setDmxChannel(dmxChannel, boundedValue);
+        const event = new CustomEvent('dmxChannelUpdate', {
+          detail: { channel: dmxChannel, value: boundedValue }
+        });
+        window.dispatchEvent(event);
+      });
+
+      if (!dmxMatchFound) {
+        debugLog.log('[MidiDmxProcessor] No DMX channel mapped to received Pitch message.');
       }
     } else if (!messageHandledByMasterSlider && (latestType === 'noteon' || latestType === 'noteoff')) {
       // Handle direct Note On/Off to DMX mappings
-      console.log('[MidiDmxProcessor] Processing Note for Direct DMX. Mappings:', midiMappings);
+      debugLog.log('[MidiDmxProcessor] Processing Note for Direct DMX. Mappings:', midiMappings);
       let dmxMatchFound = false;
       Object.entries(midiMappings).forEach(([dmxChannelStr, mapping]) => {
         if (!mapping) return;
@@ -215,7 +375,7 @@ export const MidiDmxProcessor: React.FC = () => {
             mapping.note === latestMessage.note) {
             dmxMatchFound = true;
           
-          console.log(`[MidiDmxProcessor] Found DMX channel mapping for Note ${mapping.note} on CH ${mapping.channel} -> DMX CH ${dmxChannel}`);
+          debugLog.log(`[MidiDmxProcessor] Found DMX channel mapping for Note ${mapping.note} on CH ${mapping.channel} -> DMX CH ${dmxChannel}`);
           
           // For note messages, use velocity as the value (note on) or 0 (note off)
           let noteValue = 0;
@@ -246,7 +406,7 @@ export const MidiDmxProcessor: React.FC = () => {
           const roundedDmxValue = typeof dmxValue === 'number' ? Math.round(dmxValue) : 0;
           const boundedValue = Math.max(0, Math.min(255, roundedDmxValue));
           
-          console.log(`[MidiDmxProcessor] MIDI Note ${mapping.note} value ${noteValue} -> DMX CH ${dmxChannel} value ${boundedValue}`);
+          debugLog.log(`[MidiDmxProcessor] MIDI Note ${mapping.note} value ${noteValue} -> DMX CH ${dmxChannel} value ${boundedValue}`);
           
           // Update the DMX channel
           stableFunctions.setDmxChannel(dmxChannel, boundedValue);
@@ -259,10 +419,10 @@ export const MidiDmxProcessor: React.FC = () => {
         }
       });
       if (!dmxMatchFound) {
-        console.log('[MidiDmxProcessor] No DMX channel mapped to received Note (after master slider check).');
+        debugLog.log('[MidiDmxProcessor] No DMX channel mapped to received Note (after master slider check).');
       }    }
     
-  }, [midiMessages, midiMappings, masterSliders, channelRangeMappings, stableFunctions, midiLearnTarget]); // Use stable functions
+  }, [midiMessages, midiMappings, masterSliders, channelRangeMappings, stableFunctions, midiLearnTarget, normalizePitchToMidiValue]); // Use stable functions
   /**
    * Set a custom range mapping for a specific DMX channel
    */

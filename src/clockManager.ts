@@ -1,6 +1,18 @@
 // src/clockManager.ts
 
-export type MasterClockSourceId = 'internal' | 'midi-input';
+import {
+  getAbletonLinkSnapshot,
+  initAbletonLinkBridge,
+  isAbletonLinkModuleAvailable,
+  setAbletonLinkBpm,
+  shutdownAbletonLinkBridge,
+  startAbletonLinkPolling,
+  stopAbletonLinkPolling,
+} from './abletonLinkBridge';
+import { hasActiveBridge, requestBridgeClock, type BridgeClockPayload } from './bridgeRegistry';
+import { DEFAULT_SESSION_ID } from './sessionManager';
+
+export type MasterClockSourceId = 'internal' | 'midi-input' | 'ableton-link';
 
 export interface ClockState {
   bpm: number;
@@ -8,6 +20,8 @@ export interface ClockState {
   source: MasterClockSourceId;
   beat: number; // Current beat in the bar (e.g., 1, 2, 3, 4 for 4/4)
   bar: number;  // Current bar number
+  linkPeers?: number;
+  linkAvailable?: boolean;
 }
 
 export class ClockManager {
@@ -36,6 +50,13 @@ export class ClockManager {
   private midiClockTickIntervals: number[] = []; // For averaging BPM
   private derivedExternalMidiBPM: number = 120.0;
   private externalMidiClockTickCount: number = 0; // Beat tracking for external MIDI
+  private linkBpm: number = 120;
+  private linkPeers: number = 0;
+  private linkAvailable: boolean = false;
+  private linkBeat: number = 1;
+  private lastLinkBeatInt: number = 0;
+  private useBridgeLink: boolean = false;
+  private linkSessionId: string = DEFAULT_SESSION_ID;
 
   constructor() {
     // Initialization logic, if any, beyond property defaults
@@ -74,6 +95,15 @@ export class ClockManager {
     }
   }
 
+  public setLinkSessionId(sessionId: string): void {
+    this.linkSessionId = sessionId?.trim() || DEFAULT_SESSION_ID;
+    this.linkAvailable = hasActiveBridge(this.linkSessionId);
+  }
+
+  public getLinkSessionId(): string {
+    return this.linkSessionId;
+  }
+
   public subscribe(callback: (state: ClockState) => void): () => void {
     this.subscribers.push(callback);
     // Return an unsubscribe function
@@ -102,6 +132,16 @@ export class ClockManager {
         beat: this.beat,
         bar: this.bar,
       };
+    } else if (this.currentSource === 'ableton-link') {
+      return {
+        bpm: this.linkBpm,
+        isPlaying: this.linkAvailable,
+        source: this.currentSource,
+        beat: this.beat,
+        bar: this.bar,
+        linkPeers: this.linkPeers,
+        linkAvailable: this.linkAvailable,
+      };
     } else {
       return {
         bpm: 0,
@@ -120,6 +160,8 @@ export class ClockManager {
       this.stopInternalClock();
     } else if (this.currentSource === 'midi-input') {
       this.stopListeningToMidiInput();
+    } else if (this.currentSource === 'ableton-link') {
+      this.stopAbletonLink();
     }
 
     this.currentSource = sourceId;
@@ -135,10 +177,20 @@ export class ClockManager {
       } else {
         console.warn('MIDI Input source selected, but no input device is chosen.');
       }
+    } else if (sourceId === 'ableton-link') {
+      void this.startAbletonLink();
     }
     this.notifySubscribers();
   }
   public setBPM(newBPM: number): void {
+    if (this.currentSource === 'ableton-link') {
+      if (newBPM <= 0) return;
+      if (setAbletonLinkBpm(newBPM)) {
+        this.linkBpm = newBPM;
+        this.notifySubscribers();
+      }
+      return;
+    }
     if (this.currentSource !== 'internal') {
       console.warn(`Cannot set BPM when source is ${this.currentSource}. BPM is controlled externally.`);
       return;
@@ -168,13 +220,88 @@ export class ClockManager {
     } else if (this.currentSource === 'midi-input') {
       console.warn('Play/Pause is controlled by the external MIDI master when source is midi-input.');
       // Play/Pause is driven by MIDI start/stop messages
+    } else if (this.currentSource === 'ableton-link') {
+      console.warn('Ableton Link tempo is session-synced; use another clock source to start/stop locally.');
     }
     // notifySubscribers is called by start/stopInternalClock or MIDI event handlers
-  }  public getAvailableSources(): Array<{ id: MasterClockSourceId; name: string }> {
-    return [
+  }
+
+  public getAvailableSources(): Array<{ id: MasterClockSourceId; name: string }> {
+    const sources: Array<{ id: MasterClockSourceId; name: string }> = [
       { id: 'internal', name: 'Internal Clock' },
-      { id: 'midi-input', name: 'External MIDI Clock'}
+      { id: 'midi-input', name: 'External MIDI Clock' },
     ];
+    const linkViaBridge = hasActiveBridge(this.linkSessionId);
+    if (linkViaBridge || isAbletonLinkModuleAvailable() || this.linkAvailable) {
+      const suffix = linkViaBridge ? ' (LAN bridge)' : '';
+      sources.push({ id: 'ableton-link', name: `Ableton Link${suffix}` });
+    } else {
+      sources.push({ id: 'ableton-link', name: 'Ableton Link (bridge or server module required)' });
+    }
+    return sources;
+  }
+
+  public applyBridgeClockState(state: BridgeClockPayload): void {
+    this.linkBpm = state.bpm;
+    this.linkPeers = state.linkPeers ?? 0;
+    this.linkAvailable = true;
+    this.useBridgeLink = true;
+    this.beat = state.beat ?? this.beat;
+    this.bar = state.bar ?? this.bar;
+    if (this.currentSource === 'ableton-link') {
+      this.notifySubscribers();
+    }
+  }
+
+  private async startAbletonLink(): Promise<void> {
+    if (hasActiveBridge(this.linkSessionId)) {
+      this.useBridgeLink = true;
+      this.linkAvailable = true;
+      requestBridgeClock(this.linkSessionId);
+      this.notifySubscribers();
+      return;
+    }
+    this.useBridgeLink = false;
+    const ok = await initAbletonLinkBridge(this.internalBPM);
+    this.linkAvailable = ok;
+    if (!ok) {
+      console.warn('Ableton Link unavailable; staying on internal clock metrics.');
+      return;
+    }
+    const snap = getAbletonLinkSnapshot();
+    this.linkBpm = snap.bpm;
+    this.linkPeers = snap.peers;
+    this.beat = 1;
+    this.bar = 1;
+    this.lastLinkBeatInt = Math.floor(snap.beat);
+
+    startAbletonLinkPolling((snapshot) => {
+      this.linkBpm = snapshot.bpm;
+      this.linkPeers = snapshot.peers;
+      this.linkAvailable = snapshot.available;
+
+      const beatInt = Math.floor(snapshot.beat);
+      if (beatInt !== this.lastLinkBeatInt) {
+        this.lastLinkBeatInt = beatInt;
+        this.beat++;
+        if (this.beat > this.timeSignatureNominator) {
+          this.beat = 1;
+          this.bar++;
+        }
+      }
+      this.notifySubscribers();
+    });
+    this.notifySubscribers();
+  }
+
+  private stopAbletonLink(): void {
+    if (!this.useBridgeLink) {
+      stopAbletonLinkPolling();
+      shutdownAbletonLinkBridge();
+    }
+    this.useBridgeLink = false;
+    this.linkAvailable = hasActiveBridge(this.linkSessionId);
+    this.linkPeers = 0;
   }
   
   public getAvailableMidiOutputs(): string[] {

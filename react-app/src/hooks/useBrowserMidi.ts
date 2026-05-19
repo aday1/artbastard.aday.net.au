@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSocket } from '../context/SocketContext'
 import { useStore, MidiMapping } from '../store'
+import { debugLog } from '../utils/debugLog';
 
 export const useBrowserMidi = () => {
   const [midiAccess, setMidiAccess] = useState<WebMidi.MIDIAccess | null>(null)
@@ -86,7 +87,7 @@ export const useBrowserMidi = () => {
         setActiveBrowserInputs(prev => {
           const newSet = new Set(prev)
           newSet.delete(event.port.id)
-          console.log(`[useBrowserMidi] Device ${portName} disconnected, removed from active inputs.`)
+          debugLog.log(`[useBrowserMidi] Device ${portName} disconnected, removed from active inputs.`)
           return newSet
         })
       }
@@ -116,7 +117,7 @@ export const useBrowserMidi = () => {
       const sourceInput = event.target as WebMidi.MIDIInput
       const source = sourceInput?.name || 'Browser MIDI'
       
-      console.log(`[useBrowserMidi] Raw MIDI from ${source} (ID: ${sourceInput?.id}):`, event.data)
+      debugLog.log(`[useBrowserMidi] Raw MIDI from ${source} (ID: ${sourceInput?.id}):`, event.data)
 
       // --- MIDI Learn Logic for Master Sliders ---
       if (midiLearnTarget && midiLearnTarget.type === 'masterSlider') {
@@ -125,11 +126,13 @@ export const useBrowserMidi = () => {
           learnedMapping = { channel: channel, controller: data1 }; // Store channel as 0-15
         } else if (messageType === 0x9 && data2 > 0) { // Note On (velocity > 0)
           learnedMapping = { channel: channel, note: data1 }; // Store channel as 0-15
+        } else if (messageType === 0xE) { // Pitch Bend
+          learnedMapping = { channel: channel, pitch: true };
         }
         // Could also handle Note Off for learning if desired, e.g. for toggle or specific off actions
 
         if (learnedMapping) {
-          console.log(`[useBrowserMidi] Learned MIDI for Master Slider ID ${midiLearnTarget.id}:`, learnedMapping);
+          debugLog.log(`[useBrowserMidi] Learned MIDI for Master Slider ID ${midiLearnTarget.id}:`, learnedMapping);
           updateMasterSlider(midiLearnTarget.id, { midiMapping: learnedMapping });
           safeAddNotification({
             message: `MIDI control learned for Master Slider.`,
@@ -150,6 +153,9 @@ export const useBrowserMidi = () => {
         messageToStore = { _type: 'noteoff', channel: channel, note: data1, velocity: data2, source }
       } else if (messageType === 0xB) { // Control Change
         messageToStore = { _type: 'cc', channel: channel, controller: data1, value: data2, source }
+      } else if (messageType === 0xE) { // Pitch Bend
+        const rawPitch = ((data2 << 7) | data1);
+        messageToStore = { _type: 'pitch', channel: channel, value: rawPitch, source }
       }
 
       if (messageToStore) {
@@ -177,7 +183,7 @@ export const useBrowserMidi = () => {
     activeBrowserInputs.forEach(inputId => {
       const input = midiAccess.inputs.get(inputId)
       if (input) {
-        console.log(`[useBrowserMidi] Attaching listener to active input: ${input.name} (ID: ${input.id})`)
+        debugLog.log(`[useBrowserMidi] Attaching listener to active input: ${input.name} (ID: ${input.id})`)
         input.onmidimessage = handleMidiMessage
       } else {
         console.warn(`[useBrowserMidi] Active input ID ${inputId} not found in midiAccess.inputs during listener attachment.`)
@@ -213,7 +219,7 @@ export const useBrowserMidi = () => {
         type: 'info',
         priority: 'normal'
       })
-      console.log(`[useBrowserMidi] Added ${input.name} (ID: ${inputId}) to active inputs. Listener will be (re)attached.`)
+      debugLog.log(`[useBrowserMidi] Added ${input.name} (ID: ${inputId}) to active inputs. Listener will be (re)attached.`)
     } else {
       safeAddNotification({
         message: `MIDI Input device with ID ${inputId} not found.`,
@@ -239,7 +245,7 @@ export const useBrowserMidi = () => {
         type: 'info',
         priority: 'normal'
       })
-      console.log(`[useBrowserMidi] Removed ${input.name} (ID: ${inputId}) from active inputs. Listener will be detached.`)
+      debugLog.log(`[useBrowserMidi] Removed ${input.name} (ID: ${inputId}) from active inputs. Listener will be detached.`)
     } else {
       safeAddNotification({
         message: `MIDI Input device with ID ${inputId} not found for disconnection.`,
@@ -259,7 +265,7 @@ export const useBrowserMidi = () => {
         type: 'info',
         priority: 'low'
       })
-      console.log('[useBrowserMidi] Refreshed MIDI devices list:', inputList)
+      debugLog.log('[useBrowserMidi] Refreshed MIDI devices list:', inputList)
     } else {
       safeAddNotification({
         message: 'MIDI Access not available to refresh devices.',

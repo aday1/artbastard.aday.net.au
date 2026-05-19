@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store';
 import { useSocket } from '../context/SocketContext';
+import { debugLog } from '../utils/debugLog';
 
 export const useGlobalMidiManager = () => {
   const { socket, connected } = useSocket();
@@ -21,7 +22,7 @@ export const useGlobalMidiManager = () => {
   // Initialize MIDI interfaces when socket connects
   useEffect(() => {
     if (socket && connected && !isInitialized) {
-      console.log('[GlobalMidiManager] Initializing MIDI interfaces');
+      debugLog.log('[GlobalMidiManager] Initializing MIDI interfaces');
       setIsInitialized(true);
       
       // Request MIDI interfaces
@@ -29,13 +30,13 @@ export const useGlobalMidiManager = () => {
       
       // Listen for MIDI interface updates
       const handleMidiInterfaces = (interfaces: string[]) => {
-        console.log('[GlobalMidiManager] Received MIDI interfaces:', interfaces);
+        debugLog.log('[GlobalMidiManager] Received MIDI interfaces:', interfaces);
         setMidiInterfaces(interfaces);
         setStoreMidiInterfaces(interfaces);
       };
 
       const handleActiveInterfaces = (interfaces: string[]) => {
-        console.log('[GlobalMidiManager] Received active MIDI interfaces:', interfaces);
+        debugLog.log('[GlobalMidiManager] Received active MIDI interfaces:', interfaces);
         setActiveInterfaces(interfaces);
         setStoreActiveInterfaces(interfaces);
       };
@@ -53,7 +54,7 @@ export const useGlobalMidiManager = () => {
   // Connect to MIDI interface
   const connectMidiInterface = (interfaceName: string) => {
     if (socket && connected) {
-      console.log('[GlobalMidiManager] Connecting to MIDI interface:', interfaceName);
+      debugLog.log('[GlobalMidiManager] Connecting to MIDI interface:', interfaceName);
       socket.emit('selectMidiInterface', interfaceName);
       
       addNotification({
@@ -67,7 +68,7 @@ export const useGlobalMidiManager = () => {
   // Disconnect from MIDI interface
   const disconnectMidiInterface = (interfaceName: string) => {
     if (socket && connected) {
-      console.log('[GlobalMidiManager] Disconnecting from MIDI interface:', interfaceName);
+      debugLog.log('[GlobalMidiManager] Disconnecting from MIDI interface:', interfaceName);
       socket.emit('disconnectMidiInterface', interfaceName);
       
       addNotification({
@@ -81,7 +82,7 @@ export const useGlobalMidiManager = () => {
   // Refresh MIDI interfaces
   const refreshMidiInterfaces = () => {
     if (socket && connected) {
-      console.log('[GlobalMidiManager] Refreshing MIDI interfaces');
+      debugLog.log('[GlobalMidiManager] Refreshing MIDI interfaces');
       socket.emit('getMidiInterfaces');
       
       addNotification({

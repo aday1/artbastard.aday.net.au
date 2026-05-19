@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useDocking } from '@/context/DockingContext';
+import { HorizontalFader } from './controls';
 import './GridControls.module.scss';
 
 export const GridControls: React.FC = () => {
@@ -11,10 +12,10 @@ export const GridControls: React.FC = () => {
   } = useDocking();
 
   const [isExpanded, setIsExpanded] = useState(false);
-  const handleGridSizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const size = parseInt(e.target.value, 10);
-    if (size >= 20 && size <= 200) {
-      setGridSize(size);
+  const handleGridSizeChange = (size: number) => {
+    const rounded = Math.round(size);
+    if (rounded >= 20 && rounded <= 200) {
+      setGridSize(rounded);
     }
   };
 
@@ -59,14 +60,12 @@ export const GridControls: React.FC = () => {
 
           <div className="grid-control-group">            <label>
               <span>Grid Size: {state.gridSize}px</span>
-              <input
-                type="range"
-                min="20"
-                max="200"
-                step="10"
+              <HorizontalFader
+                min={20}
+                max={200}
+                step={10}
                 value={state.gridSize}
                 onChange={handleGridSizeChange}
-                className="grid-size-slider"
               />
             </label>
           </div>          <div className="grid-presets">

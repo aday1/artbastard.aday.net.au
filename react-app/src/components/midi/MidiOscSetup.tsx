@@ -3,7 +3,9 @@ import { useStore } from '../../store'
 import { useSocket } from '../../context/SocketContext'
 import { useTheme } from '../../context/ThemeContext'
 import { useGlobalBrowserMidi } from '../../hooks/useGlobalBrowserMidi'
+import { MIDI_CONTROLLER_TEMPLATES, detectTemplateForMidiInterface, MidiControllerTemplateId } from './midiControllerTemplates'
 import styles from './MidiOscSetup.module.scss'
+import { debugLog } from '../../utils/debugLog';
 
 export const MidiOscSetup: React.FC = () => {
   const { theme } = useTheme()
@@ -29,6 +31,8 @@ export const MidiOscSetup: React.FC = () => {
   const [oscReceiveStatus, setOscReceiveStatus] = useState<'disconnected' | 'connected' | 'error'>('disconnected')
   const [oscSendStatus, setOscSendStatus] = useState<'disconnected' | 'connected' | 'error'>('disconnected')
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [connectingInterfaces, setConnectingInterfaces] = useState<Set<string>>(new Set())
+  const [applyingTemplateId, setApplyingTemplateId] = useState<MidiControllerTemplateId | null>(null)
 
   const {
     midiMessages,
@@ -38,7 +42,8 @@ export const MidiOscSetup: React.FC = () => {
     superControlOscAddresses,
     removeMidiMapping,
     setOscAssignment,
-    setSuperControlOscAddress
+    setSuperControlOscAddress,
+    applyMidiControllerTemplate
   } = useStore(state => ({
     midiMessages: state.midiMessages,
     clearAllMidiMappings: state.clearAllMidiMappings,
@@ -47,12 +52,15 @@ export const MidiOscSetup: React.FC = () => {
     superControlOscAddresses: state.superControlOscAddresses,
     removeMidiMapping: state.removeMidiMapping,
     setOscAssignment: state.setOscAssignment,
-    setSuperControlOscAddress: state.setSuperControlOscAddress
+    setSuperControlOscAddress: state.setSuperControlOscAddress,
+    applyMidiControllerTemplate: state.applyMidiControllerTemplate
   }))
 
   // Get MIDI interfaces and active interfaces from global state
   const midiInterfaces = useStore(state => state.midiInterfaces)
   const activeInterfaces = useStore(state => state.activeInterfaces)
+  const setMidiInterfaces = useStore(state => state.setMidiInterfaces)
+  const setActiveInterfaces = useStore(state => state.setActiveInterfaces)
   const { connectMidiInterface, disconnectMidiInterface, refreshMidiInterfaces } = useStore(state => ({
     connectMidiInterface: (name: string) => {
       if (socket && connected) {
@@ -70,6 +78,68 @@ export const MidiOscSetup: React.FC = () => {
       }
     }
   }))
+
+  // Listen for server MIDI interface updates
+  useEffect(() => {
+    if (socket && connected) {
+      const handleMidiInterfaces = (interfaces: string[]) => {
+        debugLog.log('[MidiOscSetup] Received MIDI interfaces from server:', interfaces)
+        setMidiInterfaces(interfaces)
+      }
+
+      const handleActiveMidiInterfaces = (interfaces: string[]) => {
+        debugLog.log('[MidiOscSetup] Received active MIDI interfaces:', interfaces)
+        setActiveInterfaces(interfaces)
+        // Clear connecting state for any interfaces that are now active
+        setConnectingInterfaces(prev => {
+          const next = new Set(prev)
+          interfaces.forEach(iface => next.delete(iface))
+          return next
+        })
+      }
+
+      const handleMidiInterfaceError = (errorMessage: string) => {
+        console.error('[MidiOscSetup] MIDI interface error:', errorMessage)
+        useStore.getState().addNotification({
+          message: `MIDI Connection Error: ${errorMessage}`,
+          type: 'error',
+          priority: 'high'
+        })
+        // Clear connecting state on error
+        setConnectingInterfaces(new Set())
+      }
+
+      const handleMidiInterfaceSelected = (interfaceName: string) => {
+        debugLog.log('[MidiOscSetup] MIDI interface selected:', interfaceName)
+        useStore.getState().addNotification({
+          message: `Connected to MIDI device: ${interfaceName}`,
+          type: 'success',
+          priority: 'normal'
+        })
+        // Clear connecting state for this interface
+        setConnectingInterfaces(prev => {
+          const next = new Set(prev)
+          next.delete(interfaceName)
+          return next
+        })
+      }
+
+      socket.on('midiInterfaces', handleMidiInterfaces)
+      socket.on('midiInputsActive', handleActiveMidiInterfaces) // Server emits 'midiInputsActive'
+      socket.on('midiInterfaceError', handleMidiInterfaceError) // Listen for errors
+      socket.on('midiInterfaceSelected', handleMidiInterfaceSelected) // Listen for success
+
+      // Request MIDI interfaces on mount
+      socket.emit('getMidiInterfaces')
+
+      return () => {
+        socket.off('midiInterfaces', handleMidiInterfaces)
+        socket.off('midiInputsActive', handleActiveMidiInterfaces)
+        socket.off('midiInterfaceError', handleMidiInterfaceError)
+        socket.off('midiInterfaceSelected', handleMidiInterfaceSelected)
+      }
+    }
+  }, [socket, connected, setMidiInterfaces, setActiveInterfaces])
 
   // Listen for OSC status updates
   useEffect(() => {
@@ -105,6 +175,35 @@ export const MidiOscSetup: React.FC = () => {
     }
   }, [socket, connected])
 
+  useEffect(() => {
+    if (!socket || !connected) return;
+
+    const handleTemplateApplied = (payload: any) => {
+      if (payload?.midiMappings && typeof payload.midiMappings === 'object') {
+        useStore.setState({ midiMappings: payload.midiMappings });
+      }
+      useStore.getState().addNotification({
+        message: `MIDI template applied: ${payload?.templateId || 'unknown'}`,
+        type: 'info',
+        priority: 'normal'
+      });
+    };
+
+    const handleMidiMappingUpdate = (mappings: any) => {
+      if (mappings && typeof mappings === 'object') {
+        useStore.setState({ midiMappings: mappings });
+      }
+    };
+
+    socket.on('midiControllerTemplateApplied', handleTemplateApplied);
+    socket.on('midiMappingUpdate', handleMidiMappingUpdate);
+
+    return () => {
+      socket.off('midiControllerTemplateApplied', handleTemplateApplied);
+      socket.off('midiMappingUpdate', handleMidiMappingUpdate);
+    };
+  }, [socket, connected]);
+
   // Refresh all MIDI interfaces
   const handleRefreshMidi = () => {
     setIsRefreshing(true)
@@ -121,7 +220,33 @@ export const MidiOscSetup: React.FC = () => {
 
   // Connect to server MIDI interface
   const handleConnectMidi = (interfaceName: string) => {
+    if (!socket || !connected) {
+      useStore.getState().addNotification({
+        message: 'Cannot connect: Socket not connected to server',
+        type: 'error',
+        priority: 'high'
+      })
+      return
+    }
+    
+    // Set connecting state
+    setConnectingInterfaces(prev => new Set(prev).add(interfaceName))
+    
+    // Emit connection request
     connectMidiInterface(interfaceName)
+    
+    // Clear connecting state after timeout if no response (5 seconds)
+    setTimeout(() => {
+      setConnectingInterfaces(prev => {
+        const next = new Set(prev)
+        if (next.has(interfaceName) && !activeInterfaces.includes(interfaceName)) {
+          // Still connecting and not active - might be an issue
+          next.delete(interfaceName)
+          return next
+        }
+        return next
+      })
+    }, 5000)
   }
 
   // Disconnect from server MIDI interface
@@ -152,6 +277,21 @@ export const MidiOscSetup: React.FC = () => {
     }
   }
 
+  const getPreferredTemplateDevice = (templateId: MidiControllerTemplateId): string | undefined => {
+    const detected = activeInterfaces.find((interfaceName) => detectTemplateForMidiInterface(interfaceName) === templateId)
+    return detected
+  }
+
+  const handleApplyControllerTemplate = async (templateId: MidiControllerTemplateId) => {
+    setApplyingTemplateId(templateId)
+    try {
+      const preferredDevice = getPreferredTemplateDevice(templateId)
+      await applyMidiControllerTemplate(templateId, preferredDevice)
+    } finally {
+      setApplyingTemplateId(null)
+    }
+  }
+
   return (
     <div className={styles.midiOscSetup}>
       <h2 className={styles.sectionTitle}>
@@ -178,6 +318,12 @@ export const MidiOscSetup: React.FC = () => {
             <p className={styles.cardDescription}>
               Server MIDI interfaces are external MIDI devices connected to the computer running ArtBastard.
               These provide stable connections for professional MIDI controllers and hardware.
+              <br /><br />
+              <strong>Important:</strong> Server MIDI and Browser MIDI are separate systems, but on Windows they
+              cannot use the same device simultaneously. If Browser MIDI is connected to a device, you must
+              disconnect it before connecting Server MIDI to the same device.
+              <br /><br />
+              <strong>Windows Note:</strong> If connection fails, try running as Administrator: <code>.\start.ps1 -Admin</code>
             </p>
             <div className={styles.interfaceList}>
               {midiInterfaces.length === 0 ? (
@@ -226,10 +372,20 @@ export const MidiOscSetup: React.FC = () => {
                           <button
                             className={`${styles.actionButton} ${styles.connectButton}`}
                             onClick={() => handleConnectMidi(interfaceName)}
+                            disabled={connectingInterfaces.has(interfaceName)}
                             title={`Connect to ${interfaceName} - Enable MIDI data flow from this device`}
                           >
-                            <i className="fas fa-link"></i>
-                            {theme !== 'minimal' && 'Connect'}
+                            {connectingInterfaces.has(interfaceName) ? (
+                              <>
+                                <i className="fas fa-spinner fa-spin"></i>
+                                {theme !== 'minimal' && 'Connecting...'}
+                              </>
+                            ) : (
+                              <>
+                                <i className="fas fa-link"></i>
+                                {theme !== 'minimal' && 'Connect'}
+                              </>
+                            )}
                           </button>
                         )}
                       </div>
@@ -268,6 +424,10 @@ export const MidiOscSetup: React.FC = () => {
             <p className={styles.cardDescription}>
               Browser MIDI uses the Web MIDI API to access devices directly in your browser.
               Requires Chrome or Edge browser and may have limitations compared to server interfaces.
+              <br /><br />
+              <strong>Note:</strong> Browser MIDI connections are automatically saved and restored when you
+              navigate between pages. Server MIDI and Browser MIDI are separate systems - connecting one
+              does not automatically connect the other.
             </p>
             <div className={styles.interfaceList}>
               {!browserMidiSupported ? (
@@ -571,6 +731,37 @@ export const MidiOscSetup: React.FC = () => {
             </h3>
           </div>
           <div className={styles.cardBody}>
+            <div className={styles.controllerTemplatesSection}>
+              <h4>Controller Templates</h4>
+              <p className={styles.mappingInstructions}>
+                Apply prebuilt mappings for supported controllers to get immediate DMX control.
+              </p>
+              <div className={styles.templateButtons}>
+                {MIDI_CONTROLLER_TEMPLATES.map((template) => {
+                  const preferredDevice = getPreferredTemplateDevice(template.id)
+                  return (
+                    <button
+                      key={template.id}
+                      className={`${styles.actionButton} ${styles.connectButton} ${styles.templateApplyButton}`}
+                      onClick={() => handleApplyControllerTemplate(template.id)}
+                      disabled={applyingTemplateId === template.id}
+                      title={template.details}
+                    >
+                      <span className={styles.templateTitle}>{template.title}</span>
+                      <span className={styles.templateDescription}>{template.description}</span>
+                      <span className={styles.templateDetails}>{template.details}</span>
+                      {preferredDevice && (
+                        <span className={styles.templateDevice}>Detected Device: {preferredDevice}</span>
+                      )}
+                      {applyingTemplateId === template.id && (
+                        <span className={styles.templateApplying}>Applying template...</span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
             <button
               className={styles.forgetAllButton}
               onClick={handleForgetAllMappings}
@@ -618,11 +809,13 @@ export const MidiOscSetup: React.FC = () => {
                       <div key={target} className={styles.mappingRow}>
                         <span className={styles.mappingTarget}>{targetName}</span>
                         <span className={styles.mappingType}>
-                          {mapping.controller !== undefined ? 'CC' : 'Note'}
+                          {mapping.pitch ? 'Pitch' : mapping.controller !== undefined ? 'CC' : 'Note'}
                         </span>
                         <span className={styles.mappingChannel}>CH {mapping.channel + 1}</span>
                         <span className={styles.mappingValue}>
-                          {mapping.controller !== undefined 
+                          {mapping.pitch
+                            ? 'Pitch Bend'
+                            : mapping.controller !== undefined
                             ? `CC ${mapping.controller}` 
                             : `Note ${mapping.note}`}
                         </span>

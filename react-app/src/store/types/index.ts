@@ -5,6 +5,21 @@ export interface MidiMapping {
   controller?: number;
 }
 
+export interface FixtureChannelRange {
+  min: number;
+  max: number;
+  description: string;
+}
+
+export interface FixtureChannel {
+  name: string;
+  type: string;
+  dmxAddress?: number;
+  ranges?: FixtureChannelRange[];
+  /** When true, DMX UI uses discrete fixture ranges (gobo slots, color wheel positions, etc.) */
+  ticksOnly?: boolean;
+}
+
 export interface Fixture {
   id: string;
   name: string;
@@ -13,7 +28,7 @@ export interface Fixture {
   model?: string;
   mode?: string;
   startAddress: number;
-  channels: { name: string; type: string; dmxAddress?: number }[];
+  channels: FixtureChannel[];
   notes?: string;
   flags?: FixtureFlag[];
   isFlagged?: boolean;
@@ -248,6 +263,8 @@ export interface AutopilotConfig {
   range: { min: number; max: number };
   syncToBPM: boolean;
   phase: number;
+  repeatMode?: EnvelopeRepeatMode;
+  loopDirection?: EnvelopeLoopDirection;
 }
 
 export interface ColorSliderAutopilotConfig {
@@ -257,6 +274,8 @@ export interface ColorSliderAutopilotConfig {
   range: { min: number; max: number };
   syncToBPM: boolean;
   phase: number;
+  repeatMode?: EnvelopeRepeatMode;
+  loopDirection?: EnvelopeLoopDirection;
 }
 
 export interface PanTiltAutopilotConfig {
@@ -270,6 +289,8 @@ export interface PanTiltAutopilotConfig {
   customPoints?: Array<{ x: number; y: number }>;
   customPath?: Array<{ x: number; y: number }>;
   phase: number;
+  repeatMode?: EnvelopeRepeatMode;
+  loopDirection?: EnvelopeLoopDirection;
 }
 
 export interface ColorAutomationConfig {
@@ -319,6 +340,10 @@ export interface ModularAutomationState {
 
 export type WaveformType = 'sine' | 'saw' | 'square' | 'triangle' | 'custom';
 
+export type EnvelopeRepeatMode = 'once' | 'loop';
+
+export type EnvelopeLoopDirection = 'forward' | 'reverse' | 'pingpong';
+
 export interface EnvelopePoint {
   x: number;
   y: number;
@@ -335,7 +360,10 @@ export interface ChannelEnvelope {
   phase: number;
   tempoSync: boolean;
   tempoMultiplier: number;
-  loop: boolean;
+  /** Play the curve once, or repeat while automation runs */
+  repeatMode: EnvelopeRepeatMode;
+  /** How each cycle traverses the curve (loop + once end positions) */
+  loopDirection: EnvelopeLoopDirection;
   min: number;
   max: number;
   speed: number;

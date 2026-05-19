@@ -1,6 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { HorizontalFader } from '../ui/controls';
 
 const DebugControls: React.FC = () => {
+  const [frost, setFrost] = useState(0);
+  const [animation, setAnimation] = useState(0);
+  const [cto, setCto] = useState(127);
+  const [ctb, setCtb] = useState(127);
+
   return (
     <div style={{
       padding: '20px',
@@ -9,7 +15,7 @@ const DebugControls: React.FC = () => {
       background: 'yellow'
     }}>
       <h3>DEBUG: Enhanced Controls Should Be Here</h3>
-      
+
       <div style={{ marginTop: '10px' }}>
         <h4>Control Mode Buttons:</h4>
         <button style={{ margin: '5px', padding: '10px', background: 'blue', color: 'white' }}>
@@ -34,23 +40,23 @@ const DebugControls: React.FC = () => {
         <h4>Professional Controls:</h4>
         <div style={{ margin: '5px 0' }}>
           <label>Frost/Diffusion: </label>
-          <input type="range" min="0" max="255" defaultValue="0" />
-          <span> 0</span>
+          <HorizontalFader min={0} max={255} value={frost} onChange={(v) => setFrost(Math.round(v))} />
+          <span> {frost}</span>
         </div>
         <div style={{ margin: '5px 0' }}>
           <label>Animation: </label>
-          <input type="range" min="0" max="255" defaultValue="0" />
-          <span> 0</span>
+          <HorizontalFader min={0} max={255} value={animation} onChange={(v) => setAnimation(Math.round(v))} />
+          <span> {animation}</span>
         </div>
         <div style={{ margin: '5px 0' }}>
           <label>CTO: </label>
-          <input type="range" min="0" max="255" defaultValue="127" />
-          <span> 127</span>
+          <HorizontalFader min={0} max={255} value={cto} onChange={(v) => setCto(Math.round(v))} />
+          <span> {cto}</span>
         </div>
         <div style={{ margin: '5px 0' }}>
           <label>CTB: </label>
-          <input type="range" min="0" max="255" defaultValue="127" />
-          <span> 127</span>
+          <HorizontalFader min={0} max={255} value={ctb} onChange={(v) => setCtb(Math.round(v))} />
+          <span> {ctb}</span>
         </div>
         <div style={{ margin: '5px 0' }}>
           <button style={{ padding: '5px 10px', background: 'red', color: 'white' }}>

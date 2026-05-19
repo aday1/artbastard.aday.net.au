@@ -1,7 +1,7 @@
 .grid-controls {
   position: fixed;
-  top: 20px;
-  right: 280px; // Moved left to avoid navbar overlap
+  top: calc(var(--layout-top-clearance, 168px) + 12px);
+  right: 20px;
   z-index: 9999;
   background: rgba(0, 0, 0, 0.8);
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -17,11 +17,8 @@
     padding: 12px;
     min-width: 250px;
   }
-  
-  // Responsive positioning for when navbar is collapsed
-  :global(body.navbar-is-collapsed) & {
-    right: 120px; // Move closer when navbar is collapsed
-  }
+
+
 }
 
 .grid-controls-toggle {

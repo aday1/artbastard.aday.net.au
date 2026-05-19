@@ -20,7 +20,6 @@ export interface DmxChannelMenuHandlers {
   selectAllChannels: () => void;
   deselectAllChannels: () => void;
   dmxChannels: number[];
-  onAddToTracker?: () => void;
 }
 
 export function buildDmxChannelContextMenu(h: DmxChannelMenuHandlers): ContextMenuItem[] {
@@ -77,13 +76,6 @@ export function buildDmxChannelContextMenu(h: DmxChannelMenuHandlers): ContextMe
       label: h.isPinned ? 'Unpin channel' : 'Pin channel',
       icon: h.isPinned ? 'PinOff' : 'Pin',
       onClick: () => h.togglePinChannel(i),
-    },
-    {
-      id: 'tracker',
-      label: 'Add to DMX Tracker',
-      icon: 'Table',
-      disabled: !h.onAddToTracker,
-      onClick: () => h.onAddToTracker?.(),
     },
     {
       id: 'color',

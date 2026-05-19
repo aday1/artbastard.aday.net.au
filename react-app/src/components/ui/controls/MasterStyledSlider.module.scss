@@ -40,7 +40,7 @@ $thumb-d: $form-h;
   pointer-events: none;
 }
 
-.input:not(.ab-dmx-range) {
+.input {
   height: $form-h;
   border-radius: $form-h;
   box-shadow: 0 -1px var(--color-card-border), 0 1px var(--color-card-bg);

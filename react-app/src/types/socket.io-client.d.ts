@@ -53,6 +53,8 @@ declare module 'socket.io-client' {
      * @default Infinity
      */
     reconnectionAttempts?: number;
+    /** Handshake auth payload (e.g. sessionId for multi-tenant DMX). */
+    auth?: Record<string, unknown>;
   }
 
   export interface ManagerOptions {

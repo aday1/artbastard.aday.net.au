@@ -53,6 +53,17 @@
   background: var(--background-secondary);
   border-radius: 8px 8px 0 0;
   padding: 0.5rem 0.5rem 0 0.5rem;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+
+  &::-webkit-scrollbar { height: 4px; }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(var(--color-primary-500-rgb, 249, 115, 22), 0.4);
+    border-radius: 2px;
+  }
 }
 
 .tabButton {
@@ -70,6 +81,12 @@
   align-items: center;
   gap: 0.5rem;
   position: relative;
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  white-space: nowrap;
+  min-height: 44px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
   
   &:hover {
     background: rgba(var(--accent-color-rgb), 0.1);
@@ -690,12 +707,9 @@
   }
   
   .tabButton {
-    padding: 0.5rem 1rem;
-    font-size: 0.8rem;
-    
-    span {
-      display: none;
-    }
+    padding: 0.5rem 0.85rem;
+    font-size: 0.85rem;
+    /* Keep label visible; row scrolls horizontally when needed. */
   }
   
   .connectionControls {

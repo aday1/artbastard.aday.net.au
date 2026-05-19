@@ -31,9 +31,11 @@ const MidiDebugger: React.FC = () => {
             <ul>
               {Object.entries(midiMappings).map(([channel, mapping]) => (
                 <li key={channel}>
-                  Channel {channel}: {mapping.controller !== undefined 
-                    ? `CC ${mapping.channel}:${mapping.controller}` 
-                    : `Note ${mapping.channel}:${mapping.note}`}
+                  Channel {channel}: {mapping.pitch
+                    ? `Pitch ${mapping.channel}`
+                    : mapping.controller !== undefined
+                      ? `CC ${mapping.channel}:${mapping.controller}`
+                      : `Note ${mapping.channel}:${mapping.note}`}
                 </li>
               ))}
             </ul>

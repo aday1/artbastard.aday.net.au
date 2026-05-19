@@ -5,6 +5,8 @@ import { useSocket } from '../../context/SocketContext';
 import { LucideIcon } from '../ui/LucideIcon';
 import DraggableFixturePalette from './DraggableFixturePalette';
 import { fixtureTemplates } from './fixtureTemplates';
+import { DmxFaderRow, ArtbastardXYPad } from '../ui/controls';
+import { getFixtureTypeColor, getFixtureTypeIcon } from '../../utils/fixturePresentation';
 import styles from './FixtureCanvasInteractive.module.scss';
 
 interface FixtureCanvasInteractiveProps {
@@ -50,31 +52,8 @@ export const FixtureCanvasInteractive: React.FC<FixtureCanvasInteractiveProps> =
   const CANVAS_WIDTH = 1200;
   const CANVAS_HEIGHT = 800;
 
-  const getFixtureColor = (type: string): string => {
-    const colorMap: Record<string, string> = {
-      'moving-head': '#ff6b6b',
-      'par': '#4ecdc4',
-      'strip': '#45b7d1',
-      'laser': '#96ceb4',
-      'strobe': '#feca57',
-      'smoke': '#a55eea',
-      default: '#fd79a8',
-    };
-    return colorMap[type.toLowerCase()] || colorMap.default;
-  };
-
-  const getFixtureIcon = (type: string) => {
-    const iconMap: Record<string, any> = {
-      'moving-head': 'Zap',
-      'par': 'Circle',
-      'strip': 'Minus',
-      'laser': 'Target',
-      'strobe': 'Flashlight',
-      'smoke': 'Cloud',
-      default: 'Lightbulb',
-    };
-    return iconMap[type.toLowerCase()] || iconMap.default;
-  };
+  const getFixtureColor = getFixtureTypeColor;
+  const getFixtureIcon = getFixtureTypeIcon;
 
   const snapToGridPosition = (x: number, y: number) => {
     if (!snapToGrid) return { x, y };
@@ -797,23 +776,16 @@ export const FixtureCanvasInteractive: React.FC<FixtureCanvasInteractiveProps> =
                         className={`${styles.canvasSlider} ${control.orientation === 'horizontal' ? styles.horizontal : styles.vertical}`}
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <label className={styles.controlLabel}>{control.label}</label>
-                        <input
-                          type="range"
-                          min="0"
-                          max="255"
+                        <DmxFaderRow
+                          compact
+                          label={control.label}
+                          controlName={`canvas-ctrl-${control.id}`}
                           value={control.currentValue}
-                          className={styles.sliderInput}
-                          style={{ 
-                            writingMode: control.orientation === 'horizontal' ? 'initial' : 'bt-lr' as any,
-                            width: control.orientation === 'horizontal' ? '80px' : '6px',
-                            height: control.orientation === 'horizontal' ? '6px' : '80px',
-                          }}
-                          onChange={(e) => handleControlValueChange(
-                            placedFixture.id, 
-                            control.id, 
-                            parseInt(e.target.value)
-                          )}
+                          showOsc={false}
+                          showMidi={false}
+                          onChange={(v) =>
+                            handleControlValueChange(placedFixture.id, control.id, Math.round(v))
+                          }
                         />
                         <div className={styles.sliderValue}>{control.currentValue}</div>
                         <div className={styles.controlActions}>
@@ -857,38 +829,15 @@ export const FixtureCanvasInteractive: React.FC<FixtureCanvasInteractiveProps> =
                         onClick={(e) => e.stopPropagation()}
                       >
                         <label className={styles.controlLabel}>{control.label}</label>
-                        <div 
-                          className={styles.xyPadArea}
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            const rect = e.currentTarget.getBoundingClientRect();
-                            const handleMouseMove = (moveEvent: MouseEvent) => {
-                              const x = Math.max(0, Math.min(255, ((moveEvent.clientX - rect.left) / rect.width) * 255));
-                              const y = Math.max(0, Math.min(255, (1 - (moveEvent.clientY - rect.top) / rect.height) * 255));
-                              
-                              handleControlValueChange(placedFixture.id, control.id, Math.round(x), 'pan');
-                              handleControlValueChange(placedFixture.id, control.id, Math.round(y), 'tilt');
-                            };
-                            
-                            const handleMouseUp = () => {
-                              document.removeEventListener('mousemove', handleMouseMove);
-                              document.removeEventListener('mouseup', handleMouseUp);
-                            };
-                            
-                            document.addEventListener('mousemove', handleMouseMove);
-                            document.addEventListener('mouseup', handleMouseUp);
-                            handleMouseMove(e.nativeEvent);
+                        <ArtbastardXYPad
+                          size={200}
+                          pan={control.panValue || 127}
+                          tilt={control.tiltValue || 127}
+                          onPanTiltChange={(p, t) => {
+                            handleControlValueChange(placedFixture.id, control.id, p, 'pan');
+                            handleControlValueChange(placedFixture.id, control.id, t, 'tilt');
                           }}
-                        >
-                          <div className={styles.xyGridLines} />
-                          <div 
-                            className={styles.xyHandle}
-                            style={{
-                              left: `${((control.panValue || 127) / 255) * 100}%`,
-                              top: `${(1 - (control.tiltValue || 127) / 255) * 100}%`
-                            }}
-                          />
-                        </div>
+                        />
                         <div className={styles.xyValues}>
                           <span>Pan: {control.panValue || 127}</span>
                           <span>Tilt: {control.tiltValue || 127}</span>
@@ -973,20 +922,15 @@ export const FixtureCanvasInteractive: React.FC<FixtureCanvasInteractiveProps> =
 
               return (
                 <div key={index} className={styles.channelControl}>
-                  <div className={styles.channelHeader}>
-                    <span className={styles.channelName}>
-                      {channel.name || `Ch ${index + 1}`}
-                    </span>
-                    <span className={styles.channelValue}>{currentValue}</span>
-                  </div>
-
-                  <input
-                    type="range"
-                    min="0"
-                    max="255"
+                  <DmxFaderRow
+                    compact
+                    label={channel.name || `Ch ${index + 1}`}
+                    subtitle={`DMX ${dmxChannel + 1}`}
+                    controlName={`fixture-ch-${index}`}
                     value={currentValue}
-                    className={styles.channelSlider}
-                    onChange={(e) => handleChannelChange(selectedFixture, index, parseInt(e.target.value))}
+                    showOsc={false}
+                    showMidi={false}
+                    onChange={(v) => handleChannelChange(selectedFixture, index, Math.round(v))}
                   />
 
                   <div className={styles.channelActions}>

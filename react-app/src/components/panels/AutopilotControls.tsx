@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useStore } from '../../store/store';
 import { AutopilotConfig } from '../../store/store';
 import CustomPathEditor from '../automation/CustomPathEditor';
+import { ArtbastardXYPad, HorizontalFader, RangeWindowControl } from '../ui/controls';
 import styles from './AutopilotControls.module.scss';
 
 export const AutopilotControls: React.FC = () => {
@@ -101,45 +102,30 @@ export const AutopilotControls: React.FC = () => {
 
           <div className={styles.configRow}>
             <label>Speed:</label>
-            <input 
-              type="range"
-              min="0.1"
-              max="10"
-              step="0.1"
+            <HorizontalFader
+              min={0.1}
+              max={10}
+              step={0.1}
               value={channelAutopilotConfig.speed}
-              onChange={(e) => setChannelAutopilotConfig(prev => ({ 
-                ...prev, 
-                speed: parseFloat(e.target.value)
-              }))}
+              onChange={(v) => setChannelAutopilotConfig((prev) => ({ ...prev, speed: v }))}
             />
             <span>{channelAutopilotConfig.speed.toFixed(1)}x</span>
           </div>
 
           <div className={styles.configRow}>
             <label>Range:</label>
-            <div className={styles.rangeInputs}>
-              <input 
-                type="number"
-                min="0"
-                max="255"
-                value={channelAutopilotConfig.range.min}
-                onChange={(e) => setChannelAutopilotConfig(prev => ({
+            <RangeWindowControl
+              min={0}
+              max={255}
+              minValue={channelAutopilotConfig.range.min}
+              maxValue={channelAutopilotConfig.range.max}
+              onChange={(minV, maxV) =>
+                setChannelAutopilotConfig((prev) => ({
                   ...prev,
-                  range: { ...prev.range, min: parseInt(e.target.value) }
-                }))}
-              />
-              <span>to</span>
-              <input 
-                type="number"
-                min="0"
-                max="255"
-                value={channelAutopilotConfig.range.max}
-                onChange={(e) => setChannelAutopilotConfig(prev => ({
-                  ...prev,
-                  range: { ...prev.range, max: parseInt(e.target.value) }
-                }))}
-              />
-            </div>
+                  range: { min: minV, max: maxV },
+                }))
+              }
+            />
           </div>
 
           <div className={styles.configRow}>
@@ -227,60 +213,38 @@ export const AutopilotControls: React.FC = () => {
 
                 <div className={styles.configRow}>
                   <label>Speed:</label>
-                  <input 
-                    type="range"
-                    min="0.1"
-                    max="5"
-                    step="0.1"
+                  <HorizontalFader
+                    min={0.1}
+                    max={5}
+                    step={0.1}
                     value={panTiltAutopilot.speed}
-                    onChange={(e) => setPanTiltAutopilot({ 
-                      speed: parseFloat(e.target.value)
-                    })}
+                    onChange={(v) => setPanTiltAutopilot({ speed: v })}
                   />
                   <span>{panTiltAutopilot.speed.toFixed(1)}x</span>
                 </div>
 
                 <div className={styles.configRow}>
                   <label>Size:</label>
-                  <input 
-                    type="range"
-                    min="10"
-                    max="100"
-                    step="5"
+                  <HorizontalFader
+                    min={10}
+                    max={100}
+                    step={5}
                     value={panTiltAutopilot.size}
-                    onChange={(e) => setPanTiltAutopilot({ 
-                      size: parseInt(e.target.value)
-                    })}
+                    onChange={(v) => setPanTiltAutopilot({ size: Math.round(v) })}
                   />
                   <span>{panTiltAutopilot.size}%</span>
                 </div>
 
                 <div className={styles.configRow}>
-                  <label>Center X:</label>
-                  <input 
-                    type="range"
-                    min="0"
-                    max="255"
-                    value={panTiltAutopilot.centerX}
-                    onChange={(e) => setPanTiltAutopilot({ 
-                      centerX: parseInt(e.target.value)
-                    })}
+                  <label>Pan / tilt center</label>
+                  <ArtbastardXYPad
+                    pan={panTiltAutopilot.centerX}
+                    tilt={panTiltAutopilot.centerY}
+                    size={220}
+                    onPanTiltChange={(centerX, centerY) =>
+                      setPanTiltAutopilot({ centerX, centerY })
+                    }
                   />
-                  <span>{panTiltAutopilot.centerX}</span>
-                </div>
-
-                <div className={styles.configRow}>
-                  <label>Center Y:</label>
-                  <input 
-                    type="range"
-                    min="0"
-                    max="255"
-                    value={panTiltAutopilot.centerY}
-                    onChange={(e) => setPanTiltAutopilot({ 
-                      centerY: parseInt(e.target.value)
-                    })}
-                  />
-                  <span>{panTiltAutopilot.centerY}</span>
                 </div>
 
                 <div className={styles.configRow}>
@@ -338,45 +302,30 @@ export const AutopilotControls: React.FC = () => {
 
               <div className={styles.configRow}>
                 <label>Speed:</label>
-                <input 
-                  type="range"
-                  min="0.1"
-                  max="1.0"
-                  step="0.1"
+                <HorizontalFader
+                  min={0.1}
+                  max={1}
+                  step={0.1}
                   value={colorSliderAutopilot.speed}
-                  onChange={(e) => setColorSliderAutopilot({ 
-                    speed: parseFloat(e.target.value)
-                  })}
+                  onChange={(v) => setColorSliderAutopilot({ speed: v })}
                 />
                 <span>{colorSliderAutopilot.speed.toFixed(1)}x</span>
               </div>
 
               <div className={styles.configRow}>
-                <label>Hue Min:</label>
-                <input 
-                  type="range"
-                  min="0"
-                  max="360"
-                  value={colorSliderAutopilot.range.min}
-                  onChange={(e) => setColorSliderAutopilot({ 
-                    range: { ...colorSliderAutopilot.range, min: parseInt(e.target.value) }
-                  })}
+                <label>Hue range</label>
+                <RangeWindowControl
+                  min={0}
+                  max={360}
+                  minValue={colorSliderAutopilot.range.min}
+                  maxValue={colorSliderAutopilot.range.max}
+                  onChange={(minV, maxV) =>
+                    setColorSliderAutopilot({
+                      range: { min: minV, max: maxV },
+                    })
+                  }
                 />
-                <span>{colorSliderAutopilot.range.min}°</span>
-              </div>
-
-              <div className={styles.configRow}>
-                <label>Hue Max:</label>
-                <input 
-                  type="range"
-                  min="0"
-                  max="360"
-                  value={colorSliderAutopilot.range.max}
-                  onChange={(e) => setColorSliderAutopilot({ 
-                    range: { ...colorSliderAutopilot.range, max: parseInt(e.target.value) }
-                  })}
-                />
-                <span>{colorSliderAutopilot.range.max}°</span>
+                <span style={{ display: 'none' }}>{colorSliderAutopilot.range.min}</span>
               </div>
 
               <div className={styles.configRow}>

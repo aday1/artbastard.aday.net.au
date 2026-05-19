@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../../store';
+import { DmxFaderRow } from '../ui/controls';
 import styles from './InteractiveChannelExplorer.module.scss';
 
 interface InteractiveChannelExplorerProps {
@@ -9,15 +10,15 @@ interface InteractiveChannelExplorerProps {
 }
 
 const COMMON_FUNCTIONS = [
-  'dimmer', 'red', 'green', 'blue', 'white', 'amber', 'uv', 
-  'pan', 'pan_fine', 'tilt', 'tilt_fine', 
-  'strobe', 'shutter', 'zoom', 'focus', 
+  'dimmer', 'red', 'green', 'blue', 'white', 'amber', 'uv',
+  'pan', 'pan_fine', 'tilt', 'tilt_fine',
+  'strobe', 'shutter', 'zoom', 'focus',
   'gobo_wheel', 'gobo_rotation', 'color_wheel', 'prism',
   'macro', 'reset', 'speed', 'other'
 ];
 
 export const InteractiveChannelExplorer: React.FC<InteractiveChannelExplorerProps> = ({ fixtureId, channelCount, onSave }) => {
-  const { setDmxChannelValue, getDmxChannelValue } = useStore();
+  const { setDmxChannelValue } = useStore();
   const [channelValues, setChannelValues] = useState<number[]>(Array(channelCount).fill(0));
   const [channelFunctions, setChannelFunctions] = useState<string[]>(Array(channelCount).fill('other'));
 
@@ -25,12 +26,10 @@ export const InteractiveChannelExplorer: React.FC<InteractiveChannelExplorerProp
   const startAddress = fixture?.startAddress || 1;
 
   useEffect(() => {
-    // Reset all channels for this fixture to 0 when component mounts
     for (let i = 0; i < channelCount; i++) {
       setDmxChannelValue(startAddress + i, 0);
     }
     return () => {
-      // Optional: Reset channels when component unmounts
       for (let i = 0; i < channelCount; i++) {
         setDmxChannelValue(startAddress + i, 0);
       }
@@ -67,21 +66,21 @@ export const InteractiveChannelExplorer: React.FC<InteractiveChannelExplorerProp
     <div className={styles.explorer}>
       <h4>Interactive Channel Explorer</h4>
       <p>Move the sliders to see what each channel does. Then, assign a function to each channel.</p>
-      
+
       {Array.from({ length: channelCount }).map((_, i) => (
         <div key={i} className={styles.channelRow}>
-          <div className={styles.channelLabel}>Channel {i + 1}</div>
-          <input
-            type="range"
-            min="0"
-            max="255"
+          <DmxFaderRow
+            compact
+            label={`Channel ${i + 1}`}
+            subtitle={`DMX ${startAddress + i}`}
+            controlName={`explorer-ch-${i}`}
             value={channelValues[i]}
-            onChange={(e) => handleSliderChange(i, parseInt(e.target.value))}
-            className={styles.slider}
+            showOsc={false}
+            showMidi={false}
+            onChange={(v) => handleSliderChange(i, Math.round(v))}
           />
-          <div className={styles.valueDisplay}>{channelValues[i]}</div>
-          <select 
-            value={channelFunctions[i]} 
+          <select
+            value={channelFunctions[i]}
             onChange={(e) => handleFunctionChange(i, e.target.value)}
             className={styles.functionSelect}
           >

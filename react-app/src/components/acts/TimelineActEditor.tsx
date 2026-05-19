@@ -5,17 +5,17 @@ import { useSocket } from '../../context/SocketContext';
 import { TimelineEventTargetSelector } from './TimelineEventTargetSelector';
 import { useAudioWaveform } from '../../hooks/useAudioWaveform';
 import { useAudioFFT } from '../../hooks/useAudioFFT';
+import { HorizontalFader } from '../ui/controls';
+import {
+  buildActStepBlocks,
+  getActLayoutDurationMs,
+  type ActStepBlock,
+} from '../../utils/actTimelineLayout';
 import styles from './TimelineActEditor.module.scss';
 
 interface TimelineActEditorProps {
   act: Act;
   onClose: () => void;
-}
-
-interface StepBlock {
-  step: ActStep;
-  startTime: number; // Start time in milliseconds
-  endTime: number; // End time in milliseconds
 }
 
 export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClose }) => {
@@ -51,12 +51,8 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
       const screenWidth = window.innerWidth;
       const targetWidth = Math.max(screenWidth * 0.9, 2000); // Use 90% of screen width, minimum 2000px
       // Calculate total duration from steps or use act.totalDuration
-      const stepBlocks = act.steps.reduce((blocks, step, index) => {
-        const startTime = blocks.length > 0 ? blocks[blocks.length - 1].endTime : 0;
-        const endTime = startTime + step.duration;
-        return [...blocks, { step, startTime, endTime }];
-      }, [] as StepBlock[]);
-      const totalDuration = stepBlocks.length > 0 ? stepBlocks[stepBlocks.length - 1].endTime : (act.totalDuration || 60000);
+      const stepBlocks = buildActStepBlocks(act.steps);
+      const totalDuration = getActLayoutDurationMs(act, stepBlocks);
       return targetWidth / (totalDuration / 1000); // pixels per second
     }
     return 30; // Fallback: 30 pixels per second
@@ -72,6 +68,8 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
   const [dragOffset, setDragOffset] = useState(0);
   const [resizeStartWidth, setResizeStartWidth] = useState(0);
   const [resizeStartX, setResizeStartX] = useState(0);
+  const resizeStartDurationRef = useRef(0);
+  const [scrubbingPlayhead, setScrubbingPlayhead] = useState(false);
   const [showAddStep, setShowAddStep] = useState(false);
   const hasDraggedEventRef = useRef(false);
   
@@ -118,26 +116,27 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
     channelLanes: act.channelLanes || {}
   });
   
-  // Calculate effective duration
-  const effectiveDuration = actState.syncToBpm && bpm > 0
-    ? (actState.bpmMultiplier || 4) * (60000 / bpm)
-    : act.totalDuration;
-
-  // Get timeline events from act
   const timelineEvents = act.timelineEvents || [];
   const midiEvents = timelineEvents.filter(e => e.type === 'midi');
   const oscEvents = timelineEvents.filter(e => e.type === 'osc');
 
-  // Calculate step blocks with their positions - recalculate when act.steps changes
-  const stepBlocks: StepBlock[] = React.useMemo(() => {
-    return act.steps.reduce((blocks, step, index) => {
-      const startTime = blocks.length > 0 ? blocks[blocks.length - 1].endTime : 0;
-      const endTime = startTime + step.duration;
-      return [...blocks, { step, startTime, endTime }];
-    }, [] as StepBlock[]);
-  }, [act.steps]);
+  const stepBlocks: ActStepBlock[] = React.useMemo(
+    () => buildActStepBlocks(act.steps),
+    [act.steps]
+  );
 
-  const totalDuration = stepBlocks.length > 0 ? stepBlocks[stepBlocks.length - 1].endTime : 0;
+  const layoutDuration = React.useMemo(
+    () => getActLayoutDurationMs(act, stepBlocks),
+    [act, stepBlocks]
+  );
+
+  const effectiveDuration = React.useMemo(() => {
+    if (actState.syncToBpm && bpm > 0) {
+      const beatMs = (actState.bpmMultiplier || 4) * (60000 / bpm);
+      return Math.max(beatMs, layoutDuration);
+    }
+    return layoutDuration;
+  }, [actState.syncToBpm, actState.bpmMultiplier, bpm, layoutDuration]);
   
   // Playback controls
   const handlePlay = () => {
@@ -595,10 +594,43 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
     e.stopPropagation();
     
     setResizingStepId(stepId);
+    resizeStartDurationRef.current = currentDuration;
     setResizeStartWidth(timeToPixels(currentDuration));
     setResizeStartX(e.clientX);
     setSelectedStepId(stepId);
   }, [timeToPixels]);
+
+  const seekPlayhead = useCallback(
+    (timeMs: number) => {
+      const clamped = Math.max(0, Math.min(snapTimeToGrid(timeMs), effectiveDuration));
+      setPlayheadPosition(clamped);
+      if (audioRef.current && actState.audioTrack) {
+        audioRef.current.currentTime = clamped / 1000;
+      }
+    },
+    [effectiveDuration, snapTimeToGrid, actState.audioTrack]
+  );
+
+  const handlePlayheadMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setScrubbingPlayhead(true);
+    },
+    []
+  );
+
+  const insertGapBeforeStep = useCallback(
+    (gapMs: number) => {
+      if (!selectedStepId) return;
+      const block = stepBlocks.find((b) => b.step.id === selectedStepId);
+      if (!block) return;
+      updateActStep(act.id, selectedStepId, {
+        startTime: block.startTime + gapMs,
+      });
+    },
+    [selectedStepId, stepBlocks, act.id, updateActStep]
+  );
 
   // Handle mouse move for dragging/resizing
   useEffect(() => {
@@ -615,60 +647,25 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
         updateTimelineEvent(act.id, draggingEventId, { time: newTime });
       }
       
+      if (scrubbingPlayhead && timelineRef.current) {
+        const rect = timelineRef.current.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left + scrollPosition;
+        seekPlayhead(pixelsToTime(mouseX));
+      }
+
       if (draggingStepId && timelineRef.current) {
         const rect = timelineRef.current.getBoundingClientRect();
         const mouseX = e.clientX - rect.left + scrollPosition;
-        const newStartTime = Math.max(0, pixelsToTime(mouseX - dragOffset));
-        
-        // Find the step index being dragged
-        const stepIndex = act.steps.findIndex(s => s.id === draggingStepId);
-        if (stepIndex >= 0) {
-          // Find which step index the new position corresponds to
-          let newIndex = 0;
-          let cumulativeTime = 0;
-          
-          for (let i = 0; i < stepBlocks.length; i++) {
-            if (i === stepIndex) continue; // Skip the dragged step
-            
-            const block = stepBlocks[i];
-            const blockCenter = block.startTime + (block.step.duration / 2);
-            
-            if (newStartTime >= cumulativeTime && newStartTime < blockCenter) {
-              newIndex = i;
-              break;
-            }
-            
-            cumulativeTime += block.step.duration;
-            if (newStartTime >= cumulativeTime) {
-              newIndex = i + 1;
-            }
-          }
-          
-          // Clamp to valid range
-          newIndex = Math.max(0, Math.min(newIndex, act.steps.length - 1));
-          
-          // Only reorder if position changed
-          if (newIndex !== stepIndex) {
-            const newOrder = [...act.steps];
-            const [movedStep] = newOrder.splice(stepIndex, 1);
-            newOrder.splice(newIndex, 0, movedStep);
-            reorderActSteps(act.id, newOrder.map(s => s.id));
-          }
-        }
+        const newStartTime = snapTimeToGrid(Math.max(0, pixelsToTime(mouseX - dragOffset)));
+        updateActStep(act.id, draggingStepId, { startTime: newStartTime });
       }
 
       if (resizingStepId && timelineRef.current) {
-        const rect = timelineRef.current.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
+        const mouseX = e.clientX;
         const deltaX = mouseX - resizeStartX;
         const deltaTime = pixelsToTime(deltaX);
-        
-        const step = act.steps.find(s => s.id === resizingStepId);
-        if (step) {
-          const newDuration = Math.max(100, step.duration + deltaTime);
-          updateActStep(act.id, resizingStepId, { duration: newDuration });
-          setResizeStartX(mouseX);
-        }
+        const newDuration = Math.max(100, resizeStartDurationRef.current + deltaTime);
+        updateActStep(act.id, resizingStepId, { duration: newDuration });
       }
     };
 
@@ -681,6 +678,7 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
         setDraggingStepId(null);
         setResizingStepId(null);
         setDraggingEventId(null);
+        setScrubbingPlayhead(false);
         setDragOffset(0);
         setEventDragOffset(0);
         setResizeStartWidth(0);
@@ -688,7 +686,7 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
       }, 100);
     };
 
-    if (draggingStepId || resizingStepId || draggingEventId) {
+    if (draggingStepId || resizingStepId || draggingEventId || scrubbingPlayhead) {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
       return () => {
@@ -696,7 +694,22 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
         window.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [draggingStepId, resizingStepId, draggingEventId, dragOffset, eventDragOffset, resizeStartX, scrollPosition, act, stepBlocks, pixelsToTime, updateActStep, reorderActSteps, updateTimelineEvent, act.id, snapTimeToGrid]);
+  }, [
+    draggingStepId,
+    resizingStepId,
+    draggingEventId,
+    scrubbingPlayhead,
+    dragOffset,
+    eventDragOffset,
+    resizeStartX,
+    scrollPosition,
+    act.id,
+    pixelsToTime,
+    updateActStep,
+    updateTimelineEvent,
+    snapTimeToGrid,
+    seekPlayhead,
+  ]);
 
   // Generate time markers
   const timeMarkers = [];
@@ -814,15 +827,8 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
       return;
     }
     
-    // Otherwise, scrub the timeline (seek to position)
-    setPlayheadPosition(Math.max(0, Math.min(time, effectiveDuration)));
-    
-    // If audio is playing, seek the audio as well
-    if (audioRef.current && actState.audioTrack) {
-      const audioTime = time / 1000; // Convert ms to seconds
-      audioRef.current.currentTime = Math.max(0, Math.min(audioTime, audioRef.current.duration));
-    }
-  }, [scrollPosition, pixelsToTime, recordingMode, effectiveDuration, actState.audioTrack, snapTimeToGrid]);
+    seekPlayhead(time);
+  }, [scrollPosition, pixelsToTime, recordingMode, seekPlayhead]);
 
   // Handle keyboard shortcuts
   useEffect(() => {
@@ -985,7 +991,8 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
         sceneName: newStepScene,
         duration: newStepDuration,
         transitionDuration: newStepTransitionDuration,
-        notes: newStepNotes || undefined
+        startTime: snapTimeToGrid(playheadPosition),
+        notes: newStepNotes || undefined,
       });
       
       // Reset form
@@ -1099,14 +1106,12 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
           
           <div className={styles.speedControl}>
             <label>Speed:</label>
-            <input
-              type="range"
-              min="0.1"
-              max="4.0"
-              step="0.1"
+            <HorizontalFader
+              min={0.1}
+              max={4.0}
+              step={0.1}
               value={actState.playbackSpeed || 1.0}
-              onChange={(e) => {
-                const speed = Number(e.target.value);
+              onChange={(speed) => {
                 setActState(prev => ({ ...prev, playbackSpeed: speed }));
                 updateAct(act.id, { playbackSpeed: speed });
               }}
@@ -1141,6 +1146,11 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
                 style={{ width: '50px', marginLeft: '8px' }}
               />
             )}
+            <span className={styles.syncHint}>
+              Uses app BPM clock. Ableton Link follows Settings / Auto Scene tempo source.
+              Act start/stop uses ACT triggers (MIDI/OSC), not Live transport.
+              Ctrl+H → Act Timeline for full guide.
+            </span>
           </div>
           
           <div className={styles.audioImport}>
@@ -1247,6 +1257,27 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
           >
             <LucideIcon name="Plus" />
             Add Step
+          </button>
+          <button
+            type="button"
+            className={styles.clipToolButton}
+            disabled={!selectedStepId}
+            onClick={() => insertGapBeforeStep(2000)}
+            title="Move selected clip 2s later (empty space before it)"
+          >
+            +2s gap
+          </button>
+          <button
+            type="button"
+            className={styles.clipToolButton}
+            onClick={() =>
+              updateAct(act.id, {
+                totalDuration: effectiveDuration + 5000,
+              })
+            }
+            title="Extend timeline end by 5 seconds of empty space"
+          >
+            Extend +5s
           </button>
           <div className={styles.snapControls}>
             <label title="Snap events to grid">
@@ -1525,15 +1556,12 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
           ))}
           
           {/* Playhead - Always visible when playing or positioned */}
-          {(isPlaying || playheadPosition > 0) && (
-            <div
-              className={styles.playhead}
-              style={{ 
-                left: `${timeToPixels(playheadPosition)}px`,
-                opacity: isPlaying ? 1 : 0.5
-              }}
-            />
-          )}
+          <div
+            className={styles.playhead}
+            style={{ left: `${timeToPixels(playheadPosition)}px` }}
+            onMouseDown={handlePlayheadMouseDown}
+            title="Drag playhead"
+          />
         </div>
 
         {/* Timeline Track */}
@@ -1550,11 +1578,17 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
             handleTimelineClick(e);
           }}
         >
-          <div className={styles.timelineContent} style={{ width: `${timeToPixels(totalDuration)}px` }}>
+          <div className={styles.timelineContent} style={{ width: `${timeToPixels(effectiveDuration)}px` }}>
+            <div
+              className={styles.playhead}
+              style={{ left: `${timeToPixels(playheadPosition)}px` }}
+              onMouseDown={handlePlayheadMouseDown}
+              title="Drag playhead"
+            />
             {/* Grid background for fine-tuning */}
             <svg 
               className={styles.timelineGrid}
-              width={timeToPixels(totalDuration)}
+              width={timeToPixels(effectiveDuration)}
               height="100%"
               style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', zIndex: 1 }}
             >

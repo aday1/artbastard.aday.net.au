@@ -8,33 +8,13 @@ import { OscMonitor } from '../osc/OscMonitor';
 import { SceneQuickLaunch } from '../scenes/SceneQuickLaunch';
 import { AutoSceneControlMini } from '../scenes/AutoSceneControlMini';
 import DockableSuperControl from '../fixtures/DockableSuperControl';
-import TouchSuperControl from '../fixtures/TouchSuperControl';
-
 // Removed TouchDmxChannelGrid, AudioControlPanel, and TouchOSCDemo imports
 import { SceneGallery } from '../scenes/SceneGallery';
 import { FixtureSetup } from '../fixtures/FixtureSetup';
 import { MidiOscSetup } from '../midi/MidiOscSetup';
 import { ClipLauncher } from '../clipLauncher/ClipLauncher';
 import { Stage3DVisualizer, DmxWaveformViewer, ColorTemperatureVisualizer } from '../visualization';
-// Lazy import Dashboard to avoid circular dependency
-// Dashboard imports ComponentToolbar which imports ComponentRegistry
-// Create a wrapper component that lazy loads Dashboard
-const DashboardWrapper: React.FC<any> = (props) => {
-  const [Dashboard, setDashboard] = React.useState<React.ComponentType<any> | null>(null);
-
-  React.useEffect(() => {
-    // Dynamic import to break circular dependency
-    import('../dashboard/Dashboard').then(module => {
-      setDashboard(() => module.default || module.Dashboard);
-    });
-  }, []);
-
-  if (!Dashboard) {
-    return <div>Loading...</div>;
-  }
-
-  return <Dashboard {...props} />;
-};
+import { AudioControlPanel } from '../audio/AudioControlPanel';
 
 export interface ComponentDefinition {
   type: string;
@@ -144,26 +124,18 @@ export const COMPONENT_REGISTRY: Record<string, ComponentDefinition> = {
     icon: 'fas fa-th',
     component: ClipLauncher,
     minSize: { width: 600, height: 400 },
-  },  // Fixture Controls
+  },
+  // Fixture Controls
   'professional-fixture-controller': {
     type: 'professional-fixture-controller',
     title: 'Super Control',
-    description: 'Advanced fixture control with channel monitoring, color wheels, XY controls, and real-time DMX feedback',
+    description:
+      'Unified fixture control: selection, RGB, pan/tilt, gobos, scenes, MIDI learn, and autopilot. Touch layout applies automatically on phones and tablets.',
     category: 'fixtures',
     icon: 'fas fa-palette',
     component: DockableSuperControl,
     defaultProps: { isDockable: true },
-    minSize: { width: 800, height: 600 },
-  },
-  'touch-fixture-controller': {
-    type: 'touch-fixture-controller',
-    title: 'Touch Super Control',
-    description: 'Touch-optimized fixture control with haptic feedback and large controls for touch screens',
-    category: 'fixtures',
-    icon: 'fas fa-hand-pointer',
-    component: TouchSuperControl,
-    defaultProps: { isFullscreen: false, enableHapticFeedback: true },
-    minSize: { width: 600, height: 800 },
+    minSize: { width: 600, height: 500 },
   },
   'fixture-setup': {
     type: 'fixture-setup',
@@ -194,6 +166,15 @@ export const COMPONENT_REGISTRY: Record<string, ComponentDefinition> = {
     component: OscMonitor,
     minSize: { width: 300, height: 200 },
   },
+  'audio-control-panel': {
+    type: 'audio-control-panel',
+    title: 'Audio Control Panel',
+    description: 'Audio-linked controls and monitoring panel',
+    category: 'audio',
+    icon: 'fas fa-wave-square',
+    component: AudioControlPanel,
+    minSize: { width: 360, height: 220 },
+  },
   // Setup
   'midi-osc-setup': {
     type: 'midi-osc-setup',
@@ -203,18 +184,6 @@ export const COMPONENT_REGISTRY: Record<string, ComponentDefinition> = {
     icon: 'fas fa-cog',
     component: MidiOscSetup,
     minSize: { width: 400, height: 350 },
-  },
-
-  // External Console - External Window Component
-  'dashboard': {
-    type: 'dashboard',
-    title: 'External Console',
-    description: 'Component workspace and layout manager - Opens in new window (perfect for tablets and 2nd monitors)',
-    category: 'setup',
-    icon: 'fas fa-external-link-alt',
-    component: DashboardWrapper, // Wrapper that lazy loads Dashboard to break circular dependency
-    minSize: { width: 800, height: 600 },
-    defaultProps: {},
   },
 };
 

@@ -23,6 +23,16 @@
   margin-bottom: 20px; // Add spacing after header
 }
 
+.headerFaderLayout {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(30, 41, 59, 0.55);
+  border: 1px solid rgba(71, 85, 105, 0.35);
+}
+
 .titleSection {
   display: flex;
   justify-content: space-between;
@@ -794,6 +804,79 @@
   }
 }
 
+.channelsPerRowRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.channelsPerRowInput {
+  flex: 1;
+  min-width: 0;
+  max-width: 8rem;
+  padding: 10px 12px;
+  background: rgba(71, 85, 105, 0.3);
+  border: 1px solid rgba(71, 85, 105, 0.5);
+  border-radius: 8px;
+  color: #e2e8f0;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+
+  &:focus {
+    outline: none;
+    border-color: #10b981;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.channelsPerRowPresets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.channelsPerRowPreset {
+  padding: 6px 10px;
+  background: rgba(71, 85, 105, 0.25);
+  border: 1px solid rgba(71, 85, 105, 0.45);
+  border-radius: 6px;
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+
+  &:hover:not(:disabled) {
+    border-color: rgba(16, 185, 129, 0.5);
+    color: #e2e8f0;
+  }
+
+  &.active {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: #10b981;
+    color: #10b981;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.channelsPerRowHint {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: #94a3b8;
+}
+
 .activeSelectionsButton {
   display: flex;
   align-items: center;
@@ -1028,6 +1111,8 @@
   padding: 20px;
   backdrop-filter: blur(10px);
   margin-bottom: 20px;
+  overflow: hidden;
+  max-height: none;
 }
 
 .midiSection {
@@ -1350,6 +1435,13 @@
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(71, 85, 105, 0.3);
   border-radius: 8px;
+  align-items: stretch;
+
+  @media (max-width: 1279px) {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 12px;
+  }
 }
 
 .pinnedChannel {
@@ -1362,6 +1454,11 @@
   gap: 8px;
   position: relative;
   transition: all 0.2s ease;
+  min-height: 0;
+
+  @media (max-width: 1279px) {
+    min-height: min(72vh, 720px);
+  }
 
   &:hover {
     background: rgba(15, 23, 42, 0.8);
@@ -1376,12 +1473,14 @@
   gap: 8px;
   position: relative;
   padding-right: 60px; // Make room for buttons
+  flex-shrink: 0;
 }
 
 .pinnedChannelInfo {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  flex-shrink: 0;
 }
 
 .channelFunction {
@@ -1407,10 +1506,42 @@
   letter-spacing: 0.5px;
 }
 
+.pinnedSliderVertical {
+  flex: 1 1 auto;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: center;
+  gap: 10px;
+  min-height: 0;
+  width: 100%;
+  pointer-events: auto;
+  position: relative;
+  z-index: 20;
+
+  > *:first-child {
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    height: 100%;
+    width: 100%;
+    max-width: 7.5rem;
+    margin: 0 auto;
+  }
+
+  .pinnedValue {
+    flex-shrink: 0;
+    align-self: center;
+    font-size: 1.35rem;
+    min-width: 2.75rem;
+    text-align: center;
+  }
+}
+
 .pinnedSliderContainer {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .pinnedSlider {
@@ -1561,9 +1692,14 @@
 }
 
 .pinnedRangeControls {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  margin-top: 4px;
+  flex-shrink: 0;
 }
 
 .pinnedRangeGroup {
@@ -1979,6 +2115,8 @@
   display: grid;
   gap: 16px;
   flex: 1;
+  width: 100%;
+  min-width: 0;
   
   &.grid {
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -1989,7 +2127,234 @@
   }
   
   &.compact {
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+
+  &.channelStrip {
+    grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  // Inline gridTemplateColumns from channels-per-row select overrides auto-fill
+  &.columnsFixed {
+    justify-content: start;
+  }
+}
+
+.dmxChannel.channelStripCard {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 8px 6px 10px;
+  min-height: 22rem;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+
+  .channelHeader {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+
+  .channelInfo {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 2px;
+  }
+
+  .channelNameWrapper .channelName {
+    font-size: 0.7rem;
+    line-height: 1.2;
+  }
+
+  .fixtureLabel {
+    font-size: 0.65rem;
+    justify-content: center;
+  }
+
+  .channelHeaderActions {
+    justify-content: center;
+  }
+
+  .channelSliderVertical {
+    flex: 1;
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    min-height: 15rem;
+    margin-bottom: 6px;
+    width: 100%;
+    overflow: visible;
+    pointer-events: auto;
+    position: relative;
+    z-index: 20;
+
+    > * {
+      flex: 1;
+      min-height: 15rem;
+      width: 100%;
+      overflow: visible;
+    }
+  }
+
+  .channelRangeControls {
+    margin-top: auto;
+    font-size: 0.7rem;
+    padding: 6px 4px;
+    overflow: hidden;
+  }
+
+  .channelActions,
+  .channelActionsStrip {
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: row;
+    justify-content: center;
+    align-items: stretch;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    gap: 4px;
+    margin-bottom: 0;
+  }
+
+  .channelActions > .selectButton,
+  .channelActions > .colorButton,
+  .channelActions > .pinButton {
+    flex: 1 1 calc(33.333% - 4px);
+    min-width: 0;
+    max-width: calc(33.333% - 4px);
+    box-sizing: border-box;
+    justify-content: center;
+  }
+
+  .channelActions > .ticksModeButton {
+    flex: 1 1 100%;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .channelActions > .midiControls,
+  .channelActions > .oscControls {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .midiControls,
+  .oscControls {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    gap: 4px;
+  }
+
+  .midiLearnButton,
+  .midiForgetButton,
+  .oscAddressButton {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    justify-content: center;
+    padding: 6px;
+    font-size: 10px;
+  }
+
+  .oscAddressDisplay,
+  .midiMappingDisplay {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin-top: 4px;
+    overflow: hidden;
+  }
+
+  .oscAddressText,
+  .midiMappingText {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 9px;
+  }
+}
+
+.channelActionsStrip {
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  gap: 4px;
+
+  .midiControls,
+  .oscControls {
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    gap: 4px;
+  }
+
+  .midiLearnButton,
+  .midiForgetButton,
+  .oscAddressButton {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+.actionBtnLabel {
+  white-space: nowrap;
+}
+
+.ticksModeButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-radius: 6px;
+  border: 1px solid #475569;
+  background: rgba(15, 23, 42, 0.8);
+  color: #94a3b8;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    border-color: var(--color-primary, #d68706);
+    color: #e2e8f0;
+  }
+
+  &.ticksModeActive {
+    border-color: var(--color-accent, #f8dd36);
+    background: color-mix(in srgb, var(--color-primary, #d68706) 25%, #0f172a);
+    color: var(--color-accent, #f8dd36);
+  }
+}
+
+.ticksModeButtonCompact {
+  padding: 0.3rem;
+  min-width: 1.75rem;
+  min-height: 1.75rem;
+
+  span {
+    display: none;
   }
 }
 
@@ -2166,7 +2531,12 @@
   margin-bottom: 12px;
   position: relative;
   z-index: 10;
-  
+
+  /* Horizontal faders only — vertical strip uses .channelSliderVertical */
+  &:not(.channelSliderVertical) form {
+    width: 100%;
+  }
+
   .slider {
     width: 100%;
     height: 10px;
@@ -2234,8 +2604,12 @@
 }
 
 .channelRangeControls {
-  display: flex;
-  gap: 8px;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
   margin-bottom: 12px;
   padding: 8px;
   background: rgba(71, 85, 105, 0.15);
@@ -2839,5 +3213,78 @@
   
   .loadSceneButton {
     justify-content: center;
+  }
+}
+
+// =====================================================================
+// MOBILE / TABLET clamp-to-viewport safety net
+// =====================================================================
+//
+// At and below the canonical tablet breakpoint (1279px) the legacy
+// rule `grid-template-columns: repeat(auto-fit, minmax(300px, 1fr))`
+// in .controlsPanel can resolve to track widths wider than the
+// container on narrow viewports - chrome's auto-fit layout produces
+// 580px tracks inside a 326px panel under some circumstances. The
+// per-block @media (max-width: 768px) overrides existed but did not
+// reliably win the cascade against the original `auto-fit` rule.
+//
+// Brute-force clamp: set the panel grid to a single column and force
+// every direct interactive child (input/select/button/range) to fit
+// the container. Belt and braces.
+
+@media (max-width: 1279px) {
+  .controlsPanel {
+    grid-template-columns: 1fr !important;
+  }
+
+  // controlGroup children must respect their parent width
+  .controlGroup,
+  .filterControls,
+  .viewModeButtons,
+  .selectionControls,
+  .paginationControls,
+  .toggleControls {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .filterSelect,
+  .pageSizeSelect,
+  .searchField {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  // Inputs / selects need 16px font on iOS to suppress auto-zoom.
+  .filterSelect,
+  .pageSizeSelect,
+  .searchField,
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  // Make sure the search input wrapper does not inherit an inline
+  // width from the legacy rule.
+  .searchInput {
+    width: 100%;
+  }
+
+  // Wrapping toggles (Display Options) so labels do not get squished
+  // into single columns at <640px.
+  .toggleControls {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+}
+
+@media (max-width: 640px) {
+  .toggleControls {
+    grid-template-columns: 1fr;
   }
 }

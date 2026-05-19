@@ -7,8 +7,9 @@ import { ColorPickerPanel } from './ColorPickerPanel'; // Added ColorPickerPanel
 import { LucideIcon } from '../ui/LucideIcon'; // Added for icons
 import { NodeBasedFixtureEditor } from './NodeBasedFixtureEditor'; // Import Node Editor
 import { FixtureTemplateManager } from './FixtureTemplateManager'; // Import Template Manager
-import SuperControlTidy from './SuperControlTidyClean'; // Import SuperControl for preview
-import SuperControlEnhanced from './SuperControlEnhanced'; // Import Enhanced SuperControl for detailed view
+import SuperControl from '../dmx/SuperControl';
+import { EnvelopeChannelPanel } from '../automation/EnvelopeChannelPanel';
+import type { FixtureChannelRange } from '../../store/types'
 import styles from './FixtureSetup.module.scss'
 
 // PlacedFixtureOnSetup type is no longer needed here, will use PlacedFixture from store
@@ -18,6 +19,8 @@ interface FixtureChannel {
   name: string
   type: 'dimmer' | 'red' | 'green' | 'blue' | 'white' | 'amber' | 'uv' | 'pan' | 'pan_fine' | 'tilt' | 'tilt_fine' | 'shutter' | 'zoom' | 'focus' | 'color_wheel' | 'gobo_wheel' | 'gobo_rotation' | 'prism' | 'iris' | 'macro' | 'reset' | 'speed' | 'sound' | 'strobe' | 'effect' | 'other';
   dmxAddress?: number; // Optional DMX address override
+  ranges?: FixtureChannelRange[];
+  ticksOnly?: boolean;
 }
 
 interface FixtureFormData {
@@ -491,6 +494,46 @@ export const FixtureSetup: React.FC = () => {
     setFixtureForm(prev => ({ ...prev, channels: updatedChannels }))
   }
 
+  const addChannelRange = (channelIndex: number) => {
+    const ch = fixtureForm.channels[channelIndex]
+    const existing = ch.ranges ?? []
+    const last = existing[existing.length - 1]
+    const nextMin = last ? Math.min(255, last.max + 1) : 0
+    const nextMax = Math.min(255, nextMin + 9)
+    const nextRanges: FixtureChannelRange[] = [
+      ...existing,
+      { min: nextMin, max: nextMax, description: `Range ${existing.length + 1}` },
+    ]
+    handleChannelChange(channelIndex, 'ranges', nextRanges)
+  }
+
+  const updateChannelRange = (
+    channelIndex: number,
+    rangeIndex: number,
+    field: keyof FixtureChannelRange,
+    fieldValue: string | number
+  ) => {
+    const ch = fixtureForm.channels[channelIndex]
+    const ranges = [...(ch.ranges ?? [])]
+    const current = ranges[rangeIndex]
+    if (!current) return
+    if (field === 'description') {
+      ranges[rangeIndex] = { ...current, description: String(fieldValue) }
+    } else {
+      const n = typeof fieldValue === 'number' ? fieldValue : parseInt(String(fieldValue), 10)
+      if (Number.isNaN(n)) return
+      const clamped = Math.max(0, Math.min(255, n))
+      ranges[rangeIndex] = { ...current, [field]: clamped }
+    }
+    handleChannelChange(channelIndex, 'ranges', ranges)
+  }
+
+  const removeChannelRange = (channelIndex: number, rangeIndex: number) => {
+    const ch = fixtureForm.channels[channelIndex]
+    const ranges = (ch.ranges ?? []).filter((_, i) => i !== rangeIndex)
+    handleChannelChange(channelIndex, 'ranges', ranges.length ? ranges : undefined)
+  }
+
   // Add custom value to dropdown lists
   const addCustomManufacturer = (value: string) => {
     if (value && !manufacturers.includes(value)) {
@@ -847,7 +890,9 @@ export const FixtureSetup: React.FC = () => {
       const mappedChannels: FixtureChannel[] = data.channels.map((ch: any, idx: number) => ({
         name: ch.name || `Channel ${idx + 1}`,
         type: knownTypes.includes(ch.type) ? ch.type : 'other',
-        dmxAddress: typeof ch.dmxAddress === 'number' ? ch.dmxAddress : undefined
+        dmxAddress: typeof ch.dmxAddress === 'number' ? ch.dmxAddress : undefined,
+        ranges: Array.isArray(ch.ranges) ? ch.ranges : undefined,
+        ticksOnly: Boolean(ch.ticksOnly),
       }));
 
       const nextAddress = calculateNextStartAddress();
@@ -2016,6 +2061,101 @@ export const FixtureSetup: React.FC = () => {
                             />
                           </div>
                         </div>
+                        <div className={styles.channelTicksSection}>
+                          <label className={styles.ticksOnlyLabel}>
+                            <input
+                              type="checkbox"
+                              checked={Boolean(channel.ticksOnly)}
+                              onChange={(e) =>
+                                handleChannelChange(index, 'ticksOnly', e.target.checked)
+                              }
+                            />
+                            Ticks only (discrete DMX ranges)
+                          </label>
+                          {(channel.ticksOnly || (channel.ranges && channel.ranges.length > 0)) && (
+                            <div className={styles.tickRangesEditor}>
+                              <div className={styles.tickRangesHeader}>
+                                <span>DMX ranges (min-max + label)</span>
+                                <button
+                                  type="button"
+                                  className={styles.addRangeButton}
+                                  onClick={() => addChannelRange(index)}
+                                >
+                                  Add range
+                                </button>
+                              </div>
+                              {(channel.ranges ?? []).map((range, rangeIndex) => (
+                                <div key={rangeIndex} className={styles.tickRangeRow}>
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={255}
+                                    value={range.min}
+                                    onChange={(e) =>
+                                      updateChannelRange(
+                                        index,
+                                        rangeIndex,
+                                        'min',
+                                        parseInt(e.target.value, 10)
+                                      )
+                                    }
+                                    className={styles.tickRangeInput}
+                                    title="Min DMX"
+                                  />
+                                  <span className={styles.tickRangeDash}>-</span>
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={255}
+                                    value={range.max}
+                                    onChange={(e) =>
+                                      updateChannelRange(
+                                        index,
+                                        rangeIndex,
+                                        'max',
+                                        parseInt(e.target.value, 10)
+                                      )
+                                    }
+                                    className={styles.tickRangeInput}
+                                    title="Max DMX"
+                                  />
+                                  <input
+                                    type="text"
+                                    value={range.description ?? ''}
+                                    onChange={(e) =>
+                                      updateChannelRange(
+                                        index,
+                                        rangeIndex,
+                                        'description',
+                                        e.target.value
+                                      )
+                                    }
+                                    className={styles.tickRangeDesc}
+                                    placeholder="Label (e.g. Gobo 1)"
+                                  />
+                                  <button
+                                    type="button"
+                                    className={styles.removeRangeButton}
+                                    onClick={() => removeChannelRange(index, rangeIndex)}
+                                    title="Remove range"
+                                  >
+                                    <LucideIcon name="X" size={14} />
+                                  </button>
+                                </div>
+                              ))}
+                              {channel.ticksOnly && (!channel.ranges || channel.ranges.length === 0) && (
+                                <p className={styles.tickRangesHint}>
+                                  Add at least one range. Example: 1-10 Gobo 1, 11-20 Gobo 2.
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <EnvelopeChannelPanel
+                          channel={actualDmxAddress - 1}
+                          channelLabel={`${channel.name} (DMX ${actualDmxAddress})`}
+                          compact
+                        />
                       </div>
                     );
                   })}
@@ -2461,7 +2601,7 @@ export const FixtureSetup: React.FC = () => {
             <p>Real-time control preview for selected fixtures</p>
           </div>
           <div className={styles.previewContent}>
-            <SuperControlEnhanced />
+            <SuperControl isDockable={false} />
           </div>
         </div>
       )}

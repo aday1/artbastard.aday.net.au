@@ -3,34 +3,25 @@ import { useStore, Fixture, MasterSlider } from '../../store'
 import useStoreUtils from '../../store/storeUtils'
 import { useTheme } from '../../context/ThemeContext'
 import { useSocket } from '../../context/SocketContext'
-import { useChromaticEnergyManipulatorSettings } from '../../context/ChromaticEnergyManipulatorContext'
+import {
+  useSuperControlPreferences,
+  type SuperControlPreferences,
+} from '../../context/SuperControlPreferencesContext'
 import { MidiLearnButton } from '../midi/MidiLearnButton'
 
 import { CURRENT_VERSION, getVersionDisplay, getBuildInfo } from '../../utils/version';
+import { isDebugEnabled, setDebugEnabled } from '../../utils/debugLog';
 import { ReleaseNotes } from './ReleaseNotes'
 import SettingsPanel from './SettingsPanel'
 import { MidiOscSetup } from '../midi/MidiOscSetup'
 import { DebugMenu } from '../debug/DebugMenu'
+import { BridgeSettings } from './BridgeSettings'
+import { FaderOrientationSwitch } from '../dmx/FaderOrientationSwitch'
 import { HelpOverlay } from '../ui/HelpOverlay'
+import { HorizontalFader } from '../ui/controls'
 import styles from './UnifiedSettings.module.scss'
 
-interface TouchOscExportOptionsUI {
-  resolution: 'phone_portrait' | 'tablet_portrait'
-  includeFixtureControls: boolean
-  includeMasterSliders: boolean
-  includeAllDmxChannels: boolean
-}
-
-interface ChromaticEnergyManipulatorSettings {
-  enableKeyboardShortcuts: boolean
-  autoSelectFirstFixture: boolean
-  showQuickActions: boolean
-  defaultColorPresets: string[]
-  enableErrorMessages: boolean
-  autoUpdateRate: number
-  enableAnimations: boolean
-  compactMode: boolean
-}
+type SuperControlSettingsExport = SuperControlPreferences
 
 interface AppSettings {
   theme: 'artsnob' | 'standard' | 'minimal'
@@ -57,13 +48,15 @@ interface AppSettings {
     midiMonitor: boolean;
     oscMonitor: boolean;
   };
-  chromaticEnergyManipulator: ChromaticEnergyManipulatorSettings;
+  superControlPreferences: SuperControlSettingsExport;
+  /** @deprecated Import key kept for older settings exports */
+  chromaticEnergyManipulator?: SuperControlSettingsExport;
 }
 
 export const UnifiedSettings: React.FC = () => {
   const { theme, setTheme, darkMode, toggleDarkMode } = useTheme()
   const { socket, connected } = useSocket()
-  const { settings: chromaticSettings, updateSettings: updateChromaticSettings } = useChromaticEnergyManipulatorSettings()
+  const { settings: chromaticSettings, updateSettings: updateChromaticSettings } = useSuperControlPreferences()
   const {
     artNetConfig,
     fixtures,
@@ -86,7 +79,9 @@ export const UnifiedSettings: React.FC = () => {
     uiSettings,
     updateUiSettings,
     setDmxVisualEffects,
-    addNotification
+    addNotification,
+    dmxFaderOrientation,
+    setDmxFaderOrientation,
   } = useStore(state => ({
     artNetConfig: state.artNetConfig,
     fixtures: state.fixtures,
@@ -99,7 +94,9 @@ export const UnifiedSettings: React.FC = () => {
     uiSettings: state.uiSettings,
     updateUiSettings: state.updateUiSettings,
     setDmxVisualEffects: state.setDmxVisualEffects,
-    addNotification: state.addNotification
+    addNotification: state.addNotification,
+    dmxFaderOrientation: state.dmxFaderOrientation,
+    setDmxFaderOrientation: state.setDmxFaderOrientation,
   }))
 
   // Settings state
@@ -115,6 +112,7 @@ export const UnifiedSettings: React.FC = () => {
   const [showReleaseNotes, setShowReleaseNotes] = useState(false);
   const [localNavVisibility, setLocalNavVisibility] = useState(navVisibility);
   const [localDebugTools, setLocalDebugTools] = useState(debugTools);
+  const [consoleDebugEnabled, setConsoleDebugEnabled] = useState(() => isDebugEnabled());
   const [activeSection, setActiveSection] = useState<string>('general');
   
   // Preview state for theme settings (not saved until user clicks Save)
@@ -615,7 +613,8 @@ export const UnifiedSettings: React.FC = () => {
         masterSliders,
         navVisibility: localNavVisibility,
         debugTools: localDebugTools,
-        chromaticEnergyManipulator: chromaticSettings
+        superControlPreferences: chromaticSettings,
+        chromaticEnergyManipulator: chromaticSettings,
       };
 
       const blob = new Blob([JSON.stringify(allSettings, null, 2)], {
@@ -659,8 +658,10 @@ export const UnifiedSettings: React.FC = () => {
       if (importedSettings.debugModules) setDebugModules(importedSettings.debugModules);
       if (importedSettings.navVisibility) setLocalNavVisibility(importedSettings.navVisibility);
       if (importedSettings.debugTools) setLocalDebugTools(importedSettings.debugTools);
-      if (importedSettings.chromaticEnergyManipulator) {
-        updateChromaticSettings(importedSettings.chromaticEnergyManipulator);
+      const importedSuperControl =
+        importedSettings.superControlPreferences ?? importedSettings.chromaticEnergyManipulator;
+      if (importedSuperControl) {
+        updateChromaticSettings(importedSuperControl);
       }
 
       useStoreUtils.setState(state => ({
@@ -796,7 +797,6 @@ export const UnifiedSettings: React.FC = () => {
               { id: 'performance', label: 'Performance', icon: 'fas fa-tachometer-alt' },
               { id: 'debug', label: 'Debug & Diagnostics', icon: 'fas fa-bug' },
               { id: 'help', label: 'Help & Documentation', icon: 'fas fa-question-circle' },
-              { id: 'experimental', label: 'Experimental', icon: 'fas fa-flask' },
               { id: 'advanced', label: 'Advanced', icon: 'fas fa-tools' },
               { id: 'state', label: 'State Management', icon: 'fas fa-database' }
             ].map(section => (
@@ -841,38 +841,15 @@ export const UnifiedSettings: React.FC = () => {
 
                 <div className={styles.settingGroup}>
                   <label className={styles.settingLabel}>
-                    <i className="fas fa-flask"></i>
-                    {theme === 'artsnob' ? 'Laboratoire Expérimental' : 'Experimental Section'}
+                    <i className="fas fa-sliders-h"></i>
+                    DMX channel faders
                   </label>
-                  <div className={styles.toggleSwitch}>
-                    <input
-                      type="checkbox"
-                      id="hideExperimentalSection"
-                      checked={uiSettings?.hideExperimentalSection || false}
-                      onChange={(e) => {
-                        updateUiSettings({ hideExperimentalSection: e.target.checked });
-                        addNotification({
-                          message: e.target.checked 
-                            ? 'Experimental section hidden from menu' 
-                            : 'Experimental section shown in menu',
-                          type: 'info',
-                          priority: 'normal'
-                        });
-                      }}
-                    />
-                    <label htmlFor="hideExperimentalSection" className={styles.toggleLabel}>
-                      <span className={styles.toggleSlider}></span>
-                    </label>
-                    <span className={styles.toggleText}>
-                      {uiSettings?.hideExperimentalSection 
-                        ? (theme === 'artsnob' ? 'Masqué (Hidden)' : 'Hidden')
-                        : (theme === 'artsnob' ? 'Visible' : 'Visible')}
-                    </span>
-                  </div>
+                  <FaderOrientationSwitch
+                    value={dmxFaderOrientation}
+                    onChange={setDmxFaderOrientation}
+                  />
                   <p className={styles.settingDescription}>
-                    {theme === 'artsnob' 
-                      ? 'Masquer la section Laboratoire Expérimental du menu principal. Les fonctionnalités expérimentales (OpenCV Visage Tracker) sont hautement buggées et incomplètes.'
-                      : 'Hide the Experimental Laboratory section from the main menu. Experimental features (OpenCV Face Tracker) are highly buggy and incomplete.'}
+                    Horizontal sliders are the default row layout. Vertical sliders use a channel-strip layout on the DMX Channels page (and pinned channels).
                   </p>
                 </div>
 
@@ -1057,32 +1034,29 @@ export const UnifiedSettings: React.FC = () => {
                     <div className={styles.colorSliderGroup}>
                       <label>
                         <span>Hue: {previewThemeColors.primaryHue}°</span>
-                        <input
-                          type="range"
-                          min="0"
-                          max="360"
+                        <HorizontalFader
+                          min={0}
+                          max={360}
                           value={previewThemeColors.primaryHue}
-                          onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, primaryHue: parseInt(e.target.value) }))}
+                          onChange={(v) => setPreviewThemeColors(prev => ({ ...prev, primaryHue: Math.round(v) }))}
                         />
                       </label>
                       <label>
                         <span>Saturation: {previewThemeColors.primarySaturation}%</span>
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
+                        <HorizontalFader
+                          min={0}
+                          max={100}
                           value={previewThemeColors.primarySaturation}
-                          onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, primarySaturation: parseInt(e.target.value) }))}
+                          onChange={(v) => setPreviewThemeColors(prev => ({ ...prev, primarySaturation: Math.round(v) }))}
                         />
                       </label>
                       <label>
                         <span>Brightness: {previewThemeColors.primaryBrightness}%</span>
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
+                        <HorizontalFader
+                          min={0}
+                          max={100}
                           value={previewThemeColors.primaryBrightness}
-                          onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, primaryBrightness: parseInt(e.target.value) }))}
+                          onChange={(v) => setPreviewThemeColors(prev => ({ ...prev, primaryBrightness: Math.round(v) }))}
                         />
                       </label>
                     </div>
@@ -1097,32 +1071,29 @@ export const UnifiedSettings: React.FC = () => {
                     <div className={styles.colorSliderGroup}>
                       <label>
                         <span>Hue: {previewThemeColors.secondaryHue}°</span>
-                        <input
-                          type="range"
-                          min="0"
-                          max="360"
+                        <HorizontalFader
+                          min={0}
+                          max={360}
                           value={previewThemeColors.secondaryHue}
-                          onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, secondaryHue: parseInt(e.target.value) }))}
+                          onChange={(v) => setPreviewThemeColors(prev => ({ ...prev, secondaryHue: Math.round(v) }))}
                         />
                       </label>
                       <label>
                         <span>Saturation: {previewThemeColors.secondarySaturation}%</span>
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
+                        <HorizontalFader
+                          min={0}
+                          max={100}
                           value={previewThemeColors.secondarySaturation}
-                          onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, secondarySaturation: parseInt(e.target.value) }))}
+                          onChange={(v) => setPreviewThemeColors(prev => ({ ...prev, secondarySaturation: Math.round(v) }))}
                         />
                       </label>
                       <label>
                         <span>Brightness: {previewThemeColors.secondaryBrightness}%</span>
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
+                        <HorizontalFader
+                          min={0}
+                          max={100}
                           value={previewThemeColors.secondaryBrightness}
-                          onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, secondaryBrightness: parseInt(e.target.value) }))}
+                          onChange={(v) => setPreviewThemeColors(prev => ({ ...prev, secondaryBrightness: Math.round(v) }))}
                         />
                       </label>
                     </div>
@@ -1137,32 +1108,29 @@ export const UnifiedSettings: React.FC = () => {
                     <div className={styles.colorSliderGroup}>
                       <label>
                         <span>Hue: {previewThemeColors.accentHue}°</span>
-                        <input
-                          type="range"
-                          min="0"
-                          max="360"
+                        <HorizontalFader
+                          min={0}
+                          max={360}
                           value={previewThemeColors.accentHue}
-                          onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, accentHue: parseInt(e.target.value) }))}
+                          onChange={(v) => setPreviewThemeColors(prev => ({ ...prev, accentHue: Math.round(v) }))}
                         />
                       </label>
                       <label>
                         <span>Saturation: {previewThemeColors.accentSaturation}%</span>
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
+                        <HorizontalFader
+                          min={0}
+                          max={100}
                           value={previewThemeColors.accentSaturation}
-                          onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, accentSaturation: parseInt(e.target.value) }))}
+                          onChange={(v) => setPreviewThemeColors(prev => ({ ...prev, accentSaturation: Math.round(v) }))}
                         />
                       </label>
                       <label>
                         <span>Brightness: {previewThemeColors.accentBrightness}%</span>
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
+                        <HorizontalFader
+                          min={0}
+                          max={100}
                           value={previewThemeColors.accentBrightness}
-                          onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, accentBrightness: parseInt(e.target.value) }))}
+                          onChange={(v) => setPreviewThemeColors(prev => ({ ...prev, accentBrightness: Math.round(v) }))}
                         />
                       </label>
                     </div>
@@ -1180,32 +1148,29 @@ export const UnifiedSettings: React.FC = () => {
                     <div className={styles.colorSliderGroup}>
                       <label>
                         <span>Background Brightness: {previewThemeColors.backgroundBrightness ?? 25}%</span>
-                        <input
-                          type="range"
-                          min="5"
-                          max="50"
+                        <HorizontalFader
+                          min={5}
+                          max={50}
                           value={previewThemeColors.backgroundBrightness ?? 25}
-                          onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, backgroundBrightness: parseInt(e.target.value) }))}
+                          onChange={(v) => setPreviewThemeColors(prev => ({ ...prev, backgroundBrightness: Math.round(v) }))}
                         />
                       </label>
                       <label>
                         <span>Background Hue: {previewThemeColors.backgroundHue ?? 220}°</span>
-                        <input
-                          type="range"
-                          min="0"
-                          max="360"
+                        <HorizontalFader
+                          min={0}
+                          max={360}
                           value={previewThemeColors.backgroundHue ?? 220}
-                          onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, backgroundHue: parseInt(e.target.value) }))}
+                          onChange={(v) => setPreviewThemeColors(prev => ({ ...prev, backgroundHue: Math.round(v) }))}
                         />
                       </label>
                       <label>
                         <span>Background Saturation: {previewThemeColors.backgroundSaturation ?? 20}%</span>
-                        <input
-                          type="range"
-                          min="0"
-                          max="50"
+                        <HorizontalFader
+                          min={0}
+                          max={50}
                           value={previewThemeColors.backgroundSaturation ?? 20}
-                          onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, backgroundSaturation: parseInt(e.target.value) }))}
+                          onChange={(v) => setPreviewThemeColors(prev => ({ ...prev, backgroundSaturation: Math.round(v) }))}
                         />
                       </label>
                     </div>
@@ -1220,12 +1185,11 @@ export const UnifiedSettings: React.FC = () => {
                     <div className={styles.colorSliderGroup}>
                       <label>
                         <span>Rotation: {previewThemeColors.hueRotation ?? 0}°</span>
-                        <input
-                          type="range"
-                          min="-180"
-                          max="180"
+                        <HorizontalFader
+                          min={-180}
+                          max={180}
                           value={previewThemeColors.hueRotation ?? 0}
-                          onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, hueRotation: parseInt(e.target.value) }))}
+                          onChange={(v) => setPreviewThemeColors(prev => ({ ...prev, hueRotation: Math.round(v) }))}
                         />
                       </label>
                     </div>
@@ -1355,33 +1319,30 @@ export const UnifiedSettings: React.FC = () => {
                         <div className={styles.colorSliderGroup}>
                           <label>
                             <span>Hue: {previewThemeColors.successHue ?? 142}°</span>
-                            <input
-                              type="range"
-                              min="0"
-                              max="360"
-                              value={previewThemeColors.successHue ?? 142}
-                              onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, successHue: parseInt(e.target.value) }))}
-                            />
+                            <HorizontalFader
+                          min={0}
+                          max={360}
+                          value={previewThemeColors.successHue ?? 142}
+                          onChange={(v) => setPreviewThemeColors(prev => ({ ...prev, successHue: Math.round(v) }))}
+                        />
                           </label>
                           <label>
                             <span>Saturation: {previewThemeColors.successSaturation ?? 71}%</span>
-                            <input
-                              type="range"
-                              min="0"
-                              max="100"
-                              value={previewThemeColors.successSaturation ?? 71}
-                              onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, successSaturation: parseInt(e.target.value) }))}
-                            />
+                            <HorizontalFader
+                          min={0}
+                          max={100}
+                          value={previewThemeColors.successSaturation ?? 71}
+                          onChange={(v) => setPreviewThemeColors(prev => ({ ...prev, successSaturation: Math.round(v) }))}
+                        />
                           </label>
                           <label>
                             <span>Brightness: {previewThemeColors.successBrightness ?? 47}%</span>
-                            <input
-                              type="range"
-                              min="0"
-                              max="100"
-                              value={previewThemeColors.successBrightness ?? 47}
-                              onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, successBrightness: parseInt(e.target.value) }))}
-                            />
+                            <HorizontalFader
+                          min={0}
+                          max={100}
+                          value={previewThemeColors.successBrightness ?? 47}
+                          onChange={(v) => setPreviewThemeColors(prev => ({ ...prev, successBrightness: Math.round(v) }))}
+                        />
                           </label>
                         </div>
                       </div>
@@ -1395,33 +1356,30 @@ export const UnifiedSettings: React.FC = () => {
                         <div className={styles.colorSliderGroup}>
                           <label>
                             <span>Hue: {previewThemeColors.warningHue ?? 38}°</span>
-                            <input
-                              type="range"
-                              min="0"
-                              max="360"
-                              value={previewThemeColors.warningHue ?? 38}
-                              onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, warningHue: parseInt(e.target.value) }))}
-                            />
+                            <HorizontalFader
+                          min={0}
+                          max={360}
+                          value={previewThemeColors.warningHue ?? 38}
+                          onChange={(v) => setPreviewThemeColors(prev => ({ ...prev, warningHue: Math.round(v) }))}
+                        />
                           </label>
                           <label>
                             <span>Saturation: {previewThemeColors.warningSaturation ?? 92}%</span>
-                            <input
-                              type="range"
-                              min="0"
-                              max="100"
-                              value={previewThemeColors.warningSaturation ?? 92}
-                              onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, warningSaturation: parseInt(e.target.value) }))}
-                            />
+                            <HorizontalFader
+                          min={0}
+                          max={100}
+                          value={previewThemeColors.warningSaturation ?? 92}
+                          onChange={(v) => setPreviewThemeColors(prev => ({ ...prev, warningSaturation: Math.round(v) }))}
+                        />
                           </label>
                           <label>
                             <span>Brightness: {previewThemeColors.warningBrightness ?? 51}%</span>
-                            <input
-                              type="range"
-                              min="0"
-                              max="100"
-                              value={previewThemeColors.warningBrightness ?? 51}
-                              onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, warningBrightness: parseInt(e.target.value) }))}
-                            />
+                            <HorizontalFader
+                          min={0}
+                          max={100}
+                          value={previewThemeColors.warningBrightness ?? 51}
+                          onChange={(v) => setPreviewThemeColors(prev => ({ ...prev, warningBrightness: Math.round(v) }))}
+                        />
                           </label>
                         </div>
                       </div>
@@ -1435,33 +1393,30 @@ export const UnifiedSettings: React.FC = () => {
                         <div className={styles.colorSliderGroup}>
                           <label>
                             <span>Hue: {previewThemeColors.errorHue ?? 0}°</span>
-                            <input
-                              type="range"
-                              min="0"
-                              max="360"
-                              value={previewThemeColors.errorHue ?? 0}
-                              onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, errorHue: parseInt(e.target.value) }))}
-                            />
+                            <HorizontalFader
+                          min={0}
+                          max={360}
+                          value={previewThemeColors.errorHue ?? 0}
+                          onChange={(v) => setPreviewThemeColors(prev => ({ ...prev, errorHue: Math.round(v) }))}
+                        />
                           </label>
                           <label>
                             <span>Saturation: {previewThemeColors.errorSaturation ?? 84}%</span>
-                            <input
-                              type="range"
-                              min="0"
-                              max="100"
-                              value={previewThemeColors.errorSaturation ?? 84}
-                              onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, errorSaturation: parseInt(e.target.value) }))}
-                            />
+                            <HorizontalFader
+                          min={0}
+                          max={100}
+                          value={previewThemeColors.errorSaturation ?? 84}
+                          onChange={(v) => setPreviewThemeColors(prev => ({ ...prev, errorSaturation: Math.round(v) }))}
+                        />
                           </label>
                           <label>
                             <span>Brightness: {previewThemeColors.errorBrightness ?? 60}%</span>
-                            <input
-                              type="range"
-                              min="0"
-                              max="100"
-                              value={previewThemeColors.errorBrightness ?? 60}
-                              onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, errorBrightness: parseInt(e.target.value) }))}
-                            />
+                            <HorizontalFader
+                          min={0}
+                          max={100}
+                          value={previewThemeColors.errorBrightness ?? 60}
+                          onChange={(v) => setPreviewThemeColors(prev => ({ ...prev, errorBrightness: Math.round(v) }))}
+                        />
                           </label>
                         </div>
                       </div>
@@ -1475,33 +1430,30 @@ export const UnifiedSettings: React.FC = () => {
                         <div className={styles.colorSliderGroup}>
                           <label>
                             <span>Hue: {previewThemeColors.infoHue ?? 217}°</span>
-                            <input
-                              type="range"
-                              min="0"
-                              max="360"
-                              value={previewThemeColors.infoHue ?? 217}
-                              onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, infoHue: parseInt(e.target.value) }))}
-                            />
+                            <HorizontalFader
+                          min={0}
+                          max={360}
+                          value={previewThemeColors.infoHue ?? 217}
+                          onChange={(v) => setPreviewThemeColors(prev => ({ ...prev, infoHue: Math.round(v) }))}
+                        />
                           </label>
                           <label>
                             <span>Saturation: {previewThemeColors.infoSaturation ?? 91}%</span>
-                            <input
-                              type="range"
-                              min="0"
-                              max="100"
-                              value={previewThemeColors.infoSaturation ?? 91}
-                              onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, infoSaturation: parseInt(e.target.value) }))}
-                            />
+                            <HorizontalFader
+                          min={0}
+                          max={100}
+                          value={previewThemeColors.infoSaturation ?? 91}
+                          onChange={(v) => setPreviewThemeColors(prev => ({ ...prev, infoSaturation: Math.round(v) }))}
+                        />
                           </label>
                           <label>
                             <span>Brightness: {previewThemeColors.infoBrightness ?? 59}%</span>
-                            <input
-                              type="range"
-                              min="0"
-                              max="100"
-                              value={previewThemeColors.infoBrightness ?? 59}
-                              onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, infoBrightness: parseInt(e.target.value) }))}
-                            />
+                            <HorizontalFader
+                          min={0}
+                          max={100}
+                          value={previewThemeColors.infoBrightness ?? 59}
+                          onChange={(v) => setPreviewThemeColors(prev => ({ ...prev, infoBrightness: Math.round(v) }))}
+                        />
                           </label>
                         </div>
                       </div>
@@ -1520,33 +1472,30 @@ export const UnifiedSettings: React.FC = () => {
                         <div className={styles.colorSliderGroup}>
                           <label>
                             <span>Primary Text Brightness: {previewThemeColors.textPrimaryBrightness ?? 90}%</span>
-                            <input
-                              type="range"
-                              min="70"
-                              max="100"
-                              value={previewThemeColors.textPrimaryBrightness ?? 90}
-                              onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, textPrimaryBrightness: parseInt(e.target.value) }))}
-                            />
+                            <HorizontalFader
+                          min={70}
+                          max={100}
+                          value={previewThemeColors.textPrimaryBrightness ?? 90}
+                          onChange={(v) => setPreviewThemeColors(prev => ({ ...prev, textPrimaryBrightness: Math.round(v) }))}
+                        />
                           </label>
                           <label>
                             <span>Secondary Text Brightness: {previewThemeColors.textSecondaryBrightness ?? 65}%</span>
-                            <input
-                              type="range"
-                              min="40"
-                              max="80"
-                              value={previewThemeColors.textSecondaryBrightness ?? 65}
-                              onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, textSecondaryBrightness: parseInt(e.target.value) }))}
-                            />
+                            <HorizontalFader
+                          min={40}
+                          max={80}
+                          value={previewThemeColors.textSecondaryBrightness ?? 65}
+                          onChange={(v) => setPreviewThemeColors(prev => ({ ...prev, textSecondaryBrightness: Math.round(v) }))}
+                        />
                           </label>
                           <label>
                             <span>Tertiary Text Brightness: {previewThemeColors.textTertiaryBrightness ?? 50}%</span>
-                            <input
-                              type="range"
-                              min="30"
-                              max="70"
-                              value={previewThemeColors.textTertiaryBrightness ?? 50}
-                              onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, textTertiaryBrightness: parseInt(e.target.value) }))}
-                            />
+                            <HorizontalFader
+                          min={30}
+                          max={70}
+                          value={previewThemeColors.textTertiaryBrightness ?? 50}
+                          onChange={(v) => setPreviewThemeColors(prev => ({ ...prev, textTertiaryBrightness: Math.round(v) }))}
+                        />
                           </label>
                         </div>
                       </div>
@@ -1560,23 +1509,21 @@ export const UnifiedSettings: React.FC = () => {
                         <div className={styles.colorSliderGroup}>
                           <label>
                             <span>Border Brightness: {previewThemeColors.borderBrightness ?? 30}%</span>
-                            <input
-                              type="range"
-                              min="10"
-                              max="60"
-                              value={previewThemeColors.borderBrightness ?? 30}
-                              onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, borderBrightness: parseInt(e.target.value) }))}
-                            />
+                            <HorizontalFader
+                          min={10}
+                          max={60}
+                          value={previewThemeColors.borderBrightness ?? 30}
+                          onChange={(v) => setPreviewThemeColors(prev => ({ ...prev, borderBrightness: Math.round(v) }))}
+                        />
                           </label>
                           <label>
                             <span>Border Saturation: {previewThemeColors.borderSaturation ?? 15}%</span>
-                            <input
-                              type="range"
-                              min="0"
-                              max="50"
-                              value={previewThemeColors.borderSaturation ?? 15}
-                              onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, borderSaturation: parseInt(e.target.value) }))}
-                            />
+                            <HorizontalFader
+                          min={0}
+                          max={50}
+                          value={previewThemeColors.borderSaturation ?? 15}
+                          onChange={(v) => setPreviewThemeColors(prev => ({ ...prev, borderSaturation: Math.round(v) }))}
+                        />
                           </label>
                         </div>
                       </div>
@@ -1595,23 +1542,21 @@ export const UnifiedSettings: React.FC = () => {
                         <div className={styles.colorSliderGroup}>
                           <label>
                             <span>Card Brightness Offset: +{previewThemeColors.cardBrightness ?? 8}%</span>
-                            <input
-                              type="range"
-                              min="0"
-                              max="20"
-                              value={previewThemeColors.cardBrightness ?? 8}
-                              onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, cardBrightness: parseInt(e.target.value) }))}
-                            />
+                            <HorizontalFader
+                          min={0}
+                          max={20}
+                          value={previewThemeColors.cardBrightness ?? 8}
+                          onChange={(v) => setPreviewThemeColors(prev => ({ ...prev, cardBrightness: Math.round(v) }))}
+                        />
                           </label>
                           <label>
                             <span>Card Saturation: {previewThemeColors.cardSaturation ?? 20}%</span>
-                            <input
-                              type="range"
-                              min="0"
-                              max="50"
-                              value={previewThemeColors.cardSaturation ?? 20}
-                              onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, cardSaturation: parseInt(e.target.value) }))}
-                            />
+                            <HorizontalFader
+                          min={0}
+                          max={50}
+                          value={previewThemeColors.cardSaturation ?? 20}
+                          onChange={(v) => setPreviewThemeColors(prev => ({ ...prev, cardSaturation: Math.round(v) }))}
+                        />
                           </label>
                         </div>
                       </div>
@@ -1630,12 +1575,14 @@ export const UnifiedSettings: React.FC = () => {
                         <div className={styles.colorSliderGroup}>
                           <label>
                             <span>Hue: {previewThemeColors.statusConnectedHue ?? 142}°</span>
-                            <input
-                              type="range"
-                              min="0"
-                              max="360"
+                            <HorizontalFader
+                              min={0}
+                              max={360}
                               value={previewThemeColors.statusConnectedHue ?? 142}
-                              onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, statusConnectedHue: parseInt(e.target.value), statusActiveHue: parseInt(e.target.value) }))}
+                              onChange={(v) => {
+                                const n = Math.round(v);
+                                setPreviewThemeColors(prev => ({ ...prev, statusConnectedHue: n, statusActiveHue: n }));
+                              }}
                             />
                           </label>
                         </div>
@@ -1650,13 +1597,12 @@ export const UnifiedSettings: React.FC = () => {
                         <div className={styles.colorSliderGroup}>
                           <label>
                             <span>Hue: {previewThemeColors.statusDisconnectedHue ?? 0}°</span>
-                            <input
-                              type="range"
-                              min="0"
-                              max="360"
-                              value={previewThemeColors.statusDisconnectedHue ?? 0}
-                              onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, statusDisconnectedHue: parseInt(e.target.value) }))}
-                            />
+                            <HorizontalFader
+                          min={0}
+                          max={360}
+                          value={previewThemeColors.statusDisconnectedHue ?? 0}
+                          onChange={(v) => setPreviewThemeColors(prev => ({ ...prev, statusDisconnectedHue: Math.round(v) }))}
+                        />
                           </label>
                         </div>
                       </div>
@@ -1670,13 +1616,12 @@ export const UnifiedSettings: React.FC = () => {
                         <div className={styles.colorSliderGroup}>
                           <label>
                             <span>Brightness: {previewThemeColors.statusInactiveBrightness ?? 50}%</span>
-                            <input
-                              type="range"
-                              min="20"
-                              max="70"
-                              value={previewThemeColors.statusInactiveBrightness ?? 50}
-                              onChange={(e) => setPreviewThemeColors(prev => ({ ...prev, statusInactiveBrightness: parseInt(e.target.value) }))}
-                            />
+                            <HorizontalFader
+                          min={20}
+                          max={70}
+                          value={previewThemeColors.statusInactiveBrightness ?? 50}
+                          onChange={(v) => setPreviewThemeColors(prev => ({ ...prev, statusInactiveBrightness: Math.round(v) }))}
+                        />
                           </label>
                         </div>
                       </div>
@@ -1698,68 +1643,62 @@ export const UnifiedSettings: React.FC = () => {
                   <div className={styles.colorSliderGroup}>
                     <label>
                       <span>Font Size: {((previewUiSettings?.fontSize || 1.0) * 100).toFixed(0)}%</span>
-                      <input
-                        type="range"
-                        min="0.75"
-                        max="2.0"
-                        step="0.05"
+                      <HorizontalFader
+                        min={0.75}
+                        max={2.0}
+                        step={0.05}
                         value={previewUiSettings?.fontSize || 1.0}
-                        onChange={(e) => setPreviewUiSettings(prev => ({ ...prev, fontSize: parseFloat(e.target.value) }))}
+                        onChange={(v) => setPreviewUiSettings(prev => ({ ...prev, fontSize: v }))}
                       />
                     </label>
                     <label>
                       <span>Line Height: {((previewUiSettings?.lineHeight || 1.5) * 100).toFixed(0)}%</span>
-                      <input
-                        type="range"
-                        min="1.0"
-                        max="2.5"
-                        step="0.1"
+                      <HorizontalFader
+                        min={1.0}
+                        max={2.5}
+                        step={0.1}
                         value={previewUiSettings?.lineHeight || 1.5}
-                        onChange={(e) => setPreviewUiSettings(prev => ({ ...prev, lineHeight: parseFloat(e.target.value) }))}
+                        onChange={(v) => setPreviewUiSettings(prev => ({ ...prev, lineHeight: v }))}
                       />
                     </label>
                     <label>
                       <span>Letter Spacing: {previewUiSettings?.letterSpacing || 0}px</span>
-                      <input
-                        type="range"
-                        min="-2"
-                        max="4"
-                        step="0.5"
+                      <HorizontalFader
+                        min={-2}
+                        max={4}
+                        step={0.5}
                         value={previewUiSettings?.letterSpacing || 0}
-                        onChange={(e) => setPreviewUiSettings(prev => ({ ...prev, letterSpacing: parseFloat(e.target.value) }))}
+                        onChange={(v) => setPreviewUiSettings(prev => ({ ...prev, letterSpacing: v }))}
                       />
                     </label>
                     <label>
                       <span>Border Radius: {previewUiSettings?.borderRadius || 8}px</span>
-                      <input
-                        type="range"
-                        min="0"
-                        max="20"
-                        step="1"
+                      <HorizontalFader
+                        min={0}
+                        max={20}
+                        step={1}
                         value={previewUiSettings?.borderRadius || 8}
-                        onChange={(e) => setPreviewUiSettings(prev => ({ ...prev, borderRadius: parseInt(e.target.value) }))}
+                        onChange={(v) => setPreviewUiSettings(prev => ({ ...prev, borderRadius: Math.round(v) }))}
                       />
                     </label>
                     <label>
                       <span>Spacing: {((previewUiSettings?.spacing || 1.0) * 100).toFixed(0)}%</span>
-                      <input
-                        type="range"
-                        min="0.5"
-                        max="2.0"
-                        step="0.1"
+                      <HorizontalFader
+                        min={0.5}
+                        max={2.0}
+                        step={0.1}
                         value={previewUiSettings?.spacing || 1.0}
-                        onChange={(e) => setPreviewUiSettings(prev => ({ ...prev, spacing: parseFloat(e.target.value) }))}
+                        onChange={(v) => setPreviewUiSettings(prev => ({ ...prev, spacing: v }))}
                       />
                     </label>
                     <label>
                       <span>Animation Speed: {((previewUiSettings?.animationSpeed || 1.0) * 100).toFixed(0)}%</span>
-                      <input
-                        type="range"
-                        min="0.25"
-                        max="3.0"
-                        step="0.25"
+                      <HorizontalFader
+                        min={0.25}
+                        max={3.0}
+                        step={0.25}
                         value={previewUiSettings?.animationSpeed || 1.0}
-                        onChange={(e) => setPreviewUiSettings(prev => ({ ...prev, animationSpeed: parseFloat(e.target.value) }))}
+                        onChange={(v) => setPreviewUiSettings(prev => ({ ...prev, animationSpeed: v }))}
                       />
                     </label>
                   </div>
@@ -1868,6 +1807,9 @@ export const UnifiedSettings: React.FC = () => {
                     Art-Net protocol is always enabled. This is the primary method for sending DMX data over network.
                   </p>
                 </div>
+
+                <h4 style={{ marginTop: '1.5rem' }}>LAN Bridge (Pi / home network)</h4>
+                <BridgeSettings />
               </div>
             )}
 
@@ -1897,16 +1839,6 @@ export const UnifiedSettings: React.FC = () => {
                 <h3><i className="fas fa-question-circle"></i> Help & Documentation</h3>
                 <div className={styles.helpSection}>
                   <HelpOverlay embedded={true} />
-                </div>
-              </div>
-            )}
-
-            {/* Experimental Features */}
-            {activeSection === 'experimental' && (
-              <div className={styles.settingsSection}>
-                <h3><i className="fas fa-flask"></i> Experimental Features</h3>
-                <div className={styles.experimentalSection}>
-                  <p>Experimental features are available in the "Laboratoire Expérimental" section of the main menu.</p>
                 </div>
               </div>
             )}
@@ -1966,12 +1898,11 @@ export const UnifiedSettings: React.FC = () => {
                 <div className={styles.settingGroup}>
                   <label className={styles.settingLabel}>
                     <i className="fas fa-lightbulb"></i>
-                    ChromaticEnergyManipulator
+                    Super Control
                   </label>
                   <p className={styles.settingDescription} style={{ marginBottom: '1rem' }}>
-                    The ChromaticEnergyManipulator is an advanced color control interface that provides intuitive color mixing, 
-                    fixture selection, and real-time DMX control. It combines color wheel, RGB sliders, and fixture management 
-                    in a unified interface for professional lighting control.
+                    Super Control is the single fixture interface for color, pan/tilt, gobos, scenes, MIDI learn, and autopilot.
+                    These preferences apply on desktop and touch surfaces.
                   </p>
                   <div className={styles.advancedToggles}>
                     <label className={styles.checkboxLabel}>
@@ -1997,7 +1928,7 @@ export const UnifiedSettings: React.FC = () => {
                       />
                       <span className={styles.checkboxText}>Auto-select First Fixture</span>
                       <span className={styles.settingDescription} style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                        Automatically select the first fixture in the list when opening the ChromaticEnergyManipulator
+                        Automatically select the first fixture when opening Super Control
                       </span>
                     </label>
                     <label className={styles.checkboxLabel}>
@@ -2023,7 +1954,7 @@ export const UnifiedSettings: React.FC = () => {
                       />
                       <span className={styles.checkboxText}>Enable Animations</span>
                       <span className={styles.settingDescription} style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                        Enable smooth transitions and animations in the ChromaticEnergyManipulator interface
+                        Enable smooth transitions and animations in Super Control
                       </span>
                     </label>
                     <label className={styles.checkboxLabel}>
@@ -2036,11 +1967,41 @@ export const UnifiedSettings: React.FC = () => {
                       />
                       <span className={styles.checkboxText}>Compact Mode</span>
                       <span className={styles.settingDescription} style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                        Use a more compact layout in the ChromaticEnergyManipulator, reducing spacing and padding for a denser interface. 
+                        Use a more compact touch-friendly layout in Super Control (also enabled on phones and tablets). 
                         Useful for smaller screens or when you need to see more information at once.
                       </span>
                     </label>
                   </div>
+                </div>
+
+                <div className={styles.settingGroup}>
+                  <label className={styles.settingLabel}>
+                    <i className="fas fa-terminal"></i>
+                    Console debug logging
+                  </label>
+                  <label className={styles.checkboxLabel}>
+                    <input
+                      type="checkbox"
+                      checked={consoleDebugEnabled}
+                      onChange={(e) => {
+                        const on = e.target.checked;
+                        setDebugEnabled(on);
+                        setConsoleDebugEnabled(on);
+                        addNotification({
+                          message: on
+                            ? 'Verbose console logging enabled'
+                            : 'Verbose console logging disabled',
+                          type: 'info',
+                          priority: 'normal',
+                        });
+                      }}
+                    />
+                    <span className={styles.checkboxText}>Verbose store and MIDI logs</span>
+                  </label>
+                  <p className={styles.settingDescription}>
+                    Gates store and MIDI console output in production. Always on in dev builds.
+                    Persists via localStorage key artbastard-debug.
+                  </p>
                 </div>
 
                 <div className={styles.settingGroup}>
@@ -2060,7 +2021,7 @@ export const UnifiedSettings: React.FC = () => {
                     className={styles.settingInput}
                   />
                   <p className={styles.settingDescription}>
-                    Update frequency in milliseconds for the ChromaticEnergyManipulator interface. Lower values (50-100ms) provide 
+                    Update frequency in milliseconds for Super Control. Lower values (50-100ms) provide 
                     more responsive updates but use more CPU. Higher values (500-1000ms) reduce CPU usage but may feel less responsive. 
                     Default: 50ms for smooth real-time control.
                   </p>

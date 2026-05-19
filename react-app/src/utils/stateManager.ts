@@ -1,4 +1,6 @@
 import { useStore } from '../store';
+import { debugLog } from '../utils/debugLog';
+
 
 // Simplified state manager for essential save/load functionality
 export class StateManager {
@@ -73,7 +75,6 @@ export class StateManager {
         autoSceneTapTempoBpm: store.autoSceneTapTempoBpm,
         autoSceneTempoSource: store.autoSceneTempoSource,
         recordingActive: store.recordingActive,
-        automationTracks: store.automationTracks,
         automationPlayback: store.automationPlayback,
         smoothDmxEnabled: store.smoothDmxEnabled,
         smoothDmxUpdateRate: store.smoothDmxUpdateRate,
@@ -92,7 +93,7 @@ export class StateManager {
     try {
       const state = this.getCurrentState();
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(state));
-      console.log('💾 ArtBastard state saved locally');
+      debugLog.log('💾 ArtBastard state saved locally');
       return true;
     } catch (error) {
       console.error('Failed to save state locally:', error);
@@ -107,7 +108,7 @@ export class StateManager {
       if (!saved) return null;
       
       const state = JSON.parse(saved);
-      console.log(`💾 Loaded ArtBastard state (v${state.version}) from ${new Date(state.timestamp).toLocaleString()}`);
+      debugLog.log(`💾 Loaded ArtBastard state (v${state.version}) from ${new Date(state.timestamp).toLocaleString()}`);
       return state;
     } catch (error) {
       console.error('Failed to load state locally:', error);
@@ -130,7 +131,7 @@ export class StateManager {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       
-      console.log('📥 ArtBastard state exported as file');
+      debugLog.log('📥 ArtBastard state exported as file');
       return true;
     } catch (error) {
       console.error('Failed to export state as file:', error);
@@ -176,7 +177,7 @@ export class StateManager {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       
-      console.log('📥 ArtBastard localStorage exported as file');
+      debugLog.log('📥 ArtBastard localStorage exported as file');
       return true;
     } catch (error) {
       console.error('Failed to export localStorage as file:', error);
@@ -215,7 +216,7 @@ export class StateManager {
             }
           }
           
-          console.log(`📤 ArtBastard localStorage imported: ${restoredCount} items restored`);
+          debugLog.log(`📤 ArtBastard localStorage imported: ${restoredCount} items restored`);
           resolve(true);
         } catch (error) {
           console.error('Failed to import localStorage from file:', error);
@@ -255,7 +256,7 @@ export class StateManager {
           }
         }
         localStorage.setItem('artbastard-localStorage-backup', JSON.stringify(localStorageData));
-        console.log('💾 Auto-saved localStorage backup on exit');
+        debugLog.log('💾 Auto-saved localStorage backup on exit');
       } catch (error) {
         console.error('Auto-save on exit failed:', error);
       }
@@ -302,7 +303,7 @@ export class StateManager {
             throw new Error('Invalid ArtBastard state file format');
           }
           
-          console.log(`📤 Importing ArtBastard state (v${state.version}) from ${new Date(state.timestamp).toLocaleString()}`);
+          debugLog.log(`📤 Importing ArtBastard state (v${state.version}) from ${new Date(state.timestamp).toLocaleString()}`);
           resolve(state);
         } catch (error) {
           reject(new Error(`Failed to parse state file: ${(error as Error).message}`));
@@ -320,7 +321,7 @@ export class StateManager {
       
       // Handle comprehensive backup format (from Settings component)
       if (state.exportType === 'complete_artbastard_backup') {
-        console.log('📤 Applying comprehensive ArtBastard backup...');
+        debugLog.log('📤 Applying comprehensive ArtBastard backup...');
         
         // Import backend data (scenes, config, state) via API
         if (state.backendData) {
@@ -337,7 +338,7 @@ export class StateManager {
               if (!response.ok) {
                 throw new Error(`Failed to import scenes: ${response.statusText}`);
               }
-              console.log('✅ Scenes imported successfully');
+              debugLog.log('✅ Scenes imported successfully');
             } catch (error) {
               console.error('❌ Failed to import scenes:', error);
               throw new Error(`Failed to import scenes: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -355,7 +356,7 @@ export class StateManager {
               if (!response.ok) {
                 throw new Error(`Failed to import config: ${response.statusText}`);
               }
-              console.log('✅ Config imported successfully');
+              debugLog.log('✅ Config imported successfully');
             } catch (error) {
               console.error('❌ Failed to import config:', error);
               throw new Error(`Failed to import config: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -373,7 +374,7 @@ export class StateManager {
               if (!response.ok) {
                 throw new Error(`Failed to import state: ${response.statusText}`);
               }
-              console.log('✅ State imported successfully');
+              debugLog.log('✅ State imported successfully');
             } catch (error) {
               console.error('❌ Failed to import state:', error);
               throw new Error(`Failed to import state: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -464,10 +465,10 @@ export class StateManager {
         if (state.frontendSettings) {
           const frontendSettings = state.frontendSettings;
           // These would need to be handled by the Settings component
-          console.log('📤 Frontend settings available for import:', frontendSettings);
+          debugLog.log('📤 Frontend settings available for import:', frontendSettings);
         }
         
-        console.log('🎯 Comprehensive ArtBastard backup applied successfully');
+        debugLog.log('🎯 Comprehensive ArtBastard backup applied successfully');
         return true;
       }
       
@@ -547,7 +548,7 @@ export class StateManager {
         });
       }
       
-      console.log('🎯 ArtBastard state applied successfully');
+      debugLog.log('🎯 ArtBastard state applied successfully');
       return true;
       
     } catch (error) {

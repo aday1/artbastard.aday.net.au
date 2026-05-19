@@ -25,8 +25,8 @@ vi.mock('../../context/SocketContext', () => ({
   })
 }))
 
-vi.mock('../../context/ChromaticEnergyManipulatorContext', () => ({
-  useChromaticEnergyManipulatorSettings: () => ({
+vi.mock('../../context/SuperControlPreferencesContext', () => ({
+  useSuperControlPreferences: () => ({
     settings: {},
     updateSettings: vi.fn()
   })

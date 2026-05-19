@@ -1,7 +1,18 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useStore, ChannelEnvelope, WaveformType } from '../../store';
+import React, { useState } from 'react';
+import {
+  useStore,
+  ChannelEnvelope,
+  WaveformType,
+  EnvelopeRepeatMode,
+  EnvelopeLoopDirection,
+} from '../../store';
 import { useTheme } from '../../context/ThemeContext';
 import { LucideIcon } from '../ui/LucideIcon';
+import { SkeuoButton } from '../ui/SkeuoButton';
+import { MasterStyledSlider, RangeWindowControl } from '../ui/controls';
+import { RemasterPanel } from '../ui/remaster/RemasterPanel';
+import { EnvelopeDrawCanvas } from './EnvelopeDrawCanvas';
+import { defaultEnvelopeDraft, bakeWaveformToPoints } from '../../utils/envelopeDefaults';
 import styles from './EnvelopeAutomation.module.scss';
 
 export const EnvelopeAutomation: React.FC = () => {
@@ -42,21 +53,9 @@ export const EnvelopeAutomation: React.FC = () => {
 
   const [editingEnvelope, setEditingEnvelope] = useState<ChannelEnvelope | null>(null);
   const [showEditor, setShowEditor] = useState(false);
-  const [newEnvelope, setNewEnvelope] = useState<Omit<ChannelEnvelope, 'id'>>({
-    channel: selectedChannels[0] || 0,
-    enabled: true,
-    waveform: 'sine',
-    customPoints: [{ x: 0, y: 0 }, { x: 1, y: 1 }],
-    amplitude: 100,
-    offset: 0,
-    phase: 0,
-    tempoSync: true,
-    tempoMultiplier: 4, // Quarter note
-    loop: true,
-    min: 0,
-    max: 255,
-    speed: 1.0
-  });
+  const [newEnvelope, setNewEnvelope] = useState<Omit<ChannelEnvelope, 'id'>>(() =>
+    defaultEnvelopeDraft(selectedChannels[0] || 0)
+  );
 
   const handleAddEnvelope = () => {
     // Use first selected channel if available, otherwise default to channel 0
@@ -67,14 +66,15 @@ export const EnvelopeAutomation: React.FC = () => {
   };
 
   const handleEditEnvelope = (envelope: ChannelEnvelope) => {
-    // Ensure min/max/speed values exist (for backwards compatibility with old envelopes)
-    const envelopeWithDefaults = {
-      ...envelope,
+    const { id: _id, ...draft } = envelope;
+    setNewEnvelope({
+      ...draft,
       min: envelope.min ?? 0,
       max: envelope.max ?? 255,
-      speed: envelope.speed ?? 1.0
-    };
-    setNewEnvelope(envelopeWithDefaults);
+      speed: envelope.speed ?? 1.0,
+      repeatMode: envelope.repeatMode ?? 'loop',
+      loopDirection: envelope.loopDirection ?? 'forward',
+    });
     setEditingEnvelope(envelope);
     setShowEditor(true);
   };
@@ -89,62 +89,40 @@ export const EnvelopeAutomation: React.FC = () => {
     setEditingEnvelope(null);
     // Reset to default values for next envelope
     const defaultChannel = selectedChannels.length > 0 ? selectedChannels[0] : 0;
-    setNewEnvelope({
-      channel: defaultChannel,
-      enabled: true,
-      waveform: 'sine',
-      customPoints: [{ x: 0, y: 0 }, { x: 1, y: 1 }],
-      amplitude: 100,
-      offset: 0,
-      phase: 0,
-      tempoSync: true,
-      tempoMultiplier: 4,
-      loop: true,
-      min: 0,
-      max: 255,
-      speed: 1.0
-    });
+    setNewEnvelope(defaultEnvelopeDraft(defaultChannel));
   };
 
   const handleCancel = () => {
     setShowEditor(false);
     setEditingEnvelope(null);
-    // Reset to default values when canceling
     const defaultChannel = selectedChannels.length > 0 ? selectedChannels[0] : 0;
-    setNewEnvelope({
-      channel: defaultChannel,
-      enabled: true,
-      waveform: 'sine',
-      customPoints: [{ x: 0, y: 0 }, { x: 1, y: 1 }],
-      amplitude: 100,
-      offset: 0,
-      phase: 0,
-      tempoSync: true,
-      tempoMultiplier: 4,
-      loop: true,
-      min: 0,
-      max: 255,
-      speed: 1.0
-    });
+    setNewEnvelope(defaultEnvelopeDraft(defaultChannel));
   };
 
   return (
     <div className={styles.envelopeAutomation}>
-      <div className={styles.header}>
-        <h2>
-          <LucideIcon name="Activity" />
-          {theme === 'artsnob' && 'Envelope Automation: The Rhythm of Light'}
-          {theme === 'standard' && 'Envelope Automation'}
-          {theme === 'minimal' && 'Envelopes'}
-        </h2>
-        <button
-          className={`${styles.toggleButton} ${envelopeAutomation.globalEnabled ? styles.active : ''}`}
-          onClick={toggleGlobalEnvelope}
-        >
-          <LucideIcon name={envelopeAutomation.globalEnabled ? "Square" : "Play"} />
-          {envelopeAutomation.globalEnabled ? 'Stop' : 'Start'}
-        </button>
-      </div>
+      <RemasterPanel
+        className={styles.remasterRoot}
+        title={
+          <>
+            <LucideIcon name="Activity" />
+            {theme === 'artsnob' && 'Envelope Automation: The Rhythm of Light'}
+            {theme === 'standard' && 'Envelope Automation'}
+            {theme === 'minimal' && 'Envelopes'}
+            <span className={styles.easeBadge}>outExpo</span>
+          </>
+        }
+        actions={
+          <button
+            type="button"
+            className={`${styles.toggleButton} ${envelopeAutomation.globalEnabled ? styles.active : ''}`}
+            onClick={toggleGlobalEnvelope}
+          >
+            <LucideIcon name={envelopeAutomation.globalEnabled ? 'Square' : 'Play'} />
+            {envelopeAutomation.globalEnabled ? 'Stop' : 'Start'}
+          </button>
+        }
+      >
 
       <div className={styles.content}>
         {/* Speed/Timer Control */}
@@ -152,7 +130,7 @@ export const EnvelopeAutomation: React.FC = () => {
           <div className={styles.speedControlHeader}>
             <label>
               <LucideIcon name="Gauge" size={16} />
-              Speed: {envelopeAutomation.speed.toFixed(2)}x
+              Global speed: {envelopeAutomation.speed.toFixed(2)}x
             </label>
             <div className={styles.midiControls}>
               {(() => {
@@ -191,14 +169,13 @@ export const EnvelopeAutomation: React.FC = () => {
               })()}
             </div>
           </div>
-          <input
-            type="range"
-            min="0.1"
-            max="2.0"
-            step="0.1"
+          <MasterStyledSlider
+            vertical={false}
+            min={0.1}
+            max={2}
+            step={0.1}
             value={envelopeAutomation.speed}
-            onChange={(e) => setEnvelopeSpeed(parseFloat(e.target.value))}
-            className={styles.speedSlider}
+            onChange={setEnvelopeSpeed}
           />
           {envelopeSpeedMidiMapping && (
             <div className={styles.midiMappingDisplay}>
@@ -237,6 +214,7 @@ export const EnvelopeAutomation: React.FC = () => {
                   onDelete={() => removeEnvelope(envelope.id)}
                   onSpeedChange={(speed) => updateEnvelope(envelope.id, { speed })}
                   globalEnabled={envelopeAutomation.globalEnabled}
+                  globalSpeed={envelopeAutomation.speed}
                 />
               ))}
             </div>
@@ -255,6 +233,7 @@ export const EnvelopeAutomation: React.FC = () => {
           />
         )}
       </div>
+      </RemasterPanel>
     </div>
   );
 };
@@ -268,6 +247,7 @@ interface EnvelopeCardProps {
   onDelete: () => void;
   onSpeedChange: (speed: number) => void;
   globalEnabled: boolean;
+  globalSpeed: number;
 }
 
 const EnvelopeCard: React.FC<EnvelopeCardProps> = ({
@@ -278,7 +258,8 @@ const EnvelopeCard: React.FC<EnvelopeCardProps> = ({
   onToggle,
   onDelete,
   onSpeedChange,
-  globalEnabled
+  globalEnabled,
+  globalSpeed,
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   
@@ -319,9 +300,19 @@ const EnvelopeCard: React.FC<EnvelopeCardProps> = ({
 
       {!isCollapsed && (
         <div className={styles.cardBody}>
+          <EnvelopeDrawCanvas
+            envelope={envelope}
+            bpm={bpm}
+            globalSpeed={globalSpeed * (envelope.speed ?? 1)}
+            animatePlayhead={globalEnabled && envelope.enabled}
+            className={styles.cardCanvas}
+          />
           <div className={styles.waveformInfo}>
             <LucideIcon name={waveformIcons[envelope.waveform]} />
             <span className={styles.waveformName}>{envelope.waveform.toUpperCase()}</span>
+            <span className={styles.playbackBadge}>
+              {envelope.repeatMode === 'once' ? 'once' : envelope.loopDirection}
+            </span>
           </div>
 
           <div className={styles.envelopeParams}>
@@ -366,14 +357,14 @@ const EnvelopeCard: React.FC<EnvelopeCardProps> = ({
                 </button>
               </div>
             </div>
-            <input
-              type="range"
-              min="0.1"
-              max="2.0"
-              step="0.1"
+            <MasterStyledSlider
+              vertical={false}
+              min={0.1}
+              max={2}
+              step={0.1}
               value={envelope.speed ?? 1.0}
-              onChange={(e) => onSpeedChange(parseFloat(e.target.value))}
-              className={styles.speedSlider}
+              onChange={onSpeedChange}
+              disabled={!globalEnabled}
             />
           </div>
         </div>
@@ -403,6 +394,16 @@ interface EnvelopeEditorProps {
   channelNames: string[];
 }
 
+const SegmentButton: React.FC<{
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}> = ({ active, onClick, children }) => (
+  <SkeuoButton compact active={active} className={styles.segmentBtn} onClick={onClick}>
+    {children}
+  </SkeuoButton>
+);
+
 const EnvelopeEditor: React.FC<EnvelopeEditorProps> = ({
   envelope,
   onChange,
@@ -412,155 +413,53 @@ const EnvelopeEditor: React.FC<EnvelopeEditorProps> = ({
   bpm,
   channelNames
 }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-
-  useEffect(() => {
-    drawWaveform();
-  }, [envelope.waveform, envelope.customPoints, envelope.amplitude, envelope.offset]);
-
-  const drawWaveform = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const width = canvas.width;
-    const height = canvas.height;
-
-    // Clear canvas
-    ctx.clearRect(0, 0, width, height);
-
-    // Draw grid
-    ctx.strokeStyle = '#333';
-    ctx.lineWidth = 1;
-    for (let i = 0; i <= 10; i++) {
-      const y = (height / 10) * i;
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(width, y);
-      ctx.stroke();
-    }
-
-    // Draw waveform
-    ctx.strokeStyle = '#4a9eff';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-
-    const points: Array<{ x: number; y: number }> = [];
-
-    for (let x = 0; x < width; x++) {
-      const progress = x / width;
-      let value = 0;
-
-      switch (envelope.waveform) {
-        case 'sine':
-          value = Math.sin(progress * Math.PI * 2) * 0.5 + 0.5;
-          break;
-        case 'saw':
-          value = progress;
-          break;
-        case 'square':
-          value = progress < 0.5 ? 1 : 0;
-          break;
-        case 'triangle':
-          value = progress < 0.5 ? progress * 2 : 2 - (progress * 2);
-          break;
-        case 'custom':
-          if (envelope.customPoints.length > 0) {
-            const sortedPoints = [...envelope.customPoints].sort((a, b) => a.x - b.x);
-            let point1 = sortedPoints[0];
-            let point2 = sortedPoints[sortedPoints.length - 1];
-
-            for (let i = 0; i < sortedPoints.length - 1; i++) {
-              if (progress >= sortedPoints[i].x && progress <= sortedPoints[i + 1].x) {
-                point1 = sortedPoints[i];
-                point2 = sortedPoints[i + 1];
-                break;
-              }
-            }
-
-            const t = (progress - point1.x) / (point2.x - point1.x || 0.001);
-            value = point1.y + (point2.y - point1.y) * t;
-          }
-          break;
-      }
-
-      const y = height - (value * height);
-      points.push({ x, y });
-
-      if (x === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
-    }
-
-    ctx.stroke();
-
-    // Draw custom points
-    if (envelope.waveform === 'custom') {
-      envelope.customPoints.forEach(point => {
-        const x = point.x * width;
-        const y = height - (point.y * height);
-        ctx.fillStyle = '#4a9eff';
-        ctx.beginPath();
-        ctx.arc(x, y, 4, 0, Math.PI * 2);
-        ctx.fill();
+  const setWaveform = (waveform: WaveformType) => {
+    if (waveform === 'custom' && envelope.waveform !== 'custom') {
+      onChange({
+        ...envelope,
+        waveform: 'custom',
+        customPoints: bakeWaveformToPoints(envelope.waveform, 48),
       });
+      return;
     }
-  };
-
-  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (envelope.waveform !== 'custom') return;
-
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = 1 - (e.clientY - rect.top) / rect.height;
-
-    const newPoints = [...envelope.customPoints, { x, y }].sort((a, b) => a.x - b.x);
-    onChange({ ...envelope, customPoints: newPoints });
-  };
-
-  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawing || envelope.waveform !== 'custom') return;
-
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = 1 - (e.clientY - rect.top) / rect.height;
-
-    // Find nearest point and update it
-    const sortedPoints = [...envelope.customPoints].sort((a, b) => a.x - b.x);
-    let nearestIndex = 0;
-    let minDist = Infinity;
-
-    sortedPoints.forEach((point, index) => {
-      const dist = Math.abs(point.x - x);
-      if (dist < minDist) {
-        minDist = dist;
-        nearestIndex = index;
-      }
-    });
-
-    if (minDist < 0.05) {
-      const newPoints = [...envelope.customPoints];
-      newPoints[nearestIndex] = { x, y: Math.max(0, Math.min(1, y)) };
-      onChange({ ...envelope, customPoints: newPoints });
-    }
+    onChange({ ...envelope, waveform });
   };
 
   return (
     <div className={styles.editor}>
-      <h3>Edit Envelope</h3>
+      <h3>Envelope editor</h3>
 
-      <div className={styles.editorForm}>
+      <div className={styles.editorLayout}>
+        <div className={styles.drawStage}>
+          <EnvelopeDrawCanvas
+            envelope={envelope}
+            bpm={bpm}
+            globalSpeed={envelope.speed ?? 1}
+            editable
+            animatePlayhead
+            onPointsChange={(customPoints) =>
+              onChange({ ...envelope, waveform: 'custom', customPoints })
+            }
+            onWaveformChange={(waveform) => onChange({ ...envelope, waveform })}
+          />
+          {envelope.waveform === 'custom' && (
+            <div className={styles.customControls}>
+              <button
+                type="button"
+                onClick={() =>
+                  onChange({
+                    ...envelope,
+                    customPoints: bakeWaveformToPoints('sine', 32),
+                  })
+                }
+              >
+                Reset curve
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className={styles.editorSidebar}>
         <div className={styles.formGroup}>
           <label>Channel:</label>
           <select
@@ -590,91 +489,111 @@ const EnvelopeEditor: React.FC<EnvelopeEditorProps> = ({
         </div>
 
         <div className={styles.formGroup}>
-          <label>Waveform:</label>
-          <select
-            value={envelope.waveform}
-            onChange={(e) => onChange({ ...envelope, waveform: e.target.value as WaveformType })}
-          >
+          <label>Waveform</label>
+          <select value={envelope.waveform} onChange={(e) => setWaveform(e.target.value as WaveformType)}>
             <option value="sine">Sine</option>
             <option value="saw">Saw</option>
             <option value="square">Square</option>
             <option value="triangle">Triangle</option>
-            <option value="custom">Custom (Draw)</option>
+            <option value="custom">Draw custom</option>
           </select>
         </div>
 
         <div className={styles.formGroup}>
+          <label>Playback</label>
+          <div className={styles.segmentRow}>
+            <SegmentButton
+              active={envelope.repeatMode === 'once'}
+              onClick={() => onChange({ ...envelope, repeatMode: 'once' as EnvelopeRepeatMode })}
+            >
+              Once
+            </SegmentButton>
+            <SegmentButton
+              active={envelope.repeatMode === 'loop'}
+              onClick={() => onChange({ ...envelope, repeatMode: 'loop' as EnvelopeRepeatMode })}
+            >
+              Repeat
+            </SegmentButton>
+          </div>
+        </div>
+
+        <div className={styles.formGroup}>
+          <label>Direction</label>
+          <div className={styles.segmentRow}>
+            <SegmentButton
+              active={envelope.loopDirection === 'forward'}
+              onClick={() => onChange({ ...envelope, loopDirection: 'forward' as EnvelopeLoopDirection })}
+            >
+              Forward
+            </SegmentButton>
+            <SegmentButton
+              active={envelope.loopDirection === 'reverse'}
+              onClick={() => onChange({ ...envelope, loopDirection: 'reverse' as EnvelopeLoopDirection })}
+            >
+              Reverse
+            </SegmentButton>
+            <SegmentButton
+              active={envelope.loopDirection === 'pingpong'}
+              onClick={() => onChange({ ...envelope, loopDirection: 'pingpong' as EnvelopeLoopDirection })}
+            >
+              Ping-pong
+            </SegmentButton>
+          </div>
+        </div>
+
+        <div className={styles.formGroup}>
           <label>Amplitude: {envelope.amplitude}%</label>
-          <input
-            type="range"
-            min="0"
-            max="100"
+          <MasterStyledSlider
+            vertical={false}
+            min={0}
+            max={100}
             value={envelope.amplitude}
-            onChange={(e) => onChange({ ...envelope, amplitude: parseInt(e.target.value) })}
+            onChange={(v) => onChange({ ...envelope, amplitude: Math.round(v) })}
           />
         </div>
 
         <div className={styles.formGroup}>
           <label>Offset: {envelope.offset}</label>
-          <input
-            type="range"
-            min="0"
-            max="255"
+          <MasterStyledSlider
+            vertical={false}
+            min={0}
+            max={255}
             value={envelope.offset}
-            onChange={(e) => onChange({ ...envelope, offset: parseInt(e.target.value) })}
+            onChange={(v) => onChange({ ...envelope, offset: Math.round(v) })}
           />
         </div>
 
         <div className={styles.formGroup}>
-          <label>Min Value: {envelope.min ?? 0}</label>
-          <input
-            type="range"
-            min="0"
-            max={envelope.max ?? 255}
-            value={envelope.min ?? 0}
-            onChange={(e) => {
-              const newMin = parseInt(e.target.value);
-              const currentMax = envelope.max ?? 255;
-              onChange({ ...envelope, min: newMin, max: Math.max(newMin, currentMax) });
-            }}
-          />
-        </div>
-
-        <div className={styles.formGroup}>
-          <label>Max Value: {envelope.max ?? 255}</label>
-          <input
-            type="range"
-            min={envelope.min ?? 0}
-            max="255"
-            value={envelope.max ?? 255}
-            onChange={(e) => {
-              const newMax = parseInt(e.target.value);
-              const currentMin = envelope.min ?? 0;
-              onChange({ ...envelope, max: newMax, min: Math.min(newMax, currentMin) });
-            }}
+          <label>DMX window</label>
+          <RangeWindowControl
+            min={0}
+            max={255}
+            minValue={envelope.min ?? 0}
+            maxValue={envelope.max ?? 255}
+            onChange={(newMin, newMax) => onChange({ ...envelope, min: newMin, max: newMax })}
           />
         </div>
 
         <div className={styles.formGroup}>
           <label>Phase: {envelope.phase}°</label>
-          <input
-            type="range"
-            min="0"
-            max="360"
+          <MasterStyledSlider
+            vertical={false}
+            min={0}
+            max={360}
             value={envelope.phase}
-            onChange={(e) => onChange({ ...envelope, phase: parseInt(e.target.value) })}
+            onChange={(v) => onChange({ ...envelope, phase: Math.round(v) })}
           />
         </div>
 
         <div className={styles.formGroup}>
           <label>Speed: {(envelope.speed ?? 1.0).toFixed(2)}x</label>
-          <input
-            type="range"
-            min="0.1"
-            max="2.0"
-            step="0.1"
+          <MasterStyledSlider
+            vertical={false}
+            min={0.1}
+            max={2}
+            step={0.1}
             value={envelope.speed ?? 1.0}
-            onChange={(e) => onChange({ ...envelope, speed: parseFloat(e.target.value) })}
+            onChange={(v) => onChange({ ...envelope, speed: v })}
           />
         </div>
 
@@ -705,46 +624,16 @@ const EnvelopeEditor: React.FC<EnvelopeEditorProps> = ({
           </div>
         )}
 
-        <div className={styles.waveformPreview}>
-          <canvas
-            ref={canvasRef}
-            width={400}
-            height={200}
-            onClick={handleCanvasClick}
-            onMouseDown={() => setIsDrawing(true)}
-            onMouseUp={() => setIsDrawing(false)}
-            onMouseLeave={() => setIsDrawing(false)}
-            onMouseMove={handleCanvasMouseMove}
-            className={styles.canvas}
-          />
         </div>
+      </div>
 
-        {envelope.waveform === 'custom' && (
-          <div className={styles.customControls}>
-            <button
-              onClick={() => onChange({ ...envelope, customPoints: [{ x: 0, y: 0 }, { x: 1, y: 1 }] })}
-            >
-              Reset
-            </button>
-            <button
-              onClick={() => {
-                const newPoints = envelope.customPoints.filter((_, i) => i !== envelope.customPoints.length - 1);
-                onChange({ ...envelope, customPoints: newPoints });
-              }}
-            >
-              Remove Last Point
-            </button>
-          </div>
-        )}
-
-        <div className={styles.editorActions}>
-          <button className={styles.cancelButton} onClick={onCancel}>
-            Cancel
-          </button>
-          <button className={styles.saveButton} onClick={onSave}>
-            Save
-          </button>
-        </div>
+      <div className={styles.editorActions}>
+        <button type="button" className={styles.cancelButton} onClick={onCancel}>
+          Cancel
+        </button>
+        <button type="button" className={styles.saveButton} onClick={onSave}>
+          Save
+        </button>
       </div>
     </div>
   );

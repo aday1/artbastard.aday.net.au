@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useStore } from '../../store';
 import { LucideIcon } from '../ui/LucideIcon';
 import { MidiLearnButton } from '../midi/MidiLearnButton';
+import { DmxFaderRow } from '../ui/controls';
+import { getFixtureInfoForChannel, getFixtureTypeColor } from '../../utils/fixturePresentation';
 import styles from './DmxChannelEditor.module.scss';
 
 interface DmxChannelEditorProps {
@@ -111,67 +113,10 @@ export const DmxChannelEditor: React.FC<DmxChannelEditorProps> = ({
     return groups;
   }, [fixtures]);
 
-  const getFixtureColor = (type: string): string => {
-    const colorMap: Record<string, string> = {
-      'moving-head': '#ff6b6b',
-      'par': '#4ecdc4',
-      'strip': '#45b7d1',
-      'laser': '#96ceb4',
-      'strobe': '#feca57',
-      'smoke': '#a55eea',
-      default: '#fd79a8',
-    };
-    return colorMap[type.toLowerCase()] || colorMap.default;
-  };
+  const getFixtureColor = getFixtureTypeColor;
 
-  const getFixtureInfoForChannel = (channelIndex: number) => {
-    const dmxAddress = channelIndex + 1;
-    
-    for (const fixture of fixtures) {
-      const fixtureStartAddress = fixture.startAddress;
-      const fixtureEndAddress = fixtureStartAddress + fixture.channels.length - 1;
-      
-      if (dmxAddress >= fixtureStartAddress && dmxAddress <= fixtureEndAddress) {
-        const channelOffset = dmxAddress - fixtureStartAddress;
-        const channel = fixture.channels[channelOffset];
-        
-        if (channel) {
-          return {
-            fixtureName: fixture.name,
-            channelFunction: channel.name || `${channel.type} Channel`,
-            channelType: channel.type,
-            shortFunction: getShortFunctionName(channel.type)
-          };
-        }
-      }
-    }
-    
-    return null;
-  };
-
-  const getShortFunctionName = (type: string): string => {
-    switch (type) {
-      case 'red': case 'green': case 'blue': case 'white': case 'amber': case 'uv': 
-        return type.toUpperCase();
-      case 'pan': case 'tilt': return type.toUpperCase();
-      case 'pan_fine': return 'PAN-F';
-      case 'tilt_fine': return 'TILT-F';
-      case 'dimmer': return 'DIM';
-      case 'shutter': return 'SHUT';
-      case 'strobe': return 'STRB';
-      case 'color_wheel': return 'CW';
-      case 'gobo_wheel': return 'GOBO';
-      case 'gobo_rotation': return 'G-ROT';
-      case 'zoom': return 'ZOOM';
-      case 'focus': return 'FOCUS';
-      case 'prism': return 'PRISM';
-      case 'iris': return 'IRIS';
-      case 'speed': return 'SPEED';
-      case 'macro': return 'MACRO';
-      case 'effect': return 'FX';
-      default: return type.toUpperCase();
-    }
-  };
+  const resolveFixtureInfo = (channelIndex: number) =>
+    getFixtureInfoForChannel(channelIndex, fixtures);
 
   const filteredChannels = React.useMemo(() => {
     let channels = Array.from({ length: 512 }, (_, i) => i);
@@ -180,7 +125,7 @@ export const DmxChannelEditor: React.FC<DmxChannelEditorProps> = ({
     if (filterText) {
       channels = channels.filter(i => {
         const name = channelNames[i] || `CH ${i + 1}`;
-        const fixtureInfo = getFixtureInfoForChannel(i);
+        const fixtureInfo = resolveFixtureInfo(i);
         const searchText = filterText.toLowerCase();
         
         return name.toLowerCase().includes(searchText) ||
@@ -429,20 +374,14 @@ export const DmxChannelEditor: React.FC<DmxChannelEditorProps> = ({
         {/* Advanced Controls */}
         {showAdvancedControls && (
           <div className={styles.advancedControls}>
-            <div className={styles.masterFader}>
-              <label>Master Fader</label>
-              <div className={styles.faderContainer}>
-                <input
-                  type="range"
-                  min="0"
-                  max="255"
-                  value={masterFader}
-                  onChange={(e) => handleMasterFaderChange(parseInt(e.target.value))}
-                  className={styles.masterFaderSlider}
-                />
-                <span className={styles.faderValue}>{masterFader}</span>
-              </div>
-            </div>
+            <DmxFaderRow
+              label="Master Fader"
+              controlName="dmx-editor-master"
+              value={masterFader}
+              showOsc={false}
+              showMidi={false}
+              onChange={(v) => handleMasterFaderChange(Math.round(v))}
+            />
 
             <div className={styles.groupSelector}>
               <label>Filter by Group</label>
@@ -519,7 +458,7 @@ export const DmxChannelEditor: React.FC<DmxChannelEditorProps> = ({
               {filteredChannels.map(channelIndex => {
                 const value = dmxChannels[channelIndex] || 0;
                 const name = channelNames[channelIndex] || `CH ${channelIndex + 1}`;
-                const fixtureInfo = getFixtureInfoForChannel(channelIndex);
+                const fixtureInfo = resolveFixtureInfo(channelIndex);
                 const isSelected = localSelectedChannels.includes(channelIndex);
                 const isActive = value > 0;
 
@@ -551,17 +490,17 @@ export const DmxChannelEditor: React.FC<DmxChannelEditorProps> = ({
                       </div>
                     </div>
 
-                    <div className={styles.channelSlider}>
-                      <input
-                        type="range"
-                        min="0"
-                        max="255"
-                        value={value}
-                        onChange={(e) => handleChannelValueChange(channelIndex, parseInt(e.target.value))}
-                        onClick={(e) => e.stopPropagation()}
-                        className={styles.slider}
-                      />
-                    </div>
+                    <DmxFaderRow
+                      compact
+                      label={`CH ${channelIndex + 1}`}
+                      subtitle={fixtureInfo?.fixtureName}
+                      meta={fixtureInfo?.shortFunction || name}
+                      controlName={`editor-ch-${channelIndex}`}
+                      value={value}
+                      showOsc={false}
+                      showMidi={false}
+                      onChange={(v) => handleChannelValueChange(channelIndex, Math.round(v))}
+                    />
 
                     <div className={styles.channelActions}>
                       <MidiLearnButton channelIndex={channelIndex} />

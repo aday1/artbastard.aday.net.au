@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useStore, Act, ActPlaybackState } from '../../store';
+import { HorizontalFader } from '../ui/controls';
 import styles from './ActPlayer.module.scss';
 
 interface ActPlayerProps {
@@ -39,11 +40,6 @@ export const ActPlayer: React.FC<ActPlayerProps> = ({ act, playbackState }) => {
           
           setCurrentTime(elapsed);
           setActStepProgress(progress);
-          
-          // Auto-advance to next step
-          if (progress >= 1) {
-            nextActStep();
-          }
         }
       }, 100);
     }
@@ -177,14 +173,12 @@ export const ActPlayer: React.FC<ActPlayerProps> = ({ act, playbackState }) => {
 
           <div className={styles.speedControl}>
             <label>Speed:</label>
-            <input
-              type="range"
-              min="0.1"
-              max="2.0"
-              step="0.1"
+            <HorizontalFader
+              min={0.1}
+              max={2.0}
+              step={0.1}
               value={playbackState.playbackSpeed}
-              onChange={(e) => handleSpeedChange(Number(e.target.value))}
-              className={styles.speedSlider}
+              onChange={handleSpeedChange}
             />
             <span className={styles.speedValue}>
               {playbackState.playbackSpeed.toFixed(1)}x

@@ -25,14 +25,13 @@ export const SkeuoButton: React.FC<SkeuoButtonProps> = ({
   const [pressed, setPressed] = useState(false);
 
   const classes = [
-    'ab-wire-btn',
     'ab-skeuo-btn',
-    variant === 'pill' ? 'ab-wire-btn--pill ab-skeuo-btn--pill' : '',
-    variant === 'wide' ? 'ab-wire-btn--wide ab-skeuo-btn--wide' : '',
-    compact ? 'ab-wire-btn--compact ab-skeuo-btn--compact' : '',
-    active ? 'ab-wire-btn--active ab-skeuo-btn--active' : '',
-    accent === 'purple' ? 'ab-wire-btn--accent-copper ab-skeuo-btn--accent-purple' : '',
-    accent === 'green' ? 'ab-wire-btn--accent-green ab-skeuo-btn--accent-green' : '',
+    variant === 'pill' ? 'ab-skeuo-btn--pill' : '',
+    variant === 'wide' ? 'ab-skeuo-btn--wide' : '',
+    compact ? 'ab-skeuo-btn--compact' : '',
+    active ? 'ab-skeuo-btn--active' : '',
+    accent === 'purple' ? 'ab-skeuo-btn--accent-purple' : '',
+    accent === 'green' ? 'ab-skeuo-btn--accent-green' : '',
     pressed ? 'pressed' : '',
     className,
   ]
@@ -58,6 +57,11 @@ export const SkeuoButton: React.FC<SkeuoButtonProps> = ({
       }}
       {...rest}
     >
+      <span className="ab-skeuo-btn__mask" aria-hidden>
+        <span className="ab-skeuo-btn__inner" />
+      </span>
+      <span className="ab-skeuo-btn__light" aria-hidden />
+      <span className="ab-skeuo-btn__ring" aria-hidden />
       <span className="ab-skeuo-btn__label">{children}</span>
     </button>
   );

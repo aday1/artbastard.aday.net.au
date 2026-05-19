@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useStore } from '../../store';
+import { HorizontalFader } from '../ui/controls';
 import styles from './BPMDashboard.module.scss';
+import { debugLog } from '../../utils/debugLog';
+
 
 interface BPMDashboardProps {
   className?: string;
@@ -28,6 +31,10 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
     autoSceneManualBpm,
     autoSceneTapTempoBpm,
     setAutoSceneTempoSource,
+    requestMasterClockSourceChange,
+    abletonLinkPeers,
+    abletonLinkAvailable,
+    selectedMidiClockHostId,
     setManualBpm,
     recordTapTempo,
     requestToggleMasterClockPlayPause,
@@ -91,7 +98,7 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
 
   // Handle play/pause with better feedback
   const handlePlayPause = () => {
-    console.log('BPM Dashboard: Play/Pause clicked', { 
+    debugLog.log('BPM Dashboard: Play/Pause clicked', { 
       currentlyPlaying: midiClockIsPlaying, 
       socketExists: !!socket,
       currentBPM: autoSceneTempoSource === 'tap_tempo' ? autoSceneTapTempoBpm : autoSceneManualBpm 
@@ -102,7 +109,7 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
       requestToggleMasterClockPlayPause();
     } else {
       // Local fallback - directly toggle the state
-      console.log('BPM Dashboard: Using local fallback for play/pause');
+      debugLog.log('BPM Dashboard: Using local fallback for play/pause');
       setMidiClockIsPlaying(!midiClockIsPlaying);
       
       // Also set BPM if we're starting
@@ -113,12 +120,26 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
     }
   };
 
-  const currentBpm = autoSceneTempoSource === 'tap_tempo' ? autoSceneTapTempoBpm : autoSceneManualBpm;
+  const currentBpm =
+    autoSceneTempoSource === 'tap_tempo'
+      ? autoSceneTapTempoBpm
+      : autoSceneTempoSource === 'manual_bpm'
+        ? autoSceneManualBpm
+        : midiClockBpm;
   const isPlaying = midiClockIsPlaying;
+
+  const selectTempoSource = (source: 'internal_clock' | 'manual_bpm' | 'tap_tempo' | 'ableton_link') => {
+    setAutoSceneTempoSource(source);
+    if (source === 'ableton_link') {
+      requestMasterClockSourceChange('ableton-link');
+    } else if (source === 'internal_clock' || source === 'tap_tempo') {
+      requestMasterClockSourceChange('internal');
+    }
+  };
 
   // Visual beat indicator
   useEffect(() => {
-    console.log('BPM Dashboard: Beat indicator effect', { 
+    debugLog.log('BPM Dashboard: Beat indicator effect', { 
       isPlaying: midiClockIsPlaying, 
       bpm: midiClockBpm,
       currentBpm 
@@ -126,7 +147,7 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
     
     if (midiClockIsPlaying && currentBpm > 0) {
       const beatInterval = (60 / currentBpm) * 1000; // Use currentBpm instead of midiClockBpm
-      console.log('BPM Dashboard: Starting beat indicator', { beatInterval, bpm: currentBpm });
+      debugLog.log('BPM Dashboard: Starting beat indicator', { beatInterval, bpm: currentBpm });
       
       const flashBeat = () => {
         setIsFlashing(true);
@@ -139,18 +160,18 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
       const intervalId = setInterval(flashBeat, beatInterval);
       
       return () => {
-        console.log('BPM Dashboard: Stopping beat indicator');
+        debugLog.log('BPM Dashboard: Stopping beat indicator');
         clearInterval(intervalId);
       };
     } else {
-      console.log('BPM Dashboard: Beat indicator stopped - not playing or BPM is 0');
+      debugLog.log('BPM Dashboard: Beat indicator stopped - not playing or BPM is 0');
       setIsFlashing(false);
     }
   }, [midiClockBpm, midiClockIsPlaying, currentBpm]);
 
   // Handle tap tempo
   const handleTap = () => {
-    console.log('BPM Dashboard: TAP button pressed');
+    debugLog.log('BPM Dashboard: TAP button pressed');
     
     // Use the store's tap tempo function
     recordTapTempo();
@@ -185,7 +206,7 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
   // Handle BPM input change
   const handleBpmChange = (value: number) => {
     const newBpm = Math.max(60, Math.min(200, value));
-    console.log('BPM Dashboard: BPM changed to', newBpm);
+    debugLog.log('BPM Dashboard: BPM changed to', newBpm);
     setManualBpm(newBpm);
     setAutoSceneTempoSource('manual_bpm');
     
@@ -241,17 +262,35 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
             <div className={styles.sourceButtons}>
               <button
                 className={`${styles.sourceButton} ${autoSceneTempoSource === 'manual_bpm' ? styles.active : ''}`}
-                onClick={() => setAutoSceneTempoSource('manual_bpm')}
+                onClick={() => selectTempoSource('manual_bpm')}
               >
                 Internal
               </button>
               <button
                 className={`${styles.sourceButton} ${autoSceneTempoSource === 'tap_tempo' ? styles.active : ''}`}
-                onClick={() => { setAutoSceneTempoSource('tap_tempo'); }}
+                onClick={() => selectTempoSource('tap_tempo')}
               >
                 Tap
               </button>
+              <button
+                className={`${styles.sourceButton} ${autoSceneTempoSource === 'internal_clock' ? styles.active : ''}`}
+                onClick={() => selectTempoSource('internal_clock')}
+              >
+                MIDI Clock
+              </button>
+              <button
+                className={`${styles.sourceButton} ${autoSceneTempoSource === 'ableton_link' ? styles.active : ''}`}
+                onClick={() => selectTempoSource('ableton_link')}
+                title={abletonLinkAvailable ? `Ableton Link (${abletonLinkPeers} peers)` : 'Ableton Link requires server native module'}
+              >
+                Link{abletonLinkAvailable ? ` (${abletonLinkPeers})` : ''}
+              </button>
             </div>
+            {selectedMidiClockHostId === 'ableton-link' && (
+              <p className={styles.linkHint}>
+                Session tempo from Ableton Link. Install optional dependency on the Node server if unavailable.
+              </p>
+            )}
           </div>
 
 
@@ -270,13 +309,11 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
                 <span className={styles.bpmLabel}>BPM</span>
               </div>
               <div className={styles.bpmSlider}>
-                <input
-                  type="range"
-                  min="60"
-                  max="200"
+                <HorizontalFader
+                  min={60}
+                  max={200}
                   value={autoSceneManualBpm}
-                  onChange={(e) => handleBpmChange(parseInt(e.target.value))}
-                  className={styles.bpmRange}
+                  onChange={(v) => handleBpmChange(Math.round(v))}
                 />
               </div>
             </div>
@@ -350,25 +387,23 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
             <div className={styles.autopilotSpeedControls}>
               <div className={styles.speedControl}>
                 <label>P/T Speed</label>
-                <input
-                  type="range"
-                  min="0.1"
-                  max="10"
-                  step="0.1"
+                <HorizontalFader
+                  min={0.1}
+                  max={10}
+                  step={0.1}
                   value={panTiltAutopilot.speed}
-                  onChange={(e) => setPanTiltAutopilot({ speed: parseFloat(e.target.value) })}
+                  onChange={(v) => setPanTiltAutopilot({ speed: v })}
                 />
                 <span>{panTiltAutopilot.speed.toFixed(1)}x</span>
               </div>
               <div className={styles.speedControl}>
                 <label>Color Speed</label>
-                <input
-                  type="range"
-                  min="0.1"
-                  max="1.0"
-                  step="0.1"
+                <HorizontalFader
+                  min={0.1}
+                  max={1.0}
+                  step={0.1}
                   value={colorSliderAutopilot.speed}
-                  onChange={(e) => setColorSliderAutopilot({ speed: parseFloat(e.target.value) })}
+                  onChange={(v) => setColorSliderAutopilot({ speed: v })}
                 />
                 <span>{colorSliderAutopilot.speed.toFixed(1)}x</span>
               </div>
@@ -395,15 +430,15 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
                 <button 
                   className={styles.debugButton}
                   onClick={() => {
-                    console.log('🔍 AUTOPILOT DEBUG INFO:');
-                    console.log('Track Autopilot Enabled:', autopilotTrackEnabled);
-                    console.log('Track Auto-Play Enabled:', autopilotTrackAutoPlay);
-                    console.log('General Autopilot Enabled:', panTiltAutopilot.enabled);
-                    console.log('Color Autopilot Enabled:', colorSliderAutopilot.enabled);
-                    console.log('Color Autopilot Type:', colorSliderAutopilot.type);
-                    console.log('Color Autopilot Speed:', colorSliderAutopilot.speed);
-                    console.log('Color Autopilot Sync to BPM:', colorSliderAutopilot.syncToBPM);
-                    console.log('Channel Autopilots:', Object.keys(channelAutopilots).length);
+                    debugLog.log('🔍 AUTOPILOT DEBUG INFO:');
+                    debugLog.log('Track Autopilot Enabled:', autopilotTrackEnabled);
+                    debugLog.log('Track Auto-Play Enabled:', autopilotTrackAutoPlay);
+                    debugLog.log('General Autopilot Enabled:', panTiltAutopilot.enabled);
+                    debugLog.log('Color Autopilot Enabled:', colorSliderAutopilot.enabled);
+                    debugLog.log('Color Autopilot Type:', colorSliderAutopilot.type);
+                    debugLog.log('Color Autopilot Speed:', colorSliderAutopilot.speed);
+                    debugLog.log('Color Autopilot Sync to BPM:', colorSliderAutopilot.syncToBPM);
+                    debugLog.log('Channel Autopilots:', Object.keys(channelAutopilots).length);
                     
                     // Trigger comprehensive debug
                     debugAutopilotState();

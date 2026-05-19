@@ -1,8 +1,6 @@
 import React from 'react';
 import { LucideIcon } from '../ui/LucideIcon';
-import { ChannelRoleIcon } from '../ui/ChannelRoleIcon';
 import { DmxChannelFader, RangeWindowControl } from '../ui/controls';
-import { ChannelEnvelopeStrip } from './ChannelEnvelopeStrip';
 import styles from '../pages/DmxChannelControlPage.module.scss';
 
 interface DmxChannelCardProps {
@@ -20,6 +18,7 @@ interface DmxChannelCardProps {
   isEditingName: boolean;
   hasCustomName: boolean;
   channelColor?: string;
+  envelopeAutomation: any;
   showMidiControls: boolean;
   showOscControls: boolean;
   editingChannelNameValue: string;
@@ -27,6 +26,7 @@ interface DmxChannelCardProps {
   getChannelRange: (channelIndex: number) => { min: number; max: number };
   setChannelRange: (channelIndex: number, min: number, max: number) => void;
   setDmxChannel: (channelIndex: number, value: number) => void;
+  toggleEnvelope: (envelopeId: string) => void;
   handleSaveChannelName: (channelIndex: number) => void;
   handleCancelEditName: () => void;
   handleStartEditName: (channelIndex: number, event: React.MouseEvent) => void;
@@ -41,8 +41,6 @@ interface DmxChannelCardProps {
   oscAddress?: string;
   verticalFader?: boolean;
   ticksOnly?: boolean;
-  auxFullRange?: boolean;
-  onToggleAuxFullRange?: () => void;
   canUseTicksMode?: boolean;
   onToggleTicksOnly?: () => void;
   onContextMenu?: (event: React.MouseEvent) => void;
@@ -63,6 +61,7 @@ export const DmxChannelCard: React.FC<DmxChannelCardProps> = ({
   isEditingName,
   hasCustomName,
   channelColor,
+  envelopeAutomation,
   showMidiControls,
   showOscControls,
   editingChannelNameValue,
@@ -70,6 +69,7 @@ export const DmxChannelCard: React.FC<DmxChannelCardProps> = ({
   getChannelRange,
   setChannelRange,
   setDmxChannel,
+  toggleEnvelope,
   handleSaveChannelName,
   handleCancelEditName,
   handleStartEditName,
@@ -84,8 +84,6 @@ export const DmxChannelCard: React.FC<DmxChannelCardProps> = ({
   oscAddress,
   verticalFader = false,
   ticksOnly = false,
-  auxFullRange = false,
-  onToggleAuxFullRange,
   canUseTicksMode = false,
   onToggleTicksOnly,
   onContextMenu,
@@ -117,17 +115,10 @@ export const DmxChannelCard: React.FC<DmxChannelCardProps> = ({
     >
       <div className={styles.channelHeader}>
         <div className={styles.channelInfo}>
-          <span className={styles.channelNumber}>
-            <ChannelRoleIcon
-              channelType={fixtureInfo?.channelType}
-              fixtureType={fixtureInfo?.fixtureType}
-              size={14}
-              showFixtureType
-            />
-            {channelIndex + 1}
-          </span>
+          <span className={styles.channelNumber}>{channelIndex + 1}</span>
           {hasFixtureAssignment && fixtureInfo && (
             <div className={styles.fixtureLabel} style={{ color: fixtureColor }}>
+              <LucideIcon name="LampDesk" size={12} />
               <span>{fixtureInfo.fixtureName}</span>
               {fixtureInfo.channelName && (
                 <span className={styles.fixtureChannelFunction}> • {fixtureInfo.channelName}</span>
@@ -171,6 +162,26 @@ export const DmxChannelCard: React.FC<DmxChannelCardProps> = ({
           )}
         </div>
         <div className={styles.channelHeaderActions}>
+          {(() => {
+            const channelEnvelope = envelopeAutomation.envelopes.find((envelope: any) => envelope.channel === channelIndex);
+            const hasEnvelope = !!channelEnvelope;
+            const envelopeEnabled = channelEnvelope?.enabled ?? false;
+
+            if (hasEnvelope) {
+              return (
+                <button
+                  className={`${styles.envelopeToggleButton} ${envelopeEnabled ? styles.active : ''}`}
+                  onClick={() => channelEnvelope && toggleEnvelope(channelEnvelope.id)}
+                  title={envelopeEnabled ? 'Stop Envelope' : 'Start Envelope'}
+                  disabled={!envelopeAutomation.globalEnabled}
+                >
+                  <LucideIcon name={envelopeEnabled ? 'Square' : 'Play'} size={14} />
+                  {envelopeEnabled ? 'Stop' : 'Start'}
+                </button>
+              );
+            }
+            return null;
+          })()}
           <div className={styles.channelValue}>
             <span className={styles.valueDisplay}>{value}</span>
             <span className={styles.valuePercent}>{Math.round((value / 255) * 100)}%</span>
@@ -187,12 +198,8 @@ export const DmxChannelCard: React.FC<DmxChannelCardProps> = ({
           onChange={(v) => setDmxChannel(channelIndex, v)}
           fixtureRanges={fixtureInfo?.ranges}
           ticksOnly={ticksOnly}
-          auxFullRange={auxFullRange}
-          onToggleAuxFullRange={onToggleAuxFullRange}
         />
       </div>
-
-      <ChannelEnvelopeStrip channelIndex={channelIndex} />
 
       <div className={styles.channelRangeControls}>
         <RangeWindowControl
@@ -261,16 +268,12 @@ export const DmxChannelCard: React.FC<DmxChannelCardProps> = ({
             className={`${styles.ticksModeButton} ${styles.ticksModeButtonCompact} ${ticksOnly ? styles.ticksModeActive : ''}`}
             onClick={(e) => {
               e.stopPropagation();
-              if (e.altKey && ticksOnly && onToggleAuxFullRange) {
-                onToggleAuxFullRange();
-                return;
-              }
               onToggleTicksOnly();
             }}
             title={
               ticksOnly
-                ? 'Disable ticks mode. Alt+click: toggle full 0-255 fader.'
-                : 'Enable ticks mode (fixture DMX ranges). Alt+click TICKS when on: full 0-255 fader.'
+                ? 'Disable ticks mode'
+                : 'Enable ticks mode (fixture DMX ranges)'
             }
           >
             <LucideIcon name="ListOrdered" size={14} />

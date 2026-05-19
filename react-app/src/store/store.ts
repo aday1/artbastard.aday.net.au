@@ -3,42 +3,26 @@ import { devtools } from 'zustand/middleware'
 import axios from 'axios'
 import { Socket } from 'socket.io-client'
 import { TimelineSequence, interpolateValue, initialTimelineSequences } from './timeline'
-import { createAutomationSlice, AutomationState } from './slices/automationSlice'
-
-// Check for factory reset marker SYNCHRONOUSLY before store initialization
-// This ensures localStorage is cleared before any state is loaded from it
-(function checkFactoryResetSync() {
-  try {
-    // Use synchronous XMLHttpRequest to check for reset marker before store loads
-    const xhr = new XMLHttpRequest();
-    xhr.open('GET', '/api/factory-reset-check', false); // false = synchronous
-    xhr.setRequestHeader('Cache-Control', 'no-cache');
-    xhr.setRequestHeader('Pragma', 'no-cache');
-    xhr.send(null);
-    
-    if (xhr.status === 200) {
-      const data = JSON.parse(xhr.responseText);
-      if (data.factoryReset) {
-        console.log('🔄 Factory reset detected - clearing localStorage before store initialization...');
-        localStorage.clear();
-        console.log('✅ localStorage cleared - factory reset complete');
-        // Note: Page reload will happen after store initialization completes
-        // The reload ensures all components start with fresh state
-        setTimeout(() => {
-          window.location.reload();
-        }, 100);
-      }
-    }
-  } catch (error) {
-    // If check fails, continue normally (fail-safe)
-    console.warn('Factory reset check failed (non-critical):', error);
-  }
-})();
+import { AutomationState } from './slices/automationSlice'
+import {
+  computeEnvelopeProgress,
+  computeEnvelopeProgressDetailed,
+  envelopeModulationToDmx,
+  resetEnvelopeSmoothing,
+  resolveEnvelopeProgress,
+  sampleWaveformValue,
+  smoothEnvelopeDmxValue,
+} from '../utils/envelopeEngine'
+import { normalizeChannelEnvelope } from '../utils/envelopeDefaults'
+import type { ChannelEnvelope } from './types'
+import { sceneNameToOscPath } from '../utils/sceneCapture'
+import { debugLog } from '../utils/debugLog'
 
 export interface MidiMapping {
   channel: number
   note?: number
   controller?: number
+  pitch?: boolean
 }
 
 export interface Fixture {
@@ -49,7 +33,7 @@ export interface Fixture {
   model?: string
   mode?: string
   startAddress: number
-  channels: { name: string; type: string; dmxAddress?: number }[]
+  channels: { name: string; type: string; dmxAddress?: number; ranges?: Array<{ min: number; max: number; description: string }> }[]
   notes?: string // Notes section for fixture documentation
   // Flagging system for organizing fixtures
   flags?: FixtureFlag[]
@@ -114,6 +98,8 @@ export interface AutopilotConfig {
   range: { min: number; max: number }; // DMX value range
   syncToBPM: boolean;
   phase: number; // Phase offset in degrees (0-360)
+  repeatMode?: import('./types').EnvelopeRepeatMode;
+  loopDirection?: import('./types').EnvelopeLoopDirection;
 }
 
 export interface ColorSliderAutopilotConfig {
@@ -123,6 +109,8 @@ export interface ColorSliderAutopilotConfig {
   range: { min: number; max: number }; // Hue range (0-360)
   syncToBPM: boolean;
   phase: number; // Phase offset in degrees (0-360)
+  repeatMode?: import('./types').EnvelopeRepeatMode;
+  loopDirection?: import('./types').EnvelopeLoopDirection;
 }
 
 export interface PanTiltAutopilotConfig {
@@ -135,6 +123,8 @@ export interface PanTiltAutopilotConfig {
   syncToBPM: boolean;
   phase: number; // Phase offset in radians for internal animation
   customPath?: Array<{ x: number; y: number }>;
+  repeatMode?: import('./types').EnvelopeRepeatMode;
+  loopDirection?: import('./types').EnvelopeLoopDirection;
 }
 
 // New Modular Automation System Interfaces
@@ -185,36 +175,15 @@ export interface ModularAutomationState {
 }
 
 // Envelope Automation System
-export type WaveformType = 'sine' | 'saw' | 'square' | 'triangle' | 'custom';
+export type {
+  WaveformType,
+  EnvelopePoint,
+  EnvelopeRepeatMode,
+  EnvelopeLoopDirection,
+  ChannelEnvelope,
+} from './types';
 
-export interface EnvelopePoint {
-  x: number; // 0-1, position in cycle
-  y: number; // 0-1, value (will be scaled to 0-255)
-}
-
-export interface ChannelEnvelope {
-  id: string;
-  channel: number; // DMX channel index (0-511)
-  enabled: boolean;
-  waveform: WaveformType;
-  customPoints: EnvelopePoint[]; // For custom drawn envelopes
-  amplitude: number; // 0-100, percentage of full range
-  offset: number; // 0-255, base value
-  phase: number; // 0-360, phase offset in degrees
-  tempoSync: boolean; // Sync to BPM
-  tempoMultiplier: number; // Beat division (1 = whole note, 2 = half, 4 = quarter, etc.)
-  loop: boolean; // Whether to loop the envelope
-  min: number; // Minimum DMX value (0-255)
-  max: number; // Maximum DMX value (0-255)
-  speed: number; // Individual envelope speed multiplier (0.1-2.0)
-}
-
-export interface EnvelopeAutomationState {
-  envelopes: ChannelEnvelope[];
-  globalEnabled: boolean;
-  animationId: number | null;
-  speed: number; // 0.1-2.0 multiplier for animation speed
-}
+export type { EnvelopeAutomationState } from './types';
 
 export interface SceneTimelineKeyframe {
   id: string;
@@ -380,6 +349,8 @@ export interface ActStep {
   id: string;
   sceneName: string;
   duration: number; // Duration in milliseconds
+  /** Absolute start time on the act timeline (ms). Omit to pack after the previous clip. */
+  startTime?: number;
   transitionDuration: number; // Transition time in milliseconds
   autopilotSettings?: {
     enabled: boolean;
@@ -472,7 +443,7 @@ interface AutoSceneSettings {
   autoSceneBeatDivision: number;
   autoSceneManualBpm: number;
   autoSceneTapTempoBpm: number;
-  autoSceneTempoSource: 'internal_clock' | 'manual_bpm' | 'tap_tempo';
+  autoSceneTempoSource: 'internal_clock' | 'manual_bpm' | 'tap_tempo' | 'ableton_link';
 }
 
 // Helper functions for localStorage persistence
@@ -504,7 +475,7 @@ const saveCurrentAutoSceneSettings = (state: {
   autoSceneBeatDivision: number;
   autoSceneManualBpm: number;
   autoSceneTapTempoBpm: number;
-  autoSceneTempoSource: 'internal_clock' | 'manual_bpm' | 'tap_tempo';
+  autoSceneTempoSource: 'internal_clock' | 'manual_bpm' | 'tap_tempo' | 'ableton_link';
 }) => {
   const settings: AutoSceneSettings = {
     autoSceneEnabled: state.autoSceneEnabled,
@@ -641,7 +612,6 @@ interface State extends AutomationState {
     fontFamilyHeading: string;
     fontWeight: number;
     fontWeightHeading: number;
-    hideExperimentalSection: boolean; // Hide Laboratoire Expérimental from main menu
   };
   themeColors: {
     primaryHue: number; // 0-360
@@ -713,6 +683,40 @@ interface State extends AutomationState {
   availableMidiClockHosts: Array<{ id: string; name: string }>;
   selectedMidiClockHostId: string | null;
   midiClockBpm: number;
+  abletonLinkPeers: number;
+  abletonLinkAvailable: boolean;
+  dmxFaderOrientation: 'horizontal' | 'vertical';
+  setDmxFaderOrientation: (orientation: 'horizontal' | 'vertical') => void;
+  dmxChannelsPerRow: number;
+  setDmxChannelsPerRow: (count: number) => void;
+  channelTicksOnlyOverrides: Record<number, boolean>;
+  setChannelTicksOnly: (dmxAddress: number, ticksOnly: boolean) => void;
+  getChannelTicksOnly: (dmxAddress: number) => boolean;
+  activeSessionId: string;
+  sessionsList: Array<{
+    id: string;
+    name: string;
+    clientCount: number;
+    bridgeConnected: boolean;
+    bridgeId?: string;
+  }>;
+  setActiveSessionId: (sessionId: string) => void;
+  setSessionsList: (sessions: Array<{
+    id: string;
+    name: string;
+    clientCount: number;
+    bridgeConnected: boolean;
+    bridgeId?: string;
+  }>, defaultSessionId?: string) => void;
+  bridgeConnected: boolean;
+  connectedClientCount: number;
+  bridgeInfo: {
+    bridgeId: string;
+    version?: string;
+    artnetStatus?: string;
+    linkPeers?: number;
+    latencyMs?: number;
+  } | null;
   midiClockIsPlaying: boolean;
   midiClockCurrentBeat: number;
   midiClockCurrentBar: number;
@@ -727,7 +731,7 @@ interface State extends AutomationState {
   autoSceneTapTempoBpm: number;
   autoSceneLastTapTime: number; // For tap tempo calculation
   autoSceneTapTimes: number[]; // Stores recent tap intervals
-  autoSceneTempoSource: 'internal_clock' | 'manual_bpm' | 'tap_tempo';
+  autoSceneTempoSource: 'internal_clock' | 'manual_bpm' | 'tap_tempo' | 'ableton_link';
   autoSceneIsFlashing: boolean; // Shared flashing state for downbeat border flash
 
   // Quick Scene State
@@ -763,18 +767,7 @@ interface State extends AutomationState {
     value?: number;
     data?: Record<string, unknown>;
   }>;
-  automationTracks: Array<{
-    id: string;
-    name: string;
-    channel: number;
-    keyframes: Array<{
-      time: number; // milliseconds from start
-      value: number; // 0-255
-      curve: 'linear' | 'smooth' | 'step' | 'ease-in' | 'ease-out' | 'ease-in-out';
-    }>;
-    enabled: boolean;
-    loop: boolean;
-  }>; automationPlayback: {
+  automationPlayback: {
     active: boolean;
     startTime: number | null;
     duration: number; // Total duration in milliseconds
@@ -859,6 +852,7 @@ interface State extends AutomationState {
     channel: number;
     note?: number;
     controller?: number;
+    pitch?: number;
     velocity?: number;
     value?: number;
     type?: string;
@@ -869,6 +863,7 @@ interface State extends AutomationState {
   addMidiMapping: (dmxChannel: number, mapping: MidiMapping) => void
   removeMidiMapping: (dmxChannel: number) => void
   clearAllMidiMappings: () => void
+  applyMidiControllerTemplate: (templateId: 'x_touch_mackie' | 'apc40_mk1', deviceName?: string) => Promise<boolean>
   setEnvelopeSpeedMidiMapping: (mapping: MidiMapping | null) => void
   removeEnvelopeSpeedMidiMapping: () => void
   setMidiInterfaces: (interfaces: string[]) => void
@@ -921,7 +916,7 @@ interface State extends AutomationState {
   toggleDarkMode: () => void;
 
   // UI Settings Actions
-  updateUiSettings: (settings: Partial<{ sparklesEnabled: boolean; dmxVisualEffects: 'off' | 'low' | 'medium' | 'high'; fontSize: number; lineHeight: number; letterSpacing: number; borderRadius: number; spacing: number; animationSpeed: number; fontFamily: string; fontFamilyHeading: string; fontWeight: number; fontWeightHeading: number; hideExperimentalSection: boolean }>) => void;
+  updateUiSettings: (settings: Partial<{ sparklesEnabled: boolean; dmxVisualEffects: 'off' | 'low' | 'medium' | 'high'; fontSize: number; lineHeight: number; letterSpacing: number; borderRadius: number; spacing: number; animationSpeed: number; fontFamily: string; fontFamilyHeading: string; fontWeight: number; fontWeightHeading: number }>) => void;
   toggleSparkles: () => void;
   setDmxVisualEffects: (level: 'off' | 'low' | 'medium' | 'high') => void;
   updateThemeColors: (colors: Partial<{
@@ -955,6 +950,8 @@ interface State extends AutomationState {
     channelType: string;
     channelIndex: number;
     startAddress: number;
+    ranges?: import('./types').FixtureChannelRange[];
+    ticksOnly?: boolean;
   } | null;
   getFixtureColor: (fixtureId: string) => string;
   isChannelAssigned: (dmxAddress: number) => boolean;
@@ -972,6 +969,17 @@ interface State extends AutomationState {
   setMasterSliders: (sliders: MasterSlider[]) => void;
   setSelectedMidiClockHostId: (hostId: string | null) => void; // Will be called by WS handler too
   setAvailableMidiClockHosts: (hosts: Array<{ id: string; name: string }>) => void; // Called by WS handler
+  setBridgeRegistry: (payload: {
+    connected: boolean;
+    bridge: {
+      bridgeId: string;
+      version?: string;
+      artnetStatus?: string;
+      linkPeers?: number;
+      latencyMs?: number;
+    } | null;
+    connectedClients?: number;
+  }) => void;
   setMidiClockBpm: (bpm: number) => void; // Called by WS handler, and also repurposed for user requests
   setMidiClockIsPlaying: (isPlaying: boolean) => void; // Called by WS handler
   setMidiClockBeatBar: (beat: number, bar: number) => void; // Called by WS handler
@@ -983,7 +991,7 @@ interface State extends AutomationState {
   setAutoSceneEnabled: (enabled: boolean) => void;
   setAutoSceneList: (sceneNames: string[]) => void;
   setAutoSceneMode: (mode: 'forward' | 'ping-pong' | 'random') => void; setAutoSceneBeatDivision: (division: number) => void;
-  setAutoSceneTempoSource: (source: 'internal_clock' | 'manual_bpm' | 'tap_tempo') => void;
+  setAutoSceneTempoSource: (source: 'internal_clock' | 'manual_bpm' | 'tap_tempo' | 'ableton_link') => void;
   setNextAutoSceneIndex: () => void; // Calculates and updates autoSceneCurrentIndex
   resetAutoSceneIndex: () => void;
   setManualBpm: (bpm: number) => void; // For auto-scene manual tempo
@@ -1081,12 +1089,29 @@ const initializeDarkMode = (): boolean => {
   }
 };
 
+// Helper: pick a sensible Sparkles default for the current device.
+// Sparkles render dozens of animated SVG elements per DMX update which
+// is expensive on phones and disrespects users with reduced-motion
+// preferences. Default to off on small screens or when the OS asks
+// for reduced motion; the user can still toggle it on from the menu.
+const sparklesDefaultForDevice = (): boolean => {
+  if (typeof window === 'undefined') return true;
+  try {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+    // Matches the canonical TABLET_BP from useMobile.ts.
+    if (window.matchMedia('(max-width: 1279px)').matches) return false;
+  } catch {
+    // matchMedia may not be available in old environments; fall through.
+  }
+  return true;
+};
+
 // Helper function to initialize UI settings from localStorage
-const initializeUiSettings = (): { sparklesEnabled: boolean; dmxVisualEffects: 'off' | 'low' | 'medium' | 'high'; fontSize: number; lineHeight: number; letterSpacing: number; borderRadius: number; spacing: number; animationSpeed: number; fontFamily: string; fontFamilyHeading: string; fontWeight: number; fontWeightHeading: number; hideExperimentalSection: boolean } => {
+const initializeUiSettings = (): { sparklesEnabled: boolean; dmxVisualEffects: 'off' | 'low' | 'medium' | 'high'; fontSize: number; lineHeight: number; letterSpacing: number; borderRadius: number; spacing: number; animationSpeed: number; fontFamily: string; fontFamilyHeading: string; fontWeight: number; fontWeightHeading: number } => {
   try {
     const stored = localStorage.getItem('uiSettings');
-    const defaultSettings = { 
-      sparklesEnabled: true, 
+    const defaultSettings = {
+      sparklesEnabled: sparklesDefaultForDevice(),
       dmxVisualEffects: 'medium' as const,
       fontSize: 1.0,
       lineHeight: 1.5,
@@ -1098,7 +1123,6 @@ const initializeUiSettings = (): { sparklesEnabled: boolean; dmxVisualEffects: '
       fontFamilyHeading: 'Source Sans Pro, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       fontWeight: 400,
       fontWeightHeading: 600,
-      hideExperimentalSection: false
     };
 
     if (stored) {
@@ -1137,8 +1161,8 @@ const initializeUiSettings = (): { sparklesEnabled: boolean; dmxVisualEffects: '
     return defaultSettings;
   } catch (error) {
     console.warn('Failed to read uiSettings from localStorage, using defaults:', error);
-    const defaultSettings: { sparklesEnabled: boolean; dmxVisualEffects: 'off' | 'low' | 'medium' | 'high'; fontSize: number; lineHeight: number; letterSpacing: number; borderRadius: number; spacing: number; animationSpeed: number; fontFamily: string; fontFamilyHeading: string; fontWeight: number; fontWeightHeading: number; hideExperimentalSection: boolean } = { 
-      sparklesEnabled: true, 
+    const defaultSettings: { sparklesEnabled: boolean; dmxVisualEffects: 'off' | 'low' | 'medium' | 'high'; fontSize: number; lineHeight: number; letterSpacing: number; borderRadius: number; spacing: number; animationSpeed: number; fontFamily: string; fontFamilyHeading: string; fontWeight: number; fontWeightHeading: number } = {
+      sparklesEnabled: sparklesDefaultForDevice(),
       dmxVisualEffects: 'medium' as const,
       fontSize: 1.0,
       lineHeight: 1.5,
@@ -1150,7 +1174,6 @@ const initializeUiSettings = (): { sparklesEnabled: boolean; dmxVisualEffects: '
       fontFamilyHeading: 'Source Sans Pro, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       fontWeight: 400,
       fontWeightHeading: 600,
-      hideExperimentalSection: false
     };
     // Apply defaults
     const root = document.documentElement;
@@ -2021,7 +2044,7 @@ export const useStore = create<State>()(
           if (saved) {
             const parsed = JSON.parse(saved);
             if (Array.isArray(parsed)) {
-              console.log('[Store] Loaded fixtures from localStorage:', parsed.length);
+              debugLog.log('[Store] Loaded fixtures from localStorage:', parsed.length);
               return parsed;
             }
           }
@@ -2369,6 +2392,51 @@ export const useStore = create<State>()(
       ],
       selectedMidiClockHostId: 'internal',
       midiClockBpm: 120.0,
+      abletonLinkPeers: 0,
+      abletonLinkAvailable: false,
+      dmxFaderOrientation: (() => {
+        try {
+          return localStorage.getItem('dmxFaderOrientation') === 'vertical' ? 'vertical' : 'horizontal';
+        } catch {
+          return 'horizontal';
+        }
+      })(),
+      dmxChannelsPerRow: (() => {
+        try {
+          const raw = localStorage.getItem('dmxChannelsPerRow');
+          const n = raw ? parseInt(raw, 10) : 0;
+          return Number.isFinite(n) && n >= 0 && n <= 128 ? n : 0;
+        } catch {
+          return 0;
+        }
+      })(),
+      channelTicksOnlyOverrides: (() => {
+        try {
+          const raw = localStorage.getItem('dmxChannelTicksOnlyOverrides');
+          if (!raw) return {};
+          const parsed = JSON.parse(raw) as Record<string, boolean>;
+          const out: Record<number, boolean> = {};
+          Object.entries(parsed).forEach(([k, v]) => {
+            const idx = parseInt(k, 10);
+            if (!Number.isNaN(idx) && idx >= 0 && idx < 512) out[idx] = Boolean(v);
+          });
+          return out;
+        } catch {
+          return {};
+        }
+      })(),
+      activeSessionId: (() => {
+        try {
+          const v = localStorage.getItem('artbastard-session-id');
+          return v && v.trim() ? v.trim().slice(0, 64) : 'default';
+        } catch {
+          return 'default';
+        }
+      })(),
+      sessionsList: [],
+      bridgeConnected: false,
+      bridgeInfo: null,
+      connectedClientCount: 0,
       midiClockIsPlaying: false,
       midiClockCurrentBeat: 1,
       midiClockCurrentBar: 1,
@@ -2452,11 +2520,14 @@ export const useStore = create<State>()(
           const saved = localStorage.getItem('envelopeAutomation');
           if (saved) {
             const parsed = JSON.parse(saved);
+            const envelopes = (parsed.envelopes || []).map((e: ChannelEnvelope) =>
+              normalizeChannelEnvelope(e)
+            );
             return {
-              envelopes: parsed.envelopes || [],
-              globalEnabled: false, // Always start disabled
-              animationId: null, // Never persist animation ID
-              speed: parsed.speed || 1.0
+              envelopes,
+              globalEnabled: false,
+              animationId: null,
+              speed: parsed.speed || 1.0,
             };
           }
         } catch (e) {
@@ -2529,7 +2600,6 @@ export const useStore = create<State>()(
       recordingActive: false,
       recordingStartTime: null,
       recordingData: [],
-      automationTracks: [],
       automationPlayback: {
         active: false,
         startTime: null,
@@ -2805,7 +2875,7 @@ export const useStore = create<State>()(
       // Actions
       fetchInitialState: async () => {
         try {
-          console.log('🔄 Fetching initial state from server...');
+          debugLog.log('🔄 Fetching initial state from server...');
           const response = await axios.get('/api/state', {
             timeout: 5000,
             headers: {
@@ -2816,7 +2886,7 @@ export const useStore = create<State>()(
 
           if (response.status === 200 && response.data) {
             const state = response.data
-            console.log('📥 Received initial state from server:', {
+            debugLog.log('📥 Received initial state from server:', {
               dmxChannels: state.dmxChannels?.filter((val: number) => val > 0).length || 0,
               scenes: state.scenes?.length || 0,
               fixtures: state.fixtures?.length || 0,
@@ -2889,7 +2959,7 @@ export const useStore = create<State>()(
               set({ transitionDuration: state.settings.transitionDuration });
             }
 
-            console.log('✅ Initial state applied successfully');
+            debugLog.log('✅ Initial state applied successfully');
             // No explicit success notification here, to avoid clutter on normal startup
             return
           }
@@ -2949,7 +3019,7 @@ export const useStore = create<State>()(
       },
 
       setDmxChannel: (channel, value, sendToBackend = true) => {
-        console.log(`[STORE] setDmxChannel called: channel=${channel}, value=${value}, sendToBackend=${sendToBackend}`);
+        debugLog.log(`[STORE] setDmxChannel called: channel=${channel}, value=${value}, sendToBackend=${sendToBackend}`);
 
         // Get channel range and clamp value
         const channelRange = get().getChannelRange(channel);
@@ -2960,10 +3030,10 @@ export const useStore = create<State>()(
         set({ dmxChannels })
 
         if (sendToBackend) {
-          console.log(`[STORE] Sending HTTP POST to /api/dmx: channel=${channel}, value=${value}`);
+          debugLog.log(`[STORE] Sending HTTP POST to /api/dmx: channel=${channel}, value=${value}`);
           axios.post('/api/dmx', { channel, value })
             .then(response => {
-              console.log(`[STORE] DMX API call successful:`, response.data);
+              debugLog.log(`[STORE] DMX API call successful:`, response.data);
             })
             .catch(error => {
               console.error('Failed to update DMX channel:', error)
@@ -2971,12 +3041,12 @@ export const useStore = create<State>()(
               get().addNotification({ message: 'Failed to update DMX channel', type: 'error', priority: 'high' })
             })
         } else {
-          console.log(`[STORE] DMX channel updated locally (no backend request): channel=${channel}, value=${value}`);
+          debugLog.log(`[STORE] DMX channel updated locally (no backend request): channel=${channel}, value=${value}`);
         }
       },
 
       setMultipleDmxChannels: (updates, sendToBackend = true) => {
-        console.log('[STORE] setMultipleDmxChannels: Called with updates batch:', updates, 'sendToBackend:', sendToBackend);
+        debugLog.log('[STORE] setMultipleDmxChannels: Called with updates batch:', updates, 'sendToBackend:', sendToBackend);
         const currentDmxChannels = get().dmxChannels;
         const newDmxChannels = [...currentDmxChannels];
         let changesApplied = false;
@@ -2992,16 +3062,16 @@ export const useStore = create<State>()(
 
         if (changesApplied) {
           set({ dmxChannels: newDmxChannels });
-          console.log('[STORE] setMultipleDmxChannels: Applied changes to local DMX state.');
+          debugLog.log('[STORE] setMultipleDmxChannels: Applied changes to local DMX state.');
         } else {
-          console.log('[STORE] setMultipleDmxChannels: No actual changes to local DMX state after processing batch.');
+          debugLog.log('[STORE] setMultipleDmxChannels: No actual changes to local DMX state after processing batch.');
         }
 
         if (sendToBackend) {
-          console.log('[STORE] setMultipleDmxChannels: Sending HTTP POST to /api/dmx/batch with payload:', updates);
+          debugLog.log('[STORE] setMultipleDmxChannels: Sending HTTP POST to /api/dmx/batch with payload:', updates);
           axios.post('/api/dmx/batch', updates)
             .then(response => {
-              console.log('[STORE] setMultipleDmxChannels: DMX batch API call successful. Response status:', response.status, 'Data:', response.data);
+              debugLog.log('[STORE] setMultipleDmxChannels: DMX batch API call successful. Response status:', response.status, 'Data:', response.data);
             })
             .catch(error => {
               console.error('[STORE] setMultipleDmxChannels: Failed to update DMX channels in batch via API.');
@@ -3021,7 +3091,7 @@ export const useStore = create<State>()(
               get().addNotification({ message: 'Failed to send DMX batch update to server', type: 'error', priority: 'high' });
             });
         } else {
-          console.log('[STORE] setMultipleDmxChannels: Skipping backend request (sendToBackend=false)');
+          debugLog.log('[STORE] setMultipleDmxChannels: Skipping backend request (sendToBackend=false)');
         }
       }, setDmxChannelValue: (channel, value) => {
         get().setDmxChannel(channel, value);
@@ -3446,7 +3516,7 @@ export const useStore = create<State>()(
         oscAssignments[channelIndex] = address;
         set({ oscAssignments });
         
-        console.log('[Store] OSC assignment changed:', {
+        debugLog.log('[Store] OSC assignment changed:', {
           channel: channelIndex + 1,
           from: oldAddress || '(none)',
           to: address
@@ -3467,7 +3537,7 @@ export const useStore = create<State>()(
         };
         set({ superControlOscAddresses });
         
-        console.log('[Store] SuperControl OSC address changed:', {
+        debugLog.log('[Store] SuperControl OSC address changed:', {
           control: controlName,
           from: oldAddress || '(none)',
           to: address
@@ -3499,7 +3569,7 @@ export const useStore = create<State>()(
         // Keep last 1000 messages in store (UI will limit display based on scrollback setting)
         const messages = [...get().oscMessages, message].slice(-1000);
         set({ oscMessages: messages });
-        // console.log('OSC message received in store:', message); // Optional: for debugging
+        // Don't log OSC messages to reduce console spam (they can be frequent)
         if (get().recordingActive) {
           get().addRecordingEvent({ type: 'osc', data: message });
         }
@@ -3568,7 +3638,10 @@ export const useStore = create<State>()(
       addMidiMessage: (message) => {
         const messages = [...get().midiMessages, message].slice(-20)
         set({ midiMessages: messages })
-        console.log('MIDI message received:', message)
+        // Only log non-CC messages to reduce spam (CC messages are very frequent)
+        if (message._type !== 'cc' && message.type !== 'cc') {
+          debugLog.log('MIDI message received:', message)
+        }
         if (get().recordingActive) {
           get().addRecordingEvent({ type: 'midi', data: message });
         }
@@ -3671,7 +3744,7 @@ export const useStore = create<State>()(
             } else {
               set({ midiClockIsPlaying: !get().midiClockIsPlaying });
             }
-            console.log('[Store] Tempo play/pause toggled via MIDI');
+            debugLog.log('[Store] Tempo play/pause toggled via MIDI');
           }
         }
 
@@ -3691,7 +3764,7 @@ export const useStore = create<State>()(
             // Trigger tap tempo
             get().recordTapTempo();
             get().setAutoSceneTempoSource('tap_tempo');
-            console.log('[Store] Tap tempo triggered via MIDI');
+            debugLog.log('[Store] Tap tempo triggered via MIDI');
           }
         }
 
@@ -3721,9 +3794,17 @@ export const useStore = create<State>()(
         midiMappings[dmxChannel] = mapping
         set({ midiMappings, midiLearnTarget: null })
         
-        const mappingType = mapping.controller !== undefined ? 'CC' : 'Note';
-        const mappingValue = mapping.controller !== undefined ? mapping.controller : mapping.note;
-        console.log('[Store] MIDI mapping added:', {
+        const mappingType = mapping.pitch
+          ? 'Pitch'
+          : mapping.controller !== undefined
+            ? 'CC'
+            : 'Note';
+        const mappingValue = mapping.pitch
+          ? 'Pitch Bend'
+          : mapping.controller !== undefined
+            ? mapping.controller
+            : mapping.note;
+        debugLog.log('[Store] MIDI mapping added:', {
           dmxChannel: dmxChannel + 1,
           type: mappingType,
           value: mappingValue,
@@ -3766,6 +3847,37 @@ export const useStore = create<State>()(
             console.error('Failed to clear all MIDI mappings:', error)
             get().addNotification({ message: 'Failed to clear all MIDI mappings', type: 'error' })
           })
+      },
+
+      applyMidiControllerTemplate: async (templateId, deviceName) => {
+        try {
+          const response = await axios.post('/api/midi/controller-template', {
+            templateId,
+            deviceName
+          });
+          const mappingsFromServer = response.data?.midiMappings;
+          if (mappingsFromServer && typeof mappingsFromServer === 'object') {
+            set({ midiMappings: mappingsFromServer });
+          }
+
+          const templateLabel = templateId === 'x_touch_mackie'
+            ? 'X-Touch Mackie template'
+            : 'APC40 MK1 template';
+          get().addNotification({
+            message: `${templateLabel} applied`,
+            type: 'success',
+            priority: 'normal'
+          });
+          return true;
+        } catch (error) {
+          console.error('Failed to apply MIDI controller template:', error);
+          get().addNotification({
+            message: 'Failed to apply MIDI controller template',
+            type: 'error',
+            priority: 'high'
+          });
+          return false;
+        }
       },
 
       setEnvelopeSpeedMidiMapping: (mapping) => {
@@ -3811,12 +3923,12 @@ export const useStore = create<State>()(
         // Save to localStorage immediately
         try {
           localStorage.setItem('artbastard-fixtures', JSON.stringify(updatedFixtures));
-          console.log('[Store] Saved fixtures to localStorage after add:', updatedFixtures.length);
+          debugLog.log('[Store] Saved fixtures to localStorage after add:', updatedFixtures.length);
         } catch (e) {
           console.error('Failed to save fixtures to localStorage:', e);
         }
         
-        console.log('[Store] Fixture added:', {
+        debugLog.log('[Store] Fixture added:', {
           name: fixture.name,
           address: fixture.startAddress,
           channels: fixture.channels?.length || 0,
@@ -3827,7 +3939,7 @@ export const useStore = create<State>()(
         // Save individual fixture to backend (more efficient than saving all fixtures)
         axios.post(`/api/fixtures/${fixture.id}`, fixture)
           .then(() => {
-            console.log('[Store] Fixture saved to server:', fixture.id);
+            debugLog.log('[Store] Fixture saved to server:', fixture.id);
           })
           .catch(error => {
             console.error('Failed to save new fixture to backend:', error);
@@ -3842,7 +3954,7 @@ export const useStore = create<State>()(
         // Save to localStorage
         try {
           localStorage.setItem('artbastard-fixtures', JSON.stringify(updatedFixtures));
-          console.log('[Store] Saved fixtures to localStorage after delete:', updatedFixtures.length);
+          debugLog.log('[Store] Saved fixtures to localStorage after delete:', updatedFixtures.length);
         } catch (e) {
           console.error('Failed to save fixtures to localStorage:', e);
         }
@@ -3871,7 +3983,7 @@ export const useStore = create<State>()(
         // Save to localStorage for persistence across server restarts
         try {
           localStorage.setItem('artbastard-fixtures', JSON.stringify(fixtures));
-          console.log('[Store] Saved fixtures to localStorage:', fixtures.length);
+          debugLog.log('[Store] Saved fixtures to localStorage:', fixtures.length);
         } catch (e) {
           console.error('Failed to save fixtures to localStorage:', e);
         }
@@ -4022,10 +4134,10 @@ export const useStore = create<State>()(
 
         if (existingIndex !== -1) {
           scenes[existingIndex] = newScene;
-          console.log(`[SCENES] Updated scene "${name}" with modular automation states`);
+          debugLog.log(`[SCENES] Updated scene "${name}" with modular automation states`);
         } else {
           scenes.push(newScene);
-          console.log(`[SCENES] Created new scene "${name}" with modular automation states`);
+          debugLog.log(`[SCENES] Created new scene "${name}" with modular automation states`);
         }
 
         set({ scenes })
@@ -4077,7 +4189,7 @@ export const useStore = create<State>()(
 
         if (scene) {
           const sceneName = scene.name;
-          console.log(`[STORE] Loading scene "${sceneName}" with transition`);
+          debugLog.log(`[STORE] Loading scene "${sceneName}" with transition`);
 
           // Cancel any ongoing transition
           if (isTransitioning && currentTransitionFrame) {
@@ -4167,7 +4279,7 @@ export const useStore = create<State>()(
           // Also send to backend for consistency
           axios.post('/api/scenes/load', { name: sceneName })
             .then(() => {
-              console.log(`[STORE] Scene "${sceneName}" loaded successfully via backend`);
+              debugLog.log(`[STORE] Scene "${sceneName}" loaded successfully via backend`);
             })
             .catch(error => {
               console.error('Failed to load scene:', error)
@@ -4827,11 +4939,11 @@ export const useStore = create<State>()(
       quickSceneSave: () => {
         const timestamp = new Date().toISOString().slice(11, 19).replace(/:/g, '-');
         const quickName = `Quick_${timestamp}`;
-        const oscAddress = `/scene/${quickName.toLowerCase()}`;
+        const oscAddress = sceneNameToOscPath(quickName);
 
         get().saveScene(quickName, oscAddress);
         get().addNotification({
-          message: `Quick scene saved as "${quickName}" 📸`,
+          message: `Quick scene saved as "${quickName}"`,
           type: 'success',
           priority: 'normal'
         });
@@ -4852,7 +4964,7 @@ export const useStore = create<State>()(
         const latestScene = scenes[scenes.length - 1];
         get().loadScene(latestScene.name);
         get().addNotification({
-          message: `Quick loaded scene "${latestScene.name}" ⚡`,
+          message: `Quick loaded scene "${latestScene.name}"`,
           type: 'success',
           priority: 'normal'
         });
@@ -5018,8 +5130,15 @@ export const useStore = create<State>()(
               phaseIncrement = (bpm / 60) * timeElapsed * panTiltAutopilot.speed;
             }
 
-          const newPhase = (panTiltAutopilot.phase + phaseIncrement) % (2 * Math.PI);
-          const progress = newPhase / (2 * Math.PI);
+          const cycleMs =
+            panTiltAutopilot.syncToBPM && bpm > 0
+              ? (60000 / Math.max(1, bpm)) / Math.max(0.01, panTiltAutopilot.speed)
+              : 1000 / Math.max(0.01, panTiltAutopilot.speed);
+          const pathEnvelope = {
+            repeatMode: panTiltAutopilot.repeatMode ?? 'loop',
+            loopDirection: panTiltAutopilot.loopDirection ?? 'forward',
+          } as ChannelEnvelope;
+          const { linearProgress: progress } = resolveEnvelopeProgress(pathEnvelope, Date.now(), cycleMs);
 
           fixtures.forEach(fixture => {
             const panChannel = fixture.channels.find(c => c.type === 'pan');
@@ -5030,16 +5149,17 @@ export const useStore = create<State>()(
               let tiltValue = panTiltAutopilot.centerY;
 
               const radius = (panTiltAutopilot.size / 100) * 127; // Convert percentage to DMX range
+              const angle = progress * 2 * Math.PI;
 
               // Calculate position based on pattern
               switch (panTiltAutopilot.pathType) {
                 case 'circle':
-                  panValue += Math.sin(newPhase) * radius;
-                  tiltValue += Math.cos(newPhase) * radius;
+                  panValue += Math.sin(angle) * radius;
+                  tiltValue += Math.cos(angle) * radius;
                   break;
                 case 'figure8':
-                  panValue += Math.sin(newPhase * 2) * radius;
-                  tiltValue += Math.sin(newPhase) * radius;
+                  panValue += Math.sin(angle * 2) * radius;
+                  tiltValue += Math.sin(angle) * radius;
                   break;
                 case 'square':
                   const t = progress;
@@ -5113,14 +5233,6 @@ export const useStore = create<State>()(
               hasUpdates = true;
             }
           });
-
-            // Update phase for next iteration
-            set(state => ({
-              panTiltAutopilot: {
-                ...state.panTiltAutopilot,
-                phase: newPhase
-              }
-            }));
           }
         }
 
@@ -5137,16 +5249,30 @@ export const useStore = create<State>()(
             // Only log debug info every 2 seconds to avoid spam
             const shouldDebug = Math.floor(now / 2000) !== Math.floor((now - 50) / 2000);
             if (shouldDebug) {
-              console.log('🎨 Color Autopilot Debug:');
-              console.log('  Total fixtures:', get().fixtures.length);
-              console.log('  RGB fixtures found:', fixtures.length);
-              console.log('  RGB fixtures:', fixtures.map(f => f.name));
+              debugLog.log('🎨 Color Autopilot Debug:');
+              debugLog.log('  Total fixtures:', get().fixtures.length);
+              debugLog.log('  RGB fixtures found:', fixtures.length);
+              debugLog.log('  RGB fixtures:', fixtures.map(f => f.name));
             }
 
             if (fixtures.length > 0) {
               const speed = colorSliderAutopilot.syncToBPM ? (bpm / 60) * colorSliderAutopilot.speed : colorSliderAutopilot.speed;
               const phaseOffset = (colorSliderAutopilot.phase / 360) * 2 * Math.PI;
-              const progress = (now / 1000 * speed) % 1;
+              const colorCycleMs =
+                colorSliderAutopilot.syncToBPM && bpm > 0
+                  ? (60000 / Math.max(1, bpm)) / Math.max(0.01, colorSliderAutopilot.speed)
+                  : 1000 / Math.max(0.01, colorSliderAutopilot.speed);
+              const { linearProgress: colorProgress } = resolveEnvelopeProgress(
+                {
+                  repeatMode: colorSliderAutopilot.repeatMode ?? 'loop',
+                  loopDirection:
+                    colorSliderAutopilot.loopDirection ??
+                    (colorSliderAutopilot.type === 'ping-pong' ? 'pingpong' : 'forward'),
+                } as ChannelEnvelope,
+                now,
+                colorCycleMs
+              );
+              const progress = colorProgress;
 
             let hue = 0;
             let saturation = 1; // Full saturation by default
@@ -5213,8 +5339,8 @@ export const useStore = create<State>()(
             const rgb = hsvToRgb(hue, saturation, value);
 
             if (shouldDebug) {
-              console.log('  Calculated HSV:', { h: hue.toFixed(1), s: saturation, v: value });
-              console.log('  Calculated RGB:', rgb);
+              debugLog.log('  Calculated HSV:', { h: hue.toFixed(1), s: saturation, v: value });
+              debugLog.log('  Calculated RGB:', rgb);
             }
 
             // Apply to all RGB fixtures
@@ -5251,7 +5377,7 @@ export const useStore = create<State>()(
                 }
 
                 if (shouldDebug) {
-                  console.log(`  Fixture "${fixture.name}":`, {
+                  debugLog.log(`  Fixture "${fixture.name}":`, {
                     redAddr: redDmxAddress,
                     greenAddr: greenDmxAddress,
                     blueAddr: blueDmxAddress,
@@ -5264,11 +5390,11 @@ export const useStore = create<State>()(
                 updates[blueDmxAddress] = rgb.b;
                 hasUpdates = true;
               } else if (shouldDebug) {
-                console.log(`  Fixture "${fixture.name}": Missing RGB channels`);
+                debugLog.log(`  Fixture "${fixture.name}": Missing RGB channels`);
               }
             });
             } else if (shouldDebug) {
-              console.log('  No RGB fixtures found!');
+              debugLog.log('  No RGB fixtures found!');
             }
           }
         }
@@ -5320,17 +5446,17 @@ export const useStore = create<State>()(
 
         // Don't start if already running
         if (autopilotTrackAnimationId !== null) {
-          console.log('[STORE] Autopilot animation already running, skipping start');
+          debugLog.log('[STORE] Autopilot animation already running, skipping start');
           return;
         }
 
         // Don't start if autopilot is not enabled
         if (!autopilotTrackEnabled) {
-          console.log('[STORE] Autopilot not enabled, cannot start animation');
+          debugLog.log('[STORE] Autopilot not enabled, cannot start animation');
           return;
         }
 
-        console.log('[STORE] Starting autopilot track animation system');
+        debugLog.log('[STORE] Starting autopilot track animation system');
 
         let lastTime = performance.now();
 
@@ -5339,14 +5465,14 @@ export const useStore = create<State>()(
 
           // Exit if autopilot is disabled or animation was stopped
           if (!state.autopilotTrackEnabled) {
-            console.log('[STORE] Animation loop stopping - autopilot disabled');
+            debugLog.log('[STORE] Animation loop stopping - autopilot disabled');
             set({ autopilotTrackAnimationId: null });
             return;
           }
 
           // Check if animation was cancelled externally
           if (state.autopilotTrackAnimationId === null) {
-            console.log('[STORE] Animation loop stopping - animation ID is null (cancelled)');
+            debugLog.log('[STORE] Animation loop stopping - animation ID is null (cancelled)');
             return;
           }
 
@@ -5378,7 +5504,7 @@ export const useStore = create<State>()(
             if (deltaTime > 0 && deltaTime < 1) { // Only log if reasonable delta time
               const tempoSource = (state.midiClockIsPlaying && state.midiClockBpm > 0) ? 'MIDI Clock' : 'Manual BPM';
               const advanceSource = state.autopilotTrackAutoPlay ? 'Auto-Play' : 'Tempo';
-              console.log(`[STORE] Autopilot advancing: ${currentPosition.toFixed(2)}% -> ${newPosition.toFixed(2)}% (BPM: ${bpm.toFixed(1)} from ${tempoSource}, speed: ${speedMultiplier}x, source: ${advanceSource}, delta: ${(deltaTime * 1000).toFixed(1)}ms)`);
+              debugLog.log(`[STORE] Autopilot advancing: ${currentPosition.toFixed(2)}% -> ${newPosition.toFixed(2)}% (BPM: ${bpm.toFixed(1)} from ${tempoSource}, speed: ${speedMultiplier}x, source: ${advanceSource}, delta: ${(deltaTime * 1000).toFixed(1)}ms)`);
             }
 
             // Update position in store
@@ -5400,14 +5526,14 @@ export const useStore = create<State>()(
         const initialAnimationId = requestAnimationFrame(animate);
         set({ autopilotTrackAnimationId: initialAnimationId });
 
-        console.log('[STORE] Autopilot track animation system started with ID:', initialAnimationId);
+        debugLog.log('[STORE] Autopilot track animation system started with ID:', initialAnimationId);
       },
 
       stopAutopilotTrackAnimation: () => {
         const { autopilotTrackAnimationId } = get();
 
         if (autopilotTrackAnimationId !== null) {
-          console.log('[STORE] Stopping autopilot track animation system, ID:', autopilotTrackAnimationId);
+          debugLog.log('[STORE] Stopping autopilot track animation system, ID:', autopilotTrackAnimationId);
           cancelAnimationFrame(autopilotTrackAnimationId);
           set({ autopilotTrackAnimationId: null });
         }
@@ -5508,7 +5634,7 @@ export const useStore = create<State>()(
 
         if (!config.enabled) return;
 
-        console.log(`[MODULAR AUTOMATION] Starting ${type} animation`);
+        debugLog.log(`[MODULAR AUTOMATION] Starting ${type} animation`);
 
         // Stop existing animation if running
         if (modularAutomation.animationIds[type]) {
@@ -5571,7 +5697,7 @@ export const useStore = create<State>()(
         const animationId = modularAutomation.animationIds[type];
 
         if (animationId) {
-          console.log(`[MODULAR AUTOMATION] Stopping ${type} animation`);
+          debugLog.log(`[MODULAR AUTOMATION] Stopping ${type} animation`);
           cancelAnimationFrame(animationId);
           set((state) => ({
             modularAutomation: {
@@ -5603,15 +5729,15 @@ export const useStore = create<State>()(
           }
         }));
 
-        console.log('[MODULAR AUTOMATION] All animations stopped');
+        debugLog.log('[MODULAR AUTOMATION] All animations stopped');
       },
 
       // Envelope Automation Actions
       addEnvelope: (envelope: Omit<ChannelEnvelope, 'id'>) => {
-        const newEnvelope: ChannelEnvelope = {
+        const newEnvelope = normalizeChannelEnvelope({
           ...envelope,
-          id: `envelope-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
-        };
+          id: `envelope-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        });
         set(state => {
           const updated = {
             envelopeAutomation: {
@@ -5642,7 +5768,7 @@ export const useStore = create<State>()(
             envelopeAutomation: {
               ...state.envelopeAutomation,
               envelopes: state.envelopeAutomation.envelopes.map(env =>
-                env.id === id ? { ...env, ...updates } : env
+                env.id === id ? normalizeChannelEnvelope({ ...env, ...updates, id: env.id }) : env
               )
             }
           };
@@ -5722,10 +5848,10 @@ export const useStore = create<State>()(
         const dmxUpdateThrottle = 16; // Update DMX at most every 16ms (~60fps)
         let pendingDmxUpdates: Record<number, number> = {};
 
-        console.log('[ENVELOPE] Starting envelope animation', {
+        debugLog.log('[ENVELOPE] Starting envelope animation', {
           globalEnabled: envelopeAutomation.globalEnabled,
           envelopeCount: envelopeAutomation.envelopes.length,
-          speed: envelopeAutomation.speed
+          speed: envelopeAutomation.speed,
         });
 
         const animate = () => {
@@ -5753,97 +5879,20 @@ export const useStore = create<State>()(
             return;
           }
 
-          // Apply speed multiplier to time
           const speedMultiplier = envelopeAutomation.speed || 1.0;
-          const adjustedTime = startTime + (now - startTime) * speedMultiplier;
 
           activeEnvelopes.forEach(envelope => {
-            let progress = 0;
-
-            // Combine global speed with individual envelope speed
-            const envelopeSpeed = envelope.speed ?? 1.0;
-            const combinedSpeed = speedMultiplier * envelopeSpeed;
-
-            if (envelope.tempoSync) {
-              // Calculate progress based on BPM (with combined speed multiplier)
-              const beatDuration = (60 / bpm) * 1000; // milliseconds per beat
-              const cycleDuration = beatDuration * envelope.tempoMultiplier;
-              const elapsed = adjustedTime - startTime;
-              // Apply combined speed to elapsed time
-              const speedAdjustedElapsed = elapsed * combinedSpeed;
-              progress = ((speedAdjustedElapsed % cycleDuration) / cycleDuration);
-            } else {
-              // Use time-based progress (1 second cycle, adjusted for combined speed)
-              const cycleTime = 1000 / combinedSpeed;
-              progress = ((adjustedTime % cycleTime) / cycleTime);
-            }
-
-            // Apply phase offset
-            progress = (progress + envelope.phase / 360) % 1;
-
-            let value = 0;
-
-            switch (envelope.waveform) {
-              case 'sine':
-                value = Math.sin(progress * Math.PI * 2) * 0.5 + 0.5;
-                break;
-              case 'saw':
-                value = progress;
-                break;
-              case 'square':
-                value = progress < 0.5 ? 1 : 0;
-                break;
-              case 'triangle':
-                value = progress < 0.5 ? progress * 2 : 2 - (progress * 2);
-                break;
-              case 'custom':
-                // Interpolate custom points
-                if (envelope.customPoints.length > 0) {
-                  const sortedPoints = [...envelope.customPoints].sort((a, b) => a.x - b.x);
-                  let point1 = sortedPoints[0];
-                  let point2 = sortedPoints[sortedPoints.length - 1];
-
-                  for (let i = 0; i < sortedPoints.length - 1; i++) {
-                    if (progress >= sortedPoints[i].x && progress <= sortedPoints[i + 1].x) {
-                      point1 = sortedPoints[i];
-                      point2 = sortedPoints[i + 1];
-                      break;
-                    }
-                  }
-
-                  const t = (progress - point1.x) / (point2.x - point1.x || 0.001);
-                  value = point1.y + (point2.y - point1.y) * t;
-                }
-                break;
-            }
-
-            // Get current DMX value (which may include scene values)
+            const { linearProgress } = computeEnvelopeProgressDetailed({
+              envelope,
+              bpm,
+              globalSpeed: speedMultiplier,
+              startTimeMs: startTime,
+              nowMs: now,
+            });
+            const waveformValue = sampleWaveformValue(envelope, linearProgress);
             const currentDmxValue = get().getDmxChannelValue(envelope.channel);
-
-            // Apply envelope as modulation on top of current value
-            // The envelope modulates around the current value, not replacing it
-            // This allows scenes to set base values, and envelopes to animate on top
-            // amplitude: 0-100% of how much to modulate from center
-            // offset: relative offset from current value (scaled to -127 to +127 for safety)
-            const modulationRange = (envelope.amplitude / 100) * 255; // How much to modulate
-            const modulationValue = (value - 0.5) * 2; // Convert 0-1 to -1 to +1 for modulation
-            const modulationAmount = modulationValue * modulationRange; // How much to add/subtract
-
-            // Scale offset to be relative (-127 to +127) to avoid going out of bounds
-            // Original offset was 0-255 absolute, now treat as -127 to +127 relative
-            const relativeOffset = (envelope.offset - 127) / 2; // Convert 0-255 to -63.5 to +63.5
-
-            // Calculate final value: current value + relative offset + modulation
-            const finalValue = Math.round(
-              currentDmxValue + relativeOffset + modulationAmount
-            );
-            // Clamp to envelope's min/max range instead of full 0-255
-            const minValue = envelope.min ?? 0;
-            const maxValue = envelope.max ?? 255;
-            const clampedValue = Math.max(minValue, Math.min(maxValue, finalValue));
-
-            // Store in pending updates for throttled batch sending
-            pendingDmxUpdates[envelope.channel] = clampedValue;
+            const targetValue = envelopeModulationToDmx(envelope, waveformValue, currentDmxValue);
+            pendingDmxUpdates[envelope.channel] = smoothEnvelopeDmxValue(envelope.channel, targetValue);
           });
 
           // Throttle DMX updates - send batch every 16ms
@@ -5869,6 +5918,7 @@ export const useStore = create<State>()(
         if (envelopeAutomation.animationId) {
           cancelAnimationFrame(envelopeAutomation.animationId);
         }
+        resetEnvelopeSmoothing();
         set(state => ({
           envelopeAutomation: {
             ...state.envelopeAutomation,
@@ -6053,11 +6103,115 @@ export const useStore = create<State>()(
         const { socket } = get();
         if (socket) {
           socket.emit('setMasterClockSource', hostId);
-          console.log('Store: Sending setMasterClockSource to server:', hostId);
+          debugLog.log('Store: Sending setMasterClockSource to server:', hostId);
         }
       },
 
       setAvailableMidiClockHosts: (hosts) => set({ availableMidiClockHosts: hosts }),
+      setDmxFaderOrientation: (orientation) => {
+        const next = orientation === 'vertical' ? 'vertical' : 'horizontal';
+        try {
+          localStorage.setItem('dmxFaderOrientation', next);
+        } catch {
+          /* ignore */
+        }
+        set({ dmxFaderOrientation: next });
+      },
+      setDmxChannelsPerRow: (count) => {
+        const n = Math.max(0, Math.min(128, Math.round(count)));
+        try {
+          localStorage.setItem('dmxChannelsPerRow', String(n));
+        } catch {
+          /* ignore */
+        }
+        set({ dmxChannelsPerRow: n });
+      },
+      getChannelTicksOnly: (dmxAddress: number) => {
+        const state = get();
+        if (state.channelTicksOnlyOverrides[dmxAddress] !== undefined) {
+          return state.channelTicksOnlyOverrides[dmxAddress];
+        }
+        const info = state.getChannelInfo(dmxAddress);
+        return info?.ticksOnly ?? false;
+      },
+      setChannelTicksOnly: (dmxAddress: number, ticksOnly: boolean) => {
+        const state = get();
+        const overrides = { ...state.channelTicksOnlyOverrides, [dmxAddress]: ticksOnly };
+        try {
+          localStorage.setItem('dmxChannelTicksOnlyOverrides', JSON.stringify(overrides));
+        } catch {
+          /* ignore */
+        }
+
+        let fixtures = state.fixtures;
+        let updatedFixtureId: string | null = null;
+
+        for (const fixture of state.fixtures) {
+          const fixtureStart = fixture.startAddress - 1;
+          const fixtureEnd = fixtureStart + (fixture.channels?.length || 0) - 1;
+          if (dmxAddress < fixtureStart || dmxAddress > fixtureEnd) continue;
+
+          const channelOffset = dmxAddress - fixtureStart;
+          fixtures = fixtures.map((f) => {
+            if (f.id !== fixture.id) return f;
+            const channels = [...(f.channels || [])];
+            const ch = channels[channelOffset];
+            if (!ch) return f;
+            channels[channelOffset] = { ...ch, ticksOnly };
+            return { ...f, channels };
+          });
+          updatedFixtureId = fixture.id;
+          break;
+        }
+
+        if (updatedFixtureId) {
+          try {
+            localStorage.setItem('artbastard-fixtures', JSON.stringify(fixtures));
+          } catch {
+            /* ignore */
+          }
+          const updated = fixtures.find((f) => f.id === updatedFixtureId);
+          if (updated) {
+            axios.post(`/api/fixtures/${updated.id}`, updated).catch((error) => {
+              console.error('Failed to save fixture ticksOnly to backend:', error);
+              get().addNotification({
+                message: 'Ticks mode saved locally; server sync failed',
+                type: 'warning',
+                priority: 'normal',
+              });
+            });
+          }
+        }
+
+        set({ channelTicksOnlyOverrides: overrides, fixtures });
+      },
+      setActiveSessionId: (sessionId) => {
+        const sid = sessionId.trim().slice(0, 64) || 'default';
+        try {
+          localStorage.setItem('artbastard-session-id', sid);
+        } catch {
+          /* ignore */
+        }
+        set({ activeSessionId: sid });
+      },
+      setSessionsList: (sessions, defaultSessionId) =>
+        set({
+          sessionsList: sessions,
+          activeSessionId: get().activeSessionId || defaultSessionId || 'default',
+        }),
+      setBridgeRegistry: (payload) =>
+        set({
+          bridgeConnected: !!payload.connected,
+          bridgeInfo: payload.bridge || null,
+          connectedClientCount:
+            typeof payload.connectedClients === 'number'
+              ? payload.connectedClients
+              : get().connectedClientCount,
+          abletonLinkAvailable:
+            !!payload.connected || get().abletonLinkAvailable,
+          abletonLinkPeers:
+            payload.bridge?.linkPeers ?? get().abletonLinkPeers,
+        }),
 
       setMidiClockBpm: (bpm) => {
         set({ midiClockBpm: bpm });
@@ -6066,7 +6220,7 @@ export const useStore = create<State>()(
         const { socket } = get();
         if (socket) {
           socket.emit('setInternalClockBPM', bpm);
-          console.log('Store: Sending setInternalClockBPM to server:', bpm);
+          debugLog.log('Store: Sending setInternalClockBPM to server:', bpm);
         }
       },
 
@@ -6080,7 +6234,7 @@ export const useStore = create<State>()(
       requestToggleMasterClockPlayPause: () => {
         const { socket } = get();
         if (socket) {
-          console.log('Store: Requesting master clock play/pause toggle via socket');
+          debugLog.log('Store: Requesting master clock play/pause toggle via socket');
           socket.emit('toggleMasterClockPlayPause');
         } else {
           console.warn('Store: No socket connection available for master clock toggle');
@@ -6121,15 +6275,16 @@ export const useStore = create<State>()(
       },
 
       setAutoSceneTempoSource: (source) => {
-        console.log('Store: Setting auto scene tempo source to:', source);
+        debugLog.log('Store: Setting auto scene tempo source to:', source);
         set({ autoSceneTempoSource: source });
         saveAutoSceneSettings(get());
 
-        // If switching to internal clock, we might need to emit some socket events
         const { socket } = get();
-        if (socket && source === 'tap_tempo') {
-          // For tap_tempo source, we're using MIDI Clock
+        if (!socket) return;
+        if (source === 'tap_tempo' || source === 'internal_clock') {
           socket.emit('setMasterClockSource', 'internal');
+        } else if (source === 'ableton_link') {
+          socket.emit('setMasterClockSource', 'ableton-link');
         }
       },
 
@@ -6173,7 +6328,7 @@ export const useStore = create<State>()(
 
       setManualBpm: (bpm) => {
         const clampedBpm = Math.max(60, Math.min(200, bpm)); // Clamp between 60-200
-        console.log('Store: Setting manual BPM to:', clampedBpm);
+        debugLog.log('Store: Setting manual BPM to:', clampedBpm);
         set({ autoSceneManualBpm: clampedBpm });
         saveAutoSceneSettings(get());
       },
@@ -6203,7 +6358,7 @@ export const useStore = create<State>()(
           // Only accept reasonable BPM values
           if (calculatedBpm >= 60 && calculatedBpm <= 200) {
             set({ autoSceneTapTempoBpm: calculatedBpm });
-            console.log('Store: Calculated tap tempo BPM:', calculatedBpm);
+            debugLog.log('Store: Calculated tap tempo BPM:', calculatedBpm);
             saveAutoSceneSettings(get());
           }
         }
@@ -6218,7 +6373,7 @@ export const useStore = create<State>()(
 
       // Legacy Autopilot Track Actions Implementation
       setAutopilotTrackEnabled: (enabled: boolean) => {
-        console.log('[STORE] Setting autopilot track enabled to:', enabled);
+        debugLog.log('[STORE] Setting autopilot track enabled to:', enabled);
         set({ autopilotTrackEnabled: enabled });
 
         if (enabled) {
@@ -6233,7 +6388,7 @@ export const useStore = create<State>()(
       },
 
       setAutopilotTrackType: (type: 'circle' | 'figure8' | 'square' | 'triangle' | 'linear' | 'random' | 'custom') => {
-        console.log('[STORE] Setting autopilot track type to:', type);
+        debugLog.log('[STORE] Setting autopilot track type to:', type);
         set({ autopilotTrackType: type });
 
         // Trigger immediate update if enabled
@@ -6243,7 +6398,7 @@ export const useStore = create<State>()(
       },
 
       setAutopilotTrackPosition: (position: number) => {
-        console.log('[STORE] Setting autopilot track position to:', position);
+        debugLog.log('[STORE] Setting autopilot track position to:', position);
         set({ autopilotTrackPosition: position });
 
         // Trigger immediate update if enabled
@@ -6253,7 +6408,7 @@ export const useStore = create<State>()(
       },
 
       setAutopilotTrackSize: (size: number) => {
-        console.log('[STORE] Setting autopilot track size to:', size);
+        debugLog.log('[STORE] Setting autopilot track size to:', size);
         set({ autopilotTrackSize: size });
 
         // Trigger immediate update if enabled
@@ -6263,7 +6418,7 @@ export const useStore = create<State>()(
       },
 
       setAutopilotTrackSpeed: (speed: number) => {
-        console.log('[STORE] Setting autopilot track speed to:', speed);
+        debugLog.log('[STORE] Setting autopilot track speed to:', speed);
         set({ autopilotTrackSpeed: speed });
 
         // Speed change doesn't require immediate position update
@@ -6271,7 +6426,7 @@ export const useStore = create<State>()(
       },
 
       setAutopilotTrackCenter: (centerX: number, centerY: number) => {
-        console.log('[STORE] Setting autopilot track center to:', centerX, centerY);
+        debugLog.log('[STORE] Setting autopilot track center to:', centerX, centerY);
         set({ autopilotTrackCenterX: centerX, autopilotTrackCenterY: centerY });
 
         // Trigger immediate update if enabled
@@ -6281,7 +6436,7 @@ export const useStore = create<State>()(
       },
 
       setAutopilotTrackAutoPlay: (autoPlay: boolean) => {
-        console.log('[STORE] Setting autopilot track auto-play to:', autoPlay);
+        debugLog.log('[STORE] Setting autopilot track auto-play to:', autoPlay);
         set({ autopilotTrackAutoPlay: autoPlay });
 
         // Auto-play state affects animation loop behavior
@@ -6289,7 +6444,7 @@ export const useStore = create<State>()(
       },
 
       setAutopilotTrackCustomPoints: (points: Array<{ x: number; y: number }>) => {
-        console.log('[STORE] Setting autopilot track custom points:', points);
+        debugLog.log('[STORE] Setting autopilot track custom points:', points);
         set({ autopilotTrackCustomPoints: points });
 
         // Trigger immediate update if enabled and using custom track
@@ -6421,13 +6576,13 @@ export const useStore = create<State>()(
         } = get();
 
         if (!autopilotTrackEnabled) {
-          console.log('[STORE] updatePanTiltFromTrack: Autopilot not enabled, skipping update');
+          debugLog.log('[STORE] updatePanTiltFromTrack: Autopilot not enabled, skipping update');
           return;
         }
 
         const currentPosition = position !== undefined ? position : autopilotTrackPosition;
 
-        console.log(`[STORE] updatePanTiltFromTrack: Calculating position for ${selectedFixtures.length} fixtures at position ${currentPosition}%`);
+        debugLog.log(`[STORE] updatePanTiltFromTrack: Calculating position for ${selectedFixtures.length} fixtures at position ${currentPosition}%`);
 
         // Calculate current track position
         let pan: number, tilt: number;
@@ -6446,7 +6601,7 @@ export const useStore = create<State>()(
           return;
         }
 
-        console.log('[STORE] updatePanTiltFromTrack: Calculated pan =', pan, ', tilt =', tilt);
+        debugLog.log('[STORE] updatePanTiltFromTrack: Calculated pan =', pan, ', tilt =', tilt);
 
         // Apply to selected fixtures
         const targetFixtures = selectedFixtures.length > 0
@@ -6488,7 +6643,7 @@ export const useStore = create<State>()(
             updates[panDmxAddress] = clampedPan;
             updates[tiltDmxAddress] = clampedTilt;
 
-            console.log(`[STORE] updatePanTiltFromTrack: Fixture ${fixture.name}: Pan CH${panDmxAddress + 1}=${clampedPan}, Tilt CH${tiltDmxAddress + 1}=${clampedTilt}`);
+            debugLog.log(`[STORE] updatePanTiltFromTrack: Fixture ${fixture.name}: Pan CH${panDmxAddress + 1}=${clampedPan}, Tilt CH${tiltDmxAddress + 1}=${clampedTilt}`);
           } else {
             console.warn(`[STORE] updatePanTiltFromTrack: Fixture ${fixture.name} missing pan or tilt channel`);
           }
@@ -6496,7 +6651,7 @@ export const useStore = create<State>()(
 
         // Apply all updates at once
         if (Object.keys(updates).length > 0) {
-          console.log(`[STORE] updatePanTiltFromTrack: Applying ${Object.keys(updates).length} channel updates to ${fixturesWithPanTilt} fixtures`);
+          debugLog.log(`[STORE] updatePanTiltFromTrack: Applying ${Object.keys(updates).length} channel updates to ${fixturesWithPanTilt} fixtures`);
           get().setMultipleDmxChannels(updates, true); // Send to backend
         } else {
           console.warn('[STORE] updatePanTiltFromTrack: No pan/tilt channels found in target fixtures');
@@ -6508,46 +6663,46 @@ export const useStore = create<State>()(
         const state = get();
         console.group('🔍 AUTOPILOT DEBUG STATE');
 
-        console.log('=== Main Autopilot System ===');
-        console.log('Update Interval:', state.autopilotUpdateInterval ? 'Running' : 'Stopped');
-        console.log('Last Update:', new Date(state.lastAutopilotUpdate).toLocaleTimeString());
+        debugLog.log('=== Main Autopilot System ===');
+        debugLog.log('Update Interval:', state.autopilotUpdateInterval ? 'Running' : 'Stopped');
+        debugLog.log('Last Update:', new Date(state.lastAutopilotUpdate).toLocaleTimeString());
 
-        console.log('=== Pan/Tilt Autopilot ===');
-        console.log('Enabled:', state.panTiltAutopilot.enabled);
-        console.log('Path Type:', state.panTiltAutopilot.pathType);
-        console.log('Speed:', state.panTiltAutopilot.speed);
-        console.log('Center X/Y:', state.panTiltAutopilot.centerX, state.panTiltAutopilot.centerY);
-        console.log('Size:', state.panTiltAutopilot.size);
-        console.log('Sync to BPM:', state.panTiltAutopilot.syncToBPM);
-        console.log('Phase:', state.panTiltAutopilot.phase);
+        debugLog.log('=== Pan/Tilt Autopilot ===');
+        debugLog.log('Enabled:', state.panTiltAutopilot.enabled);
+        debugLog.log('Path Type:', state.panTiltAutopilot.pathType);
+        debugLog.log('Speed:', state.panTiltAutopilot.speed);
+        debugLog.log('Center X/Y:', state.panTiltAutopilot.centerX, state.panTiltAutopilot.centerY);
+        debugLog.log('Size:', state.panTiltAutopilot.size);
+        debugLog.log('Sync to BPM:', state.panTiltAutopilot.syncToBPM);
+        debugLog.log('Phase:', state.panTiltAutopilot.phase);
 
-        console.log('=== Color Autopilot ===');
-        console.log('Enabled:', state.colorSliderAutopilot.enabled);
-        console.log('Type:', state.colorSliderAutopilot.type);
-        console.log('Speed:', state.colorSliderAutopilot.speed);
-        console.log('Range:', state.colorSliderAutopilot.range);
-        console.log('Sync to BPM:', state.colorSliderAutopilot.syncToBPM);
+        debugLog.log('=== Color Autopilot ===');
+        debugLog.log('Enabled:', state.colorSliderAutopilot.enabled);
+        debugLog.log('Type:', state.colorSliderAutopilot.type);
+        debugLog.log('Speed:', state.colorSliderAutopilot.speed);
+        debugLog.log('Range:', state.colorSliderAutopilot.range);
+        debugLog.log('Sync to BPM:', state.colorSliderAutopilot.syncToBPM);
 
-        console.log('=== Track Autopilot ===');
-        console.log('Enabled:', state.autopilotTrackEnabled);
-        console.log('Auto Play:', state.autopilotTrackAutoPlay);
-        console.log('Type:', state.autopilotTrackType);
-        console.log('Position:', state.autopilotTrackPosition + '%');
-        console.log('Size:', state.autopilotTrackSize + '%');
-        console.log('Center X/Y:', state.autopilotTrackCenterX, state.autopilotTrackCenterY);
-        console.log('Speed:', state.autopilotTrackSpeed);
-        console.log('Animation ID:', state.autopilotTrackAnimationId);
+        debugLog.log('=== Track Autopilot ===');
+        debugLog.log('Enabled:', state.autopilotTrackEnabled);
+        debugLog.log('Auto Play:', state.autopilotTrackAutoPlay);
+        debugLog.log('Type:', state.autopilotTrackType);
+        debugLog.log('Position:', state.autopilotTrackPosition + '%');
+        debugLog.log('Size:', state.autopilotTrackSize + '%');
+        debugLog.log('Center X/Y:', state.autopilotTrackCenterX, state.autopilotTrackCenterY);
+        debugLog.log('Speed:', state.autopilotTrackSpeed);
+        debugLog.log('Animation ID:', state.autopilotTrackAnimationId);
 
-        console.log('=== Channel Autopilots ===');
-        console.log('Count:', Object.keys(state.channelAutopilots).length);
+        debugLog.log('=== Channel Autopilots ===');
+        debugLog.log('Count:', Object.keys(state.channelAutopilots).length);
         Object.entries(state.channelAutopilots).forEach(([channel, config]) => {
-          console.log(`Channel ${parseInt(channel) + 1}:`, config);
+          debugLog.log(`Channel ${parseInt(channel) + 1}:`, config);
         });
 
-        console.log('=== System State ===');
-        console.log('BPM:', state.bpm);
-        console.log('Selected Fixtures:', state.selectedFixtures.length);
-        console.log('Total Fixtures:', state.fixtures.length);
+        debugLog.log('=== System State ===');
+        debugLog.log('BPM:', state.bpm);
+        debugLog.log('Selected Fixtures:', state.selectedFixtures.length);
+        debugLog.log('Total Fixtures:', state.fixtures.length);
 
         console.groupEnd();
       },
@@ -6606,6 +6761,11 @@ export const useStore = create<State>()(
                 channelType: channel.type,
                 channelIndex: channelOffset,
                 startAddress: fixture.startAddress,
+                ranges: channel.ranges,
+                ticksOnly:
+                  state.channelTicksOnlyOverrides[dmxAddress] !== undefined
+                    ? state.channelTicksOnlyOverrides[dmxAddress]
+                    : (channel.ticksOnly ?? false),
               };
             }
           }

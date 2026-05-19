@@ -5,97 +5,34 @@ import { useSocket } from '../../context/SocketContext'
 import { useBrowserMidi } from '../../hooks/useBrowserMidi'
 import { DmxChannelStats } from '../dmx/DmxChannelStats'
 import styles from './Navbar.module.scss'
-import { Sparkles } from './Sparkles'
 import { LucideIcon } from '../ui/LucideIcon'
 import { ThemeToggleButton } from './ThemeToggleButton'
 import * as Icons from 'lucide-react'
 import { ViewType } from '../../context/RouterContext'
 import { useRouter } from '../../context/RouterContext'
+import { toast } from 'react-toastify'
+import { NAV_ITEMS as SHARED_NAV_ITEMS, NavItem } from './navItems'
+import { openMobileSurface } from '../../utils/openPopupSurface'
 
-// Updated navigation items with Lucide icon names
-const navItems: Array<{
-  id: ViewType
-  icon: string // Lucide icon name
-  title: {
-    artsnob: string
-    standard: string
-    minimal: string
-    tooltip?: string // Explanation for the uninitiated
-  }
-}> = [
-    {
-      id: 'main',
-      icon: 'Layout',
-      title: {
-        artsnob: "🖥️ Console Externe Élégante™",
-        standard: 'External Console',
-        minimal: 'Console',
-        tooltip: "Opens the External Console in a new window - perfect for tablets and 2nd monitors. Click to open!"
-      }
-    },
-    {
-      id: 'dmxControl',
-      icon: 'Zap',
-      title: {
-        artsnob: "⚡ Contrôle DMX Ultime",
-        standard: 'DMX Control',
-        minimal: 'DMX',
-        tooltip: "Direct DMX channel control with MIDI Learn/Forget functionality."
-      }
-    },
-    {
-      id: 'fixture',
-      icon: 'LampDesk',
-      title: {
-        artsnob: "💡 Fixture Extraordinaire",
-        standard: 'Fixtures',
-        minimal: 'Fix',
-        tooltip: "Mere light fixtures. *sigh* How pedestrian of you to ask."
-      }
-    },
-    {
-      id: 'scenesActs',
-      icon: 'Theater',
-      title: {
-        artsnob: "🎬 Scènes Dramatiques",
-        standard: 'Scenes',
-        minimal: 'Scenes',
-        tooltip: "Create, manage, and orchestrate lighting scenes and automated sequences. The heart of your lighting control."
-      }
-    },
-    {
-      id: 'misc',
-      icon: 'Settings',
-      title: {
-        artsnob: "⚙️ Paramètres Cognoscenti",
-        standard: 'Settings',
-        minimal: 'Cfg',
-        tooltip: "Configuration settings. Do try not to strain yourself understanding that, darling."
-      }
-    },
-    {
-      id: 'mobile',
-      icon: 'Smartphone',
-      title: {
-        artsnob: "📱 Version Mobile Élégante™",
-        standard: 'Mobile Version',
-        minimal: 'Mobile',
-        tooltip: "Opens the mobile-optimized interface in a new window - perfect for phones and tablets. Touch-optimized controls with large sliders."
-      }
-    },
-    {
-      id: 'experimental',
-      icon: 'FlaskConical',
-      title: {
-        artsnob: "🧪 Laboratoire Expérimental",
-        standard: 'Experimental',
-        minimal: 'Exp',
-        tooltip: "Experimental features for the avant-garde. Face tracking and cutting-edge controls. Not for the faint of heart, mon ami."
-      }
-    },
-  ]
+// Active navigation items used by both desktop sidebar and drawer.
+const navItems: NavItem[] = SHARED_NAV_ITEMS
 
-export const Navbar: React.FC = () => {
+export interface NavbarProps {
+  /**
+   * `sidebar` (default) - desktop floating top navigation strip.
+   * `drawer`            - simplified vertical list rendered inside a
+   *                       Drawer panel; no per-item status indicators,
+   *                       no popup window launchers, no collapse toggle.
+   */
+  variant?: 'sidebar' | 'drawer'
+  /**
+   * Called when an item is selected in drawer mode so the parent can
+   * close its drawer.
+   */
+  onItemSelected?: () => void
+}
+
+export const Navbar: React.FC<NavbarProps> = ({ variant = 'sidebar', onItemSelected }) => {
   const { theme, setTheme } = useTheme()
   const { currentView, setCurrentView } = useRouter()
   const [isCollapsed, setIsCollapsed] = useState(false)
@@ -138,55 +75,43 @@ export const Navbar: React.FC = () => {
   }, [dmxChannels]);
 
   const handleViewChange = (view: ViewType) => {
-    // Special handling for External Console - open in new window
-    if (view === 'main') {
-      const width = 1200;
-      const height = 800;
-      const left = (window.screen.width - width) / 2;
-      const top = (window.screen.height - height) / 2;
-
-      const newWindow = window.open(
-        `${window.location.origin}${window.location.pathname}#/external-console`,
-        'ExternalConsole',
-        `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes,toolbar=no,menubar=no,location=no`
-      );
-
-      if (newWindow) {
-        // Focus the new window
-        newWindow.focus();
-      } else {
-        // Fallback if popup blocked
-        console.warn('Popup blocked. Please allow popups for this site.');
-        setCurrentView(view);
+    // Drawer variant always navigates in-place. Popups are blocked on
+    // mobile Safari and feel hostile on tablet anyway.
+    if (variant === 'drawer') {
+      if (view === 'mobile') {
+        setCurrentView('mobile')
+        onItemSelected?.()
+        return
       }
-    } else if (view === 'mobile') {
-      // Special handling for Mobile Version - open in new window optimized for mobile (DMX tab)
-      const width = 480;
-      const height = 800;
-      const left = (window.screen.width - width) / 2;
-      const top = (window.screen.height - height) / 2;
-
-      const newWindow = window.open(
-        `${window.location.origin}${window.location.pathname}#/mobile`,
-        'ArtBastardMobile',
-        `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes,toolbar=no,menubar=no,location=no`
-      );
-
-      if (newWindow) {
-        // Focus the new window
-        newWindow.focus();
-        // Wait a bit then switch to DMX tab (original mobile version)
-        setTimeout(() => {
-          newWindow.postMessage({ type: 'switchTab', tab: 'dmx' }, window.location.origin);
-        }, 500);
-      } else {
-        // Fallback if popup blocked
-        console.warn('Popup blocked. Please allow popups for this site.');
-        setCurrentView(view);
-      }
-    } else {
-      setCurrentView(view);
+      setCurrentView(view)
+      onItemSelected?.()
+      return
     }
+
+    if (view === 'mobile') {
+      const result = openMobileSurface()
+      if (result.kind === 'window' && result.window) {
+        const mobileWindow = result.window
+        setTimeout(() => {
+          try {
+            mobileWindow.postMessage({ type: 'switchTab', tab: 'dmx' }, window.location.origin)
+          } catch {
+            // Popup closed or cross-origin; ignore.
+          }
+        }, 500)
+        return
+      }
+      if (result.kind === 'tab') {
+        toast.info('Pop-up blocked. Touch surface opened in a new tab.')
+        return
+      }
+      if (result.kind === 'same-tab') {
+        toast.info('Pop-ups are blocked. Opening the touch surface in this tab.')
+        return
+      }
+    }
+
+    setCurrentView(view)
   }
 
   const toggleCollapse = () => {
@@ -210,6 +135,87 @@ export const Navbar: React.FC = () => {
     return null
   }
 
+  // Drawer variant - simplified vertical list rendered inside a Drawer.
+  // No sidebar collapse, no per-item status indicators, no popups.
+  if (variant === 'drawer') {
+    return (
+      <nav className={styles.drawerNav} aria-label="Primary navigation">
+        <ul className={styles.drawerNavList}>
+          {navItems.map((item) => {
+              const active = currentView === item.id
+              const labelText =
+                item.title[theme as keyof typeof item.title] ?? item.title.standard
+              return (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    className={`${styles.drawerNavItem} ${active ? styles.drawerNavItemActive : ''}`}
+                    onClick={() => handleViewChange(item.id)}
+                  >
+                    <span className={styles.drawerNavIcon} aria-hidden="true">
+                      <LucideIcon name={item.icon as keyof typeof Icons} size={20} />
+                    </span>
+                    <span className={styles.drawerNavText}>
+                      <span className={styles.drawerNavTitle}>{labelText}</span>
+                      {item.title.tooltip && (
+                        <span className={styles.drawerNavDesc}>{item.title.tooltip}</span>
+                      )}
+                    </span>
+                    {active && <LucideIcon name="Check" size={16} />}
+                  </button>
+                </li>
+              )
+            })}
+        </ul>
+
+        <div className={styles.drawerNavSection}>
+          <button
+            type="button"
+            onClick={() => {
+              toggleSparkles()
+            }}
+            className={`${styles.drawerNavItem} ${uiSettings?.sparklesEnabled ? styles.drawerNavItemActive : ''}`}
+          >
+            <span className={styles.drawerNavIcon} aria-hidden="true">
+              <LucideIcon name="Sparkles" size={20} />
+            </span>
+            <span className={styles.drawerNavText}>
+              <span className={styles.drawerNavTitle}>
+                {uiSettings?.sparklesEnabled ? 'Sparkles on' : 'Sparkles off'}
+              </span>
+              <span className={styles.drawerNavDesc}>
+                Background motion. Disabled by default on small screens for performance.
+              </span>
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              const event = new CustomEvent('resetLayout')
+              window.dispatchEvent(event)
+              localStorage.removeItem('midiMonitorDismissed')
+              localStorage.removeItem('oscMonitorDismissed')
+              localStorage.removeItem('fancyQuotesDismissed')
+              onItemSelected?.()
+            }}
+            className={styles.drawerNavItem}
+          >
+            <span className={styles.drawerNavIcon} aria-hidden="true">
+              <LucideIcon name="RotateCcw" size={20} />
+            </span>
+            <span className={styles.drawerNavText}>
+              <span className={styles.drawerNavTitle}>Reset layout</span>
+              <span className={styles.drawerNavDesc}>
+                Restore dismissed monitors and panels.
+              </span>
+            </span>
+          </button>
+        </div>
+      </nav>
+    )
+  }
+
   return (
     <div className={`${styles.navbarContainer} ${isCollapsed ? styles.navBarCollapsedState : ''}`}>
       <button
@@ -217,21 +223,12 @@ export const Navbar: React.FC = () => {
         className={styles.collapseToggle}
         title={isCollapsed ? 'Expand Navigation' : 'Collapse Navigation'}
       >
-        <LucideIcon name={isCollapsed ? 'ChevronLeft' : 'ChevronRight'} />
+        <LucideIcon name={isCollapsed ? 'ChevronDown' : 'ChevronUp'} />
       </button>
-
-      {/* Sparkles component can be placed here if it needs to be part of the main navbar scrollable content */}
-      {/* <Sparkles /> */}
 
       <div className={`${styles.navContent} ${isCollapsed ? styles.navContentCollapsed : ''}`}>
         <div className={styles.navButtons}>
-          {navItems.filter((item) => {
-            // Hide experimental section if configured to hide
-            if (item.id === 'experimental' && uiSettings?.hideExperimentalSection) {
-              return false;
-            }
-            return true;
-          }).map((item) => (
+          {navItems.map((item) => (
             <div key={item.id} className={styles.navItemContainer}>
               <button
                 onClick={() => handleViewChange(item.id)}
@@ -246,21 +243,17 @@ export const Navbar: React.FC = () => {
               {/* Status indicators under each menu item */}
               {!isCollapsed && (
                 <div className={styles.itemStatusIndicators}>
-                  {/* Connection Status for main item */}
-                  {item.id === 'main' && (
-                    <div
-                      className={`${styles.itemStatusIcon} ${connected ? styles.statusOk : styles.statusError}`}
-                      title={connected ? 'Connected to server' : 'Disconnected from server'}
-                    >
-                      <LucideIcon name={connected ? 'Wifi' : 'WifiOff'} />
-                      <span className={styles.itemStatusLabel}>
-                        {connected ? 'Connected' : 'Disconnected'}
-                      </span>
-                    </div>
-                  )}
-                  {/* DMX Activity for dmxControl item */}
                   {item.id === 'dmxControl' && (
                     <>
+                      <div
+                        className={`${styles.itemStatusIcon} ${connected ? styles.statusOk : styles.statusError}`}
+                        title={connected ? 'Connected to server' : 'Disconnected from server'}
+                      >
+                        <LucideIcon name={connected ? 'Wifi' : 'WifiOff'} />
+                        <span className={styles.itemStatusLabel}>
+                          {connected ? 'Connected' : 'Disconnected'}
+                        </span>
+                      </div>
                       <div
                         className={`${styles.itemStatusIcon} ${dmxActivity ? styles.statusActive : styles.statusNeutral}`}
                         title={`DMX Output ${dmxActivity ? '(active)' : '(idle)'}`}
@@ -322,40 +315,38 @@ export const Navbar: React.FC = () => {
           ))}
         </div>
         
-        {/* Sparkles Toggle */}
-        <div className={styles.resetLayoutSection}>
-          <button
-            onClick={toggleSparkles}
-            className={`${styles.resetLayoutButton} ${uiSettings?.sparklesEnabled ? styles.active : ''}`}
-            title={uiSettings?.sparklesEnabled ? 'Disable sparkles' : 'Enable sparkles'}
-          >
-            <LucideIcon name="Sparkles" />
-            {!isCollapsed && <span>{uiSettings?.sparklesEnabled ? 'Sparkles ON' : 'Sparkles OFF'}</span>}
-          </button>
-        </div>
+        <div className={styles.toolbarExtras}>
+          <div className={styles.resetLayoutSection}>
+            <button
+              type="button"
+              onClick={toggleSparkles}
+              className={`${styles.resetLayoutButton} ${uiSettings?.sparklesEnabled ? styles.active : ''}`}
+              title={uiSettings?.sparklesEnabled ? 'Disable sparkles' : 'Enable sparkles'}
+            >
+              <LucideIcon name="Sparkles" />
+              {!isCollapsed && <span>{uiSettings?.sparklesEnabled ? 'Sparkles ON' : 'Sparkles OFF'}</span>}
+            </button>
+          </div>
 
-        {/* Reset Layout Button */}
-        <div className={styles.resetLayoutSection}>
-          <button
-            onClick={() => {
-              // Dispatch event to reset monitors and other dismissed elements
-              const event = new CustomEvent('resetLayout');
-              window.dispatchEvent(event);
-              // Also clear any other layout-related localStorage items if needed
-              localStorage.removeItem('midiMonitorDismissed');
-              localStorage.removeItem('oscMonitorDismissed');
-              localStorage.removeItem('fancyQuotesDismissed');
-            }}
-            className={styles.resetLayoutButton}
-            title="Reset Layout - Restore dismissed monitors"
-          >
-            <LucideIcon name="RotateCcw" />
-            {!isCollapsed && <span>Reset Layout</span>}
-          </button>
+          <div className={styles.resetLayoutSection}>
+            <button
+              type="button"
+              onClick={() => {
+                const event = new CustomEvent('resetLayout');
+                window.dispatchEvent(event);
+                localStorage.removeItem('midiMonitorDismissed');
+                localStorage.removeItem('oscMonitorDismissed');
+                localStorage.removeItem('fancyQuotesDismissed');
+              }}
+              className={styles.resetLayoutButton}
+              title="Reset Layout - Restore dismissed monitors"
+            >
+              <LucideIcon name="RotateCcw" />
+              {!isCollapsed && <span>Reset Layout</span>}
+            </button>
+          </div>
         </div>
       </div>
-      {/* If Sparkles is meant to be fixed at the bottom or outside scroll, place it here, relative to navbarContainer */}
-      <Sparkles />
     </div>
   )
 }

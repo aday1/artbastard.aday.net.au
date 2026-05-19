@@ -2,6 +2,7 @@ import React from 'react';
 import { Fixture } from '../../store';
 import { LucideIcon } from '../ui/LucideIcon';
 import { fixtureTemplates } from './fixtureTemplates';
+import { getFixtureTypeColor, getFixtureTypeIcon } from '../../utils/fixturePresentation';
 import styles from './DraggableFixturePalette.module.scss';
 
 interface DraggableFixturePaletteProps {
@@ -15,32 +16,6 @@ const DraggableFixturePalette: React.FC<DraggableFixturePaletteProps> = ({
   onFixtureDrop,
   canvasRef,
 }) => {
-  const getFixtureColor = (type: string): string => {
-    const colorMap: Record<string, string> = {
-      'moving-head': '#ff6b6b',
-      'par': '#4ecdc4',
-      'strip': '#45b7d1',
-      'laser': '#96ceb4',
-      'strobe': '#feca57',
-      'smoke': '#a55eea',
-      default: '#fd79a8',
-    };
-    return colorMap[type.toLowerCase()] || colorMap.default;
-  };
-
-  const getFixtureIcon = (type: string) => {
-    const iconMap: Record<string, any> = {
-      'moving-head': 'Zap',
-      'par': 'Circle',
-      'strip': 'Minus',
-      'laser': 'Target',
-      'strobe': 'Flashlight',
-      'smoke': 'Cloud',
-      default: 'Lightbulb',
-    };
-    return iconMap[type.toLowerCase()] || iconMap.default;
-  };
-
   const handleDragStart = (event: React.DragEvent, fixtureId: string) => {
     event.dataTransfer.setData('text/plain', fixtureId);
     event.dataTransfer.effectAllowed = 'copy';
@@ -78,12 +53,12 @@ const DraggableFixturePalette: React.FC<DraggableFixturePaletteProps> = ({
             onDragEnd={handleDragEnd}
             onMouseDown={handleMouseDown}
             style={{
-              '--fixture-color': getFixtureColor(template.type)
+              '--fixture-color': getFixtureTypeColor(template.type)
             } as React.CSSProperties}
             title={`${template.name} (${template.type}) - ${template.channels?.length || 0} channels`}
           >
             <div className={styles.fixtureIcon}>
-              <LucideIcon name={getFixtureIcon(template.type) as any} />
+              <LucideIcon name={getFixtureTypeIcon(template.type) as any} />
             </div>
             
             <div className={styles.fixtureInfo}>

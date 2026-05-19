@@ -4,6 +4,13 @@
   bottom: 20px; /* Bottom positioning */
   width: 400px;
   max-height: 300px; /* This will be the overall max-height including header */
+
+  /* Hide the floating OSC monitor on mobile/tablet (<1280px) to avoid
+   * clashing with the MobileTopBar, bottom-centre toasts and the help
+   * button. Use the embedded copy inside the Help overlay if needed. */
+  @media (max-width: 1279px) {
+    display: none !important;
+  }
   background-color: #2a2a2a;
   border: 2px solid #555;
   border-radius: 6px;
@@ -97,6 +104,16 @@
   margin-right: 10px; /* Adjusted margin */
   font-size: 0.9em;
   color: #aaa;
+}
+
+.filterBadge {
+  margin-right: 10px;
+  font-size: 0.8em;
+  color: #ffaa00;
+  background: rgba(255, 170, 0, 0.15);
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 170, 0, 0.3);
 }
 
 .controls {
@@ -264,6 +281,82 @@
 .argValue {
   color: #f0f0f0;
   word-break: break-all; /* Prevent overflow */
+}
+
+.filterPanel {
+  background-color: #333;
+  border-top: 1px solid #555;
+  padding: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.filterHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 0.9em;
+  
+  strong {
+    color: #ff6600;
+  }
+  
+  button {
+    background: rgba(255, 102, 0, 0.2);
+    border: 1px solid rgba(255, 102, 0, 0.4);
+    color: #ffaa00;
+    padding: 4px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.85em;
+    
+    &:hover {
+      background: rgba(255, 102, 0, 0.3);
+    }
+    
+    &.active {
+      background: #ff6600;
+      color: #fff;
+    }
+  }
+}
+
+.filterOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  
+  button {
+    background: rgba(255, 102, 0, 0.1);
+    border: 1px solid rgba(255, 102, 0, 0.3);
+    color: #ff6600;
+    padding: 6px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    text-align: left;
+    font-size: 0.85em;
+    transition: all 0.2s;
+    
+    &:hover {
+      background: rgba(255, 102, 0, 0.2);
+      border-color: rgba(255, 102, 0, 0.5);
+    }
+    
+    &.active {
+      background: rgba(255, 102, 0, 0.3);
+      border-color: #ff6600;
+      font-weight: bold;
+    }
+  }
+}
+
+.noHosts {
+  color: #888;
+  font-style: italic;
+  font-size: 0.85em;
+  padding: 8px;
+  text-align: center;
 }
 
 /* Removed duplicated .tooltipArgs, .tooltipArg, .argType, .argValue from here as they are now direct children of .hoverTooltip or part of new structure */

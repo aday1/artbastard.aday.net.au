@@ -1,61 +1,99 @@
-# 🔧 **Installation Guide** - ArtBastard V5.12
+# ArtBastard Installation
 
-> *"Installation, mes amis, should be as smooth as a perfectly focused spotlight."*
+## Requirements
 
-## 📋 **System Requirements**
-- **Node.js** 18+ (the foundation of excellence)
-- **Modern Browser** (Chrome/Firefox/Safari/Edge)
-- **DMX Interface** (USB DMX or Art-Net device)
-- **2GB RAM minimum** (4GB recommended for large shows)
+- Linux / macOS / Windows
+- Node.js 20+
+- npm 10+
+- Modern browser (Chrome, Firefox, Edge, Safari)
+- USB DMX interface or Art-Net node
+- Optional: MIDI controller, OSC client, TouchOSC tablet
+- Cloud + home LAN: Raspberry Pi (or similar) for `bridge-agent` when using
+  the hosted app with local Art-Net (see DOCS/BRIDGE.md)
 
-## ⚡ **Quick Install**
+## Install
 
-### 1. **Clone & Launch**
-```bash
-git clone https://github.com/aday1/ArtBastard-DMX512.git
-cd ArtBastard-DMX512
+From repository root:
+
+```
+npm ci
+npm --prefix react-app ci
+```
+
+`--legacy-peer-deps` may be required on some npm versions; the bundled
+launchers handle that automatically.
+
+## Run
+
+Linux / macOS:
+
+```
+./start.sh
+```
+
+Windows:
+
+```
 .\start.ps1
 ```
-Navigate to: `http://localhost:3030`
 
-### 2. **DMX Hardware Setup**
-- **USB DMX**: Connect interface, install drivers if needed
-- **Art-Net**: Configure network settings (usually auto-detects)
-- **Verify**: Check status bar for connection indicator
+App URL: http://localhost:3030
 
-## 🚨 **Troubleshooting**
+## Reset workflow
 
-### Build Issues
-```bash
-# Clean rebuild
-.\start.ps1 -Clear
+Force a factory-fresh start with the launcher flag:
 
-# Factory fresh start (clears all saved state)
-.\start.ps1 -Reset
-# or
-.\start.sh --reset
+```
+./start.sh --reset       # Linux / macOS
+.\start.ps1 -Reset       # Windows
 ```
 
-### Factory Reset
-If you need to completely reset the application to factory defaults:
-- **UI Reset**: Use Configuration Sanctuary → Factory Reset button (clears all UI state, fixtures, channel names, etc.)
-- **Server Reset**: Use `.\start.ps1 -Reset` or `.\start.sh --reset` to clear all server-side saved state (scenes, config, acts, fixtures, groups, last-state.json)
+Or by API:
 
-### DMX Connection Problems
-- Check USB cable/drivers
-- Verify Art-Net network settings
-- Restart application after hardware changes
+```
+DELETE /api/state
+DELETE /api/config
+DELETE /api/scenes
+GET    /api/factory-reset-check     # returns true once reset has occurred
+```
 
-### Performance Optimization
-- Close unused browser tabs
-- Disable browser extensions during performance
-- Use Chrome for best WebGL support
+Always export `/api/config` and `/api/scenes` first if you want to keep the
+current show. Restore via the matching POST endpoints, or paste a
+configuration JSON via Settings > Import.
 
-## 📱 **Touch Screen Setup**
-For professional touch consoles:
-1. Set display scaling to 100%
-2. Calibrate touch sensitivity
-3. Enable fullscreen mode (F11)
+## Verify build and runtime
 
----
-**Next:** [Fixture Setup](./FIXTURES.md) | [Usage Guide](./USAGE.md)
+```
+npm run build
+npm run test:api-contract
+npm run test:touchosc-workflow
+npm run test:bridge-smoke
+```
+
+## LAN / Pi bridge (cloud deploy only)
+
+If you use the hosted app with fixtures on a private LAN, install the bridge
+on a Pi (see DOCS/BRIDGE.md). Not required for local `localhost` runs where
+the server can reach Art-Net directly.
+
+## Capture demo evidence (optional)
+
+The demo capture pipeline requires `Xvfb`, `ffmpeg`, `xdotool` and
+`google-chrome` on the host. The repo's CI / dev container ships them.
+
+```
+npm run demo:capture-screenshots
+npm run demo:capture-videos
+npm run demo:evidence-full
+```
+
+Outputs:
+
+- Screenshots: `/tmp/artbastard-demo-screenshots-<timestamp>/`
+- Videos: `website/videos/<name>.{webm,jpg}`
+
+The capture-videos pipeline launches the running backend (or starts one if
+none is reachable on `BASE_URL`), renders the routes in headed Chrome on a
+virtual X display, and encodes WebM clips with VP9. Adjust framerate /
+bitrate / clip list with the environment variables described in
+DOCS/SHOWCASE.md.

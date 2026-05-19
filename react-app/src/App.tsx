@@ -2,10 +2,9 @@ import React, { useEffect, useState } from 'react'
 import { Layout } from './components/layout/Layout'
 import { ThemeProvider } from './context/ThemeContext'
 import { SocketProvider } from './context/SocketContext'
-import { PanelProvider } from './context/PanelContext'
 import { DockingProvider } from './context/DockingContext'
 import { PinningProvider } from './context/PinningContext'
-import { ChromaticEnergyManipulatorProvider } from './context/ChromaticEnergyManipulatorContext'
+import { SuperControlPreferencesProvider } from './context/SuperControlPreferencesContext'
 import { useSceneTransitionAnimation } from './hooks/useSceneTransitionAnimation'
 import { useGlobalMidiManager } from './hooks/useGlobalMidiManager'
 import { useGlobalBrowserMidi } from './hooks/useGlobalBrowserMidi'
@@ -20,17 +19,48 @@ import { MidiDmxProcessor } from './components/midi/MidiDmxProcessor'
 import { OscDmxProcessor } from './components/midi/OscDmxProcessor'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
-import ExternalConsolePage from './pages/ExternalConsolePage'
 import MobilePage from './pages/MobilePage'
+import { FactoryResetBanner } from './components/layout/FactoryResetBanner'
+import { RouterProvider } from './context/RouterContext'
+import { ContextMenuProvider } from './context/ContextMenuContext'
+
+/**
+ * Pick a toast container position that does not overlap the new
+ * MobileTopBar / safe-area chrome. We resolve once at module load
+ * and again on resize via React state in the App component.
+ */
+const resolveToastPosition = (): 'top-right' | 'bottom-center' => {
+  if (typeof window === 'undefined') return 'top-right'
+  try {
+    // Matches the canonical TABLET_BP from useMobile.ts so the toast
+    // strip moves to the bottom-centre on every device that gets the
+    // mobile chrome (phones, iPad portrait/landscape, small touch
+    // laptops). Anything wider gets the desktop top-right stack.
+    return window.matchMedia('(max-width: 1279px)').matches
+      ? 'bottom-center'
+      : 'top-right'
+  } catch {
+    return 'top-right'
+  }
+}
+
+// Capture the URL hash exactly once at module load so that React strict
+// mode remounts and the SPA's own hash updates (RouterContext rewrites
+// the hash whenever currentView changes) do not accidentally re-classify
+// the SPA as the standalone Mobile popup window.
+const initialHashAtLoad = typeof window !== 'undefined' ? window.location.hash : ''
+const initialIsMobilePopup =
+  initialHashAtLoad === '#/mobile' || initialHashAtLoad === '#mobile'
 
 function App() {
-  // Check if this is the External Console page (opened in new window)
-  const isExternalConsole = window.location.hash === '#/external-console' || 
-                            window.location.hash === '#external-console';
-  
-  // Check if this is the Mobile page (opened in new window)
-  const isMobilePage = window.location.hash === '#/mobile' || 
-                       window.location.hash === '#mobile';
+  const isMobilePage = initialIsMobilePopup
+
+  const [toastPosition, setToastPosition] = useState(resolveToastPosition())
+  useEffect(() => {
+    const handleResize = () => setToastPosition(resolveToastPosition())
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
   
   // Initialize global monitoring
   useGlobalMonitoring();
@@ -60,104 +90,48 @@ function App() {
   // Initialize clip launcher playback
   useClipLauncher();
   
-  // If this is the External Console, render it standalone
-  if (isExternalConsole) {
-    return (
-      <ThemeProvider>
-        <SocketProvider>
-          <PanelProvider>
-            <DockingProvider>
-              <PinningProvider>
-                <ChromaticEnergyManipulatorProvider>
-                  <MidiDmxProcessor />
-                  <OscDmxProcessor />
-                  <ExternalConsolePage />
-                  <ToastContainer 
-                    position="top-right"
-                    autoClose={3000}
-                    hideProgressBar={false}
-                    newestOnTop={false}
-                    closeOnClick
-                    rtl={false}
-                    pauseOnFocusLoss
-                    draggable
-                    pauseOnHover
-                    theme="dark"
-                  />
-                </ChromaticEnergyManipulatorProvider>
-              </PinningProvider>
-            </DockingProvider>
-          </PanelProvider>
-        </SocketProvider>
-      </ThemeProvider>
-    );
-  }
-  
-  // If this is the Mobile page, render it standalone
-  if (isMobilePage) {
-    return (
-      <ThemeProvider>
-        <SocketProvider>
-          <PanelProvider>
-            <DockingProvider>
-              <PinningProvider>
-                <ChromaticEnergyManipulatorProvider>
-                  <MidiDmxProcessor />
-                  <OscDmxProcessor />
-                  <MobilePage />
-                  <ToastContainer 
-                    position="top-center"
-                    autoClose={3000}
-                    hideProgressBar={false}
-                    newestOnTop={false}
-                    closeOnClick
-                    rtl={false}
-                    pauseOnFocusLoss
-                    draggable
-                    pauseOnHover
-                    theme="dark"
-                  />
-                </ChromaticEnergyManipulatorProvider>
-              </PinningProvider>
-            </DockingProvider>
-          </PanelProvider>
-        </SocketProvider>
-      </ThemeProvider>
-    );
-  }
-  
-  // Normal app layout
+  const toast = (
+    <ToastContainer
+      position={isMobilePage ? 'bottom-center' : toastPosition}
+      autoClose={3000}
+      hideProgressBar={false}
+      newestOnTop={false}
+      closeOnClick
+      rtl={false}
+      pauseOnFocusLoss
+      draggable
+      pauseOnHover
+      theme="dark"
+    />
+  )
+
   return (
     <ThemeProvider>
       <SocketProvider>
-        <PanelProvider>
-          <DockingProvider>
-            <PinningProvider>
-              <ChromaticEnergyManipulatorProvider>
-                {/* Global MIDI processor - processes MIDI messages into DMX channel updates */}
-                <MidiDmxProcessor />
-                {/* Global OSC processor - processes OSC messages into DMX channel updates */}
-                <OscDmxProcessor />
-                <Layout />
-                <ToastContainer 
-                  position="top-right"
-                  autoClose={3000}
-                  hideProgressBar={false}
-                  newestOnTop={false}
-                  closeOnClick
-                  rtl={false}
-                  pauseOnFocusLoss
-                  draggable
-                  pauseOnHover
-                  theme="dark"
-                />
-              </ChromaticEnergyManipulatorProvider>
-            </PinningProvider>
-          </DockingProvider>
-        </PanelProvider>
+        <DockingProvider>
+          <PinningProvider>
+            <SuperControlPreferencesProvider>
+              <RouterProvider>
+                <ContextMenuProvider>
+                  <MidiDmxProcessor />
+                  <OscDmxProcessor />
+                  {isMobilePage ? (
+                    <MobilePage />
+                  ) : (
+                    <>
+                      <FactoryResetBanner />
+                      <Layout />
+                    </>
+                  )}
+                  {toast}
+                </ContextMenuProvider>
+              </RouterProvider>
+            </SuperControlPreferencesProvider>
+          </PinningProvider>
+        </DockingProvider>
       </SocketProvider>
     </ThemeProvider>
-  );
+  )
 }
 
 export default App

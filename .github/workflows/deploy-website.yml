@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'website/**'
+      - 'DOCS/**'
       - '.github/workflows/deploy-website.yml'
   workflow_dispatch:
   release:

@@ -73,7 +73,9 @@ export const createAutomationSlice: StateCreator<any> = (set, get) => ({
     centerX: 128,
     centerY: 128,
     syncToBPM: false,
-    phase: 0
+    phase: 0,
+    repeatMode: 'loop',
+    loopDirection: 'forward',
   },
   colorSliderAutopilot: {
     enabled: false,

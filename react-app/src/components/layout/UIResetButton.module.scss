@@ -1,7 +1,7 @@
 .resetButton {
   position: fixed;
   bottom: 20px;
-  right: 280px; // Moved further left to avoid blocking navbar status icons
+  right: 20px;
   z-index: 1050;
   background-color: var(--color-card-bg);
   border: none;
@@ -31,9 +31,6 @@
     outline: none;
     box-shadow: 0 0 0 2px var(--color-primary);
   }
-  
-  // Responsive positioning for when navbar is collapsed
-  :global(body.navbar-is-collapsed) & {
-    right: 120px; // Move closer to the collapsed navbar
-  }
+
+
 }

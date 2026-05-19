@@ -18,8 +18,6 @@ export interface DmxChannelFaderProps {
   onChange: (value: number) => void;
   fixtureRanges?: FixtureChannelRange[];
   ticksOnly?: boolean;
-  auxFullRange?: boolean;
-  onToggleAuxFullRange?: () => void;
   vertical?: boolean;
   className?: string;
   faderSize?: DmxFaderSize;
@@ -33,8 +31,6 @@ export const DmxChannelFader: React.FC<DmxChannelFaderProps> = ({
   onChange,
   fixtureRanges,
   ticksOnly = false,
-  auxFullRange = false,
-  onToggleAuxFullRange,
   vertical = true,
   className = '',
   faderSize = 'default',
@@ -65,22 +61,8 @@ export const DmxChannelFader: React.FC<DmxChannelFaderProps> = ({
   if (useTicks) {
     return (
       <div className={`${styles.root} ${className}`}>
-        <button
-          type="button"
-          className={`${styles.modeBadge} ${auxFullRange ? styles.modeBadgeActive : ''}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleAuxFullRange?.();
-          }}
-          title={
-            auxFullRange
-              ? 'Hide full 0-255 fader (click). Alt+click TICKS also toggles.'
-              : 'Show full 0-255 fader alongside slot/fine (click). Alt+click TICKS also toggles.'
-          }
-        >
-          {auxFullRange ? 'Ticks + Full' : 'Ticks'}
-        </button>
-        <div className={auxFullRange ? styles.triple : styles.dual}>
+        <span className={styles.modeBadge}>Ticks</span>
+        <div className={styles.dual}>
           <div className={styles.slotCol}>
             <DmxSteppedVerticalFader
               value={value}
@@ -103,20 +85,6 @@ export const DmxChannelFader: React.FC<DmxChannelFaderProps> = ({
               size={faderSize}
             />
           </div>
-          {auxFullRange ? (
-            <div className={styles.fullCol}>
-              <DmxVerticalFader
-                value={clampToRange(value, min, max)}
-                min={min}
-                max={max}
-                disabled={disabled}
-                onChange={onChange}
-                readoutLabel={`Full ${min}-${max}`}
-                showReadout
-                size={faderSize}
-              />
-            </div>
-          ) : null}
         </div>
       </div>
     );
@@ -136,5 +104,3 @@ export const DmxChannelFader: React.FC<DmxChannelFaderProps> = ({
     </div>
   );
 };
-
-

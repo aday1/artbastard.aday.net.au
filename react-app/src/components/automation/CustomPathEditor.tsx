@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useStore } from '../../store/store';
+import { HorizontalFader } from '../ui/controls';
+import { EnvelopePlaybackControls } from './EnvelopePlaybackControls';
 import styles from './CustomPathEditor.module.scss';
 
 interface PathPoint {
@@ -390,6 +392,16 @@ export const CustomPathEditor: React.FC<CustomPathEditorProps> = ({
           
           <div className={styles.controls}>
             <div className={styles.section}>
+              <h4>Path playback</h4>
+              <EnvelopePlaybackControls
+                repeatMode={panTiltAutopilot.repeatMode ?? 'loop'}
+                loopDirection={panTiltAutopilot.loopDirection ?? 'forward'}
+                onRepeatModeChange={(repeatMode) => setPanTiltAutopilot({ repeatMode })}
+                onLoopDirectionChange={(loopDirection) => setPanTiltAutopilot({ loopDirection })}
+              />
+            </div>
+
+            <div className={styles.section}>
               <h4>View Options</h4>
               <label>
                 <input
@@ -412,13 +424,11 @@ export const CustomPathEditor: React.FC<CustomPathEditorProps> = ({
             {showPreview && (
               <div className={styles.section}>
                 <h4>Preview Position</h4>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
+                <HorizontalFader
+                  min={0}
+                  max={100}
                   value={previewPosition}
-                  onChange={(e) => setPreviewPosition(parseInt(e.target.value))}
-                  className={styles.previewSlider}
+                  onChange={(v) => setPreviewPosition(Math.round(v))}
                 />
                 <span>{previewPosition}%</span>
               </div>

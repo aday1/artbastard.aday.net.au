@@ -2,10 +2,49 @@
 // Touch-friendly, accessible, and professional lighting control interface
 
 // ============================================================================
+// RESPONSIVE BREAKPOINTS
+// ============================================================================
+//
+// Tier         | Range            | Purpose
+// -------------+------------------+-----------------------------------------
+// phone        | <= 640px         | One-handed phone use, single column
+// tablet       | 641px - 1279px   | iPad portrait AND landscape, small
+//                                   touch laptops (Surface Go etc.) -
+//                                   drawer chrome
+// desktop      | >= 1280px        | Side rails (Navbar + PinnedChannels)
+//
+// SCSS @media usage example:
+//   @media (max-width: 640px) { ... }   // phones
+//   @media (max-width: 1279px) { ... }  // phones + tablets
+//   @media (min-width: 1280px) { ... }  // desktop only
+//
+// JS-side: see src/hooks/useMobile.ts (PHONE_BP=640, TABLET_BP=1280).
+
+// ============================================================================
 // DESIGN TOKENS
 // ============================================================================
 
 :root {
+  // Canonical responsive breakpoints (read by JS via getComputedStyle if needed)
+  --bp-phone: 640px;
+  --bp-tablet: 1024px;
+  --bp-desktop: 1280px;
+
+  // Compact mobile chrome dimensions
+  --mobile-topbar-height: 56px;
+  --tablet-topbar-height: 64px;
+
+  // Canonical responsive breakpoints (kept in sync with useMobile.ts).
+  --bp-phone-px: 640;
+  --bp-tablet-px: 1280;
+
+  // Safe area insets - default to 0 on browsers that lack env() so the
+  // CSS that consumes them does not produce calc(0px + nothing) artifacts.
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+
   // Spacing Scale (8px base unit)
   --space-xs: 0.25rem;    // 4px
   --space-sm: 0.5rem;     // 8px
@@ -122,6 +161,15 @@
   --color-info-500: #3b82f6;
   --color-info-600: #2563eb;
   --color-info-700: #1d4ed8;
+
+  // RGB tuples (used wherever we need rgba() with a token; CSS variables
+  // cannot be split mid-function, so we declare the channel triples
+  // directly alongside their hex equivalents).
+  --color-primary-500-rgb: 249, 115, 22;
+  --color-primary-400-rgb: 251, 146, 60;
+  --color-success-500-rgb: 34, 197, 94;
+  --color-error-500-rgb: 239, 68, 68;
+  --color-info-500-rgb: 59, 130, 246;
 
   // Background Colors
   --color-background: var(--color-primary-50);
@@ -461,7 +509,7 @@
   &:focus {
     outline: none;
     border-color: var(--color-border-focus);
-    box-shadow: 0 0 0 3px rgba(var(--color-primary-500), 0.1);
+    box-shadow: 0 0 0 3px rgba(var(--color-primary-500-rgb), 0.18);
   }
 
   &:disabled {
@@ -679,4 +727,99 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+// ============================================================================
+// RESPONSIVE UTILITY CLASSES
+// ============================================================================
+
+// Show/hide helpers based on the canonical breakpoints. Use class names
+// rather than @media wrappers in components when you need both code paths
+// to coexist.
+.hide-on-mobile {
+  @media (max-width: 640px) { display: none !important; }
+}
+.hide-on-tablet-down {
+  @media (max-width: 1279px) { display: none !important; }
+}
+.show-on-mobile {
+  @media (min-width: 641px) { display: none !important; }
+}
+.show-on-tablet-down {
+  @media (min-width: 1280px) { display: none !important; }
+}
+
+// Safe area padding helpers for elements that need to clear iPhone /
+// iPad notches and the home indicator. Apply to any container that sits
+// against the device edges (top bars, bottom sheets, drawers).
+.safe-area-padding {
+  padding-top: var(--safe-top);
+  padding-right: var(--safe-right);
+  padding-bottom: var(--safe-bottom);
+  padding-left: var(--safe-left);
+}
+.safe-area-padding-top    { padding-top: var(--safe-top); }
+.safe-area-padding-bottom { padding-bottom: var(--safe-bottom); }
+.safe-area-padding-x {
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+}
+
+// Horizontally scrollable tab bar used by responsive page tabs.
+// Apply to the tabs container (flex row) and the tabs naturally
+// stop wrapping and scroll-snap.
+.scroll-tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  -ms-overflow-style: none;
+
+  > * {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+  }
+
+  // Subtle scrollbar styling so the bar does not visually jump
+  // between desktop (no scroll) and mobile (scroll) states.
+  &::-webkit-scrollbar {
+    height: 4px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(var(--color-primary-500-rgb), 0.4);
+    border-radius: 2px;
+  }
+}
+
+// Class-shaped touch target so components can opt in without using
+// SCSS @extend (which requires the source file to know the placeholder).
+.ab-touch-target {
+  min-height: var(--touch-target-min);
+  min-width: var(--touch-target-min);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+// Body scroll lock helper consumed by Drawer and modal overlays.
+html.ab-no-scroll,
+body.ab-no-scroll {
+  overflow: hidden !important;
+  touch-action: none;
+}
+
+// Clamp images and embeds (canvas, video, iframe) inside narrow
+// containers so experimental pages do not trigger horizontal scroll.
+.ab-fluid-media,
+.ab-fluid-media img,
+.ab-fluid-media canvas,
+.ab-fluid-media video,
+.ab-fluid-media iframe {
+  max-width: 100%;
+  height: auto;
 }

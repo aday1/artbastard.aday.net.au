@@ -1,2 +1,189 @@
-// Legacy import path — styles live in workbench-shell.scss
-@use './workbench-shell.scss';
+// Skeuomorphic controls (OSINT619 / rodzyk / panel chrome)
+// https://codepen.io/OSINT619/pen/QwKoNBp
+
+:root {
+  --skeuo-smooth: 0.35s cubic-bezier(0.075, 0.82, 0.165, 1);
+  --skeuo-neon: hsl(171deg 100% 51%);
+  --skeuo-neon-glow: hsl(171 100% 51% / 0.75);
+  --skeuo-g100: hsl(0deg 0% 93%);
+  --skeuo-g200: hsl(0deg 0% 80%);
+  --skeuo-g300: hsl(0deg 0% 69%);
+  --skeuo-g500: hsl(0deg 0% 45%);
+  --skeuo-g600: hsl(0deg 0% 37%);
+  --skeuo-g700: hsl(0deg 0% 22%);
+  --skeuo-g800: hsl(0deg 0% 14%);
+  --skeuo-shadow-far: 0 18px 28px -12px rgb(0 0 0 / 0.65);
+  --skeuo-shadow-contact: 0 4px 8px -4px rgb(0 0 0 / 0.55);
+  --skeuo-inner-highlight: inset 0 3px 5px -3px rgb(255 255 255 / 0.45);
+  --skeuo-inner-shade: inset 0 -5px 7px -6px rgb(0 0 0 / 0.55);
+}
+
+[data-theme='dark'] {
+  --skeuo-neon: #00d4ff;
+  --skeuo-neon-glow: rgba(0, 212, 255, 0.8);
+  --skeuo-g100: hsl(220deg 8% 78%);
+  --skeuo-g200: hsl(220deg 8% 62%);
+  --skeuo-g300: hsl(220deg 8% 48%);
+  --skeuo-g500: hsl(220deg 10% 36%);
+  --skeuo-g600: hsl(220deg 12% 28%);
+  --skeuo-g700: hsl(220deg 14% 20%);
+  --skeuo-g800: hsl(220deg 16% 12%);
+}
+
+.ab-skeuo-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: var(--touch-target-min, 44px);
+  padding: 0.35rem 0.85rem;
+  border: 2px solid var(--skeuo-g600);
+  border-radius: 10px;
+  color: var(--skeuo-g100);
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.1;
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+  box-shadow: var(--skeuo-shadow-far), var(--skeuo-shadow-contact);
+  transition:
+    box-shadow var(--skeuo-smooth),
+    transform var(--skeuo-smooth),
+    filter var(--skeuo-smooth);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  &:not(:disabled):active,
+  &.pressed {
+    transform: translateY(2px);
+  }
+
+  &:not(:disabled):active .ab-skeuo-btn__mask,
+  &.pressed .ab-skeuo-btn__mask {
+    filter: brightness(0.78);
+  }
+}
+
+.ab-skeuo-btn--pill {
+  border-radius: 999px;
+  min-width: 2.75rem;
+}
+
+.ab-skeuo-btn--wide {
+  width: 100%;
+}
+
+.ab-skeuo-btn--compact {
+  min-height: 2.35rem;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.75rem;
+}
+
+.ab-skeuo-btn--active .ab-skeuo-btn__light {
+  background-color: var(--skeuo-neon);
+  box-shadow:
+    0 1px 1px -0.5px rgba(255, 255, 255, 0.5),
+    inset 0 -1px 1px -0.5px rgba(0, 0, 0, 0.25),
+    0 1px 5px var(--skeuo-neon-glow),
+    0 2px 14px var(--skeuo-neon-glow);
+}
+
+.ab-skeuo-btn--accent-purple.ab-skeuo-btn--active .ab-skeuo-btn__light {
+  background-color: #c084fc;
+  box-shadow:
+    0 1px 5px rgba(192, 132, 252, 0.55),
+    0 2px 14px rgba(192, 132, 252, 0.45);
+}
+
+.ab-skeuo-btn--accent-green.ab-skeuo-btn--active .ab-skeuo-btn__light {
+  background-color: #34d399;
+  box-shadow:
+    0 1px 5px rgba(52, 211, 153, 0.55),
+    0 2px 14px rgba(52, 211, 153, 0.45);
+}
+
+.ab-skeuo-btn__mask {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+  transition: filter var(--skeuo-smooth);
+}
+
+.ab-skeuo-btn__inner {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  border: 3px solid var(--skeuo-g500);
+  background: linear-gradient(180deg, var(--skeuo-g600), var(--skeuo-g200));
+  box-shadow: var(--skeuo-inner-highlight), var(--skeuo-inner-shade);
+}
+
+.ab-skeuo-btn__light {
+  position: absolute;
+  top: 0.2rem;
+  left: 50%;
+  width: 0.55rem;
+  height: 0.55rem;
+  margin-left: -0.275rem;
+  border-radius: 999px;
+  background-color: var(--skeuo-g600);
+  box-shadow:
+    0 1px 1px -0.5px rgba(255, 255, 255, 0.45),
+    inset 0 -1px 1px -0.5px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+  transition:
+    box-shadow var(--skeuo-smooth),
+    background-color var(--skeuo-smooth);
+}
+
+.ab-skeuo-btn__ring {
+  position: absolute;
+  inset: -12%;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(0deg, var(--skeuo-g100), var(--skeuo-g300));
+  box-shadow: inset 0 -2px 3px -1px rgb(255 255 255 / 0.35);
+  pointer-events: none;
+}
+
+.ab-skeuo-btn__label {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  pointer-events: none;
+}
+
+.ab-skeuo-square-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.3rem;
+  border-radius: 10px;
+  background: var(--skeuo-g700);
+  box-shadow:
+    inset 0 2px 4px rgb(0 0 0 / 0.35),
+    0 2px 8px rgb(0 0 0 / 0.25);
+}
+
+.ab-skeuo-panel {
+  border-radius: 14px;
+  border: 1px solid rgb(255 255 255 / 0.14);
+  background: linear-gradient(155deg, hsl(220deg 14% 24%), hsl(220deg 16% 14%));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.12),
+    inset 0 -10px 24px rgb(0 0 0 / 0.28),
+    0 12px 28px -10px rgb(0 0 0 / 0.55);
+}

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useStore } from '../store'
 import { MidiMapping } from '../store'
+import { debugLog } from '../utils/debugLog';
 
 export interface SuperControlMidiMapping extends MidiMapping {
   controlName: string;
@@ -33,7 +34,7 @@ export const useSuperControlMidiLearn = () => {
     
     if (midiLearnTarget !== null) {
       cancelMidiLearnAction() 
-      console.log(`[SuperControlMidiLearn] Canceled previous learn to start ${controlName}`);
+      debugLog.log(`[SuperControlMidiLearn] Canceled previous learn to start ${controlName}`);
     }
     
     startMidiLearnAction(target)
@@ -43,7 +44,7 @@ export const useSuperControlMidiLearn = () => {
       type: 'info',
       priority: 'normal'
     });
-    console.log(`[SuperControlMidiLearn] Started for control ${controlName}. Status: learning. Range: ${minValue}-${maxValue}`);
+    debugLog.log(`[SuperControlMidiLearn] Started for control ${controlName}. Status: learning. Range: ${minValue}-${maxValue}`);
     
     if (timeoutId) {
       window.clearTimeout(timeoutId);
@@ -59,7 +60,7 @@ export const useSuperControlMidiLearn = () => {
           type: 'error',
           priority: 'high'
         });
-        console.log(`[SuperControlMidiLearn] Timed out for control ${controlName}. Status: timeout.`);
+        debugLog.log(`[SuperControlMidiLearn] Timed out for control ${controlName}. Status: timeout.`);
       }
     }, 30000)
     
@@ -69,7 +70,7 @@ export const useSuperControlMidiLearn = () => {
   // Cancel MIDI learn mode
   const cancelLearn = useCallback(() => {
     if (midiLearnTarget !== null) {
-      console.log(`[SuperControlMidiLearn] Cancelling learn for target:`, midiLearnTarget);
+      debugLog.log(`[SuperControlMidiLearn] Cancelling learn for target:`, midiLearnTarget);
       cancelMidiLearnAction()
       addNotification({
         message: `MIDI Learn cancelled.`,
@@ -89,10 +90,10 @@ export const useSuperControlMidiLearn = () => {
   useEffect(() => {
     let resetTimer: number | null = null;
     if (learnStatus === 'success' || learnStatus === 'timeout') {
-      console.log(`[SuperControlMidiLearn] Learn status is ${learnStatus}. Will reset to idle in 3 seconds.`);
+      debugLog.log(`[SuperControlMidiLearn] Learn status is ${learnStatus}. Will reset to idle in 3 seconds.`);
       resetTimer = window.setTimeout(() => {
         setLearnStatus('idle');
-        console.log('[SuperControlMidiLearn] Learn status reset to idle.');
+        debugLog.log('[SuperControlMidiLearn] Learn status reset to idle.');
       }, 3000);
     }
     return () => {
@@ -110,7 +111,7 @@ export const useSuperControlMidiLearn = () => {
 
     const latestMessage = midiMessages[midiMessages.length - 1]
     const controlName = midiLearnTarget.controlName;
-    console.log('[SuperControlMidiLearn] In learn mode. Processing message:', latestMessage, `for control ${controlName}`);
+    debugLog.log('[SuperControlMidiLearn] In learn mode. Processing message:', latestMessage, `for control ${controlName}`);
     
     const messageType = latestMessage.type || latestMessage._type;
 
@@ -122,7 +123,7 @@ export const useSuperControlMidiLearn = () => {
         minValue: 0,
         maxValue: 255
       }
-      console.log(`[SuperControlMidiLearn] Creating CC mapping for control ${controlName}:`, mapping);
+      debugLog.log(`[SuperControlMidiLearn] Creating CC mapping for control ${controlName}:`, mapping);
       
       // Store the mapping
       setSuperControlMappings(prev => ({
@@ -145,7 +146,7 @@ export const useSuperControlMidiLearn = () => {
         type: 'success',
         priority: 'normal'
       });
-      console.log(`[SuperControlMidiLearn] Success for control ${controlName}. Status: success.`);
+      debugLog.log(`[SuperControlMidiLearn] Success for control ${controlName}. Status: success.`);
       
       if (timeoutId) {
         window.clearTimeout(timeoutId)
@@ -159,7 +160,7 @@ export const useSuperControlMidiLearn = () => {
         minValue: 0,
         maxValue: 255
       }
-      console.log(`[SuperControlMidiLearn] Creating Note mapping for control ${controlName}:`, mapping);
+      debugLog.log(`[SuperControlMidiLearn] Creating Note mapping for control ${controlName}:`, mapping);
       
       // Store the mapping
       setSuperControlMappings(prev => ({
@@ -182,14 +183,49 @@ export const useSuperControlMidiLearn = () => {
         type: 'success',
         priority: 'normal'
       });
-      console.log(`[SuperControlMidiLearn] Success for control ${controlName}. Status: success.`);
+      debugLog.log(`[SuperControlMidiLearn] Success for control ${controlName}. Status: success.`);
       
       if (timeoutId) {
         window.clearTimeout(timeoutId)
         setTimeoutId(null)
       }
+    } else if (messageType === 'pitch' && latestMessage.value !== undefined) {
+      const mapping: SuperControlMidiMapping = {
+        controlName,
+        channel: latestMessage.channel,
+        pitch: true,
+        minValue: 0,
+        maxValue: 255
+      }
+      debugLog.log(`[SuperControlMidiLearn] Creating Pitch mapping for control ${controlName}:`, mapping);
+
+      setSuperControlMappings(prev => ({
+        ...prev,
+        [controlName]: mapping
+      }))
+
+      if (controlName === 'quickSceneLoad') {
+        const { setQuickSceneMidiMapping } = useStore.getState();
+        setQuickSceneMidiMapping(mapping);
+      }
+
+      const event = new CustomEvent('superControlMidiMappingCreated', { detail: { controlName, mapping } })
+      window.dispatchEvent(event)
+
+      setLearnStatus('success')
+      addNotification({
+        message: `${controlName} mapped to MIDI Pitch on CH ${mapping.channel}.`,
+        type: 'success',
+        priority: 'normal'
+      });
+      debugLog.log(`[SuperControlMidiLearn] Success for control ${controlName}. Status: success.`);
+
+      if (timeoutId) {
+        window.clearTimeout(timeoutId)
+        setTimeoutId(null)
+      }
     } else {
-      console.log('[SuperControlMidiLearn] Ignoring non-CC/Note message or message without controller/note:', messageType);
+      debugLog.log('[SuperControlMidiLearn] Ignoring non-CC/Note/Pitch message or message without mapping data:', messageType);
     }
   }, [midiMessages, midiLearnTarget, learnStatus, timeoutId, addNotification, cancelMidiLearnAction]);
 
@@ -206,7 +242,7 @@ export const useSuperControlMidiLearn = () => {
       type: 'info',
       priority: 'normal'
     });
-    console.log(`[SuperControlMidiLearn] Mapping removed for control ${controlName}`);
+    debugLog.log(`[SuperControlMidiLearn] Mapping removed for control ${controlName}`);
   }, [addNotification]);
 
   // Set custom range for a mapping
@@ -242,6 +278,13 @@ export const useSuperControlMidiLearn = () => {
                  midiMessage.channel === mapping.channel && midiMessage.note === mapping.note) {
         matched = true;
         midiValue = midiMessage.velocity || 0;
+      } else if (messageType === 'pitch' && mapping.pitch &&
+                 midiMessage.channel === mapping.channel) {
+        matched = true;
+        const rawPitch = midiMessage.value || 0;
+        midiValue = rawPitch > 127
+          ? Math.round(Math.max(0, Math.min(1, rawPitch / 16383)) * 127)
+          : rawPitch;
       }
 
       if (matched && controlHandlers[controlName]) {
@@ -250,7 +293,7 @@ export const useSuperControlMidiLearn = () => {
         const maxVal = mapping.maxValue || 255;
         const scaledValue = Math.round((midiValue / 127) * (maxVal - minVal) + minVal);
         
-        console.log(`[SuperControlMidiLearn] Triggering ${controlName} with MIDI value ${midiValue} -> scaled ${scaledValue}`);
+        debugLog.log(`[SuperControlMidiLearn] Triggering ${controlName} with MIDI value ${midiValue} -> scaled ${scaledValue}`);
         controlHandlers[controlName](scaledValue);
       }
     });

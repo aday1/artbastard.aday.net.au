@@ -30,7 +30,7 @@ export const PinButton: React.FC<PinButtonProps> = ({
     switch (id) {
       case 'master-fader': return 'Master Fader';
       case 'scene-auto': return 'Scene Auto';
-      case 'chromatic-energy-manipulator': return 'Energy Manipulator';
+      case 'professional-fixture-controller': return 'Super Control';
       case 'scene-quick-launch': return 'Quick Launch';
       case 'quick-capture': return 'Quick Capture';
       default: return id;

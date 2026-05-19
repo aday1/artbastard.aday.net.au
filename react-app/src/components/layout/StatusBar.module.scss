@@ -1,19 +1,29 @@
 .statusBar {
   background: rgba(0, 0, 0, 0.1);
-  padding: 0.5rem 1rem;
+  padding: 0.5rem max(1rem, var(--safe-right)) max(0.5rem, var(--safe-bottom)) max(1rem, var(--safe-left));
   display: flex;
   justify-content: space-between;
   align-items: center;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   position: relative; /* allow absolute centering of left section */
+  flex-wrap: wrap;
+  gap: 8px;
 
   .left {
     display: flex;
     gap: 1rem;
     align-items: center;
-    position: absolute; /* center the network status button */
+    /* Centre on roomy screens, but flow normally below 1280px so that
+     * the absolutely-positioned Network button does not collide with
+     * the right-hand connection chip. */
+    position: absolute;
     left: 50%;
     transform: translateX(-50%);
+
+    @media (max-width: 1280px) {
+      position: static;
+      transform: none;
+    }
 
     .networkButton {
       display: flex;

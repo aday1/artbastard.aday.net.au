@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { useSocket } from '../context/SocketContext';
 import { useStore } from '../store';
+import { debugLog } from '../utils/debugLog';
+
 
 /**
  * Hook to sync localStorage changes across all connected clients via WebSocket
@@ -37,7 +39,7 @@ export const useLocalStorageSync = () => {
             value: value,
             sourceId: socket.id
           });
-          console.log('[LocalStorageSync] Synced localStorage change:', e.key);
+          debugLog.log('[LocalStorageSync] Synced localStorage change:', e.key);
         } catch (error) {
           console.error('[LocalStorageSync] Failed to sync localStorage change:', error);
         }
@@ -63,7 +65,7 @@ export const useLocalStorageSync = () => {
               sourceId: socket.id
             });
           }
-          console.log('[LocalStorageSync] Synced localStorage change:', key);
+          debugLog.log('[LocalStorageSync] Synced localStorage change:', key);
         } catch {
           // If not JSON, send as string
           socket.emit('localStorageSync', {
@@ -151,7 +153,7 @@ export const useLocalStorageSync = () => {
       data: allData,
       sourceId: socket.id
     });
-    console.log('[LocalStorageSync] Synced all localStorage data:', Object.keys(allData).length, 'keys');
+    debugLog.log('[LocalStorageSync] Synced all localStorage data:', Object.keys(allData).length, 'keys');
   };
 
   return { syncAllLocalStorage };

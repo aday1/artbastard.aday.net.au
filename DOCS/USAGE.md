@@ -1,157 +1,195 @@
-# 🎛️ **Usage Guide** - ArtBastard V5.12
+# ArtBastard Usage Guide
 
-> *"Mastery comes not from complexity, but from elegant simplicity in powerful tools. ArtBastard provides the latter; you must provide the former. If you find yourself confused, perhaps you should first acquire a basic understanding of theatrical lighting before attempting to use a tool designed for professionals. We recommend starting with a simple on/off switch and working your way up. Remember: the Wind Dancing Masters began with a single candle and a gentle breeze. You, mes amis, have the advantage of modern technology. Do not squander it."*  
-> — *Le Créateur des Lumières*
+## Cloud hosting and LAN / Pi bridge
 
-*"This guide assumes a basic understanding of DMX512, theatrical lighting, and general competence. If you find yourself asking 'What is a fixture?' or 'How do I turn on a light?', perhaps you should consult a technical professional, or better yet, acquire one. The ancient masters would have had no patience for such questions, and neither do we."*
+The live site (artbastard.aday.net.au) runs on a cloud VPS. It cannot send
+Art-Net UDP to your home LAN. For fixtures on 192.168.1.*:
 
-## 🎪 **Interface Overview** *(For Those Who Appreciate Elegance)*
+1. Run `artbastard-bridge` on a Raspberry Pi on that LAN (see DOCS/BRIDGE.md).
+2. In the web UI: Settings > Network > generate bridge token, set Art-Net IP.
+3. Control from any browser; DMX flows cloud -> bridge -> Art-Net node.
 
-ArtBastard's interface is designed for both precision and speed - essential for live performance. We've eliminated the bloated, cluttered interfaces that plague amateur software, replacing them with elegant controls that respect your intelligence and your artistry.
+**Concurrent operators:** Many browsers may connect at the same time (FOH desk,
+tablet, phone). Everyone sees the same DMX state; any fader move updates all
+clients and the Pi bridge. This is intentional for one show / one universe.
 
-### **Main Control Areas**
-- **Channel Faders** - Individual fixture control
-- **Group Controls** - Batch fixture management  
-- **Master Fader** - Global intensity control
-- **Scene Manager** - Saved lighting states
+**Later:** If you need multiple separate shows (different state per venue or
+tenant), that will require a future sessions model. Today there is a single
+shared universe per server instance.
 
-## 🎨 **Basic Operation** *(The Foundation of All Great Art)*
+## Operator flow
 
-### **1. Controlling Individual Fixtures** *(Because True Artists Command Every Photon)*
-- **Sliders**: Adjust intensity, color, position with the precision your artistry demands. We've made them larger and more responsive, because your time is too valuable for fiddly controls.
-- **Color Picker**: Visual color selection that produces hues so pure, they would make Monet question his palette choices. Choose your colors with the confidence of a master painter.
-- **Preset Buttons**: Quick access to common settings, because true artists understand the value of efficiency. We've eliminated the tedious menu navigation that plagues amateur software.
-- **Fine Control**: Hold Shift for precise adjustments. Because sometimes, a single percentage point makes all the difference between art and mere illumination.
+Recommended order for a new session:
 
-### **2. Working with Groups** *(Because True Artists Think in Compositions)*
-- Select multiple fixtures using Ctrl+Click - *obviously*. We assume you possess at least this level of competence.
-- Create groups for efficient batch control. Because true artists understand that lighting is not about individual fixtures, but about compositions.
-- Use group faders for consistent lighting looks. Command entire groups of fixtures with a single gesture, as it should be.
+1. Configure fixtures and groups in Fixture Setup.
+2. Open DMX Control and verify channel response.
+3. Save baseline scenes from SuperControl.
+4. Open Scenes and Acts for timeline or clip workflows.
+5. Configure MIDI / OSC mappings or apply a controller template.
+6. Validate TouchOSC export / upload if you use a tablet desk.
 
-### **3. Scene Management** *(Because True Artists Preserve Their Masterpieces)*
-- **Record**: Capture current lighting state with the precision it deserves. Your compositions are worth preserving.
-- **Recall**: Instantly return to saved scenes. Because true artists understand the value of preparation, even in the heat of performance.
-- **Edit**: Modify existing scenes on-the-fly. Because true artistry sometimes requires improvisation, even within a prepared composition.
-- **Crossfade**: Smooth transitions between scenes that eliminate the jarring cuts that plague amateur systems. Your audience deserves better.
+## Routes
 
-### **4. Face Tracking** *(The Future of Photonic Control)*
-- **Real-time Face Detection**: Advanced OpenCV-based facial recognition that tracks your movements with precision worthy of a professional installation.
-- **Gesture Recognition**: The system detects nodding, head shaking, and stationary states, transforming your movements into photonic choreography.
-- **Pan/Tilt Mapping**: Your head movements control fixture pan and tilt in real-time. Nod for tilt, shake for pan - *c'est magnifique!*
-- **Consolidated Configuration**: All settings (camera, tracking, DMX channels, OSC endpoints) unified on a single page, because toggling between pages is for peasants.
-- **Camera Selection**: Choose from available cameras with user-friendly buttons, because true artists deserve intuitive interfaces.
-- **Live Feedback**: Real-time sliders show pan and tilt values as you move, providing visual confirmation that your artistry is being translated into photonic control.
+Hash-based deep linking - bookmark any of these:
 
-### **5. Timeline Editor** *(DAW-Style Professional Editing)*
-- **Keyframe Animation**: Create complex lighting sequences with precise keyframe control. Keyframes display actual DMX values (0-255) and percentages - no more meaningless "X ch" labels. *Finally, a timeline that respects your intelligence!*
-- **Timeline Navigation**: Professional timeline ruler with scrubbing support. Click or drag on the ruler to jump to any position or scrub through your timeline. Home/End keys jump to start/end, Space plays/pauses.
-- **Visual Feedback**: Clear playhead indicator, drag preview showing exact time positions, and smooth curve visualization between keyframes. *Transparency is artistry, mes amis.*
-- **Multi-Track View**: View multiple channels simultaneously in a multi-track timeline. Each channel gets its own track with mute/solo controls, collapsible tracks, and individual keyframe management.
-- **Keyboard Shortcuts**: DAW-style shortcuts for efficient editing: Space (play/pause), Home/End (navigation), Shift+Arrow (nudge), Ctrl+C/V (copy/paste), Delete (remove keyframes), Ctrl+Z/Y (undo/redo). Press `?` to view all shortcuts.
-- **Curve Editing**: Visualize and edit interpolation curves between keyframes. Choose from linear, ease-in, ease-out, smooth, or step interpolation. *Because true artists understand the importance of smooth transitions.*
+- `#/dmx-control`
+- `#/fixture`
+- `#/scenes-acts`
+- `#/experimental`
+- `#/external-console`
+- `#/mobile`
+- `#/settings`
 
-### **6. Clip Launcher** *(Session-Style Live Performance)*
-- **Grid-Based Interface**: Session-style clip launcher with customizable grid (default 4×4). Organize your scenes in a visual grid for quick access during live performance. *Inspired by Ableton Live, because great artists learn from each other.*
-- **Launch Controls**: Click to launch scenes, double-click to edit. Play/stop buttons for each clip, loop toggle, and "Stop All" for emergency control. Multiple clips can play simultaneously for layered effects.
-- **Visual States**: Clear indicators for playing (highlighted), queued (different color), recording (pulsing), and empty (dashed border). *Because visual feedback is essential for live performance.*
-- **Scene Integration**: Seamlessly integrated with ArtBastard's scene system. Any scene can be assigned to a clip cell, and scenes with timelines will play their timelines when launched.
+Experimental tab deep-link examples:
 
-### **7. Scene Management with MIDI/OSC** *(Because True Artists Prepare)*
-- **Per-Scene MIDI Mapping**: Each saved scene can have its own MIDI trigger. Click "MIDI" on any scene, send a MIDI CC or Note, and that scene is now mapped.
-- **Per-Scene OSC Addresses**: Each scene gets a unique OSC address (default: `/scene/1`, `/scene/2`, etc.) with custom override capability.
-- **Configuration Export/Import**: Export all settings (including scene MIDI/OSC mappings) as JSON for backup or sharing.
-- **Factory Reset**: Complete system reset that clears all saved state, fixtures, channel names, MIDI mappings, OSC addresses, and persisted data. Truly fresh start.
+- `#/experimental?tab=opencv`
+- `#/experimental?tab=osc`
+- `#/experimental?tab=touchosc`
 
-*Because true artists understand that lighting is not about individual fixtures, but about compositions. Your scenes deserve to be triggered with the precision of a maestro, and ArtBastard ensures they are.*
+## MIDI controller templates
 
-### **6. Display Options & Customization** *(Because True Artists Personalize Their Tools)*
-- **Display Options**: Scene Controls, MIDI Controls, OSC Controls, and Envelope Automation are enabled by default. Toggle them off in the Display Options section if you prefer a minimalist interface.
-- **Customizable Color Themes**: Access Configuration Sanctuary → Theme section. Use HSL sliders for primary, secondary, and accent colors to create your own photonic aesthetic.
-- **DMX Visual Effects**: Configure visual effects (off/low/medium/high) in Configuration Sanctuary → Performance section. Adjust GPU usage to match your system's capabilities.
-- **Sparkles Toggle**: Quick toggle in the right-hand navbar menu to enable/disable visual sparkles on DMX activity.
+Apply via UI (Settings > MIDI > Apply Template) or via REST:
 
-### **7. SuperControl Layout** *(Because Efficiency Matters)*
-- **Quick Panel Selection**: Switch between 2-column and 3-column layouts with quick selection buttons.
-- **Side-by-Side Controls**: Controls are displayed side-by-side within columns for efficient workflow.
-- **Responsive Design**: Layout adapts to your screen size automatically.
+```
+POST /api/midi/controller-template
+Content-Type: application/json
+{ "template": "xtouch" }   // or "apc40"
+```
 
-### **8. Tempo Control with MIDI/OSC** *(Because Rhythm Is Everything)*
-- **Tempo Play/Pause MIDI**: Learn MIDI mappings for tempo start/stop in the Pinned Channels panel.
-- **Tap Tempo MIDI**: Learn MIDI mappings for tap tempo functionality.
-- **Tempo Play/Pause OSC**: Learn OSC addresses (`/tempo/playpause`, `/tempo/toggle`) for wireless tempo control.
-- **Tap Tempo OSC**: Learn OSC address (`/tempo/tap`) for wireless tap tempo from any device.
+Effects:
 
-### **9. Network Telemetry** *(Because Monitoring Is Essential)*
-- **DMX Message Log**: View real-time DMX/ArtNet message updates in the Network Telemetry panel.
-- **Channel Monitoring**: See channel, old value, and new value for every DMX update.
-- **Real-time Feedback**: Watch your commands take effect with precision.
+- Standard mappings are applied immediately.
+- X-Touch scribble strips receive DMX channel labels via SysEx.
+- Pitch-bend mappings are wired for the X-Touch master and per-channel
+  faders.
+- User MIDI Learn entries on other controls are not affected.
 
-## 🎹 **MIDI Control**
+Full mapping tables: DOCS/MIDI_TEMPLATES.md.
 
-### **MIDI Learning**
-1. Right-click any control
-2. Select **"Learn MIDI"**
-3. Move your MIDI controller
-4. Control is now mapped
+## TouchOSC workflow
 
-### **Popular MIDI Controllers**
-- **Behringer BCF2000** - 8 motorized faders
-- **Akai APC40** - Grid-based control
-- **NanoKontrol** - Compact solution
-- **OSC Protocol** - Wireless control via mobile devices
+1. Open `#/experimental?tab=touchosc`.
+2. Choose layout and channel count.
+3. Click Generate to produce the `.tosc` file.
+4. Click Upload to push it to the tablet over the network.
+5. Confirm the upload status badge.
+6. Download a copy from the runtime endpoint if needed.
 
-## 📱 **Touch Interface**
+Smoke test: `npm run test:touchosc-workflow`.
 
-### **Touch Optimization**
-- **Large Controls**: 44px+ touch targets
-- **Drag Zones**: Clear resize handles
-- **Gesture Support**: Pinch-to-zoom, swipe navigation
-- **Haptic Feedback**: Visual response to touches
+## Scene workflow
 
+1. Capture the current output as a scene from SuperControl.
+2. Optionally attach an OSC trigger address.
+3. Recall by clicking, by MIDI, or by OSC `/scene/trigger/<name>`.
+4. Set fade times for soft transitions.
 
-## ⚡ **Live Performance Workflow**
+## Scene timeline workflow
 
-### **Pre-Show Setup**
-1. **Load Show File** - Import your saved configuration
-2. **Test All Fixtures** - Verify hardware connections  
-3. **Check Scenes** - Confirm all cues are working
-4. **MIDI Check** - Test controller responsiveness
+1. Open Scenes and Acts and edit a scene's timeline.
+2. Add tracks for the channels you want to animate.
+3. Press `K` at the playhead to add a keyframe (or click in the track).
+4. Drag keyframes to scrub their value; the drag preview shows the exact
+   time.
+5. Use `Space` to play / pause, `Home` / `End` to jump to the boundaries.
 
-### **During Show**
-- **Master Fader** for house lights/overrides
-- **Scene Triggers** for major lighting changes
-- **Manual Override** for spontaneous adjustments
-- **Emergency Blackout** (spacebar or dedicated button)
+Full shortcut list: DOCS/SHORTCUTS.md.
 
-### **Advanced Techniques**
-- **Crossfade Timing** - Adjust transition speeds
-- **Chase Effects** - Automated sequences
-- **Beat Sync** - Audio-responsive lighting
-- **Backup Scenes** - Always have a fallback plan
+## Act timeline workflow
 
-## 🔧 **Keyboard Shortcuts** *(Efficiency Is Artistry)*
+1. Scenes & Acts → open an Act (timeline editor).
+2. Add scene clips; drag clips to set **start time**; resize for duration.
+3. Seek with the ruler/playhead; **Add step** inserts at the playhead.
+4. Create gaps: select a clip → **+2s gap**, or drag clips apart; use
+   **Extend +5s** if the ruler runs out of room.
+5. Optional: **Sync to BPM** for bar-aligned length (uses app BPM).
+6. Optional: place **MIDI/OSC timeline events** for scheduled cues during playback.
+7. Run the show with **ACT triggers** (MIDI/OSC) — play / pause / stop / next.
 
-### **General Controls**
-- **Spacebar** - Emergency blackout toggle (or Timeline Play/Pause in timeline editor)
-- **Ctrl+S** - Save current state
-- **Ctrl+Z/Y** - Undo/Redo changes
-- **F11** - Toggle fullscreen
-- **Ctrl+H** or **?** - Help overlay / Keyboard shortcuts help
-- **Esc** - Close dialogs/overlays
+Transport vs tempo: ACT triggers **start** acts; Ableton Link (Settings +
+Pi bridge) shares **BPM** only. Live transport is not mirrored unless you
+add OSC/MIDI timeline events or external mappings. See DOCS/ACT_TIMELINE.md.
 
-### **Timeline Editor Shortcuts** *(DAW-Style Professional Editing)*
-- **Space** - Play/Pause timeline
-- **Home** - Jump to start of timeline
-- **End** - Jump to end of timeline
-- **Shift+Arrow Left/Right** - Nudge playhead or selected keyframes
-- **Ctrl+C** - Copy selected keyframes
-- **Ctrl+V** - Paste keyframes at playhead position
-- **Delete** - Delete selected keyframes
-- **Ctrl+Z/Y** - Undo/Redo timeline changes
-- **Ctrl+A** - Select all keyframes
-- **?** - Show keyboard shortcuts help overlay
+## Clip launcher workflow
 
-*These shortcuts transform timeline editing from a tedious chore into an elegant dance of efficiency. The Wind Dancing Masters would approve.*
+1. Open the Clip Launcher panel (Scenes and Acts page).
+2. Click an empty cell to assign a scene.
+3. Click a populated cell to launch it; double-click to edit properties.
+4. Toggle Loop on cells that should repeat.
+5. Stop everything at once with Stop All.
 
----
-**Next:** [Features](./FEATURES.md) | [History](./HISTORY.md)
+## Backup and reset workflow
+
+Configuration export / import is available through Settings and the API.
+
+Reset sequence:
+
+1. Export backups (`GET /api/config`, `GET /api/scenes`).
+2. `DELETE /api/state`
+3. `DELETE /api/config`
+4. `DELETE /api/scenes`
+5. Confirm `GET /api/factory-reset-check` returns true.
+6. Restore backups via the corresponding POST endpoints.
+
+Or simply launch with `--reset` / `-Reset`:
+
+```
+./start.sh --reset       # Linux / macOS
+.\start.ps1 -Reset       # Windows
+```
+
+## Keyboard shortcuts
+
+See DOCS/SHORTCUTS.md for the full master table. Highlights:
+
+- `Ctrl + H` - toggle Help overlay
+- `Space`    - emergency blackout (or play / pause inside the timeline)
+- `?`        - keyboard shortcut modal
+- `1`-`9`    - trigger scenes 1-9
+- `Ctrl + S` - quick save scene
+- `B`        - toggle blackout
+- `M`        - toggle Master Fader
+
+## Troubleshooting
+
+DMX
+
+- No output: check the interface, the start address, and the universe.
+- Flicker: missing 120 ohm terminator or loose XLR.
+- Wrong colour: profile mismatch; verify channel mode.
+
+MIDI
+
+- Device missing: re-grant Web MIDI permission, or restart the browser
+  with the device already plugged in.
+- Mappings lost: re-apply the controller template, or restore your
+  configuration backup.
+
+OSC
+
+- Not receiving: verify the listening port, check the firewall, watch
+  the OSC Monitor for incoming traffic.
+
+TouchOSC
+
+- Upload fails: confirm tablet IP is reachable; fall back to the runtime
+  download endpoint.
+
+Build / start
+
+- Run `./start.sh --reset` or `.\start.ps1 -Reset` for a clean rebuild.
+- If `dist/server.js` is missing, run `npm run build` first.
+- Demo capture requires Xvfb + ffmpeg + xdotool + google-chrome.
+
+## Producing demo artefacts
+
+```
+npm run demo:capture-screenshots   # 7 PNGs of every major route
+npm run demo:capture-videos        # 8 WebM clips + JPG posters
+npm run demo:evidence              # smoke tests + screenshots
+npm run demo:evidence-full         # smoke tests + screenshots + videos
+```
+
+Output:
+- Screenshots: `/tmp/artbastard-demo-screenshots-YYYYMMDD-HHMMSS/`.
+- Videos: `website/videos/<name>.{webm,jpg}` (consumed by the showcase).

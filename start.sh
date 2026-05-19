@@ -18,6 +18,7 @@
 CLEAR=false
 RESET=false
 HELP=false
+PORT=3030
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -29,6 +30,10 @@ while [[ $# -gt 0 ]]; do
         -Reset|--reset)
             RESET=true
             shift
+            ;;
+        -Port|--port)
+            PORT="$2"
+            shift 2
             ;;
         -Help|--help|-h)
             HELP=true
@@ -42,6 +47,12 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Validate port range
+if [ "$PORT" -lt 1 ] || [ "$PORT" -gt 65535 ]; then
+    echo "❌ Invalid port: $PORT. Port must be between 1 and 65535." >&2
+    exit 1
+fi
+
 # Show help
 if [ "$HELP" = true ]; then
     echo ""
@@ -53,12 +64,14 @@ if [ "$HELP" = true ]; then
     echo "  🚀 ./start.sh           # Fast start (recommended)"
     echo "  🧹 ./start.sh -Clear    # Full clean rebuild (removes everything, reinstalls, rebuilds)"
     echo "  🔄 ./start.sh -Reset    # Factory reset - clears all saved state (fixtures, scenes, config)"
+    echo "  🌐 ./start.sh -Port 8080 # Specify web server port (default: 3030)"
     echo "  ❓ ./start.sh -Help     # Display this help"
     echo ""
     echo "🎯 Modes:"
     echo "  🚀 Default: Fast start - preserves cache and dependencies, only rebuilds if needed"
     echo "  🧹 -Clear:  Full clean - removes node_modules, cache, and build artifacts, then rebuilds"
     echo "  🔄 -Reset:  Factory reset - deletes all saved state files (config, scenes, fixtures, etc.)"
+    echo "  🌐 -Port:   Specify web server port (1-65535, default: 3030)"
     echo ""
     echo "✨ May your lights shine bright! ✨"
     echo ""
@@ -219,7 +232,7 @@ test_needs_rebuild() {
 
 # Function to launch browser when server is ready
 start_browser_when_ready() {
-    URL=${1:-"http://localhost:3030"}
+    URL=${1:-"http://localhost:$PORT"}
     MAX_ATTEMPTS=${2:-45}
     
     (
@@ -353,12 +366,44 @@ if [ "$CLEAR" = true ]; then
     echo ""
     BROWSER_PID=$(start_browser_when_ready)
     
+    # MIDI Device Auto-Connect Configuration
+    echo ""
+    echo "🎹 ════════════════════════════════════════════════════════════════ 🎹"
+    echo "🎹  MIDI Device Auto-Connect Configuration"
+    echo "🎹 ════════════════════════════════════════════════════════════════ 🎹"
+    echo ""
+    echo "  Configure which MIDI devices should auto-connect on startup."
+    echo "  Press Enter to skip and use current configuration."
+    echo ""
+    
+    # Check if Node.js is available
+    if command -v node >/dev/null 2>&1; then
+        # Check if the MIDI selector script exists
+        MIDI_SELECTOR_SCRIPT="$(dirname "$0")/scripts/select-midi-devices.js"
+        if [ -f "$MIDI_SELECTOR_SCRIPT" ]; then
+            echo "  Running MIDI device selector..."
+            echo ""
+            if node "$MIDI_SELECTOR_SCRIPT"; then
+                echo ""
+                echo "  ✅ MIDI configuration updated!"
+            else
+                echo ""
+                echo "  ⚠️  MIDI configuration cancelled or failed"
+            fi
+        else
+            echo "  ℹ️  MIDI selector script not found, skipping configuration"
+        fi
+    else
+        echo "  ℹ️  Node.js not available, skipping MIDI configuration"
+    fi
+    
     # Start server
+    echo ""
     echo "🎭 ════════════════════════════════════════════════════════════════ 🎭"
-    echo "🎭  Starting ArtBastard DMX512 Server..."
+    echo "🎭  Starting ArtBastard DMX512 Server on port $PORT..."
     echo "🎭 ════════════════════════════════════════════════════════════════ 🎭"
     echo ""
-    npm start
+    PORT=$PORT npm start
     
     # Cleanup browser job
     kill $BROWSER_PID 2>/dev/null || true
@@ -517,8 +562,38 @@ else
 fi
 
 echo ""
+echo "🎹 ════════════════════════════════════════════════════════════════ 🎹"
+echo "🎹  MIDI Device Auto-Connect Configuration"
+echo "🎹 ════════════════════════════════════════════════════════════════ 🎹"
+echo ""
+echo "  Configure which MIDI devices should auto-connect on startup."
+echo "  Press Enter to skip and use current configuration."
+echo ""
+
+# Check if Node.js is available
+if command -v node >/dev/null 2>&1; then
+    # Check if the MIDI selector script exists
+    MIDI_SELECTOR_SCRIPT="$(dirname "$0")/scripts/select-midi-devices.js"
+    if [ -f "$MIDI_SELECTOR_SCRIPT" ]; then
+        echo "  Running MIDI device selector..."
+        echo ""
+        if node "$MIDI_SELECTOR_SCRIPT"; then
+            echo ""
+            echo "  ✅ MIDI configuration updated!"
+        else
+            echo ""
+            echo "  ⚠️  MIDI configuration cancelled or failed"
+        fi
+    else
+        echo "  ℹ️  MIDI selector script not found, skipping configuration"
+    fi
+else
+    echo "  ℹ️  Node.js not available, skipping MIDI configuration"
+fi
+
+echo ""
 echo "🎭 ════════════════════════════════════════════════════════════════ 🎭"
-echo "🎭  Initiating ArtBastard DMX512 server deployment..."
+echo "🎭  Initiating ArtBastard DMX512 server deployment on port $PORT..."
 echo "🎭 ════════════════════════════════════════════════════════════════ 🎭"
 echo ""
 
@@ -527,7 +602,7 @@ echo "🌐 Browser will launch automatically when server is ready..."
 BROWSER_PID=$(start_browser_when_ready)
 
 # Deploy the server
-npm start
+PORT=$PORT npm start
 
 # Cleanup browser job
 kill $BROWSER_PID 2>/dev/null || true

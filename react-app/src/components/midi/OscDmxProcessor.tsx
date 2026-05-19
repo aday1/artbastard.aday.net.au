@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useSocket } from '../../context/SocketContext';
 import { useStore } from '../../store';
+import { debugLog } from '../../utils/debugLog';
 
 /**
  * This component doesn't render anything but processes OSC messages
@@ -17,7 +18,7 @@ export const OscDmxProcessor: React.FC = () => {
     if (!socket) return;
 
     const handleOscActivity = (data: { channelIndex: number; value: number }) => {
-      console.log('[OscDmxProcessor] OSC activity received:', data);
+      debugLog.log('[OscDmxProcessor] OSC activity received:', data);
       if (reportOscActivity) {
         reportOscActivity(data.channelIndex, data.value);
       }

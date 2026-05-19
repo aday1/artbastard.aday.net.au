@@ -1,6 +1,7 @@
 // Import font fallbacks for better loading performance
 @use './font-fallbacks.scss';
 @use './design-system.scss';
+@use './skeuomorphic-controls.scss';
 /* emoji-fixes removed to restore default icon and text rendering */
 
 // Base variables
@@ -146,6 +147,10 @@ html, body {
 
 html {
   background-color: var(--color-background);
+  // Use dynamic viewport height when supported so iOS Safari URL bar
+  // does not crop the bottom of the layout. Old browsers keep 100%.
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 body {
@@ -161,7 +166,43 @@ body {
   line-height: var(--ui-line-height, 1.5);
   letter-spacing: var(--ui-letter-spacing, 0px);
   font-size: calc(1rem * var(--ui-font-size, 1.0));
-  overflow-y: auto; /* Ensure vertical scrolling available in Electron */
+  overflow-x: hidden; /* Drawer transitions must not create a scrollbar */
+  overflow-y: auto;   /* Ensure vertical scrolling available in Electron */
+  min-height: 100vh;
+  min-height: 100dvh;
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cpath fill='%23f59e0b' stroke='%235a4333' stroke-width='1' d='M2 2 L2 18 L8 12 L11 18 L13 16 L10 10 L18 10 Z'/%3E%3C/svg%3E") 2 2, auto;
+}
+
+body * {
+  cursor: inherit;
+}
+
+html[data-theme="dark"] body {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cpath fill='%23a78bfa' stroke='%231a1620' stroke-width='1' d='M2 2 L2 18 L8 12 L11 18 L13 16 L10 10 L18 10 Z'/%3E%3C/svg%3E") 2 2, auto;
+}
+
+input[type="text"],
+input[type="search"],
+input[type="email"],
+input[type="password"],
+input[type="url"],
+input[type="number"],
+textarea,
+[contenteditable="true"] {
+  cursor: text;
+}
+
+@media (pointer: coarse) {
+  body,
+  body * {
+    cursor: auto !important;
+  }
+}
+
+// Body scroll lock used by the Drawer primitive when a drawer is open.
+body.ab-no-scroll {
+  overflow: hidden;
+  touch-action: none;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -181,7 +222,6 @@ a {
 }
 
 button {
-  cursor: pointer;
   border: none;
   background: none;
   font-family: var(--font-body);
@@ -269,8 +309,8 @@ button {
   }
 }
 
-// Slider styles
-input[type="range"] {
+// Legacy slider styles (styled faders use ui/controls modules)
+input[type="range"]:not(.ab-styled-fader) {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;

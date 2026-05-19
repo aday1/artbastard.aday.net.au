@@ -1,73 +1,77 @@
-# 💡 **Fixture Setup Guide** - ArtBastard V5.12
+# ArtBastard Fixture Setup
 
-> *"A lighting designer without proper fixture configuration is like a painter without pigments."*
+Configure your luminaires for control through ArtBastard's fixture
+management system.
 
-## 🎯 **Fixture Setup Overview**
+## Overview
 
-Configure your luminaires for intelligent control through ArtBastard's comprehensive fixture management system.
+A fixture is a logical grouping of DMX channels with a starting address and
+a profile that explains what each channel does. ArtBastard stores fixtures
+as individual JSON files for clean version control.
 
-## 📚 **Built-in Fixture Profiles**
-ArtBastard includes professional profiles for:
+## Built-in profiles
 
-### 🔄 **Moving Lights**
-- **Pan/Tilt** positioning with speed control
-- **Color wheels** and **GOBO** selection
-- **Beam control** (zoom, focus, iris)
-- **Animation effects** and pattern generators
+ArtBastard ships profiles for the common fixture families:
 
-### 🌈 **LED Fixtures** 
-- **RGB/RGBW** color mixing
-- **Strobe** and dimming control
-- **Color temperature** correction (CTO/CTB)
-- **Special effects** and macros
+- Moving lights: pan / tilt with speed control, colour wheels, GOBO,
+  beam control (zoom / focus / iris), animation / pattern channels.
+- LED fixtures: RGB / RGBW / RGBA mixing, strobe, dimming, colour
+  temperature (CTO / CTB), macros and special effects.
+- Specialty effects: lasers (including EL1000RGB), haze and fog
+  machines, LED strips and pixel mapping, UV / blacklight fixtures.
 
-### ⚡ **Specialty Effects**
-- **Lasers** (EL1000RGB profiles included)
-- **Haze/Fog machines** with timing control
-- **LED strips** and pixel mapping
-- **UV/Blacklight** fixtures
+## Adding a custom fixture
 
-## 🛠️ **Adding Custom Fixtures**
+1. Open Fixture Setup in the main navigation.
+2. Click "Add New Fixture".
+3. Define the channel layout. Example RGB+strobe profile:
+   - Channel 1: Dimmer (0-255)
+   - Channel 2: Red (0-255)
+   - Channel 3: Green (0-255)
+   - Channel 4: Blue (0-255)
+   - Channel 5: Strobe (0 = off, 1-255 = speed)
+4. Set the starting DMX address (1-512). The system computes the channel
+   span and warns about conflicts.
+5. Use the Channel Test action to verify each function. Tweak ranges if
+   needed and save the profile for future use.
 
-### 1. **Access Fixture Setup**
-- Click **"Fixture Setup"** in main navigation
-- Select **"Add New Fixture"**
+## Address planning
 
-### 2. **Configure Channels**
-```
-Channel 1: Dimmer (0-255)
-Channel 2: Red (0-255)
-Channel 3: Green (0-255)
-Channel 4: Blue (0-255)
-Channel 5: Strobe (0=off, 1-255=speed)
-```
+Suggested universe layout for a typical theatre rig:
 
-### 3. **Set DMX Address**
-- Choose starting DMX address (1-512)
-- System automatically calculates channel span
-- Avoid address conflicts with existing fixtures
+- Universe 1: front-of-house wash and key lights, addresses 1-200
+- Universe 2: moving heads and movers, addresses 201-400
+- Universe 3: effects and specialty fixtures, addresses 401-512
 
-### 4. **Test Configuration**
-- Use **Channel Test** to verify each function
-- Adjust ranges if needed
-- Save profile for future use
+Best practices:
 
-## 📡 **DMX Addressing**
+- Leave gaps between fixture groups for expansion.
+- Document your addressing scheme - export Settings as a backup.
+- Number fixtures stage left to stage right where possible.
 
-### **Address Planning**
-- **Universe 1**: Main stage lighting (1-200)
-- **Universe 2**: Moving lights (201-400) 
-- **Universe 3**: Effects/specialty (401-512)
+## Fixture groups
 
-### **Best Practices**
-- Leave gaps between fixture groups for expansion
-- Document your addressing scheme
-- Use logical numbering (stage left to right)
+- Create groups for batch control (Front Wash, Movers, Effects, etc.).
+- A fixture can belong to multiple groups.
+- Groups are reflected in SuperControl and the OSC address tree.
 
-## 🎨 **Grouping & Organization**
-- Create **Fixture Groups** for batch control
-- Organize by type, position, or function
-- Name groups clearly ("Front Wash", "Movers", "Effects")
+## DIP switch calculator
 
----
-**Next:** [Usage Guide](./USAGE.md) | [Features](./FEATURES.md)
+Built into the Help overlay (Help > DIP Simulator). Enter a DMX address
+1-512 and read off the binary pattern alongside a fixture-style switch
+block visualisation. Useful for older fixtures with physical switches.
+
+## Address Sheet PDF
+
+Help > Address Sheet generates a printable PDF with a row per fixture:
+name, profile, start address, channel count, group memberships. Useful
+to leave at the desk during a tech run.
+
+## Multi-universe planning
+
+ArtBastard supports multiple Art-Net universes. Configure them in
+Settings > Network. The DMX Control page exposes a universe selector that
+filters the channel grid; the universe count is reflected in the OSC
+address tree as well.
+
+Next: USAGE.md, FEATURES.md, SHORTCUTS.md.

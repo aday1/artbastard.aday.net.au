@@ -974,6 +974,98 @@
   }
 }
 
+.channelTicksSection {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--color-card-border);
+}
+
+.ticksOnlyLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+}
+
+.tickRangesEditor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.tickRangesHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary, #94a3b8);
+}
+
+.addRangeButton {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  border: 1px solid var(--color-primary, #4a5cff);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(74, 92, 255, 0.15);
+  }
+}
+
+.tickRangeRow {
+  display: grid;
+  grid-template-columns: 3.5rem auto 3.5rem 1fr auto;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.tickRangeInput {
+  width: 100%;
+  padding: 0.35rem;
+  border: 1px solid var(--color-card-border);
+  border-radius: 4px;
+  background: var(--color-card-bg);
+  color: var(--color-text);
+  font-size: 0.85rem;
+}
+
+.tickRangeDash {
+  text-align: center;
+  color: var(--color-text-secondary, #94a3b8);
+}
+
+.tickRangeDesc {
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--color-card-border);
+  border-radius: 4px;
+  background: var(--color-card-bg);
+  color: var(--color-text);
+  font-size: 0.85rem;
+}
+
+.removeRangeButton {
+  padding: 0.25rem;
+  border: none;
+  background: transparent;
+  color: var(--color-error, #ef4444);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tickRangesHint {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary, #94a3b8);
+  font-style: italic;
+}
+
 .formActions {
   display: flex;
   justify-content: space-between;

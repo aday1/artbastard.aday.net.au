@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 
-export type ViewType = 'main' | 'fixture' | 'planner' | 'scenesActs' | 'misc' | 'state' | 'dmxControl' | 'experimental' | 'mobile'
+export type ViewType = 'fixture' | 'planner' | 'scenesActs' | 'misc' | 'state' | 'dmxControl' | 'mobile'
 
 interface RouterContextType {
   currentView: ViewType
@@ -16,11 +16,79 @@ interface RouterProviderProps {
   children: ReactNode
 }
 
-export const RouterProvider: React.FC<RouterProviderProps> = ({ children }) => {
-  const [currentView, setCurrentView] = useState<ViewType>('dmxControl')
-  const [navigationHistory, setNavigationHistory] = useState<ViewType[]>(['dmxControl'])
+const viewToHash: Record<ViewType, string> = {
+  fixture: '#/fixture',
+  planner: '#/planner',
+  scenesActs: '#/scenes-acts',
+  misc: '#/settings',
+  state: '#/state',
+  dmxControl: '#/dmx-control',
+  mobile: '#/mobile'
+}
 
-  // Listen for navigation events from navbar
+const hashToView = (hashValue: string): ViewType | null => {
+  const normalized = hashValue.replace(/^#/, '').replace(/^\//, '').toLowerCase()
+  const pathOnly = normalized.split('?')[0]
+
+  if (!pathOnly) return null
+
+  switch (pathOnly) {
+    case 'main':
+    case 'external-console':
+      return 'dmxControl'
+    case 'fixture':
+      return 'fixture'
+    case 'planner':
+      return 'planner'
+    case 'scenes-acts':
+    case 'scenesacts':
+      return 'scenesActs'
+    case 'settings':
+    case 'misc':
+      return 'misc'
+    case 'state':
+      return 'state'
+    case 'dmx-control':
+    case 'dmxcontrol':
+      return 'dmxControl'
+    case 'experimental':
+      return 'dmxControl'
+    case 'mobile':
+      return 'mobile'
+    default:
+      return null
+  }
+}
+
+/**
+ * Pick a sensible default view when the URL has no hash. On phones and
+ * tablets we drop the user straight onto the touch-optimised Mobile
+ * surface (which has its own embedded DMX/SuperControl tabs) instead
+ * of the desktop DMX page that requires a mouse to be usable.
+ */
+const resolveDefaultView = (): ViewType => {
+  if (typeof window === 'undefined') return 'dmxControl'
+  try {
+    const isSmall = window.matchMedia('(max-width: 1279px)').matches
+    return isSmall ? 'mobile' : 'dmxControl'
+  } catch {
+    return 'dmxControl'
+  }
+}
+
+export const RouterProvider: React.FC<RouterProviderProps> = ({ children }) => {
+  const initialHashView = hashToView(window.location.hash)
+  const initialView: ViewType = initialHashView || resolveDefaultView()
+  const [currentView, setCurrentView] = useState<ViewType>(initialView)
+  const [navigationHistory, setNavigationHistory] = useState<ViewType[]>([initialView])
+
+  useEffect(() => {
+    const legacy = hashToView(window.location.hash)
+    if (legacy === 'dmxControl' && window.location.hash.match(/main|external-console/i)) {
+      window.history.replaceState(null, '', viewToHash.dmxControl)
+    }
+  }, [])
+
   useEffect(() => {
     const handleViewChange = (event: CustomEvent<{ view: ViewType }>) => {
       const newView = event.detail.view
@@ -33,6 +101,28 @@ export const RouterProvider: React.FC<RouterProviderProps> = ({ children }) => {
       window.removeEventListener('changeView', handleViewChange as EventListener)
     }
   }, [])
+
+  useEffect(() => {
+    const handleHashRouteChange = () => {
+      const routeView = hashToView(window.location.hash)
+      if (!routeView || routeView === currentView) return
+
+      setCurrentView(routeView)
+      setNavigationHistory(prev => [...prev, routeView])
+    }
+
+    window.addEventListener('hashchange', handleHashRouteChange)
+    return () => {
+      window.removeEventListener('hashchange', handleHashRouteChange)
+    }
+  }, [currentView])
+
+  useEffect(() => {
+    const targetHash = viewToHash[currentView]
+    if (window.location.hash !== targetHash) {
+      window.history.replaceState(null, '', targetHash)
+    }
+  }, [currentView])
 
   const handleSetCurrentView = (view: ViewType) => {
     setCurrentView(view)

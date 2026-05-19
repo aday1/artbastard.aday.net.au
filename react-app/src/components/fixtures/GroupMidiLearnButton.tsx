@@ -2,6 +2,8 @@ import React from 'react'
 import { useGroupMidiLearn } from '../../hooks/useGroupMidiLearn'
 import { useStore } from '../../store'
 import styles from '../midi/MidiLearnButton.module.scss'
+import { debugLog } from '../../utils/debugLog';
+
 
 interface GroupMidiLearnButtonProps {
   groupId: string
@@ -23,22 +25,22 @@ export const GroupMidiLearnButton: React.FC<GroupMidiLearnButtonProps> = ({ grou
   // Debug log for current state
   React.useEffect(() => {
     if (isGroupLearning) {
-      console.log(`Group ${groupId} is in learn mode. Status: ${learnStatus}`)
+      debugLog.log(`Group ${groupId} is in learn mode. Status: ${learnStatus}`)
     }
   }, [isGroupLearning, learnStatus, groupId])
   
   // Handle learn button click
   const handleClick = () => {
-    console.log(`MIDI Learn button clicked for group ${groupId}`);
-    console.log(`Current learning state: ${isGroupLearning ? 'Learning' : 'Not learning'}`);
+    debugLog.log(`MIDI Learn button clicked for group ${groupId}`);
+    debugLog.log(`Current learning state: ${isGroupLearning ? 'Learning' : 'Not learning'}`);
     
     if (isGroupLearning) {
       // If already learning, cancel
-      console.log(`Cancelling MIDI learn for group ${groupId}`);
+      debugLog.log(`Cancelling MIDI learn for group ${groupId}`);
       cancelLearn()
     } else {
       // Start learning
-      console.log(`Starting MIDI learn for group ${groupId}`);
+      debugLog.log(`Starting MIDI learn for group ${groupId}`);
       startLearn(groupId)
     }
   }

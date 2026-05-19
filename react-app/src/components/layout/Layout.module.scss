@@ -1,31 +1,40 @@
-/* Define navbar width variables here too, or import from a global sheet if available */
+/* Desktop primary nav is a floating top bar (see Navbar). Vertical clearance only. */
 :root {
-  --navbar-expanded-width: 220px; /* Ensure consistency if not globally defined */
-  --navbar-collapsed-width: 56px; /* Ensure consistency */
+  --navbar-top-expanded: 168px;
+  --navbar-top-collapsed: 58px;
 }
 
 .layout {
+  --layout-top-clearance: var(--navbar-top-expanded);
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   background: var(--background);
   color: var(--text-primary);
   position: relative; // Added to contain absolute children like Sparkles
 
+  :global(body.navbar-is-collapsed) & {
+    --layout-top-clearance: var(--navbar-top-collapsed);
+  }
+
   .contentWrapper {
     flex: 1;
     display: flex;
     gap: 1rem;
     padding: 1rem;
-    padding-right: calc(var(--navbar-expanded-width) + 1rem); /* Add right padding for vertical navbar */
+    padding-right: 1rem;
     padding-left: calc(var(--pinned-channels-width, 0px) + 1rem); /* Add left padding for pinned channels */
     position: relative;
     overflow: visible;
-    transition: padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: padding-top 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
-    /* Styling for when navbar is collapsed - applied via body class */
-    :global(body.navbar-is-collapsed) & {
-      padding-right: calc(var(--navbar-collapsed-width) + 1rem); /* Reduced padding for collapsed navbar */
+    @media (min-width: 1280px) {
+      padding-top: calc(var(--layout-top-clearance) + var(--safe-top, 0px));
+    }
+
+    @media (max-width: 1279px) {
+      padding-left: 1rem;
     }
 
     .statusPanel {
@@ -241,5 +250,64 @@
   }
   100% {
     background-position: 0% 50%;
+  }
+}
+/* =====================================================================
+ * MOBILE / TABLET LAYOUT MODE
+ * ===================================================================
+ * Active when useMobile().isMobileOrTablet returns true. The Layout
+ * adds the `.layoutMobile` class to its root and the chrome around
+ * the page is replaced by a fixed top bar (MobileTopBar) plus on-
+ * demand drawers.
+ */
+.layoutMobile {
+  // Orphan fixed-corner badges from older builds (static HTML + React).
+  :global(.deploy-lane-top-badge) {
+    display: none !important;
+  }
+
+  // Reserve room at the top for the mobile top bar (which is fixed).
+  // We use the canonical token introduced in design-system.scss.
+  padding-top: calc(var(--mobile-topbar-height, 56px) + var(--safe-top));
+
+  .contentWrapper {
+    padding: 12px;
+    padding-left: max(12px, var(--safe-left));
+    padding-right: max(12px, var(--safe-right));
+    padding-bottom: max(12px, var(--safe-bottom));
+    gap: 12px;
+  }
+
+  .mainContent {
+    gap: 12px;
+  }
+
+  .title {
+    font-size: 1.25rem;
+  }
+
+  // Disable the rainbow gradient animation on mobile so prefers-
+  // reduced-motion users (and battery-conscious users) are spared.
+  .title span {
+    animation: none !important;
+    background: none !important;
+    -webkit-background-clip: initial !important;
+    background-clip: initial !important;
+    -webkit-text-fill-color: var(--color-text-secondary, #94a3b8) !important;
+    color: var(--color-text-secondary, #94a3b8) !important;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1279px) {
+  .layoutMobile {
+    padding-top: calc(var(--tablet-topbar-height, 64px) + var(--safe-top));
+  }
+}
+
+// Honour the user's reduced-motion preference globally for the
+// rainbow title animation, even on desktop.
+@media (prefers-reduced-motion: reduce) {
+  .title span {
+    animation: none !important;
   }
 }

@@ -1,188 +1,135 @@
-# ⚡ **Features Overview** - ArtBastard V5.12
+# ArtBastard Features (v5.12.0)
 
-> *"Features without purpose are merely digital decorations. Every capability serves the art. We have eliminated the frivolous, the unnecessary, the 'user-friendly' nonsense that plagues amateur software. What remains is pure, uncompromising power for those who understand that lighting is not a craft, but an art form. We honor the legacy of the Wind Dancing Masters, who first understood that light could be choreographed. Their ancient wisdom flows through every feature, every control, every photon we command."*  
-> — *Le Créateur des Lumières*
+Feature inventory after the rebuild consolidation. Subsystem first, then
+notable shipped features.
 
-*"If you find yourself overwhelmed by these features, perhaps you should first master the basics of theatrical lighting before attempting to use a tool designed for professionals. We recommend starting with a simple dimmer and working your way up. ArtBastard is not a training wheel - it is a Formula One race car. Drive it accordingly. The Wind Dancing Masters did not achieve mastery overnight, and neither shall you."*
+## Control and runtime
 
-## 🎯 **Core Control Systems** *(The Foundation of Photonic Mastery)*
+- 512-channel DMX universe control with fixture / group abstractions.
+- Art-Net output across multiple universes.
+- Real-time socket state synchronisation between backend and every
+  connected client (main app, external console, mobile surface). Multiple
+  operators can work concurrently; one shared DMX universe is broadcast to
+  all clients and to the active LAN bridge when connected.
+- LAN / Pi bridge (`bridge-agent/`): outbound WSS from a home-network host
+  to drive Art-Net on 192.168.1.* (and similar) when the UI runs on the
+  cloud. Ableton Link can run on the bridge for Live tempo sync. One bridge
+  per show today; separate isolated sessions per tenant are future work.
+- Consolidated backend lifecycle and unified fixture persistence service.
+- Network interface auto-detection with ICMP ping verification.
 
-### **DMX512 Universe Management** *(Because One Universe Is Never Enough)*
-- **Multi-universe support** - Expand beyond 512 channels, because true artists are not limited by the constraints of mere mortals. If 512 channels suffice for your needs, perhaps you are not creating art, but merely "turning on lights."
-- **Art-Net integration** - Network-based DMX distribution for professional installations. If you're still using USB cables, *mon ami*, it is time to evolve. The future is networked, and it is *magnifique*.
-- **Real-time monitoring** - Live channel value display that updates with the immediacy your artistry demands. Watch your commands take effect in real-time, as they should.
-- **Address conflict detection** - Prevent fixture overlaps before they become problems. We've eliminated the tedious manual checking that plagued lesser systems, because your time is too valuable for such pedestrian concerns.
+## Operator UI (remaster, May 2026)
 
-### **Professional Fixture Control** *(For Fixtures That Deserve Respect)*
-- **Pan/Tilt positioning** with speed curves so smooth, they would make a Swiss watchmaker weep. Control every degree of movement with the precision your artistry demands.
-- **Color mixing** (RGB, RGBW, CMY) that produces hues so pure, they would make Monet question his palette choices. We've eliminated the muddy, imprecise color mixing that plagues amateur systems.
-- **GOBO & pattern selection** worthy of a museum. Choose from professional gobo libraries, or import your own custom patterns. Because true artists do not limit themselves to the patterns provided by manufacturers.
-- **Beam control** (zoom, focus, iris, prism) with precision that would make a neurosurgeon envious. Every parameter is yours to command.
-- **Animation effects** with speed control that allows you to create sequences worthy of a professional installation. We've eliminated the jerky, amateurish animations that plague lesser software.
-- **Color temperature correction** (CTO/CTB) for those who understand that color is not merely RGB values, but a complex interaction of temperature, saturation, and artistic intent.
-- **Face Tracking Integration** - Revolutionary real-time face tracking that maps human movement to pan/tilt control. Nod your head, shake it side to side - watch as your fixtures follow your every gesture. Transform your movements into photonic choreography. *C'est révolutionnaire!*
+Shared controls in `react-app/src/components/ui/controls/`:
 
-## 🎨 **Interface & Usability**
+- `ArtbastardXYPad` - pan/tilt and autopilot track centers
+- `VerticalBabydinoSlider` / `HorizontalFader` - styled gold faders
+- `RangeWindowControl` - dual-handle min/max windows
+- `SteppedGoboSlider` - discrete gobo steps
+- `RemasterPanel` - glass panel shell for automation surfaces
+- Envelope engine with anime.js `outExpo` (`utils/envelopeEngine.ts`)
 
-### **Adaptive UI Design**
-- **Touch-optimized controls** - 44px+ touch targets
-- **Responsive layouts** - Desktop to tablet scaling
-- **Professional color schemes** - Easy on the eyes during long shows
-- **Customizable workspaces** - Arrange controls as needed
-- **Customizable Color Themes** - HSL sliders for primary, secondary, and accent colors. Create your own photonic aesthetic.
-- **SuperControl Layout System** - Quick panel selection for 2-column or 3-column layouts. Controls displayed side-by-side within columns for efficient workflow.
-- **Display Options** - Scene Controls, MIDI Controls, OSC Controls, and Envelope Automation enabled by default. Toggle them off if you prefer a minimalist interface.
+Surfaces using the kit: DmxChannelCard grid, Super Control, fixture canvas,
+Chromatic Energy manipulator, scenes, mobile/touch, BPM dashboard, envelope
+and modular automation. Settings and face-tracker debug still use native
+ranges where low traffic warrants it.
 
-### **Advanced Control Methods**
-- **MIDI integration** - Hardware controller support
-- **OSC Protocol** - Wireless tablet/phone control  
-- **Keyboard shortcuts** - Comprehensive DAW-style keyboard shortcuts for timeline and general controls
-  - Timeline shortcuts: Space (play/pause), Home/End (navigation), Shift+Arrow (nudge), Ctrl+C/V (copy/paste)
-  - General shortcuts: Ctrl+H (help), ? (shortcuts help), Esc (close dialogs)
-  - Press `?` anywhere to view the beautiful keyboard shortcuts help overlay
+## DMX workflow and UX
 
-## 🎪 **Performance & Show Control**
+- Modular DMX Control page architecture:
+  - Header with master fader and global state
+  - Filters and fixture selector
+  - Channels viewport and channel cards (grid or list)
+  - Pinned channels summary
+  - Scene controls
+  - MIDI connections panel
+  - Footer / status row
+- Channel and fixture filtering utilities with regression tests.
+- Pinned channel summaries and active channel visibility helpers.
+- Theme system with HSL controls, typography scale, spacing tokens, and
+  five preset themes.
 
-### **Scene Management**
-- **Instant scene recall** - One-click lighting states
-- **Crossfade control** - Smooth transitions with timing
-- **Scene editing** - Modify cues on-the-fly
-- **Backup systems** - Never lose your show data
+## Scenes, acts, and timelines
 
-### **Automation & Effects**
-- **Chase sequences** - Automated lighting patterns
-- **Audio sync** - Beat-responsive lighting (when hardware supports)
-- **Timeline recording** - Capture live performances
-- **Random effects** - Spontaneous variation generators
+- Scene save / load / delete from the canonical SuperControl flow.
+- Scene timeline playback with batched channel updates.
+- Scene timeline editor (DAW-style) with:
+  - Multi-track view, mute / solo / collapse per track
+  - Keyframes that show actual DMX values (0-255) and percentages
+  - Easing types: linear, ease-in, ease-out, smooth, step
+  - Snapping, drag preview, undo / redo, copy / paste
+- Act timeline editor (show sequencing):
+  - Scene clips with absolute start times, gaps, resize, playhead scrub
+  - +2s gap / extend timeline tools; playback waits through gaps
+  - MIDI and OSC lanes with scheduled events at ms offsets
+  - Sync to BPM (app tempo / bar multiplier); see DOCS/ACT_TIMELINE.md
+- Clip launcher (Ableton-style) with:
+  - Customisable grid (default 4x4)
+  - Visual states: playing, queued, recording, empty
+  - Loop toggle per clip and Stop All
+- ACT triggers: play, pause, stop, next, previous, toggle (act transport).
+- Ableton Link (via Pi bridge): shared BPM with Link peers; not Live transport.
 
-## 🔧 **Technical Features**
+## Touch and external surfaces
 
-### **Hardware Compatibility**
-- **USB DMX interfaces** - Plug-and-play support
-- **Art-Net nodes** - Professional network DMX
-- **MIDI controllers** - Extensive device support
-- **Touch devices** - Tablets, touch monitors, phones
+- External Console route (`#/external-console`).
+- Mobile Control Surface route (`#/mobile`).
+- Hash-based deep linking everywhere.
+- Experimental page tab deep-linking, including
+  `#/experimental?tab=touchosc`.
 
-### **Data Management**
-- **Show file import/export** - Share configurations
-- **Fixture profile library** - Growing database
-- **Settings backup** - Preserve your workspace
-- **Auto-save protection** - Never lose work
+## TouchOSC
 
-## 🎭 **Professional Lighting Features**
+- Canonical TouchOSC XML generation path.
+- Export and upload workflow with upload status feedback.
+- Runtime endpoint for TouchOSC layout download.
+- TouchOSC workflow smoke test (`test:touchosc-workflow`).
 
-### **Fixture Profiles**
-- **Moving head lights** - Full feature support
-- **LED wash fixtures** - Color mixing and effects
-- **Traditional dimmers** - Incandescent control
-- **Specialty effects** - Lasers, fog, strobes
-- **Custom profiles** - Build your own fixture definitions
+## MIDI and OSC
 
-### **Advanced Control**
-- **Preset positions** - Save favorite fixture settings
-- **Group control** - Batch operations on multiple fixtures
-- **Intensity curves** - Non-linear dimming control
-- **Color calibration** - Match fixtures across manufacturers
+- MIDI Learn for note, CC, and pitch-bend mappings.
+- Pitch-bend-to-DMX processing path in backend and frontend.
+- MIDI controller templates:
+  - Behringer X-Touch (Mackie mode)
+  - Akai APC40 MK1
+- X-Touch scribble strip SysEx labels updated on template apply and on
+  channel rename.
+- Controller template REST endpoint:
+  `POST /api/midi/controller-template { template: 'xtouch' | 'apc40' }`.
+- OSC integration covering SuperControl axes, scenes, ACT triggers, master
+  controls, and per-fixture / per-channel direct control.
 
-## 🌐 **Connectivity & Integration**
+## Help and discoverability
 
-### **Network Protocols**
-- **Art-Net** - Industry standard network DMX distribution
-- **OSC** - Open Sound Control for advanced integration
-- **WebSocket** - Real-time data streaming
+- HelpOverlay accessible by Ctrl+H or from Settings > Help.
+- Tabs: Getting Started, DMX Control, Address Sheet, DIP Simulator, MIDI
+  Setup, OSC Integration, Scene Management, Timeline, Clip Launcher,
+  Shortcuts.
+- Live MIDI Monitor and OSC Monitor embedded in the help tabs.
+- DIP Switch Calculator and PDF Address Sheet generator.
 
-### **External Integration**
-- **Media servers** - Control video/projection systems
-- **Audio systems** - Trigger lighting from sound cues
-- **Home automation** - Integrate with smart systems
-- **Show control** - Part of larger production systems
+## Settings and reset
 
-## 🎬 **Timeline System** *(DAW-Style Professional Editing)*
+- API contract support for:
+  - `/api/state` GET / POST / DELETE
+  - `/api/config` GET / POST / DELETE
+  - `/api/scenes` GET / POST / DELETE
+- Factory reset marker check endpoint:
+  - `/api/factory-reset-check`
+- Launcher reset flags: `./start.sh --reset` and `.\start.ps1 -Reset`.
 
-### **Timeline Editor** *(Finally, A Timeline That Makes Sense)*
-- **Keyframe Animation** - Create complex lighting sequences with precise keyframe control. Keyframes display actual DMX values (0-255) and percentages, not meaningless labels. *Because you deserve to know what you're controlling.*
-- **Timeline Ruler** - Professional time ruler with time markers and scrubbing support. Click or drag on the ruler to jump to any position or scrub through your timeline. *Navigation worthy of a professional timeline editor.*
-- **Visual Playhead** - Clear visual indicator showing current playback position. Watch your lighting sequence unfold with the precision of a professional DAW.
-- **Timeline Grid** - Background grid for better alignment and precision. Snap keyframes to grid for perfect timing, or disable snapping for free-form editing.
-- **Drag Preview** - Real-time feedback showing exact time position while dragging keyframes. No more guessing where your keyframes will land. *Transparency is artistry.*
-- **Multi-Track View** - View multiple channels simultaneously in a multi-track timeline. Each channel gets its own track with keyframes, curves, and controls. *Because complex lighting requires complex visualization.*
-- **Curve Visualization** - Smooth interpolation curves between keyframes. Visualize how your lighting values transition over time with beautiful curve rendering.
-- **DAW-Style Keyboard Shortcuts** - Professional keyboard shortcuts for efficient editing:
-  - **Space**: Play/Pause timeline
-  - **Home/End**: Jump to start/end
-  - **Shift+Arrow**: Nudge playhead/keyframes
-  - **Ctrl+C/V**: Copy/Paste keyframes
-  - **Delete**: Delete selected keyframes
-  - **Ctrl+Z/Y**: Undo/Redo
-  - **Ctrl+A**: Select all keyframes
-  - **?**: Show keyboard shortcuts help
-- **Keyframe Tooltips** - Detailed tooltips showing actual DMX values, channel names, fixture information, and easing types. *Information at your fingertips, as it should be.*
+## Testing and evidence tooling
 
-*The timeline system has been completely refactored to provide a professional, DAW-like experience. No more confusing circle sliders with meaningless labels - now you see exactly what you're controlling, when you're controlling it, and how it transitions. The Wind Dancing Masters would approve of this level of precision.*
-
-## 🎹 **Clip Launcher** *(Session-Style Live Performance)*
-
-### **Live Performance Scene Management** *(Inspired by Ableton Live)*
-- **Grid-Based Interface** - Session-style clip launcher with customizable grid (rows × columns). Organize your scenes in a visual grid for quick access during live performance.
-- **Clip Cells** - Each cell can hold a scene, with visual feedback for playing, queued, and recording states. Click to launch, double-click to edit.
-- **Launch Controls** - Launch, stop, loop, and queue scenes with professional workflow. Multiple clips can play simultaneously, perfect for layered lighting effects.
-- **Scene Integration** - Seamlessly integrated with ArtBastard's scene system. Any scene can be assigned to a clip cell and launched instantly.
-- **Visual Feedback** - Clear visual indicators for clip states: playing (highlighted), queued (different color), recording (pulsing), empty (dashed border).
-- **Grid Customization** - Adjust grid size to match your workflow. Default 4×4 grid, expandable to any size you need.
-
-*The clip launcher transforms scene management from a simple list into a powerful live performance instrument. Launch scenes with the precision and speed of a professional lighting operator. Because live performance requires more than just scene buttons - it requires a performance instrument.*
-
-## 🎛️ **Advanced Automation & Control**
-
-### **Modular Automation System** *(Because True Artists Control Every Aspect)*
-- **🎨 Color Automation** - Rainbow, color cycling, pulsing colors with precision that would make Monet weep. Speed range: 0.1x-1.0x for precise control.
-- **💡 Dimmer Automation** - Breathing, strobing, ramping intensity with the grace of a ballerina
-- **🔄 Pan/Tilt Automation** - Movement patterns (circle, figure8, linear sweeps) worthy of a professional installation. Automatic tempo synchronization with pause when tempo stops.
-- **✨ Effects Automation** - GOBO cycling, prism rotation, focus sweeps that transform mere illumination into visual poetry
-- **⏱️ Tempo Synchronization** - Autopilot and auto color automatically pause when tempo stops if synced to BPM. True artists respect the rhythm.
-
-*Unlike primitive "autopilot" systems, ArtBastard's modular automation allows you to control each aspect independently. Want colors to cycle but pan/tilt to stay still? *Bien sûr!* Want dimmer to breathe but effects to remain static? *Évidemment!* True artistry requires this level of control.*
-
-### **Scene Integration with Automation**
-- **Automatic State Preservation** - All automation states are saved and restored with scenes
-- **Independent Module Control** - Each automation module (color, dimmer, pan/tilt, effects) can be enabled/disabled independently
-- **Scene-Specific Automation** - Different scenes can have different automation configurations
-- **Seamless Transitions** - Automation states transition smoothly when loading scenes
-
-*Because true artists understand that lighting is not about individual fixtures, but about compositions. Your scenes deserve to remember their automation states, and ArtBastard ensures they do.*
-
-## 🎹 **MIDI & OSC Integration** *(For Those Who Command Light, Not Merely Operate It)*
-
-### **Comprehensive MIDI Control**
-- **MIDI Learn System** - Map any MIDI CC or Note to any control with the ease that even a novice could manage (though we doubt they would appreciate the artistry)
-- **Per-Scene MIDI Mapping** - Each saved scene can have its own MIDI trigger, because true artists understand the value of preparation
-- **MIDI Forget** - Clear mappings for individual controls or scenes when your artistic vision evolves
-- **Hardware Controller Support** - Extensive device support for those who prefer tactile control
-- **Tempo Control MIDI** - Learn MIDI mappings for tempo play/pause and tap tempo. Command your lighting tempo with external controllers.
-
-### **OSC Protocol Integration**
-- **Per-Scene OSC Addresses** - Each scene gets a unique OSC address (default: `/scene/1`, `/scene/2`, etc.) with custom override capability
-- **Intelligent Routing** - Automatic routing through ArtBastard's OSC endpoints, visible in real-time monitoring
-- **Clipboard Integration** - One-click copy OSC addresses for easy external controller setup
-- **Face Tracker OSC** - Face tracking movements flow seamlessly into your OSC network. *Magnifique!*
-- **Tempo Control OSC** - Learn OSC addresses for tempo play/pause (`/tempo/playpause`, `/tempo/toggle`) and tap tempo (`/tempo/tap`). Wireless tempo control from any device.
-- **SuperControl OSC** - All SuperControl functions accessible via OSC addresses (e.g., `/supercontrol/dimmer`, `/supercontrol/pan`, etc.)
-
-### **Configuration Management**
-- **Export All Settings** - Download complete configuration as JSON file for backup or sharing
-- **Import Settings** - Load previously saved configurations to quickly set up new installations
-- **Save as Default** - Set current configuration as the default for new sessions
-- **Factory Reset** - Complete system reset that clears all saved state, fixtures, channel names, MIDI mappings, OSC addresses, and persisted data. Truly fresh start.
-- **Customizable Color Themes** - HSL sliders for primary, secondary, and accent colors. Create your own photonic aesthetic with the precision of a master painter.
-- **DMX Visual Effects** - Configurable visual effects (off/low/medium/high) for DMX activity monitoring. Adjust GPU usage to match your system's capabilities.
-- **Display Options** - Scene Controls, MIDI Controls, OSC Controls, and Envelope Automation enabled by default. Toggle them off if you prefer a minimalist interface.
-
-*Because true artists understand the value of preserving their work. Your configurations deserve immortality (or at least preservation until the next show).*
-
----
-### 🧰 **Developer Tooling**
-- **start.ps1** - Main launch script for Windows (with -Clear and -Reset options)
-- **start.sh** - Main launch script for Linux (with --clear and --reset options)
-
----
-**Next:** [History & Reviews](./HISTORY.md) | [Usage Guide](./USAGE.md) | Back to [README](./README.md)
+- Unit / regression tests for:
+  - TouchOSC export
+  - Scene capture indexing
+  - ACT trigger handling
+  - Clip launcher helper logic
+  - DMX filtering behaviour
+- Smoke scripts:
+  - API contract smoke (`test:api-contract`)
+  - TouchOSC workflow smoke (`test:touchosc-workflow`)
+- Demo evidence pipeline:
+  - Automated screenshot capture (`demo:capture-screenshots`)
+  - Automated video capture (`demo:capture-videos`)
+  - Combined evidence run (`demo:evidence` / `demo:evidence-full`)

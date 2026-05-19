@@ -5,7 +5,25 @@ import { OscMonitor } from '../osc/OscMonitor';
 import { DipSwitchSimulator } from './DipSwitchSimulator';
 import { PdfAddressSheet } from './PdfAddressSheet';
 
-type HelpTab = 'overview' | 'dmx-basics' | 'dip-simulator' | 'midi-setup' | 'osc-integration' | 'scene-management' | 'timeline' | 'clip-launcher' | 'shortcuts' | 'address-sheet';
+type HelpTab =
+  | 'overview'
+  | 'dmx-basics'
+  | 'dip-simulator'
+  | 'midi-setup'
+  | 'controller-templates'
+  | 'osc-integration'
+  | 'scene-management'
+  | 'timeline'
+  | 'act-timeline'
+  | 'clip-launcher'
+  | 'acts-triggers'
+  | 'mobile'
+  | 'factory-reset'
+  | 'shortcuts'
+  | 'address-sheet'
+  | 'troubleshooting'
+  | 'lan-bridge'
+  | 'video-tour';
 
 interface HelpOverlayProps {
   embedded?: boolean; // When true, renders without floating button (for settings page)
@@ -66,17 +84,27 @@ export const HelpOverlay: React.FC<HelpOverlayProps> = ({ embedded = false }) =>
   const filteredContent = (content: string) => {
     if (!searchQuery) return content;
     return content.toLowerCase().includes(searchQuery.toLowerCase());
-  };  const tabs: Array<{id: HelpTab, label: string, icon: string}> = [
+  };
+
+  const tabs: Array<{id: HelpTab, label: string, icon: string}> = [
     { id: 'overview', label: 'Getting Started', icon: '🚀' },
     { id: 'dmx-basics', label: 'DMX Control', icon: '💡' },
     { id: 'address-sheet', label: 'Address Sheet', icon: '📋' },
     { id: 'dip-simulator', label: 'DIP Simulator', icon: '🔧' },
     { id: 'midi-setup', label: 'MIDI Setup', icon: '🎹' },
+    { id: 'controller-templates', label: 'Controller Templates', icon: '🎚️' },
     { id: 'osc-integration', label: 'OSC Control', icon: '📡' },
     { id: 'scene-management', label: 'Scene Management', icon: '🎬' },
-    { id: 'timeline', label: 'Timeline Editor', icon: '🎬' },
-    { id: 'clip-launcher', label: 'Clip Launcher', icon: '🎹' },
+    { id: 'timeline', label: 'Scene Timeline', icon: '🎞️' },
+    { id: 'act-timeline', label: 'Act Timeline', icon: '🎬' },
+    { id: 'clip-launcher', label: 'Clip Launcher', icon: '🟧' },
+    { id: 'acts-triggers', label: 'ACT Triggers', icon: '▶️' },
+    { id: 'mobile', label: 'Touch Surface', icon: '📱' },
+    { id: 'factory-reset', label: 'Factory Reset', icon: '♻️' },
     { id: 'shortcuts', label: 'Shortcuts', icon: '⌨️' },
+    { id: 'lan-bridge', label: 'LAN / Pi Bridge', icon: '🔌' },
+    { id: 'troubleshooting', label: 'Troubleshooting', icon: '🛟' },
+    { id: 'video-tour', label: 'Video Tour', icon: '🎥' },
   ];
 
   const renderTabContent = () => {
@@ -107,6 +135,7 @@ export const HelpOverlay: React.FC<HelpOverlayProps> = ({ embedded = false }) =>
                 <li>USB DMX interface or Art-Net compatible device</li>
                 <li>DMX512 lighting fixtures</li>
                 <li>Optional: MIDI controller or OSC-capable device</li>
+                <li>Cloud + home LAN: Raspberry Pi running <code>artbastard-bridge</code> (see Help tab LAN / Pi Bridge)</li>
               </ul>
             </div>
 
@@ -154,16 +183,30 @@ export const HelpOverlay: React.FC<HelpOverlayProps> = ({ embedded = false }) =>
             </div>
 
             <div className={styles.section}>
-              <h5>📊 Interface Overview</h5>
-              <p>The interface is organized into modular panels that you can arrange to suit your workflow:</p>
+              <h5>🗺️ Routes</h5>
+              <p>Hash-based deep links - bookmark any of these:</p>
               <ul>
-                <li><strong>DMX Control Panel:</strong> Main fader interface for direct channel control</li>
-                <li><strong>Scene Control:</strong> Save and recall lighting scenes</li>
-                
-                <li><strong>SuperControl:</strong> Advanced fixture control with MIDI/OSC</li>
-                <li><strong>Master Fader:</strong> Global brightness control</li>
-                <li><strong>Monitors:</strong> MIDI and OSC message monitoring</li>
+                <li><code>#/</code> - DMX Control home</li>
+                <li><code>#/fixture</code> - Fixture Setup + Advanced Fixture Control (SuperControl)</li>
+                <li><code>#/scenes-acts</code> - Scenes, ACT triggers, timeline</li>
+                <li><code>#/mobile</code> - Touch-first phone and tablet surface</li>
+                <li><code>#/settings</code> - Settings + embedded Help</li>
               </ul>
+            </div>
+
+            <div className={styles.section}>
+              <h5>📊 Interface Overview</h5>
+              <p>The DMX Control page is split into modular panels you can rearrange:</p>
+              <ul>
+                <li><strong>Header + Master Fader:</strong> global state, blackout, brightness</li>
+                <li><strong>Filters &amp; Fixture Selector:</strong> narrow the channel grid</li>
+                <li><strong>Channels Viewport:</strong> grid or list of channel cards</li>
+                <li><strong>Pinned Channels:</strong> always-on summary of active channels</li>
+                <li><strong>Scene Controls:</strong> save and recall lighting scenes</li>
+                <li><strong>SuperControl:</strong> advanced fixture control with MIDI/OSC</li>
+                <li><strong>MIDI / OSC traffic:</strong> floating panels for incoming controller messages (not the external operator desk)</li>
+              </ul>
+              <p>Press <kbd>Ctrl</kbd>+<kbd>H</kbd> from any page to open this help overlay. Scene timeline, act timeline, ACT triggers, controller templates, factory reset, touch surface, and the demo video tour each have their own tab.</p>
             </div>
           </div>
         );
@@ -201,6 +244,7 @@ export const HelpOverlay: React.FC<HelpOverlayProps> = ({ embedded = false }) =>
                 <li><strong>Fixture Control:</strong> Use fixture-specific controls (brightness, color, etc.)</li>
                 <li><strong>Scene Control:</strong> Save and recall preset lighting looks</li>
                 <li><strong>Real-time Control:</strong> Use MIDI or OSC for live performance</li>
+                <li><strong>Fader layout:</strong> On the DMX page header (or Settings), switch between Horizontal Sliders and Vertical Sliders. The choice applies to the channel grid, pinned channels, and the left sidebar.</li>
               </ul>
             </div>
 
@@ -262,12 +306,23 @@ export const HelpOverlay: React.FC<HelpOverlayProps> = ({ embedded = false }) =>
             </div>            <div className={styles.section}>
               <h5>🔧 Popular Controllers</h5>
               <ul>
-                <li><strong>Akai APC series:</strong> Grid-based controllers perfect for scene triggering</li>
-                <li><strong>Novation Launchpad:</strong> RGB feedback and extensive grid control</li>
-                <li><strong>Behringer X-Touch:</strong> Professional mixing console with motorized faders</li>
-                <li><strong>Korg nanoKONTROL:</strong> Compact USB controller with faders and knobs</li>
+                <li><strong>Akai APC series:</strong> Grid-based controllers perfect for scene triggering. APC40 MK1 has a one-click template - see the Controller Templates tab.</li>
+                <li><strong>Novation Launchpad:</strong> RGB feedback and extensive grid control.</li>
+                <li><strong>Behringer X-Touch:</strong> Professional mixing console with motorized faders. Mackie-mode template ships with scribble-strip SysEx labels.</li>
+                <li><strong>Korg nanoKONTROL:</strong> Compact USB controller with faders and knobs.</li>
               </ul>
-            </div>            <div className={styles.section}>
+            </div>
+
+            <div className={styles.section}>
+              <h5>🎚️ Controller Templates &amp; Pitch-bend</h5>
+              <p>One-click templates for Behringer X-Touch (Mackie) and Akai APC40 MK1. Pitch-bend mappings are wired by default for the X-Touch master fader and per-channel faders.</p>
+              <p>Apply via <em>Settings → MIDI → Apply Template</em> or via REST:</p>
+              <pre><code>{`POST /api/midi/controller-template
+{ "template": "xtouch" }   // or "apc40"`}</code></pre>
+              <p>See the Controller Templates tab for the full mapping reference.</p>
+            </div>
+
+            <div className={styles.section}>
               <h5>📊 Live MIDI Monitor</h5>
               <p>Use the MIDI Monitor below to test your controller and see incoming messages in real-time:</p>
               <div className={styles.monitorContainer}>
@@ -364,7 +419,7 @@ export const HelpOverlay: React.FC<HelpOverlayProps> = ({ embedded = false }) =>
                   <li>XY Pad and normalized controls use 0.0-1.0 range</li>
                   <li>Trigger controls respond to any positive value</li>
                   <li>Addresses are customizable in SuperControl OSC input fields</li>
-                  <li>Use OSC Placeholder in Experimental section to view all available OSC addresses</li>
+                  <li>Use the OSC Monitor (debug tools) to watch live incoming traffic</li>
                 </ul>
               </div>
             </div>
@@ -479,6 +534,66 @@ export const HelpOverlay: React.FC<HelpOverlayProps> = ({ embedded = false }) =>
                   <kbd>Space</kbd>
                   <span>Emergency Blackout (or Timeline Play/Pause in timeline editor)</span>
                 </div>
+                <div className={styles.shortcut}>
+                  <kbd>B</kbd>
+                  <span>Toggle Blackout</span>
+                </div>
+                <div className={styles.shortcut}>
+                  <kbd>?</kbd>
+                  <span>Show Keyboard Shortcuts Modal</span>
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.section}>
+              <h5>🧭 Navigation</h5>
+              <div className={styles.shortcutList}>
+                <div className={styles.shortcut}>
+                  <kbd>1</kbd>
+                  <span>Go to DMX Control</span>
+                </div>
+                <div className={styles.shortcut}>
+                  <kbd>2</kbd>
+                  <span>Go to Scenes &amp; Acts</span>
+                </div>
+                <div className={styles.shortcut}>
+                  <kbd>3</kbd>
+                  <span>Go to Fixture Setup</span>
+                </div>
+                <div className={styles.shortcut}>
+                  <kbd>4</kbd>
+                  <span>Go to MIDI / OSC</span>
+                </div>
+                <div className={styles.shortcut}>
+                  <kbd>Tab</kbd>
+                  <span>Cycle Through Panels</span>
+                </div>
+                <div className={styles.shortcut}>
+                  <kbd>Ctrl</kbd> + <kbd>F</kbd>
+                  <span>Find / Filter Fixtures</span>
+                </div>
+                <div className={styles.shortcut}>
+                  <kbd>F11</kbd>
+                  <span>Toggle Fullscreen</span>
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.section}>
+              <h5>🤖 Automation</h5>
+              <div className={styles.shortcutList}>
+                <div className={styles.shortcut}>
+                  <kbd>A</kbd>
+                  <span>Toggle Automation</span>
+                </div>
+                <div className={styles.shortcut}>
+                  <kbd>P</kbd>
+                  <span>Toggle Autopilot</span>
+                </div>
+                <div className={styles.shortcut}>
+                  <kbd>K</kbd>
+                  <span>Add Keyframe at Playhead (Timeline)</span>
+                </div>
               </div>
             </div>
 
@@ -578,34 +693,14 @@ export const HelpOverlay: React.FC<HelpOverlayProps> = ({ embedded = false }) =>
               </div>
             </div>
 
-            <div className={styles.section}>
-              <h5>🔍 Navigation</h5>
-              <div className={styles.shortcutList}>
-                <div className={styles.shortcut}>
-                  <kbd>Tab</kbd>
-                  <span>Cycle Through Panels</span>
-                </div>
-                <div className={styles.shortcut}>
-                  <kbd>Ctrl</kbd> + <kbd>Tab</kbd>
-                  <span>Switch Panel Focus</span>
-                </div>
-                <div className={styles.shortcut}>
-                  <kbd>Ctrl</kbd> + <kbd>F</kbd>
-                  <span>Find/Filter Fixtures</span>
-                </div>
-                <div className={styles.shortcut}>
-                  <kbd>F11</kbd>
-                  <span>Toggle Fullscreen</span>
-                </div>
-              </div>
-            </div>          </div>
+          </div>
         );
 
       case 'timeline':
         return (
           <div className={styles.tabContent}>
-            <h4>🎬 Timeline Editor</h4>
-            <p>Create complex lighting sequences with DAW-style timeline editing. The timeline system has been completely refactored to provide professional-grade editing capabilities.</p>
+            <h4>🎬 Scene Timeline Editor</h4>
+            <p>Per-scene DMX animation: DAW-style keyframes on channel tracks. For sequencing whole scenes in a show, use the <strong>Act Timeline</strong> help tab.</p>
             
             <div className={styles.section}>
               <h5>🎯 Keyframe Animation</h5>
@@ -652,6 +747,61 @@ export const HelpOverlay: React.FC<HelpOverlayProps> = ({ embedded = false }) =>
                 <li>Mute/Solo controls per track</li>
                 <li>Track height adjustment</li>
                 <li>Collapsible tracks for better organization</li>
+              </ul>
+            </div>
+          </div>
+        );
+
+      case 'act-timeline':
+        return (
+          <div className={styles.tabContent}>
+            <h4>Act Timeline</h4>
+            <p>
+              Sequence scenes in a show: clips, gaps, and scheduled MIDI/OSC events.
+              For per-scene DMX keyframes, see the Scene Timeline tab.
+            </p>
+
+            <div className={styles.section}>
+              <h5>Editing</h5>
+              <ul>
+                <li><strong>Drag clips</strong> horizontally to set start time (not list order).</li>
+                <li><strong>Resize</strong> the right edge to change clip duration.</li>
+                <li><strong>Playhead:</strong> click the ruler or drag the red line to seek.</li>
+                <li><strong>Add step</strong> inserts a clip at the playhead.</li>
+                <li><strong>+2s gap</strong> (clip selected) shifts that clip and later clips.</li>
+                <li><strong>Extend +5s</strong> adds empty timeline past the last clip.</li>
+                <li>Playback <strong>waits through gaps</strong> before the next scene loads.</li>
+              </ul>
+            </div>
+
+            <div className={styles.section}>
+              <h5>Transport vs clock</h5>
+              <ul>
+                <li>
+                  <strong>ACT triggers</strong> (MIDI/OSC): play, pause, stop, next, prev, toggle —
+                  how you start an act from hardware or QLab.
+                </li>
+                <li>
+                  <strong>Sync to BPM</strong> on the act: bar length from app BPM; does not start
+                  Ableton Live.
+                </li>
+                <li>
+                  <strong>Ableton Link</strong> (Settings + Pi bridge): shared tempo only, not Live
+                  transport.
+                </li>
+                <li>
+                  <strong>MIDI/OSC lanes</strong>: fire at absolute ms during playback (scheduled cues).
+                </li>
+              </ul>
+            </div>
+
+            <div className={styles.section}>
+              <h5>Recommendations</h5>
+              <ul>
+                <li>Build scene looks first; use acts to order scenes.</li>
+                <li>Map spare pads to ACT triggers for the current show act.</li>
+                <li>Use OSC timeline events to start Live on a beat if needed.</li>
+                <li>Leave 1–3 s gaps between clips for fades.</li>
               </ul>
             </div>
           </div>
@@ -705,6 +855,278 @@ export const HelpOverlay: React.FC<HelpOverlayProps> = ({ embedded = false }) =>
                 <li>Multiple clips can play simultaneously for layered effects</li>
                 <li>Scene changes are instantly reflected in the clip launcher</li>
               </ul>
+            </div>
+          </div>
+        );
+
+      case 'controller-templates':
+        return (
+          <div className={styles.tabContent}>
+            <h4>🎚️ MIDI Controller Templates</h4>
+            <p>Apply factory-tuned MIDI mappings in one click. Two templates ship with the current build.</p>
+
+            <div className={styles.section}>
+              <h5>Behringer X-Touch (Mackie mode)</h5>
+              <ul>
+                <li><strong>Faders 1-8:</strong> pitch-bend channels 1-8 → SuperControl dimmer per group, plus DMX channels 1-8.</li>
+                <li><strong>Master fader:</strong> pitch-bend channel 9 → master brightness.</li>
+                <li><strong>V-Pots 1-8:</strong> CC 16-23 → SuperControl pan/tilt/RGB axes.</li>
+                <li><strong>Transport:</strong> ACT triggers (play / stop / next / prev / pause toggle).</li>
+                <li><strong>Scribble strips:</strong> SysEx labels are pushed showing the DMX channel name.</li>
+                <li><strong>Jog wheel:</strong> scrubs the timeline playhead.</li>
+              </ul>
+            </div>
+
+            <div className={styles.section}>
+              <h5>Akai APC40 MK1</h5>
+              <ul>
+                <li><strong>Pad grid (8×5):</strong> trigger the matching clip launcher cells.</li>
+                <li><strong>Track buttons:</strong> SuperControl axis selection (R/G/B/W/Pan/Tilt/Dimmer/Strobe).</li>
+                <li><strong>Cue level knob:</strong> fine-adjust the active SuperControl axis.</li>
+                <li><strong>Crossfader:</strong> master brightness.</li>
+                <li><strong>Scene buttons:</strong> trigger the corresponding scene rows.</li>
+              </ul>
+            </div>
+
+            <div className={styles.section}>
+              <h5>Apply a template</h5>
+              <p>UI: <em>Settings → MIDI → Apply Template</em>. Or via REST:</p>
+              <pre><code>{`POST /api/midi/controller-template
+Content-Type: application/json
+{ "template": "xtouch" }   // or "apc40"`}</code></pre>
+              <p>The endpoint is idempotent. User MIDI Learn entries on other controls are not touched. To clear everything, run a factory reset and re-apply.</p>
+            </div>
+
+            <div className={styles.section}>
+              <h5>Pitch-bend</h5>
+              <p>Pitch-bend mappings are supported in both directions. The X-Touch template wires master and per-channel faders to pitch-bend by default; APC40 wires the crossfader to pitch-bend channel 1 as a fallback.</p>
+            </div>
+          </div>
+        );
+
+      case 'acts-triggers':
+        return (
+          <div className={styles.tabContent}>
+            <h4>▶️ ACT Triggers</h4>
+            <p>
+              ACT triggers are <strong>transport</strong> for a specific act (play, pause, stop,
+              next, prev, toggle). They do not share Ableton Live&apos;s play button unless you map
+              them yourself. For act clip editing and tempo, see the Act Timeline tab.
+            </p>
+
+            <div className={styles.section}>
+              <h5>Available actions</h5>
+              <ul>
+                <li><code>play</code> - start playback</li>
+                <li><code>pause</code> - pause without resetting</li>
+                <li><code>stop</code> - stop and rewind</li>
+                <li><code>next</code> - advance to the next scene/step</li>
+                <li><code>prev</code> - previous scene/step</li>
+                <li><code>toggle</code> - switch play/pause based on state</li>
+              </ul>
+            </div>
+
+            <div className={styles.section}>
+              <h5>Where they appear</h5>
+              <ul>
+                <li>OSC: <code>/act/play</code>, <code>/act/pause</code>, <code>/act/stop</code>, <code>/act/next</code>, <code>/act/prev</code>, <code>/act/toggle</code>.</li>
+                <li>MIDI: assignable via MIDI Learn or applied through the controller templates.</li>
+                <li>Keyboard: <kbd>Space</kbd> for play/pause inside the timeline; <kbd>Esc</kbd> for stop.</li>
+              </ul>
+            </div>
+
+            <div className={styles.section}>
+              <h5>Tip</h5>
+              <p>
+                Pause + play resumes the act from the same offset; stop resets. Sync to BPM on the
+                act aligns length to bars (app BPM or Link tempo source). Timeline MIDI/OSC lanes
+                are scheduled cues during playback, not act transport.
+              </p>
+            </div>
+          </div>
+        );
+
+      case 'mobile':
+        return (
+          <div className={styles.tabContent}>
+            <h4>Touch Surface</h4>
+            <p>The <code>#/mobile</code> route shares live state with the desktop app and is tuned for phones and tablets.</p>
+
+            <div className={styles.section}>
+              <h5>Layout</h5>
+              <ul>
+                <li>Super Control and DMX channels on tabs with touch-first faders.</li>
+                <li>Designed for ~430x932 viewports; works in-browser or in a popup window on desktop.</li>
+                <li>Floating MIDI/OSC traffic panels stay off by default to keep the surface clean.</li>
+              </ul>
+            </div>
+
+            <div className={styles.section}>
+              <h5>Multi-client</h5>
+              <p>State synchronises in real time over Socket.IO. Changes on a phone show up on the desk and vice versa.</p>
+            </div>
+          </div>
+        );
+
+      case 'factory-reset':
+        return (
+          <div className={styles.tabContent}>
+            <h4>♻️ Factory Reset</h4>
+            <p>Clears DMX state, configuration, and saved scenes. Use this between shows or after a botched configuration.</p>
+
+            <div className={styles.section}>
+              <h5>Via UI</h5>
+              <ol className={styles.stepList}>
+                <li>Open <em>Settings → Reset</em>.</li>
+                <li>Confirm the dialog.</li>
+                <li>The page reloads on a fresh state.</li>
+              </ol>
+            </div>
+
+            <div className={styles.section}>
+              <h5>Via API</h5>
+              <pre><code>{`DELETE /api/state
+DELETE /api/config
+DELETE /api/scenes
+GET    /api/factory-reset-check    # returns true once reset has occurred`}</code></pre>
+            </div>
+
+            <div className={styles.section}>
+              <h5>Via launcher</h5>
+              <pre><code>{`./start.sh --reset
+.\\start.ps1 -Reset`}</code></pre>
+            </div>
+
+            <div className={styles.section}>
+              <h5>Backup first</h5>
+              <p>Always export <code>/api/config</code> and <code>/api/scenes</code> before you reset. Restore via the matching POST endpoints, or paste a configuration JSON via Settings → Import.</p>
+            </div>
+          </div>
+        );
+
+      case 'lan-bridge':
+        return (
+          <div className={styles.tabContent}>
+            <h4>LAN / Pi Bridge</h4>
+            <p>
+              Use when the app runs in the cloud but Art-Net and fixtures are on your home LAN (for example 192.168.1.*).
+            </p>
+            <div className={styles.section}>
+              <h5>Setup</h5>
+              <ol className={styles.stepList}>
+                <li>Run <code>artbastard-bridge</code> on a Raspberry Pi on the same network as your Art-Net node.</li>
+                <li>Settings &gt; Network: generate a bridge token; save it in <code>~/.artbastard/bridge.json</code> on the Pi.</li>
+                <li>Set Art-Net target IP and click Apply Art-Net target.</li>
+                <li>Control lights from the cloud UI; DMX goes cloud to bridge to Art-Net.</li>
+              </ol>
+            </div>
+            <div className={styles.section}>
+              <h5>Multiple operators</h5>
+              <p>
+                Many browsers can connect at once. All operators share one DMX state; every fader move syncs to every client and to the Pi bridge. One bridge per show today.
+              </p>
+            </div>
+            <div className={styles.section}>
+              <h5>Ableton Link</h5>
+              <p>
+                Enable Link on the Pi; choose <strong>Ableton Link</strong> as tempo source in BPM / Auto Scene. Ableton Live on the same LAN can drive tempo.
+              </p>
+            </div>
+            <div className={styles.section}>
+              <h5>Later: separate sessions</h5>
+              <p>
+                Multiple isolated shows or tenants will need a future sessions feature. For now everyone shares one universe.
+              </p>
+            </div>
+            <div className={styles.section}>
+              <h5>Reference</h5>
+              <p>Repository file <code>DOCS/BRIDGE.md</code> (systemd, env vars, troubleshooting).</p>
+            </div>
+          </div>
+        );
+
+      case 'troubleshooting':
+        return (
+          <div className={styles.tabContent}>
+            <h4>🛟 Troubleshooting</h4>
+
+            <div className={styles.section}>
+              <h5>DMX</h5>
+              <ul>
+                <li><strong>No output:</strong> check the interface, the start address, and the universe.</li>
+                <li><strong>Flicker:</strong> missing 120Ω terminator or loose XLR.</li>
+                <li><strong>Wrong colour:</strong> profile mismatch - verify the channel mode in Fixture Setup.</li>
+                <li><strong>Partial control:</strong> some fixtures have multiple modes - select the right one.</li>
+              </ul>
+            </div>
+
+            <div className={styles.section}>
+              <h5>MIDI</h5>
+              <ul>
+                <li><strong>Device missing:</strong> re-grant Web MIDI permission, or restart the browser with the device already plugged in.</li>
+                <li><strong>Mappings lost:</strong> re-apply the controller template, or restore your configuration backup.</li>
+                <li><strong>X-Touch labels stale:</strong> re-apply the X-Touch template - SysEx is sent on apply.</li>
+              </ul>
+            </div>
+
+            <div className={styles.section}>
+              <h5>OSC</h5>
+              <ul>
+                <li><strong>Not receiving:</strong> verify the listening port, the firewall, and watch the OSC Monitor for incoming traffic.</li>
+                <li><strong>Wrong address:</strong> check SuperControl OSC fields and the OSC Monitor for live traffic.</li>
+              </ul>
+            </div>
+
+            <div className={styles.section}>
+              <h5>LAN / Pi Bridge</h5>
+              <ul>
+                <li><strong>Bridge disconnected:</strong> check Pi online, token valid, outbound HTTPS to cloud.</li>
+                <li><strong>No Art-Net on LAN:</strong> Art-Net target IP in Settings; Pi on same subnet as node.</li>
+                <li><strong>Cloud OK, no lights:</strong> bridge must be connected; cloud does not send Art-Net to LAN.</li>
+                <li><strong>Link peers 0:</strong> Link on in Live; same LAN as Pi; no AP isolation.</li>
+              </ul>
+            </div>
+
+            <div className={styles.section}>
+              <h5>Build / start</h5>
+              <ul>
+                <li>Run <code>./start.sh --reset</code> or <code>.\start.ps1 -Reset</code> for a clean rebuild.</li>
+                <li>If <code>dist/server.js</code> is missing, run <code>npm run build</code> first.</li>
+                <li>Demo capture requires <code>Xvfb</code>, <code>ffmpeg</code>, <code>xdotool</code>, and <code>google-chrome</code>.</li>
+              </ul>
+            </div>
+          </div>
+        );
+
+      case 'video-tour':
+        return (
+          <div className={styles.tabContent}>
+            <h4>🎥 Video Tour</h4>
+            <p>Five short WebM clips of every major surface ship with the public showcase page. Embed them locally or stream from the live site.</p>
+
+            <div className={styles.section}>
+              <h5>Where</h5>
+              <ul>
+                <li>Repo path: <code>website/videos/</code></li>
+                <li>Public showcase: <a href="https://aday1.github.io/artbastard.aday.net.au/" target="_blank" rel="noopener">aday1.github.io/artbastard.aday.net.au</a></li>
+                <li>Source: GitHub <a href="https://github.com/aday1/artbastard.aday.net.au/tree/main/website/videos" target="_blank" rel="noopener">website/videos</a></li>
+              </ul>
+            </div>
+
+            <div className={styles.section}>
+              <h5>Clips</h5>
+              <ul>
+                <li>DMX Control Home</li>
+                <li>Fixture Setup &amp; SuperControl</li>
+                <li>Scenes &amp; Acts</li>
+                <li>Mobile Control Surface (430x932)</li>
+                <li>Settings &amp; In-App Help</li>
+              </ul>
+            </div>
+
+            <div className={styles.section}>
+              <h5>Regenerate</h5>
+              <p>Run <code>npm run demo:capture-videos</code> from the repo root. The pipeline uses Xvfb + ffmpeg + xdotool + google-chrome and writes WebM + JPG poster pairs into <code>website/videos/</code>. See <code>DOCS/SHOWCASE.md</code> for tunable env vars.</p>
             </div>
           </div>
         );

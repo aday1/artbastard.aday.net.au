@@ -1,30 +1,40 @@
-import React from 'react'
+import React, { Suspense, lazy } from 'react'
 import { useRouter } from '../../context/RouterContext'
-import MainPage from '../../pages/MainPage'
-import FixturePage from '../../pages/FixturePage'
-import ActsScenesPage from '../../pages/ActsScenesPage'
-import SettingsPage from '../../pages/SettingsPage'
 import DmxChannelControlPage from '../pages/DmxChannelControlPage'
-import ExperimentalPage from '../../pages/ExperimentalPage'
-import ExternalConsolePage from '../../pages/ExternalConsolePage'
 import MobilePage from '../../pages/MobilePage'
+
+const FixturePage = lazy(() => import('../../pages/FixturePage'))
+const ActsScenesPage = lazy(() => import('../../pages/ActsScenesPage'))
+const SettingsPage = lazy(() => import('../../pages/SettingsPage'))
+const PageFallback = () => (
+  <div style={{ padding: 24, opacity: 0.7 }}>Loading...</div>
+)
 
 const PageRouter: React.FC = () => {
   const { currentView } = useRouter()
+
   const renderCurrentPage = () => {
     switch (currentView) {
-      case 'main':
-        return <MainPage />
-      case 'fixture':
-        return <FixturePage />
-      case 'scenesActs':
-        return <ActsScenesPage />
-      case 'misc':
-        return <SettingsPage />
       case 'dmxControl':
         return <DmxChannelControlPage />
-      case 'experimental':
-        return <ExperimentalPage />
+      case 'fixture':
+        return (
+          <Suspense fallback={<PageFallback />}>
+            <FixturePage />
+          </Suspense>
+        )
+      case 'scenesActs':
+        return (
+          <Suspense fallback={<PageFallback />}>
+            <ActsScenesPage />
+          </Suspense>
+        )
+      case 'misc':
+        return (
+          <Suspense fallback={<PageFallback />}>
+            <SettingsPage />
+          </Suspense>
+        )
       case 'mobile':
         return <MobilePage />
       default:

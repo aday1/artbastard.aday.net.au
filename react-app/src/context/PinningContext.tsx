@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect, Rea
 export type PinnableComponent = 
   | 'master-fader'
   | 'scene-auto'
-  | 'chromatic-energy-manipulator'
+  | 'professional-fixture-controller'
   | 'scene-quick-launch'
   | 'quick-capture';
 
@@ -31,7 +31,7 @@ export const PinningProvider: React.FC<PinningProviderProps> = ({ children }) =>
   const getDefaultPinState = (): PinningState => ({
     'master-fader': true,
     'scene-auto': true,
-    'chromatic-energy-manipulator': true,
+    'professional-fixture-controller': true,
     'scene-quick-launch': true,
     'quick-capture': true,
   });
@@ -41,8 +41,16 @@ export const PinningProvider: React.FC<PinningProviderProps> = ({ children }) =>
     const saved = localStorage.getItem('artbastard-pinning-state');
     if (saved) {
       try {
-        const parsed = JSON.parse(saved);
-        // Merge with defaults to ensure all components have a state
+        const parsed = JSON.parse(saved) as PinningState;
+        if (parsed['chromatic-energy-manipulator'] !== undefined) {
+          parsed['professional-fixture-controller'] = parsed['chromatic-energy-manipulator'];
+          delete parsed['chromatic-energy-manipulator'];
+        }
+        if (parsed['touch-fixture-controller'] !== undefined) {
+          parsed['professional-fixture-controller'] =
+            parsed['professional-fixture-controller'] ?? parsed['touch-fixture-controller'];
+          delete parsed['touch-fixture-controller'];
+        }
         return { ...getDefaultPinState(), ...parsed };
       } catch (error) {
         console.warn('Failed to parse saved pinning state, using defaults');

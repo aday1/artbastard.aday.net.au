@@ -2,6 +2,7 @@ import React, { useState, useCallback, useRef, useEffect } from 'react'
 import { useStore } from '../../store'
 import { useTheme } from '../../context/ThemeContext'
 import { LucideIcon } from '../ui/LucideIcon'
+import { HorizontalFader } from '../ui/controls'
 import styles from './NodeBasedFixtureEditor.module.scss'
 
 interface FixtureNode {
@@ -707,13 +708,12 @@ export const NodeBasedFixtureEditor: React.FC<NodeBasedFixtureEditorProps> = ({
                     
                     <div className={styles.detailRow}>
                       <label>Value:</label>
-                      <input
-                        type="range"
-                        min="0"
-                        max="255"
+                      <HorizontalFader
+                        min={0}
+                        max={255}
                         value={node.data.value || 0}
-                        onChange={(e) => {
-                          const newValue = parseInt(e.target.value)
+                        onChange={(v) => {
+                          const newValue = Math.round(v)
                           if (node.data.dmxAddress) {
                             setDmxChannel(node.data.dmxAddress - 1, newValue)
                           }

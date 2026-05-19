@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useStore } from '../store'; // Import Zustand store
+import { handleActTriggerAction } from './actTriggerHandler';
+import { debugLog } from '../utils/debugLog';
 
 interface SocketContextType {
   socket: Socket | null;
@@ -28,14 +30,30 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setError(null);
 
       // Initialize socket with error handling
-      console.log('Initializing Socket.IO connection');
+      debugLog.log('Initializing Socket.IO connection');
 
       // Use window.location to automatically connect to the correct host
       const socketUrl = process.env.NODE_ENV === 'production'
         ? window.location.origin
         : 'http://localhost:3030'; // Explicitly set the backend URL in development (Updated to 3030)
 
-      console.log(`[SocketContext] Connecting to socket at: ${socketUrl}`);
+      debugLog.log(`[SocketContext] Connecting to socket at: ${socketUrl}`);
+
+      const sessionId = (() => {
+        try {
+          const fromUrl = new URLSearchParams(window.location.search).get('sessionId');
+          if (fromUrl && fromUrl.trim()) {
+            const sid = fromUrl.trim().slice(0, 64);
+            localStorage.setItem('artbastard-session-id', sid);
+            return sid;
+          }
+          const v = localStorage.getItem('artbastard-session-id');
+          return v && v.trim() ? v.trim().slice(0, 64) : 'default';
+        } catch {
+          return 'default';
+        }
+      })();
+      useStore.getState().setActiveSessionId(sessionId);
 
       const socketInstance = io(socketUrl, {
         reconnectionAttempts: 5,
@@ -44,11 +62,12 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         timeout: 10000,
         forceNew: true,
         autoConnect: true,
-        transports: ['websocket', 'polling']
+        transports: ['websocket', 'polling'],
+        auth: { sessionId },
       });
 
       socketInstance.on('connect', () => {
-        console.log('Socket.IO connected');
+        debugLog.log('Socket.IO connected');
         setConnected(true);
         setError(null);
 
@@ -60,7 +79,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       });
 
       socketInstance.on('disconnect', (reason) => {
-        console.log(`Socket.IO disconnected: ${reason}`);
+        debugLog.log(`Socket.IO disconnected: ${reason}`);
         setConnected(false);
       });
 
@@ -83,12 +102,12 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       // Listen for masterClockUpdate from backend
       socketInstance.on('masterClockUpdate', (data: any) => {
-        console.log('[SocketContext] Received masterClockUpdate:', data);
+        debugLog.log('[SocketContext] Received masterClockUpdate:', data);
         const {
           setMidiClockBpm,
           setMidiClockIsPlaying,
           setSelectedMidiClockHostId,
-          setMidiClockBeatBar
+          setMidiClockBeatBar,
         } = useStore.getState();
 
         if (data && typeof data.bpm === 'number') {
@@ -103,11 +122,72 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (data && typeof data.beat === 'number' && typeof data.bar === 'number') {
           setMidiClockBeatBar(data.beat, data.bar);
         }
+        if (data && (typeof data.linkPeers === 'number' || typeof data.linkAvailable === 'boolean')) {
+          useStore.setState({
+            abletonLinkPeers: typeof data.linkPeers === 'number' ? data.linkPeers : useStore.getState().abletonLinkPeers,
+            abletonLinkAvailable: typeof data.linkAvailable === 'boolean' ? data.linkAvailable : useStore.getState().abletonLinkAvailable,
+          });
+        }
+      });
+
+      socketInstance.on('session:joined', (payload: {
+        sessionId?: string;
+        dmxChannels?: number[];
+      }) => {
+        if (payload?.sessionId) {
+          useStore.getState().setActiveSessionId(payload.sessionId);
+        }
+        if (payload?.dmxChannels && Array.isArray(payload.dmxChannels)) {
+          const updates: Record<number, number> = {};
+          payload.dmxChannels.forEach((value, index) => {
+            updates[index] = value;
+          });
+          useStore.getState().setMultipleDmxChannels(updates, false);
+        }
+      });
+
+      socketInstance.on('sessions:list', (payload: {
+        sessions?: Array<{
+          id: string;
+          name: string;
+          clientCount: number;
+          bridgeConnected: boolean;
+          bridgeId?: string;
+        }>;
+        defaultSessionId?: string;
+      }) => {
+        if (payload?.sessions) {
+          useStore.getState().setSessionsList(payload.sessions, payload.defaultSessionId);
+        }
+      });
+
+      socketInstance.on('session:error', (payload: { message?: string }) => {
+        useStore.getState().addNotification({
+          message: payload?.message || 'Session error',
+          type: 'error',
+          priority: 'high',
+        });
+      });
+
+      socketInstance.on('bridge:registry', (payload: {
+        connected?: boolean;
+        bridge?: unknown;
+        connectedClients?: number;
+        sessionId?: string;
+      }) => {
+        const { setBridgeRegistry } = useStore.getState();
+        if (payload && typeof payload.connected === 'boolean') {
+          setBridgeRegistry({
+            connected: payload.connected,
+            bridge: (payload.bridge as Parameters<typeof setBridgeRegistry>[0]['bridge']) || null,
+            connectedClients: payload.connectedClients,
+          });
+        }
       });
 
       // Listen for availableClockSources from backend
       socketInstance.on('availableClockSources', (sources: Array<{ id: string; name: string }>) => {
-        console.log('[SocketContext] Received availableClockSources:', sources);
+        debugLog.log('[SocketContext] Received availableClockSources:', sources);
         const { setAvailableMidiClockHosts } = useStore.getState();
         if (Array.isArray(sources)) {
           setAvailableMidiClockHosts(sources);
@@ -116,19 +196,19 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       // Listen for MIDI clock input list
       socketInstance.on('midiClockInputs', (payload: { inputs: string[]; currentInput: string | null }) => {
-        console.log('[SocketContext] Received midiClockInputs:', payload);
+        debugLog.log('[SocketContext] Received midiClockInputs:', payload);
         // For now, store them inside availableMidiClockHosts with special prefix or just log.
         // Could extend store with dedicated state later.
       });
 
       // Listen for MIDI clock input changed broadcast
       socketInstance.on('midiClockInputChanged', ({ inputName }: { inputName: string }) => {
-        console.log('[SocketContext] MIDI clock input changed to:', inputName);
+        debugLog.log('[SocketContext] MIDI clock input changed to:', inputName);
       });
 
       // Listen for DMX channel updates from backend
       socketInstance.on('dmxUpdate', ({ channel, value }: { channel: number; value: number }) => {
-        console.log('[SocketContext] Received DMX update:', { channel, value });
+        debugLog.log('[SocketContext] Received DMX update:', { channel, value });
         // Update the store with the new DMX channel value (don't send back to backend to avoid loops)
         const store = useStore.getState();
         store.setDmxChannel(channel, value, false);
@@ -136,8 +216,8 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       // Listen for restored DMX state from backend (on startup)
       socketInstance.on('dmxStateRestored', ({ dmxChannels }: { dmxChannels: number[] }) => {
-        console.log('[SocketContext] Received restored DMX state:', dmxChannels.length, 'channels');
-        console.log('[SocketContext] Non-zero channels:', dmxChannels.filter(val => val > 0).length);
+        debugLog.log('[SocketContext] Received restored DMX state:', dmxChannels.length, 'channels');
+        debugLog.log('[SocketContext] Non-zero channels:', dmxChannels.filter(val => val > 0).length);
 
         // Update all DMX channels with the restored state using bulk update
         const updates: Record<number, number> = {};
@@ -147,48 +227,22 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
         const store = useStore.getState();
         store.setMultipleDmxChannels(updates, false); // Don't send back to backend to avoid loops
-        console.log('[SocketContext] Applied restored DMX state to frontend');
+        debugLog.log('[SocketContext] Applied restored DMX state to frontend');
       });
 
       // Listen for ACT trigger events from backend (OSC/MIDI triggers)
       socketInstance.on('actTrigger', ({ actId, action, triggerId }: { actId: string; action: string; triggerId: string }) => {
-        console.log('[SocketContext] Received ACT trigger:', { actId, action, triggerId });
+        debugLog.log('[SocketContext] Received ACT trigger:', { actId, action, triggerId });
         const store = useStore.getState();
-
-        // Execute the ACT action based on the trigger
-        switch (action) {
-          case 'play':
-            store.playAct(actId);
-            break;
-          case 'pause':
-            store.pauseAct();
-            break;
-          case 'stop':
-            store.stopAct();
-            break;
-          case 'toggle':
-            if (store.actPlaybackState.isPlaying && store.actPlaybackState.currentActId === actId) {
-              store.pauseAct();
-            } else {
-              store.playAct(actId);
-            }
-            break;
-          case 'next':
-            // TODO: Implement next step functionality
-            console.log('[SocketContext] Next step not yet implemented');
-            break;
-          case 'previous':
-            // TODO: Implement previous step functionality
-            console.log('[SocketContext] Previous step not yet implemented');
-            break;
-          default:
-            console.warn('[SocketContext] Unknown ACT trigger action:', action);
+        const handled = handleActTriggerAction(store, actId, action);
+        if (!handled) {
+          console.warn('[SocketContext] Unknown ACT trigger action:', action);
         }
       });
 
       // Listen for ACTS save events from frontend
       const handleSaveActs = (event: CustomEvent) => {
-        console.log('[SocketContext] Saving ACTS to backend:', event.detail.length, 'acts');
+        debugLog.log('[SocketContext] Saving ACTS to backend:', event.detail.length, 'acts');
         socketInstance.emit('saveActs', event.detail);
       };
 
@@ -196,7 +250,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       // Listen for initialState event (sent on connection)
       socketInstance.on('initialState', (state: any) => {
-        console.log('[SocketContext] Received initialState from backend:', {
+        debugLog.log('[SocketContext] Received initialState from backend:', {
           fixtures: state.fixtures?.length || 0,
           groups: state.groups?.length || 0,
           scenes: state.scenes?.length || 0,
@@ -214,8 +268,8 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             }
             return fixture;
           });
-          console.log('[SocketContext] Setting fixtures from initialState:', normalizedFixtures.length);
-          console.log('[SocketContext] Fixture IDs:', normalizedFixtures.map((f: any) => f.id));
+          debugLog.log('[SocketContext] Setting fixtures from initialState:', normalizedFixtures.length);
+          debugLog.log('[SocketContext] Fixture IDs:', normalizedFixtures.map((f: any) => f.id));
           store.setFixtures(normalizedFixtures);
         }
         if (state.groups && Array.isArray(state.groups)) {
@@ -252,13 +306,13 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           }
           // Update store (direct assignment since there's no setter, but this will trigger re-renders via Zustand)
           useStore.setState({ fixtureTemplates: mergedTemplates });
-          console.log('[SocketContext] Synced fixture templates from server:', serverTemplates.length, 'custom templates');
+          debugLog.log('[SocketContext] Synced fixture templates from server:', serverTemplates.length, 'custom templates');
         }
       });
 
       // Listen for fixtures updates from backend (multi-window sync)
       socketInstance.on('fixturesUpdated', (fixturesData: any[]) => {
-        console.log('[SocketContext] Received fixtures update from backend:', fixturesData.length, 'fixtures');
+        debugLog.log('[SocketContext] Received fixtures update from backend:', fixturesData.length, 'fixtures');
         const store = useStore.getState();
         if (Array.isArray(fixturesData)) {
           // Normalize fixtures to ensure they have required fields
@@ -276,7 +330,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       });
 
       socketInstance.on('fixturesUpdate', (fixturesData: any[]) => {
-        console.log('[SocketContext] Received fixtures update (fixturesUpdate) from backend:', fixturesData.length, 'fixtures');
+        debugLog.log('[SocketContext] Received fixtures update (fixturesUpdate) from backend:', fixturesData.length, 'fixtures');
         const store = useStore.getState();
         if (Array.isArray(fixturesData)) {
           // Normalize fixtures to ensure they have required fields
@@ -295,7 +349,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       // Listen for fixture template updates from backend
       socketInstance.on('fixtureTemplatesUpdated', (templatesData: any[]) => {
-        console.log('[SocketContext] Received fixture templates update from backend:', templatesData.length, 'templates');
+        debugLog.log('[SocketContext] Received fixture templates update from backend:', templatesData.length, 'templates');
         const store = useStore.getState();
         if (Array.isArray(templatesData)) {
           const currentTemplates = store.fixtureTemplates;
@@ -330,7 +384,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       });
 
       socketInstance.on('fixturesLoaded', (fixturesData: any[]) => {
-        console.log('[SocketContext] Received fixtures loaded from backend:', fixturesData.length, 'fixtures');
+        debugLog.log('[SocketContext] Received fixtures loaded from backend:', fixturesData.length, 'fixtures');
         const store = useStore.getState();
         if (Array.isArray(fixturesData)) {
           // Normalize fixtures to ensure they have required fields
@@ -343,28 +397,28 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             }
             return fixture;
           });
-          console.log('[SocketContext] Setting fixtures from fixturesLoaded:', normalizedFixtures.length);
-          console.log('[SocketContext] Fixture details:', normalizedFixtures.map((f: any) => ({ id: f.id, name: f.name, startAddress: f.startAddress })));
+          debugLog.log('[SocketContext] Setting fixtures from fixturesLoaded:', normalizedFixtures.length);
+          debugLog.log('[SocketContext] Fixture details:', normalizedFixtures.map((f: any) => ({ id: f.id, name: f.name, startAddress: f.startAddress })));
           store.setFixtures(normalizedFixtures);
         }
       });
 
       // Listen for groups updates from backend (multi-window sync)
       socketInstance.on('groupsUpdated', (groupsData: any[]) => {
-        console.log('[SocketContext] Received groups update from backend:', groupsData.length, 'groups');
+        debugLog.log('[SocketContext] Received groups update from backend:', groupsData.length, 'groups');
         const store = useStore.getState();
         store.setGroups(groupsData);
       });
 
       socketInstance.on('groupsLoaded', (groupsData: any[]) => {
-        console.log('[SocketContext] Received groups loaded from backend:', groupsData.length, 'groups');
+        debugLog.log('[SocketContext] Received groups loaded from backend:', groupsData.length, 'groups');
         const store = useStore.getState();
         store.setGroups(groupsData);
       });
 
       // Listen for quick scene save/load events
       socketInstance.on('quickSceneSaved', (data: { name: string; slot?: number; timestamp: number }) => {
-        console.log('[SocketContext] Quick scene saved:', data.name);
+        debugLog.log('[SocketContext] Quick scene saved:', data.name);
         const store = useStore.getState();
         store.addNotification({
           message: `Quick scene saved: ${data.name}`,
@@ -374,7 +428,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       });
 
       socketInstance.on('quickSceneLoaded', (data: { name: string; slot?: number; timestamp: number }) => {
-        console.log('[SocketContext] Quick scene loaded:', data.name);
+        debugLog.log('[SocketContext] Quick scene loaded:', data.name);
         const store = useStore.getState();
         store.addNotification({
           message: `Quick scene loaded: ${data.name}`,
@@ -384,7 +438,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       });
 
       socketInstance.on('quickSceneLoadError', (data: { slot: number; error: string }) => {
-        console.log('[SocketContext] Quick scene load error:', data.error);
+        debugLog.log('[SocketContext] Quick scene load error:', data.error);
         const store = useStore.getState();
         store.addNotification({
           message: `Quick scene load failed: ${data.error}`,
@@ -398,7 +452,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         // Don't process our own updates (avoid loops)
         if (sourceId === socketInstance.id) return;
 
-        console.log('[SocketContext] Received localStorage update from another client:', { key, sourceId });
+        debugLog.log('[SocketContext] Received localStorage update from another client:', { key, sourceId });
         try {
           if (typeof value === 'string') {
             localStorage.setItem(key, value);
@@ -418,7 +472,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         // Don't process our own updates
         if (sourceId === socketInstance.id) return;
 
-        console.log('[SocketContext] Received bulk localStorage update from another client:', { keysCount: Object.keys(data).length, sourceId });
+        debugLog.log('[SocketContext] Received bulk localStorage update from another client:', { keysCount: Object.keys(data).length, sourceId });
         try {
           for (const [key, value] of Object.entries(data)) {
             if (typeof value === 'string') {
@@ -437,16 +491,16 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       // Listen for scene loaded events from backend
       socketInstance.on('sceneLoaded', ({ name, channelValues }: { name: string; channelValues: number[] }) => {
-        console.log('[SocketContext] Received scene loaded:', { name, channelValues });
-        console.log('[SocketContext] Channel values length:', channelValues.length);
-        console.log('[SocketContext] First 10 channel values:', channelValues.slice(0, 10));
+        debugLog.log('[SocketContext] Received scene loaded:', { name, channelValues });
+        debugLog.log('[SocketContext] Channel values length:', channelValues.length);
+        debugLog.log('[SocketContext] First 10 channel values:', channelValues.slice(0, 10));
 
         // Cancel any ongoing frontend transition FIRST since backend has loaded the scene
         const store = useStore.getState();
         if (store.isTransitioning && store.currentTransitionFrame) {
           window.cancelAnimationFrame(store.currentTransitionFrame);
           useStore.setState({ currentTransitionFrame: null, isTransitioning: false });
-          console.log('[SocketContext] Cancelled frontend transition for backend scene load');
+          debugLog.log('[SocketContext] Cancelled frontend transition for backend scene load');
         }
 
         // Update all DMX channels with the scene values using bulk update
@@ -454,18 +508,22 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         channelValues.forEach((value, index) => {
           updates[index] = value;
         });
-        console.log('[SocketContext] About to call setMultipleDmxChannels with updates:', Object.keys(updates).length, 'channels');
+        debugLog.log('[SocketContext] About to call setMultipleDmxChannels with updates:', Object.keys(updates).length, 'channels');
         store.setMultipleDmxChannels(updates, false); // Don't send back to backend to avoid loops
-        console.log('[SocketContext] Applied scene values to DMX channels');
+        debugLog.log('[SocketContext] Applied scene values to DMX channels');
       });
 
       setSocket(socketInstance);
 
       // Cleanup function
       return () => {
-        console.log('Cleaning up Socket.IO connection');
+        debugLog.log('Cleaning up Socket.IO connection');
         if (socketInstance) {
           socketInstance.off('masterClockUpdate');
+          socketInstance.off('session:joined');
+          socketInstance.off('sessions:list');
+          socketInstance.off('session:error');
+          socketInstance.off('bridge:registry');
           socketInstance.off('availableClockSources');
           socketInstance.off('midiClockInputs');
           socketInstance.off('midiClockInputChanged');
@@ -504,14 +562,14 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Function to manually reconnect
   const reconnect = () => {
-    console.log('[SocketContext] Manual reconnection requested');
+    debugLog.log('[SocketContext] Manual reconnection requested');
     if (socket) {
-      console.log('[SocketContext] Disconnecting existing socket...');
+      debugLog.log('[SocketContext] Disconnecting existing socket...');
       socket.disconnect();
       socket.connect(); // Try to reconnect the existing socket first
-      console.log('[SocketContext] Socket reconnection initiated');
+      debugLog.log('[SocketContext] Socket reconnection initiated');
     } else {
-      console.log('[SocketContext] No socket instance, creating new one');
+      debugLog.log('[SocketContext] No socket instance, creating new one');
       initSocket();
     }
   };

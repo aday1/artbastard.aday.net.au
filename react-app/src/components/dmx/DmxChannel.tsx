@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore } from '../../store';
 import { MidiLearnButton } from '../midi/MidiLearnButton';
+import { DmxFaderRow, HorizontalFader, RangeWindowControl } from '../ui/controls';
+import { getFixtureInfoForChannel } from '../../utils/fixturePresentation';
 import styles from './DmxChannel.module.scss';
 
 interface DmxChannelProps {
@@ -16,77 +18,6 @@ interface ExtendedMidiRangeMapping extends MidiRangeMapping {
   inverted?: boolean;
 }
 
-interface FixtureChannelInfo {
-  fixtureName?: string;
-  channelFunction?: string;
-  channelType?: string;
-  shortFunction?: string;
-}
-
-// Helper function to get fixture information for a DMX channel
-const getFixtureInfoForChannel = (channelIndex: number, fixtures: any[]): FixtureChannelInfo => {
-  const dmxAddress = channelIndex + 1; // Convert 0-based index to 1-based address
-  
-  for (const fixture of fixtures) {
-    const fixtureStartAddress = fixture.startAddress;
-    const fixtureEndAddress = fixtureStartAddress + fixture.channels.length - 1;
-    
-    if (dmxAddress >= fixtureStartAddress && dmxAddress <= fixtureEndAddress) {
-      const channelOffset = dmxAddress - fixtureStartAddress;
-      const channel = fixture.channels[channelOffset];
-      
-      if (channel) {
-        // Generate short function name for display
-        const shortFunction = (() => {
-          switch (channel.type) {
-            case 'red': case 'green': case 'blue': case 'white': case 'amber': case 'uv': 
-              return channel.type.toUpperCase();
-            case 'pan': case 'tilt': return channel.type.toUpperCase();
-            case 'pan_fine': return 'PAN-F';
-            case 'tilt_fine': return 'TILT-F';
-            case 'dimmer': return 'DIM';
-            case 'shutter': return 'SHUT';
-            case 'strobe': return 'STRB';
-            case 'color_wheel': return 'CW';
-            case 'gobo_wheel': return 'GOBO';
-            case 'gobo_rotation': return 'G-ROT';
-            case 'zoom': return 'ZOOM';
-            case 'focus': return 'FOCUS';
-            case 'prism': return 'PRISM';
-            case 'iris': return 'IRIS';            case 'speed': return 'SPEED';
-            case 'macro': return 'MACRO';
-            case 'effect': return 'FX';
-            // NEW: Professional channel types
-            case 'frost': 
-            case 'diffusion': return 'FROST';
-            case 'animation': return 'ANIM';
-            case 'animation_speed': return 'A-SPD';
-            case 'cto': 
-            case 'color_temperature_orange': return 'CTO';
-            case 'ctb':
-            case 'color_temperature_blue': return 'CTB';
-            case 'reset': return 'RESET';
-            case 'lamp_control': return 'LAMP';
-            case 'fan_control': return 'FAN';
-            case 'display': return 'DISP';
-            case 'function': return 'FUNC';
-            default: return channel.type.toUpperCase();
-          }
-        })();
-        
-        return {
-          fixtureName: fixture.name,
-          channelFunction: channel.name || `${channel.type} Channel`,
-          channelType: channel.type,
-          shortFunction
-        };
-      }
-    }
-  }
-  
-  return {};
-};
-
 const DmxChannelComponent: React.FC<DmxChannelProps> = ({ index, allowFullscreen = true, touchOptimized = false }) => {
   const {
     dmxChannels,
@@ -97,7 +28,8 @@ const DmxChannelComponent: React.FC<DmxChannelProps> = ({ index, allowFullscreen
     oscAssignments,
     setOscAssignment,
     oscActivity,
-    fixtures
+    fixtures,
+    dmxFaderOrientation,
   } = useStore(state => ({
     dmxChannels: state.dmxChannels,
     channelNames: state.channelNames,
@@ -107,7 +39,8 @@ const DmxChannelComponent: React.FC<DmxChannelProps> = ({ index, allowFullscreen
     oscAssignments: state.oscAssignments,
     setOscAssignment: state.setOscAssignment,
     oscActivity: state.oscActivity,
-    fixtures: state.fixtures
+    fixtures: state.fixtures,
+    dmxFaderOrientation: state.dmxFaderOrientation,
   }));
 
   const getChannelRange = useStore(state => state.getChannelRange);
@@ -227,7 +160,7 @@ const DmxChannelComponent: React.FC<DmxChannelProps> = ({ index, allowFullscreen
   const isSelected = selectedChannels.includes(index);
   
   // Get fixture information for this channel
-  const fixtureInfo = getFixtureInfoForChannel(index, fixtures || []);
+  const fixtureInfo = getFixtureInfoForChannel(index, fixtures || []) ?? {};
   const displayName = fixtureInfo.fixtureName 
     ? `${fixtureInfo.fixtureName} - ${fixtureInfo.shortFunction}` 
     : name;
@@ -359,15 +292,20 @@ const DmxChannelComponent: React.FC<DmxChannelProps> = ({ index, allowFullscreen
         {value}
       </div>
 
-      <div className={`${styles.slider}`} data-dmx-channel={index}>
-        <input
-          type="range"
+      <div className={styles.slider} data-dmx-channel={index} onClick={(e) => e.stopPropagation()}>
+        <DmxFaderRow
+          compact
+          layout={dmxFaderOrientation}
+          label={displayName}
+          subtitle={fixtureInfo.fixtureName ? `${fixtureInfo.fixtureName} · ${fixtureInfo.shortFunction}` : undefined}
+          controlName={`dmx-ch-${index}`}
           min={channelRangeMin}
           max={channelRangeMax}
           value={value}
-          onChange={handleValueChange}
-          onClick={(e) => e.stopPropagation()}
-          data-slider-index={index}
+          showOsc={false}
+          showMidi={false}
+          showPresets={false}
+          onChange={(v) => handleValueChange({ target: { value: String(v) } } as React.ChangeEvent<HTMLInputElement>)}
         />
       </div>
 
@@ -399,93 +337,20 @@ const DmxChannelComponent: React.FC<DmxChannelProps> = ({ index, allowFullscreen
           borderRadius: '4px',
           border: '1px solid rgba(59, 130, 246, 0.3)'
         }}>
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '6px' }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '10px', color: '#94a3b8', display: 'block', marginBottom: '2px' }}>
-                MIN: {channelRangeMin}
-              </label>
-              <input
-                type="range"
-                min="0"
-                max={channelRangeMax - 1}
-                value={channelRangeMin}
-                onChange={(e) => {
-                  const newMin = parseInt(e.target.value);
-                  setChannelRangeMin(newMin);
-                  setChannelRange(index, newMin, channelRangeMax);
-                }}
-                style={{ width: '100%' }}
-              />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '10px', color: '#94a3b8', display: 'block', marginBottom: '2px' }}>
-                MAX: {channelRangeMax}
-              </label>
-              <input
-                type="range"
-                min={channelRangeMin + 1}
-                max="255"
-                value={channelRangeMax}
-                onChange={(e) => {
-                  const newMax = parseInt(e.target.value);
-                  setChannelRangeMax(newMax);
-                  setChannelRange(index, channelRangeMin, newMax);
-                }}
-                style={{ width: '100%' }}
-              />
-            </div>
-          </div>
-          {/* Numeric inputs for precise values */}
-          <div style={{ display: 'flex', gap: '6px' }}>
-            <div style={{ flex: 1 }}>
-              <input
-                type="number"
-                min="0"
-                max={channelRangeMax - 1}
-                value={channelRangeMin}
-                onChange={(e) => {
-                  const newMin = parseInt(e.target.value);
-                  if (!isNaN(newMin) && newMin >= 0 && newMin < channelRangeMax) {
-                    setChannelRangeMin(newMin);
-                    setChannelRange(index, newMin, channelRangeMax);
-                  }
-                }}
-                style={{
-                  width: '100%',
-                  padding: '4px',
-                  backgroundColor: '#1e293b',
-                  color: '#e2e8f0',
-                  border: '1px solid #475569',
-                  borderRadius: '3px',
-                  fontSize: '10px'
-                }}
-              />
-            </div>
-            <div style={{ flex: 1 }}>
-              <input
-                type="number"
-                min={channelRangeMin + 1}
-                max="255"
-                value={channelRangeMax}
-                onChange={(e) => {
-                  const newMax = parseInt(e.target.value);
-                  if (!isNaN(newMax) && newMax > channelRangeMin && newMax <= 255) {
-                    setChannelRangeMax(newMax);
-                    setChannelRange(index, channelRangeMin, newMax);
-                  }
-                }}
-                style={{
-                  width: '100%',
-                  padding: '4px',
-                  backgroundColor: '#1e293b',
-                  color: '#e2e8f0',
-                  border: '1px solid #475569',
-                  borderRadius: '3px',
-                  fontSize: '10px'
-                }}
-              />
-            </div>
-          </div>
+          <RangeWindowControl
+            label="Channel window"
+            showNumericInputs
+            dense
+            min={0}
+            max={255}
+            minValue={channelRangeMin}
+            maxValue={channelRangeMax}
+            onChange={(newMin, newMax) => {
+              setChannelRangeMin(newMin);
+              setChannelRangeMax(newMax);
+              setChannelRange(index, newMin, newMax);
+            }}
+          />
         </div>
       )}
 
@@ -574,28 +439,16 @@ const DmxChannelComponent: React.FC<DmxChannelProps> = ({ index, allowFullscreen
                     </div>
                   </div>
                   <div className={styles.midiRangeSliderRow}>
-                    <div className={styles.midiDualSlider}>
-                      <input 
-                        type="range" 
-                        min="0" 
-                        max="127" 
-                        value={midiRangeMapping.inputMin}
-                        onChange={(e) => handleMidiRangeChange('inputMin', parseInt(e.target.value))}
-                        className={styles.midiRangeSliderMin}
-                      />
-                      <input 
-                        type="range" 
-                        min="0" 
-                        max="127" 
-                        value={midiRangeMapping.inputMax}
-                        onChange={(e) => handleMidiRangeChange('inputMax', parseInt(e.target.value))}
-                        className={styles.midiRangeSliderMax}
-                      />
-                      <div className={styles.sliderLabels}>
-                        <span>{midiRangeMapping.inputMin}</span>
-                        <span>{midiRangeMapping.inputMax}</span>
-                      </div>
-                    </div>
+                    <RangeWindowControl
+                      min={0}
+                      max={127}
+                      minValue={midiRangeMapping.inputMin}
+                      maxValue={midiRangeMapping.inputMax}
+                      onChange={(a, b) => {
+                        handleMidiRangeChange('inputMin', a);
+                        handleMidiRangeChange('inputMax', b);
+                      }}
+                    />
                   </div>
                 </div>
                 
@@ -624,28 +477,16 @@ const DmxChannelComponent: React.FC<DmxChannelProps> = ({ index, allowFullscreen
                     </div>
                   </div>
                   <div className={styles.midiRangeSliderRow}>
-                    <div className={styles.midiDualSlider}>
-                      <input 
-                        type="range" 
-                        min="0" 
-                        max="255" 
-                        value={midiRangeMapping.outputMin}
-                        onChange={(e) => handleMidiRangeChange('outputMin', parseInt(e.target.value))}
-                        className={styles.midiRangeSliderMin}
-                      />
-                      <input 
-                        type="range" 
-                        min="0" 
-                        max="255" 
-                        value={midiRangeMapping.outputMax}
-                        onChange={(e) => handleMidiRangeChange('outputMax', parseInt(e.target.value))}
-                        className={styles.midiRangeSliderMax}
-                      />
-                      <div className={styles.sliderLabels}>
-                        <span>{midiRangeMapping.outputMin}</span>
-                        <span>{midiRangeMapping.outputMax}</span>
-                      </div>
-                    </div>
+                    <RangeWindowControl
+                      min={0}
+                      max={255}
+                      minValue={midiRangeMapping.outputMin}
+                      maxValue={midiRangeMapping.outputMax}
+                      onChange={(a, b) => {
+                        handleMidiRangeChange('outputMin', a);
+                        handleMidiRangeChange('outputMax', b);
+                      }}
+                    />
                   </div>
                 </div>
                 
@@ -664,15 +505,12 @@ const DmxChannelComponent: React.FC<DmxChannelProps> = ({ index, allowFullscreen
                       <label title="Controls how MIDI input values are mapped to DMX output. Values less than 1.0 create a logarithmic curve (more sensitive at low values), 1.0 is linear, and values greater than 1.0 create an exponential curve (more sensitive at high values).">
                         Curve:
                       </label>
-                      <input 
-                        type="range" 
-                        min="0.1" 
-                        max="3" 
-                        step="0.1" 
+                      <HorizontalFader
+                        min={0.1}
+                        max={3}
+                        step={0.1}
                         value={midiRangeMapping.curve}
-                        onChange={(e) => handleMidiRangeChange('curve', parseFloat(e.target.value))}
-                        className={styles.midiCurveSlider}
-                        title="Controls how MIDI input values are mapped to DMX output. Values less than 1.0 create a logarithmic curve (more sensitive at low values), 1.0 is linear, and values greater than 1.0 create an exponential curve (more sensitive at high values)."
+                        onChange={(v) => handleMidiRangeChange('curve', v)}
                       />
                       <span className={styles.curveValue}>{midiRangeMapping.curve?.toFixed(1)}</span>
                     </div>
@@ -758,14 +596,14 @@ const DmxChannelComponent: React.FC<DmxChannelProps> = ({ index, allowFullscreen
           </div>
           
           <div className={`${styles.slider} ${styles.fullscreenSlider}`} data-dmx-channel={index}>
-            <input
-              type="range"
-              min="0"
-              max="255"
+            <DmxFaderRow
+              label={displayName}
+              subtitle={`CH ${dmxAddress}`}
+              controlName={`dmx-ch-fs-${index}`}
               value={value}
-              onChange={handleValueChange}
-              onClick={(e) => e.stopPropagation()}
-              data-slider-index={index}
+              showOsc={false}
+              showMidi={false}
+              onChange={(v) => handleValueChange({ target: { value: String(v) } } as React.ChangeEvent<HTMLInputElement>)}
             />
           </div>
           

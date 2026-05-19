@@ -8,32 +8,13 @@
 
 .channelRow {
   display: grid;
-  grid-template-columns: 80px 1fr 80px 200px;
-  gap: 15px;
-  align-items: center;
+  grid-template-columns: 1fr minmax(160px, 220px);
+  gap: 12px;
+  align-items: start;
   margin-bottom: 10px;
   padding: 10px;
   background: rgba(255,255,255,0.05);
   border-radius: 6px;
-}
-
-.channelLabel {
-  font-weight: bold;
-  color: #00d4ff;
-}
-
-.slider {
-  width: 100%;
-  cursor: pointer;
-}
-
-.valueDisplay {
-  text-align: center;
-  font-weight: 500;
-  color: #fff;
-  background: rgba(0,0,0,0.2);
-  padding: 4px 8px;
-  border-radius: 4px;
 }
 
 .functionSelect {

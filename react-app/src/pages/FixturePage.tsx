@@ -13,8 +13,8 @@ const FixturePage: React.FC = () => {
     {
       id: 'control',
       label: {
-        artsnob: 'Chromatic Energy Control',
-        standard: 'Advanced Fixture Control',
+        artsnob: 'Super Contrôle',
+        standard: 'Super Control',
         minimal: 'Control'
       },
       icon: 'fas fa-sliders-h',

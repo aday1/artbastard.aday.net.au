@@ -270,8 +270,16 @@
 
 // Source Section
 .sourceSection {
+  .linkHint {
+    margin: 6px 0 0;
+    font-size: 0.75rem;
+    color: #94a3b8;
+    line-height: 1.35;
+  }
+
   .sourceButtons {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
     
     .sourceButton {

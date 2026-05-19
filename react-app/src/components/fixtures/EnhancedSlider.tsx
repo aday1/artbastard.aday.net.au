@@ -1,17 +1,18 @@
-import React, { useState } from 'react';
-import { LucideIcon } from '../ui/LucideIcon';
-import styles from './SuperControl.module.scss';
+import React from 'react';
+import { DmxFaderRow } from '../ui/controls';
 
 interface EnhancedSliderProps {
   label: string;
   value: number;
   onChange: (value: number) => void;
   min?: number;
-  max?: number; step?: number;
+  max?: number;
+  step?: number;
   midiMapping?: {
     channel?: number;
     note?: number;
     cc?: number;
+    controller?: number;
     minValue?: number;
     maxValue?: number;
   };
@@ -22,8 +23,11 @@ interface EnhancedSliderProps {
   isMidiLearning?: boolean;
   disabled?: boolean;
   icon?: string;
-  dmxChannels?: number[]; // Array of DMX channels this control affects
+  dmxChannels?: number[];
 }
+
+const controlSlug = (label: string) =>
+  label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 export const EnhancedSlider: React.FC<EnhancedSliderProps> = ({
   label,
@@ -40,109 +44,45 @@ export const EnhancedSlider: React.FC<EnhancedSliderProps> = ({
   isMidiLearning = false,
   disabled = false,
   icon,
-  dmxChannels = []
+  dmxChannels = [],
 }) => {
-  const [localOscAddress, setLocalOscAddress] = useState(oscAddress);
-  const [localMin, setLocalMin] = useState(min);
-  const [localMax, setLocalMax] = useState(max);
+  const controlName = controlSlug(label);
 
-  const handleOscAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newAddress = e.target.value;
-    setLocalOscAddress(newAddress);
-    onOscAddressChange?.(newAddress);
-  };
-  const getMidiStatusText = () => {
-    if (!midiMapping) return 'No MIDI';
-    if (midiMapping.cc !== undefined) {
-      return `CH${midiMapping.channel} CC${midiMapping.cc}`;
-    }
-    if (midiMapping.note !== undefined) {
-      return `CH${midiMapping.channel} Note${midiMapping.note}`;
-    }
-    return 'MIDI Set';
-  };
+  let midiMappingLabel: string | undefined;
+  if (midiMapping?.cc !== undefined || midiMapping?.controller !== undefined) {
+    const cc = midiMapping.cc ?? midiMapping.controller;
+    midiMappingLabel = `CH${midiMapping.channel} CC${cc}`;
+  } else if (midiMapping?.note !== undefined) {
+    midiMappingLabel = `CH${midiMapping.channel} Note ${midiMapping.note}`;
+  }
 
-  const getDmxChannelsText = () => {
-    if (!dmxChannels || dmxChannels.length === 0) return 'No DMX';
-    if (dmxChannels.length === 1) return `DMX ${dmxChannels[0]}`;
-    if (dmxChannels.length <= 3) return `DMX ${dmxChannels.join(', ')}`;
-    return `DMX ${dmxChannels[0]}-${dmxChannels[dmxChannels.length - 1]} (${dmxChannels.length})`;
-  };
+  const metaParts: string[] = [];
+  if (icon) metaParts.push(icon);
+  if (dmxChannels.length === 1) metaParts.push(`DMX ${dmxChannels[0]}`);
+  else if (dmxChannels.length > 1) {
+    if (dmxChannels.length <= 3) metaParts.push(`DMX ${dmxChannels.join(', ')}`);
+    else metaParts.push(`DMX ${dmxChannels[0]}-${dmxChannels[dmxChannels.length - 1]} (${dmxChannels.length})`);
+  }
+
   return (
-    <div className={styles.enhancedSliderGroup}>
-      <div className={styles.sliderMainRow}>
-        <div className={styles.sliderLabel}>
-          {icon && <LucideIcon name={icon as any} />}
-          {label}
-        </div>
-
-        <div className={styles.sliderContainer}>
-          <input
-            type="range"
-            min={localMin}
-            max={localMax}
-            step={step}
-            value={value}
-            onChange={(e) => onChange(Number(e.target.value))}
-            disabled={disabled}
-          />
-        </div>
-
-        <div className={styles.valueDisplay}>
-          {value}
-        </div>
-      </div>
-
-      <div className={styles.sliderInfoRow}>
-        <div className={styles.dmxChannelInfo}>
-          {getDmxChannelsText()}
-        </div>
-        <div className={styles.midiStatusSmall}>
-          {getMidiStatusText()}
-        </div>
-      </div>
-
-      <div className={styles.sliderSecondaryRow}>
-        <div className={styles.minMaxInputs}>
-          <label>Min:</label>
-          <input
-            type="number"
-            value={localMin}
-            onChange={(e) => setLocalMin(Number(e.target.value))}
-            className={styles.smallInput}
-          />
-          <label>Max:</label>
-          <input
-            type="number"
-            value={localMax}
-            onChange={(e) => setLocalMax(Number(e.target.value))}
-            className={styles.smallInput}
-          />
-        </div>
-
-        <button
-          className={`${styles.midiLearnBtn} ${isMidiLearning ? styles.learning : ''} ${midiMapping ? styles.learned : ''}`}
-          onClick={midiMapping ? onMidiForget : onMidiLearn}
-          title={midiMapping ? 'Click to forget MIDI mapping' : 'Click to learn MIDI mapping'}
-        >
-          <LucideIcon name={isMidiLearning ? "Radio" : midiMapping ? "Unlink" : "Link"} />
-          {isMidiLearning ? 'Learning...' : midiMapping ? 'Forget MIDI' : 'MIDI Learn'}
-        </button>
-
-        <div className={styles.midiStatus}>
-          {getMidiStatusText()}
-        </div>
-
-        <input
-          type="text"
-          className={styles.oscAddressInput}
-          placeholder="/osc/address"
-          value={localOscAddress}
-          onChange={handleOscAddressChange}
-          title="OSC Address for this control"
-        />
-      </div>
-    </div>
+    <DmxFaderRow
+      label={label}
+      value={value}
+      min={min}
+      max={max}
+      step={step}
+      disabled={disabled}
+      controlName={controlName}
+      meta={metaParts.length > 0 ? metaParts.join(' · ') : undefined}
+      oscAddress={oscAddress || `/${controlName}`}
+      onOscAddressChange={onOscAddressChange}
+      isMidiLearning={isMidiLearning}
+      isMidiMapped={!!midiMapping}
+      midiMappingLabel={midiMappingLabel}
+      onMidiLearn={onMidiLearn}
+      onMidiForget={midiMapping ? onMidiForget : undefined}
+      onChange={onChange}
+    />
   );
 };
 

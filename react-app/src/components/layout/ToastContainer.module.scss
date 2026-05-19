@@ -41,13 +41,19 @@
 }
 
 // Responsive adjustments
-@media (max-width: 768px) {
+//
+// On mobile the top of the screen is occupied by the new MobileTopBar.
+// Stack toasts at the bottom (above the home indicator) so they do
+// not overlap the chrome and are easy to dismiss with a thumb.
+@media (max-width: 1279px) {
   .toastContainer {
-    left: 20px;
-    right: 20px;
-    top: 20px;
+    top: auto;
+    left: 12px;
+    right: 12px;
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    align-items: stretch;
   }
-  
+
   .toastWrapper {
     animation: toastSlideInMobile 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     animation-delay: calc(var(--toast-index) * 0.1s);
@@ -58,7 +64,7 @@
 @keyframes toastSlideInMobile {
   from {
     opacity: 0;
-    transform: translateY(-100%) scale(0.9);
+    transform: translateY(100%) scale(0.95);
   }
   to {
     opacity: 1;

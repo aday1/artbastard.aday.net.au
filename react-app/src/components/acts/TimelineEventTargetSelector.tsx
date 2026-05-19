@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../../store';
 import { LucideIcon } from '../ui/LucideIcon';
+import { HorizontalFader } from '../ui/controls';
 import styles from './TimelineEventTargetSelector.module.scss';
 
 interface TimelineEventTargetSelectorProps {
@@ -161,13 +162,11 @@ export const TimelineEventTargetSelector: React.FC<TimelineEventTargetSelectorPr
             <div className={styles.valueInput}>
               <label>Target Value (0-255):</label>
               <div className={styles.valueControls}>
-                <input
-                  type="range"
-                  min="0"
-                  max="255"
+                <HorizontalFader
+                  min={0}
+                  max={255}
                   value={targetValue}
-                  onChange={(e) => setTargetValue(Number(e.target.value))}
-                  className={styles.valueSlider}
+                  onChange={(v) => setTargetValue(Math.round(v))}
                 />
                 <input
                   type="number"

@@ -39,6 +39,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
+      'framer-motion': resolve(__dirname, 'node_modules/framer-motion/dist/cjs/index.js'),
     },
   },  css: {
     preprocessorOptions: {
@@ -62,7 +63,9 @@ export default defineConfig({
     modules: {
       localsConvention: 'camelCase'
     }
-  },optimizeDeps: {
+  },
+  optimizeDeps: {
+    include: ['framer-motion'],
     esbuildOptions: {
       // tsconfigRaw is correctly typed here, ensure your Vite version supports this structure
       // For older versions, this might need adjustment or removal if it causes type errors.
@@ -79,11 +82,12 @@ export default defineConfig({
     rollupOptions: {
       // Force Rollup to use JavaScript fallback instead of native binaries
       external: (id) => {
+        if (id === 'hls.js' || id.startsWith('hls.js/')) return true;
         if (id.includes('@rollup/rollup-win32-x64-msvc') || 
             id.includes('@rollup/rollup-linux-x64-gnu') ||
             id.includes('@rollup/rollup-darwin-x64') ||
             id.includes('@rollup/rollup-darwin-arm64')) {
-          return false; // Don't externalize these, let them be bundled/ignored
+          return false;
         }
         return false;
       },

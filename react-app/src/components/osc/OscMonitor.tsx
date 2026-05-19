@@ -25,6 +25,11 @@ export const OscMonitor: React.FC = () => {
     const saved = localStorage.getItem('oscMonitorDismissed');
     return saved === 'true';
   });
+  const [filterHost, setFilterHost] = useState<string>(() => {
+    const saved = localStorage.getItem('oscMonitorFilterHost');
+    return saved || 'all'; // 'all' means show all hosts
+  });
+  const [showFilter, setShowFilter] = useState(false);
   const { socket, connected: socketConnected } = useSocket();
   const monitorRef = useRef<HTMLDivElement>(null);
 
@@ -38,16 +43,67 @@ export const OscMonitor: React.FC = () => {
     return () => window.removeEventListener('resetLayout', handleResetLayout);
   }, []);
 
+  // Throttling for OSC messages to reduce lag
+  const lastOscMessageTimeRef = useRef<number>(0);
+  const pendingOscMessageRef = useRef<OscMessage | null>(null);
+  const oscThrottleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const OSC_THROTTLE_MS = 16; // ~60fps for store updates
+  const MAX_OSC_MESSAGE_AGE_MS = 50; // Don't process messages older than 50ms
+
   useEffect(() => {
     if (socket && socketConnected && !isPaused) {
       const handleOscMessage = (message: OscMessage) => {
-        addOscMessageToStore(message);
-        setFlashActive(true);
-        setTimeout(() => setFlashActive(false), 200);
+        const now = Date.now();
+        const timeSinceLastMessage = now - lastOscMessageTimeRef.current;
+        
+        // Always store the latest message
+        pendingOscMessageRef.current = message;
+        
+        // Cancel any existing timeout
+        if (oscThrottleTimeoutRef.current) {
+          clearTimeout(oscThrottleTimeoutRef.current);
+          oscThrottleTimeoutRef.current = null;
+        }
+        
+        // Throttle store updates to reduce re-renders
+        if (timeSinceLastMessage >= OSC_THROTTLE_MS) {
+          // Time to update - add to store immediately
+          addOscMessageToStore(message);
+          lastOscMessageTimeRef.current = now;
+          pendingOscMessageRef.current = null;
+          setFlashActive(true);
+          setTimeout(() => setFlashActive(false), 200);
+        } else {
+          // Too soon - schedule a throttled store update
+          oscThrottleTimeoutRef.current = setTimeout(() => {
+            const pending = pendingOscMessageRef.current;
+            if (pending) {
+              // Check message age - don't process if too old
+              const messageAge = Date.now() - (pending.timestamp || 0);
+              if (messageAge < MAX_OSC_MESSAGE_AGE_MS) {
+                addOscMessageToStore(pending);
+                lastOscMessageTimeRef.current = Date.now();
+                setFlashActive(true);
+                setTimeout(() => setFlashActive(false), 200);
+              } else {
+                // Message too old - discard it
+                console.log(`[OscMonitor] Discarding stale OSC message (${messageAge}ms old)`);
+              }
+              pendingOscMessageRef.current = null;
+            }
+            oscThrottleTimeoutRef.current = null;
+          }, OSC_THROTTLE_MS - timeSinceLastMessage);
+        }
       };
       socket.on('oscMessage', handleOscMessage);
       return () => {
         socket.off('oscMessage', handleOscMessage);
+        // Cleanup timeout on unmount
+        if (oscThrottleTimeoutRef.current) {
+          clearTimeout(oscThrottleTimeoutRef.current);
+          oscThrottleTimeoutRef.current = null;
+        }
+        pendingOscMessageRef.current = null;
       };
     }
   }, [socket, socketConnected, addOscMessageToStore, isPaused]);
@@ -56,16 +112,38 @@ export const OscMonitor: React.FC = () => {
   const [autoScroll, setAutoScroll] = useState(true);
   const lastMessageCountRef = useRef<number>(0);
 
-  // Update displayed messages based on scrollback setting
+  // Get unique OSC hosts from messages
+  const availableHosts = React.useMemo(() => {
+    const hosts = new Set<string>();
+    oscMessagesFromStore.forEach(msg => {
+      if (msg.source) {
+        hosts.add(msg.source);
+      } else {
+        hosts.add('unknown');
+      }
+    });
+    return Array.from(hosts).sort();
+  }, [oscMessagesFromStore]);
+
+  // Update displayed messages based on scrollback setting and filter
   useEffect(() => {
     if (oscMessagesFromStore.length > 0) {
+      // Filter by host if filter is set
+      let filteredMessages = oscMessagesFromStore;
+      if (filterHost !== 'all') {
+        filteredMessages = oscMessagesFromStore.filter(msg => {
+          const msgHost = msg.source || 'unknown';
+          return msgHost === filterHost;
+        });
+      }
+      
       // Show last N messages based on scrollback setting
-      const recentMessages = oscMessagesFromStore.slice(-scrollback);
+      const recentMessages = filteredMessages.slice(-scrollback);
       setLastMessages(recentMessages);
     } else {
       setLastMessages([]);
     }
-  }, [oscMessagesFromStore, scrollback]);
+  }, [oscMessagesFromStore, scrollback, filterHost]);
 
   // Auto-scroll to bottom when new messages arrive (tail -f behavior)
   useEffect(() => {
@@ -203,10 +281,30 @@ export const OscMonitor: React.FC = () => {
           </span>
         )}
       </span>
-      {!isCollapsed && <span className={styles.status}>Recent: {oscMessagesFromStore.length}</span>}
+      {!isCollapsed && (
+        <>
+          <span className={styles.status}>Recent: {oscMessagesFromStore.length}</span>
+          {filterHost !== 'all' && (
+            <span className={styles.filterBadge} title={`Filtered by: ${filterHost}`}>
+              Filter: {filterHost}
+            </span>
+          )}
+        </>
+      )}
       <div className={styles.controls}>
         {!isCollapsed && (
           <>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowFilter(!showFilter);
+              }}
+              onPointerDown={e => e.stopPropagation()}
+              title="Filter by OSC host/source"
+              className={filterHost !== 'all' ? styles.active : ''}
+            >
+              <LucideIcon name="Filter" size={14} strokeWidth={1.5} />
+            </button>
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -322,6 +420,11 @@ export const OscMonitor: React.FC = () => {
                 </span>
               ))}
             </div>
+            {msg.source && (
+              <span className={styles.source} title={`Source: ${msg.source}`}>
+                {msg.source}
+              </span>
+            )}
             <span className={styles.timestamp}>
               {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : ''}
             </span>
@@ -365,6 +468,42 @@ export const OscMonitor: React.FC = () => {
         // whileDrag={{ cursor: 'grabbing' }}
       >
         {renderHeader()}
+        {showFilter && !isCollapsed && (
+          <div className={styles.filterPanel} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.filterHeader}>
+              <strong>Filter by OSC Host:</strong>
+              <button
+                onClick={() => {
+                  setFilterHost('all');
+                  localStorage.setItem('oscMonitorFilterHost', 'all');
+                  setShowFilter(false);
+                }}
+                className={filterHost === 'all' ? styles.active : ''}
+              >
+                All Hosts
+              </button>
+            </div>
+            <div className={styles.filterOptions}>
+              {availableHosts.length > 0 ? (
+                availableHosts.map(host => (
+                  <button
+                    key={host}
+                    onClick={() => {
+                      setFilterHost(host);
+                      localStorage.setItem('oscMonitorFilterHost', host);
+                      setShowFilter(false);
+                    }}
+                    className={filterHost === host ? styles.active : ''}
+                  >
+                    {host}
+                  </button>
+                ))
+              ) : (
+                <span className={styles.noHosts}>No hosts detected yet</span>
+              )}
+            </div>
+          </div>
+        )}
         {renderContent()}
       </div>
 

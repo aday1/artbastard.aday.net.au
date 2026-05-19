@@ -452,11 +452,22 @@
   border-radius: 8px;
   padding: 12px;
   transition: all 0.2s ease;
+  min-width: 0;
+  overflow: hidden;
 
   &:hover {
     border-color: rgba(16, 185, 129, 0.4);
     background: rgba(15, 23, 42, 0.8);
   }
+}
+
+.pinnedChannelRange {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  margin-top: 8px;
 }
 
 .channelHeader {
@@ -970,5 +981,98 @@
     &.collapsed {
       width: 48px;
     }
+  }
+}
+// =====================================================================
+// DRAWER VARIANT
+// =====================================================================
+//
+// When PinnedChannels is rendered inside a Drawer (mobile/tablet
+// chrome), drop the fixed positioning and let the panel fill its
+// container. The internals of the pinned list stay the same; this
+// override only affects the outer wrapper.
+
+.pinnedChannelsContainer.drawerVariant {
+  position: static !important;
+  width: 100% !important;
+  min-width: 0;
+  max-width: none;
+  height: auto !important;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: none;
+  box-shadow: none;
+  z-index: auto;
+  overflow: visible;
+
+  .pinnedContent {
+    padding: 12px;
+    overflow: visible;
+  }
+}
+
+.drawerEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 32px 24px;
+  text-align: center;
+  color: var(--color-text-secondary, #94a3b8);
+
+  p {
+    margin: 0;
+    font-size: 0.95rem;
+  }
+}
+
+.drawerEmptyHint {
+  font-size: 0.8rem !important;
+  color: var(--color-text-tertiary, #64748b);
+}
+
+// Hide the original sidebar wrapper at and below tablet so only the
+// drawer variant is rendered there. The MobileTopBar is responsible
+// for instantiating the drawer copy.
+@media (max-width: 1279px) {
+  // Only the *sidebar* form gets hidden. The drawer form is unaffected
+  // because it has the .drawerVariant class which our selector excludes.
+  .pinnedChannelsContainer:not(.drawerVariant) {
+    display: none !important;
+  }
+}
+
+// =====================================================================
+// DRAWER VARIANT - touch target safety net
+// =====================================================================
+//
+// The PinnedChannels file uses many inline `style={{...}}` buttons
+// (1681 lines of TSX with inline styles for tempo / quick scene panels).
+// We do not refactor those in this pass, but in drawer mode we ensure
+// every button is at least 36px tall and 28px wide so a thumb can hit
+// it without zooming. This selector is intentionally scoped so the
+// desktop sidebar still gets the dense layout it was designed for.
+
+.pinnedChannelsContainer.drawerVariant {
+  button {
+    min-height: 36px;
+    min-width: 28px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  // Inputs (BPM editor, scene rename) deserve a comfortable hit area.
+  input[type='text'],
+  input[type='number'],
+  select {
+    min-height: 36px;
+    font-size: 14px;
+  }
+
+  // Range sliders should also be tap-comfortable.
+  input[type='range'] {
+    min-height: 36px;
   }
 }

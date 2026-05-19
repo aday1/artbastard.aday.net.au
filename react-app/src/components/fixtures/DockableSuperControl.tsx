@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { DockableComponent } from '../ui/DockableComponent';
 import { DockPosition } from '../../context/DockingContext';
-import SuperControl from './SuperControlWrapper';
+import SuperControl from '../dmx/SuperControl';
 import { LucideIcon } from '../ui/LucideIcon';
 import { useStore } from '../../store';
 import styles from './DockableSuperControl.module.scss';

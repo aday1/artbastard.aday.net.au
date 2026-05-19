@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { DockableComponent } from '@/components/ui/DockableComponent';
 import { useStore } from '../../store';
+import { useSceneCapture } from '../../hooks/useSceneCapture';
 import { LucideIcon } from '../ui/LucideIcon';
 import styles from './SceneQuickLaunch.module.scss';
 
@@ -18,19 +19,19 @@ export const SceneQuickLaunch: React.FC<SceneQuickLaunchProps> = ({
   const [activeSceneId, setActiveSceneId] = useState<string | null>(null);
   
   // Get scenes and actions from store
-  const { scenes, loadScene, saveScene, deleteScene } = useStore(state => ({
+  const { scenes, loadScene, deleteScene } = useStore(state => ({
     scenes: state.scenes,
     loadScene: state.loadScene,
-    saveScene: state.saveScene,
     deleteScene: state.deleteScene
   }));
+  const { quickCapture } = useSceneCapture();
 
   const handleSceneActivate = async (sceneName: string) => {
     try {
       loadScene(sceneName);
       setActiveSceneId(sceneName);
       useStore.getState().addNotification({
-        message: `Scene "${sceneName}" activated ✨`,
+        message: `Scene "${sceneName}" activated`,
         type: 'success',
         priority: 'normal'
       });
@@ -40,14 +41,7 @@ export const SceneQuickLaunch: React.FC<SceneQuickLaunchProps> = ({
   };
 
   const handleQuickCapture = () => {
-    const timestamp = new Date().toISOString().slice(11, 19).replace(/:/g, '-');
-    const quickName = `Quick_${timestamp}`;
-    saveScene(quickName, `/scene/${quickName.toLowerCase()}`);
-    useStore.getState().addNotification({      message: `Scene quick saved as "${quickName}" 📸`,
-      type: 'success',
-      priority: 'normal',
-      dismissible: true
-    });
+    quickCapture();
   };
 
   const handleQuickDelete = () => {
@@ -55,7 +49,8 @@ export const SceneQuickLaunch: React.FC<SceneQuickLaunchProps> = ({
 
     if (window.confirm(`Are you sure you want to delete scene "${activeSceneId}"?`)) {
       deleteScene(activeSceneId);
-      useStore.getState().addNotification({      message: `Scene "${activeSceneId}" deleted 🗑️`,
+      useStore.getState().addNotification({
+        message: `Scene "${activeSceneId}" deleted`,
       type: 'success',
       priority: 'normal',
       dismissible: true

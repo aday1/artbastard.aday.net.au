@@ -6,9 +6,15 @@ import fs from 'fs';
 import cors from 'cors';
 import { json } from 'body-parser';
 import { log } from './logger'; // Import from logger instead of index
-import { startLaserTime, listMidiInterfaces, connectMidiInput, disconnectMidiInput, updateArtNetConfig, pingArtNetDevice } from './core';
-import { apiRouter, setupSocketHandlers } from './api';
+import { startLaserTime, listMidiInterfaces, connectMidiInput, disconnectMidiInput, updateArtNetConfig, pingArtNetDevice, addSocketHandlers } from './core';
+import { apiRouter, registerApiSocketHandlers } from './api';
 import { clockManager, MasterClockSourceId, ClockState } from './clockManager';
+import { initAbletonLinkBridge } from './abletonLinkBridge';
+import { loadFixturesData } from './fixturesPersistence';
+import { registerBridgeSocketMiddleware, attachBridgeSocketHandlers } from './bridgeHandlers';
+import { subscribeBridgeClock } from './bridgeRegistry';
+import { attachClientSessionHandlers, onClientDisconnect, resolveClientSessionId } from './sessionHandlers';
+import { initSessions, ensureSession, DEFAULT_SESSION_ID } from './sessionManager';
 
 // Declare global io instance for use in API routes
 declare global {
@@ -76,6 +82,12 @@ try {
   // Make io available globally for use in other modules
   global.io = io;
 
+  void initAbletonLinkBridge().then((ok) => {
+    if (ok) {
+      log('Ableton Link native bridge initialized', 'CLOCK');
+    }
+  });
+
   // ClockManager integration: Subscribe to updates and broadcast via WebSocket
   clockManager.subscribe((clockState: ClockState) => {
     log('Broadcasting clock update:', 'CLOCK', clockState);
@@ -84,35 +96,40 @@ try {
     }
   });
 
-  // Add specific middleware for rate limiting and validation
+  initSessions();
+
+  subscribeBridgeClock((sessionId, state) => {
+    if (global.io) {
+      global.io.to(`session:${sessionId}`).emit('bridgeClockUpdate', state);
+    }
+    if (sessionId === clockManager.getLinkSessionId()) {
+      clockManager.applyBridgeClockState(state);
+    }
+  });
+
+  registerBridgeSocketMiddleware(io);
+
+  // Add specific middleware for rate limiting and validation (clients only)
   io.use((socket, next) => {
-    // Track message rate
+    if ((socket as any).data?.role === 'bridge') {
+      return next();
+    }
     const messageCount = { count: 0, lastReset: Date.now() };
-    const rateLimitWindow = 1000; // 1 second
+    const rateLimitWindow = 1000;
     const maxMessagesPerWindow = 100;
 
     socket.on('message', () => {
       const now = Date.now();
-      
       if (now - messageCount.lastReset > rateLimitWindow) {
         messageCount.count = 0;
         messageCount.lastReset = now;
       }
       messageCount.count++;
-      
       if (messageCount.count > maxMessagesPerWindow) {
         socket.emit('error', 'Rate limit exceeded');
-        return;
       }
     });
-
-    // Validate connection
-    if (socket.handshake.auth && socket.handshake.auth.token) {
-      // Add your token validation logic here if needed
-      next();
-    } else {
-      next();
-    }
+    next();
   });
 
   // Add global error handlers
@@ -196,27 +213,9 @@ try {
       const currentDmxState = getDmxChannels();
       const activeDmxChannels = currentDmxState ? currentDmxState.filter((v: number) => v > 0).length : 0;
       
-      // Load current state to get counts - use bundle format loader
-      // Try to load from API module first (bundle format), fallback to core
-      let currentFixtures: any[] = [];
-      let currentGroups: any[] = [];
-      
-      try {
-        // Try using the API module's loadFixturesData which uses bundle format
-        const apiModule = require('./api');
-        if (apiModule.loadFixturesData) {
-          const fixturesData = apiModule.loadFixturesData();
-          currentFixtures = fixturesData.fixtures || [];
-          currentGroups = fixturesData.groups || [];
-        } else {
-          throw new Error('loadFixturesData not found in api module');
-        }
-      } catch (err) {
-        // Fallback to core module
-        const core = require('./core');
-        currentFixtures = core.loadFixtures() || [];
-        currentGroups = core.loadGroups() || [];
-      }
+      const fixturesData = loadFixturesData();
+      const currentFixtures = fixturesData.fixtures || [];
+      const currentGroups = fixturesData.groups || [];
       
       // Load other state
       const core = require('./core');
@@ -296,21 +295,33 @@ try {
 
   // Socket.IO connection handler
   io.on('connection', (socket) => {
-    log('A user connected', 'SERVER', { socketId: socket.id, transport: socket.conn.transport.name });
+    const role = (socket as any).data?.role || 'client';
+    log('Socket connected', 'SERVER', { socketId: socket.id, role, transport: socket.conn.transport.name });
+
+    if (role === 'bridge') {
+      attachBridgeSocketHandlers(io, socket);
+      return;
+    }
+
+    const sessionId = resolveClientSessionId(socket.handshake.auth as { sessionId?: string });
+    ensureSession(sessionId);
+    attachClientSessionHandlers(io, socket);
+
+    addSocketHandlers(io, socket);
+    registerApiSocketHandlers(io, socket);
 
     // Send initial clock state and available sources
     socket.emit('masterClockUpdate', clockManager.getState());
     socket.emit('availableClockSources', clockManager.getAvailableSources());
 
-    // Send available MIDI interfaces to the client
-    const midiInterfaces = listMidiInterfaces();
-    log('MIDI interfaces found', 'MIDI', { inputs: midiInterfaces.inputs, isWsl: midiInterfaces.isWsl });
-    socket.emit('midiInterfaces', midiInterfaces.inputs);
+    // Send currently active MIDI interfaces (if any)
+    // Note: This requires access to activeMidiInputs from the MIDI module
+    // We'll emit this after the connection is established, or it will be sent when interfaces connect
 
     // Handle MIDI interface selection
-    socket.on('selectMidiInterface', (interfaceName) => {
+    socket.on('selectMidiInterface', async (interfaceName) => {
       log('Selecting MIDI interface', 'MIDI', { interfaceName, socketId: socket.id });
-      connectMidiInput(io, interfaceName);
+      await connectMidiInput(io, interfaceName);
     });
 
     // Handle MIDI interface disconnection
@@ -327,7 +338,8 @@ try {
 
     socket.on('updateArtNetConfig', (config) => {
       try {
-        updateArtNetConfig(config);
+        const sid = (socket as any).data?.sessionId || DEFAULT_SESSION_ID;
+        updateArtNetConfig(config, sid);
         socket.emit('artnetStatus', { status: 'configUpdated' });
         // Test connection with new config
         pingArtNetDevice(io, config.ip);
@@ -353,6 +365,8 @@ try {
     // ClockManager control handlers
     socket.on('setMasterClockSource', (sourceId: MasterClockSourceId) => {
       log(`Client ${socket.id} setMasterClockSource: ${sourceId}`, 'CLOCK');
+      const sid = (socket as any).data?.sessionId || DEFAULT_SESSION_ID;
+      clockManager.setLinkSessionId(sid);
       // Basic validation for sourceId can be added here if MasterClockSourceId type isn't strictly enforced by Socket.IO
       if (clockManager.getAvailableSources().find(s => s.id === sourceId)) {
         clockManager.setSource(sourceId);
@@ -461,6 +475,7 @@ try {
 
     socket.on('disconnect', (reason) => {
       log('User disconnected', 'SERVER', { reason, socketId: socket.id });
+      onClientDisconnect(socket);
     });
 
     // Handle reconnection attempts
@@ -545,8 +560,6 @@ try {
     }
   });
 
-  // Set up additional Socket.IO handlers from API
-  setupSocketHandlers(io);
   // Start the server with automatic port fallback
   const basePortEnv = process.env.PORT;
   const basePort = basePortEnv ? parseInt(basePortEnv, 10) : 3030;
@@ -579,7 +592,10 @@ try {
     
     // Initialize application with Socket.IO instance
     try {
-      startLaserTime(io);
+      (global as any).__serverOwnsSocketLifecycle = true;
+      startLaserTime(io).catch((error) => {
+        log('Error in startLaserTime', 'ERROR', { error: error?.message || String(error) });
+      });
       
       // Restore last saved state if available
       restoreLastState(io);

@@ -3,8 +3,11 @@ import { useStore } from '../../store';
 import { useSocket } from '../../context/SocketContext';
 import { useMidiLearn } from '../../hooks/useMidiLearn';
 import { DockableComponent } from '../ui/DockableComponent';
+import { MasterStyledSlider } from '../ui/controls';
 import styles from './MasterFader.module.scss';
 import { Sparkles } from '../layout/Sparkles'; // Import Sparkles
+import { debugLog } from '../../utils/debugLog';
+
 
 interface MasterFaderProps {
   onValueChange?: (value: number) => void;
@@ -101,7 +104,7 @@ export const MasterFader: React.FC<MasterFaderProps> = ({
       setBaselineChannelValues(baseline);
       setMasterFaderValueWhenActivated(255);
       setIsMasterFaderActive(true);
-      console.log('[MasterFader] Baseline state saved at 255:', baseline);
+      debugLog.log('[MasterFader] Baseline state saved at 255:', baseline);
     }
   }, [isMasterFaderActive, baselineChannelValues, dmxChannels, isChannelIgnored, value]);
 
@@ -134,7 +137,7 @@ export const MasterFader: React.FC<MasterFaderProps> = ({
       
       if (Object.keys(restoreUpdates).length > 0) {
         setMultipleDmxChannels(restoreUpdates);
-        console.log('[MasterFader] Baseline state restored:', restoreUpdates);
+        debugLog.log('[MasterFader] Baseline state restored:', restoreUpdates);
       }
       
       // Reset baseline system
@@ -425,7 +428,7 @@ export const MasterFader: React.FC<MasterFaderProps> = ({
           setMidiCC(mapping.controller);
           setMidiChannel(mapping.channel + 1); // Convert 0-15 to 1-16
           setIsLearning(false);
-          console.log('[MasterFader] MIDI learned:', mapping);
+          debugLog.log('[MasterFader] MIDI learned:', mapping);
         } else if (mapping.note !== undefined) {
           // For note mappings, we could use note on/off to toggle or set value
           setMidiCC(null); // Notes not supported for continuous control
@@ -605,11 +608,11 @@ export const MasterFader: React.FC<MasterFaderProps> = ({
     
     // Only send updates if there are actual changes
     if (updateCount > 0) {
-      console.log(`[MasterFader] Setting ${updateCount} channels to 0 (skipped ${512 - updateCount} already at 0)`);
+      debugLog.log(`[MasterFader] Setting ${updateCount} channels to 0 (skipped ${512 - updateCount} already at 0)`);
       // Update store - this will batch send to backend
       setMultipleDmxChannels(dmxUpdates, true);
     } else {
-      console.log('[MasterFader] All channels already at 0, skipping update');
+      debugLog.log('[MasterFader] All channels already at 0, skipping update');
     }
     
     // OPTIMIZATION: Batch OSC messages instead of sending individually
@@ -633,7 +636,7 @@ export const MasterFader: React.FC<MasterFaderProps> = ({
       const batchSize = 10; // Send 10 OSC messages at a time
       
       if (oscAddressArray.length > 0) {
-        console.log(`[MasterFader] Sending ${oscAddressArray.length} OSC zero messages in batches of ${batchSize}`);
+        debugLog.log(`[MasterFader] Sending ${oscAddressArray.length} OSC zero messages in batches of ${batchSize}`);
         
         // Send in batches with small delays to avoid overwhelming the system
         oscAddressArray.forEach((oscAddress, index) => {
@@ -846,18 +849,34 @@ export const MasterFader: React.FC<MasterFaderProps> = ({
       {!isMinimized && (
         <div className={styles.faderContainer}>
           <div className={styles.sliderWrapper}>
-            <input
-              type="range"
-              min="0"
-              max="255"
+            <MasterStyledSlider
               value={value}
-              onChange={handleSliderChange}
-              onInput={handleSliderInput}
-              onMouseDown={handleSliderMouseDown}
-              onMouseUp={handleSliderMouseUp}
-              onTouchStart={handleSliderTouchStart}
-              onTouchEnd={handleSliderTouchEnd}
-              className={styles.verticalSlider}
+              min={0}
+              max={255}
+              vertical
+              height={280}
+              onChange={(v) => {
+                saveBaselineState();
+                handleValueChange(v);
+              }}
+              onInput={(v) => {
+                saveBaselineState();
+                handleValueChange(v);
+              }}
+              onMouseDown={() => {
+                isDraggingRef.current = true;
+                saveBaselineState();
+              }}
+              onMouseUp={() => {
+                isDraggingRef.current = false;
+              }}
+              onTouchStart={() => {
+                isDraggingRef.current = true;
+                saveBaselineState();
+              }}
+              onTouchEnd={() => {
+                isDraggingRef.current = false;
+              }}
             />
             <div className={styles.valueDisplay}>
               {Math.round((value / 255) * 100)}%
