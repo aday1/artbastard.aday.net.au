@@ -1,0 +1,158 @@
+.colorTempVisualizer {
+  background: #1a1a1a;
+  border-radius: 8px;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  
+  h3 {
+    margin: 0;
+    color: #e2e8f0;
+    font-size: 16px;
+    font-weight: 600;
+  }
+}
+
+.avgTemp {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.tempValue {
+  font-size: 24px;
+  font-weight: 700;
+  color: #60a5fa;
+  line-height: 1;
+}
+
+.tempLabel {
+  font-size: 11px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #64748b;
+  text-align: center;
+  
+  p {
+    margin: 8px 0;
+  }
+  
+  .hint {
+    font-size: 12px;
+    color: #475569;
+  }
+}
+
+.tempList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tempItem {
+  background: rgba(30, 41, 59, 0.5);
+  border-radius: 6px;
+  padding: 12px;
+  border: 1px solid rgba(59, 130, 246, 0.1);
+}
+
+.fixtureInfo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.fixtureName {
+  color: #e2e8f0;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.temp {
+  color: #60a5fa;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.tempBar {
+  height: 8px;
+  background: rgba(30, 41, 59, 0.8);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+  position: relative;
+}
+
+.tempFill {
+  height: 100%;
+  transition: width 0.3s ease, background-color 0.3s ease;
+  border-radius: 4px;
+}
+
+.rgbInfo {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  color: #94a3b8;
+  
+  span {
+    font-family: monospace;
+  }
+}
+
+.scale {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(59, 130, 246, 0.1);
+}
+
+.scaleLabel {
+  font-size: 10px;
+  color: #64748b;
+  font-weight: 500;
+  min-width: 50px;
+}
+
+.scaleGradient {
+  flex: 1;
+  height: 20px;
+  background: linear-gradient(
+    to right,
+    #ff8c42 0%,
+    #ffb347 25%,
+    #fff5e6 50%,
+    #e6f3ff 75%,
+    #80c5ff 100%
+  );
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+

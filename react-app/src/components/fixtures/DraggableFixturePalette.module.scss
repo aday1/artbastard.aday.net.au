@@ -1,0 +1,263 @@
+/* Draggable Fixture Palette Styles */
+.fixturePalette {
+  position: absolute;
+  top: 80px;
+  left: 20px;
+  width: 320px;
+  max-height: 75vh;
+  background: var(--surface-color, #2a2a2a);
+  border: 2px solid var(--border-color, #404040);
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(15px);
+  z-index: 1000;
+  overflow: hidden;
+  font-family: var(--font-family, 'Inter', sans-serif);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  &:hover {
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+    transform: translateY(-2px);
+  }
+}
+
+.paletteHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, var(--primary-color, #007acc) 0%, var(--accent-color, #0084ff) 50%, #00d4ff 100%);
+  color: white;
+  border-bottom: 1px solid var(--border-color, #404040);
+  position: relative;
+  overflow: hidden;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    animation: shimmer 3s ease-in-out infinite;
+  }
+}
+
+.paletteHeader h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  flex: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.dragHint {
+  font-size: 12px;
+  opacity: 0.9;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 4px 8px;
+  border-radius: 6px;
+  backdrop-filter: blur(5px);
+}
+
+.fixtureGrid {
+  max-height: calc(75vh - 100px);
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.paletteFixture {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: var(--card-bg, #363636);
+  border: 2px solid transparent;
+  border-radius: 12px;
+  cursor: grab;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(5px);
+}
+
+.paletteFixture::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  background: linear-gradient(180deg, var(--fixture-color), rgba(255, 255, 255, 0.3));
+  opacity: 0.9;
+  border-radius: 0 3px 3px 0;
+}
+
+.paletteFixture:hover {
+  background: var(--hover-bg, #404040);
+  border-color: var(--fixture-color);
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.paletteFixture.dragging,
+.paletteFixture:active {
+  cursor: grabbing;
+  transform: rotate(8deg) scale(1.08);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  border-color: var(--fixture-color);
+  z-index: 1001;
+  background: var(--fixture-color);
+  color: white;
+}
+
+.fixtureIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, var(--fixture-color), rgba(255, 255, 255, 0.2));
+  border-radius: 12px;
+  color: white;
+  font-size: 20px;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.fixtureInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.fixtureName {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, #ffffff);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fixtureType {
+  font-size: 12px;
+  color: var(--text-secondary, #b3b3b3);
+  text-transform: uppercase;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+.fixtureChannels {
+  font-size: 11px;
+  color: var(--fixture-color);
+  font-weight: 500;
+}
+
+.dragHandle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: var(--text-secondary, #888);
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+
+.paletteFixture:hover .dragHandle {
+  opacity: 1;
+  color: var(--fixture-color);
+}
+
+/* Custom scrollbar for fixture grid */
+.fixtureGrid::-webkit-scrollbar {
+  width: 6px;
+}
+
+.fixtureGrid::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.fixtureGrid::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb, #555);
+  border-radius: 3px;
+}
+
+.fixtureGrid::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-hover, #777);
+}
+
+/* Animation for drag and drop feedback */
+@keyframes dragPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+@keyframes shimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+.paletteFixture.dragFeedback {
+  animation: dragPulse 0.6s ease-in-out infinite;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .fixturePalette {
+    width: 280px;
+  }
+  
+  .paletteFixture {
+    padding: 14px 16px;
+    gap: 12px;
+  }
+  
+  .fixtureIcon {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 768px) {
+  .fixturePalette {
+    width: 260px;
+    left: 10px;
+    top: 60px;
+  }
+  
+  .paletteHeader {
+    padding: 16px 20px;
+  }
+  
+  .paletteHeader h3 {
+    font-size: 16px;
+  }
+  
+  .fixtureGrid {
+    padding: 16px;
+    gap: 12px;
+  }
+  
+  .paletteFixture {
+    padding: 12px 16px;
+    gap: 10px;
+  }
+  
+  .fixtureIcon {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+  }
+}

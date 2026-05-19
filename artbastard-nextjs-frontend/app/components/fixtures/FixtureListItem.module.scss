@@ -1,0 +1,99 @@
+@import '../../styles/variables';
+@use 'sass:color';
+
+.fixtureListItem {
+  display: flex;
+  align-items: center;
+  padding: $spacing-unit * 1.5;
+  background-color: $background-dark-secondary;
+  border: 1px solid $background-dark-tertiary;
+  border-radius: $border-radius;
+  margin-bottom: $spacing-unit;
+  cursor: pointer;
+  transition: background-color $transition-fast, border-color $transition-fast, box-shadow $transition-fast;
+
+  &:hover {
+    background-color: color.scale($background-dark-secondary, $lightness: 5%);
+    border-color: $primary-color;
+  }
+
+  &.selected {
+    background-color: color.scale($primary-color, $alpha: -0.8); // More subtle selection bg
+    border-color: $secondary-color;
+    box-shadow: 0 0 8px rgba($secondary-color, 0.4);
+
+    .name {
+      color: $secondary-color;
+    }
+    .selectionIndicator svg {
+      color: $secondary-color;
+    }
+  }
+}
+
+.selectionIndicator {
+  margin-right: $spacing-unit * 1.5;
+  font-size: $font-size-lg;
+  color: $text-color-muted;
+  transition: color $transition-fast;
+}
+
+.icon {
+  margin-right: $spacing-unit * 1.5;
+  font-size: $font-size-xl;
+  color: $primary-color; // Default icon color
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px; // Ensure consistent icon spacing
+}
+
+.details {
+  flex-grow: 1;
+  overflow: hidden; // Prevent long names from breaking layout
+}
+
+.name {
+  font-size: $font-size-base;
+  font-weight: 600;
+  color: $text-color-light;
+  margin: 0 0 ($spacing-unit * 0.5) 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color $transition-fast;
+}
+
+.info {
+  font-size: $font-size-sm;
+  color: $text-color-muted;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  margin-left: $spacing-unit * 2;
+}
+
+.actionButton {
+  background: none;
+  border: none;
+  color: $text-color-muted;
+  font-size: $font-size-base; // Make icons a bit larger
+  padding: $spacing-unit * 0.5;
+  margin-left: $spacing-unit * 0.5;
+  cursor: pointer;
+  transition: color $transition-fast;
+
+  &:hover {
+    color: $primary-color;
+  }
+
+  &.deleteButton:hover {
+    color: $error-color;
+  }
+}

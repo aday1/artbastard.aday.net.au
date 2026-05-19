@@ -1,0 +1,1207 @@
+// Enhanced Help Overlay Styles
+.helpEmbedded {
+  width: 100%;
+  max-width: 100%;
+  
+  .helpContent {
+    position: relative;
+    max-width: 100%;
+    max-height: none;
+    box-shadow: none;
+    border: 1px solid var(--border-color, rgba(71, 85, 105, 0.3));
+  }
+}
+
+.helpButton {
+  position: fixed;
+  bottom: 20px;
+  left: 20px; // Moved back to bottom left corner
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #007acc, #005a9e);
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  z-index: 10000;
+  box-shadow: 
+    0 4px 12px rgba(0, 122, 204, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  &:hover {
+    transform: scale(1.1) translateY(-2px);
+    box-shadow: 
+      0 8px 20px rgba(0, 122, 204, 0.4),
+      0 4px 8px rgba(0, 0, 0, 0.15);
+    background: linear-gradient(135deg, #0099ff, #007acc);
+  }
+
+  &:active {
+    transform: scale(1.05) translateY(-1px);
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    border-radius: 50%;
+    background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1));
+    z-index: -1;
+  }
+}
+
+// Remove responsive positioning to keep it in bottom left corner
+/* :global(body.navbar-is-collapsed) .helpButton {
+  left: 120px; // Position when navbar is collapsed
+} */
+
+.helpOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 20000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.helpContent {
+  background: var(--color-background, #1a1a1a);
+  border: 1px solid var(--color-border, #333);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 1000px;
+  max-height: 90vh;
+  overflow: hidden;
+  box-shadow: 
+    0 25px 50px rgba(0, 0, 0, 0.5),
+    0 10px 20px rgba(0, 0, 0, 0.3);
+  animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+.helpHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 28px;
+  background: linear-gradient(135deg, #007acc, #005a9e);
+  color: white;
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex: 1;
+
+  h3 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  }
+}
+
+.searchContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+
+  .searchInput {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    padding: 8px 12px 8px 36px;
+    color: white;
+    font-size: 14px;
+    width: 250px;
+    transition: all 0.3s ease;
+
+    &::placeholder {
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    &:focus {
+      outline: none;
+      background: rgba(255, 255, 255, 0.25);
+      border-color: rgba(255, 255, 255, 0.4);
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
+    }
+  }
+
+  i {
+    position: absolute;
+    left: 12px;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 14px;
+  }
+}
+
+.closeButton {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
+  }
+}
+
+.helpTabs {
+  display: flex;
+  background: var(--color-card-bg, #252525);
+  border-bottom: 1px solid var(--color-border, #333);
+  overflow-x: auto;
+  scrollbar-width: thin;
+
+  &::-webkit-scrollbar {
+    height: 3px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 122, 204, 0.3);
+    border-radius: 2px;
+  }
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 20px;
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted, #888);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-bottom: 3px solid transparent;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 500;
+
+  &:hover {
+    background: rgba(0, 122, 204, 0.1);
+    color: var(--color-text, #e0e0e0);
+  }
+
+  &.active {
+    background: rgba(0, 122, 204, 0.15);
+    color: #007acc;
+    border-bottom-color: #007acc;
+    font-weight: 600;
+  }
+}
+
+.tabIcon {
+  font-size: 16px;
+}
+
+.tabLabel {
+  font-size: 13px;
+}
+
+.helpBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px;
+  color: var(--color-text, #e0e0e0);
+  line-height: 1.6;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: var(--color-card-bg, #252525);
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 122, 204, 0.3);
+    border-radius: 4px;
+
+    &:hover {
+      background: rgba(0, 122, 204, 0.5);
+    }
+  }
+}
+
+.tabContent {
+  h4 {
+    margin: 0 0 20px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #007acc;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  h5 {
+    margin: 20px 0 12px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-text, #e0e0e0);
+  }
+
+  h6 {
+    margin: 16px 0 8px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #007acc;
+  }
+
+  p {
+    margin: 0 0 16px 0;
+    color: var(--color-text-muted, #bbb);
+  }
+
+  ul, ol {
+    margin: 0 0 16px 0;
+    padding-left: 20px;
+
+    li {
+      margin-bottom: 8px;
+      color: var(--color-text, #e0e0e0);
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
+
+  kbd {
+    background: var(--color-border, #333);
+    border: 1px solid var(--color-border-light, #555);
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    font-weight: bold;
+    color: #007acc;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  }
+
+  strong {
+    color: #007acc;
+    font-weight: 600;
+  }
+}
+
+// Welcome Section
+.welcomeSection {
+  .featureGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin: 24px 0;
+  }
+
+  .featureCard {
+    background: var(--color-card-bg, #252525);
+    border: 1px solid var(--color-border, #333);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    transition: all 0.3s ease;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0, 122, 204, 0.15);
+      border-color: rgba(0, 122, 204, 0.3);
+    }
+
+    .featureIcon {
+      font-size: 32px;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    h5 {
+      margin: 0 0 8px 0;
+      color: #007acc;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    p {
+      margin: 0;
+      font-size: 12px;
+      color: var(--color-text-muted, #888);
+    }
+  }
+
+  .quickStart {
+    background: linear-gradient(135deg, rgba(0, 122, 204, 0.1), rgba(0, 122, 204, 0.05));
+    border: 1px solid rgba(0, 122, 204, 0.2);
+    border-radius: 12px;
+    padding: 24px;
+    margin-top: 24px;
+
+    h5 {
+      margin-top: 0;
+      color: #007acc;
+    }
+
+    ol {
+      margin: 16px 0 20px 0;
+    }
+  }
+}
+
+.tutorialButton,
+.startTutorialButton {
+  background: linear-gradient(135deg, #007acc, #005a9e);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  &:hover {
+    background: linear-gradient(135deg, #0099ff, #007acc);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 122, 204, 0.3);
+  }
+}
+
+// Grid Controls
+.gridControls {
+  background: var(--color-card-bg, #252525);
+  border: 1px solid var(--color-border, #333);
+  border-radius: 12px;
+  padding: 24px;
+  margin-top: 16px;
+}
+
+.controlGroup {
+  margin-bottom: 24px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  label {
+    display: block;
+    font-weight: 600;
+    color: var(--color-text, #e0e0e0);
+    margin-bottom: 8px;
+    font-size: 14px;
+  }
+}
+
+.slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-border, #333);
+  outline: none;
+  transition: all 0.3s ease;
+  cursor: pointer;
+
+  &::-webkit-slider-thumb {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #007acc, #005a9e);
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 122, 204, 0.3);
+    transition: all 0.2s ease;
+
+    &:hover {
+      transform: scale(1.2);
+      box-shadow: 0 4px 12px rgba(0, 122, 204, 0.4);
+    }
+  }
+
+  &::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #007acc, #005a9e);
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 6px rgba(0, 122, 204, 0.3);
+
+    &:hover {
+      transform: scale(1.2);
+    }
+  }
+}
+
+.sliderTicks {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--color-text-muted, #888);
+}
+
+.toggleGroup {
+  label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    margin-bottom: 8px;
+
+    input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: #007acc;
+      cursor: pointer;
+    }
+  }
+
+  .toggleLabel {
+    font-weight: 600;
+    color: var(--color-text, #e0e0e0);
+  }
+
+  .toggleDescription {
+    font-size: 12px;
+    color: var(--color-text-muted, #888);
+    margin-left: 30px;
+    margin-top: -4px;
+  }
+}
+
+.quickActions {
+  display: flex;
+  gap: 12px;
+  margin: 20px 0;
+  flex-wrap: wrap;
+}
+
+.quickButton {
+  background: var(--color-border, #333);
+  color: var(--color-text, #e0e0e0);
+  border: 1px solid var(--color-border-light, #555);
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: #007acc;
+    color: white;
+    border-color: #007acc;
+  }
+}
+
+.statusPanel {
+  background: rgba(0, 122, 204, 0.05);
+  border: 1px solid rgba(0, 122, 204, 0.2);
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 20px;
+
+  h5 {
+    margin: 0 0 12px 0;
+    color: #007acc;
+    font-size: 14px;
+  }
+}
+
+.statusItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 13px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  span:first-child {
+    color: var(--color-text-muted, #bbb);
+  }
+}
+
+.statusValue {
+  font-weight: 600;
+  
+  &.enabled {
+    color: #00ff66;
+  }
+
+  &.disabled {
+    color: #ff6666;
+  }
+}
+
+// Keyboard Shortcuts
+.shortcutSection {
+  margin-bottom: 28px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  h5 {
+    color: #007acc;
+    border-bottom: 1px solid var(--color-border, #333);
+    padding-bottom: 8px;
+  }
+}
+
+.shortcutList {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.shortcutItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--color-card-bg, #252525);
+  border: 1px solid var(--color-border, #333);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(0, 122, 204, 0.1);
+    border-color: rgba(0, 122, 204, 0.3);
+  }
+
+  span:last-child {
+    color: var(--color-text-muted, #bbb);
+    font-size: 13px;
+  }
+}
+
+// Components Section
+.componentSection {
+  .componentCard {
+    background: var(--color-card-bg, #252525);
+    border: 1px solid var(--color-border, #333);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    transition: all 0.3s ease;
+
+    &:hover {
+      border-color: rgba(0, 122, 204, 0.3);
+      box-shadow: 0 4px 12px rgba(0, 122, 204, 0.1);
+    }
+
+    h6 {
+      margin-top: 0;
+      color: #007acc;
+      font-size: 16px;
+    }
+
+    ul {
+      margin-top: 12px;
+      
+      li {
+        font-size: 13px;
+        color: var(--color-text-muted, #bbb);
+      }
+    }
+  }
+}
+
+.dockingZones {
+  margin-top: 32px;
+
+  .zoneGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .zoneItem {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px;
+    background: var(--color-card-bg, #252525);
+    border: 1px solid var(--color-border, #333);
+    border-radius: 8px;
+    text-align: center;
+
+    .zoneName {
+      font-weight: 600;
+      color: var(--color-text, #e0e0e0);
+      font-size: 13px;
+    }
+
+    .zoneSize {
+      font-size: 11px;
+      color: var(--color-text-muted, #888);
+      margin-top: 4px;
+    }
+  }
+}
+
+// Tutorial
+.tutorialActive {
+  .tutorialProgress {
+    background: var(--color-card-bg, #252525);
+    border: 1px solid var(--color-border, #333);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+
+    .progressBar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      background: linear-gradient(90deg, rgba(0, 122, 204, 0.1), rgba(0, 122, 204, 0.2));
+      transition: width 0.3s ease;
+      border-radius: 8px;
+    }
+
+    span {
+      position: relative;
+      z-index: 1;
+      font-weight: 600;
+      color: #007acc;
+      font-size: 14px;
+    }
+  }
+
+  .tutorialStep {
+    h5 {
+      color: #007acc;
+      margin-bottom: 12px;
+    }
+
+    p {
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+  }
+
+  .tutorialControls {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+  }
+
+  .skipButton {
+    background: transparent;
+    border: 1px solid var(--color-border, #333);
+    color: var(--color-text-muted, #888);
+    border-radius: 6px;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+      border-color: #007acc;
+      color: #007acc;
+    }
+  }
+
+  .nextButton {
+    background: linear-gradient(135deg, #007acc, #005a9e);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+      background: linear-gradient(135deg, #0099ff, #007acc);
+    }
+  }
+}
+
+.tutorialStart {
+  .tutorialIntro {
+    text-align: center;
+    padding: 24px;
+    background: var(--color-card-bg, #252525);
+    border: 1px solid var(--color-border, #333);
+    border-radius: 12px;
+    margin-bottom: 20px;
+
+    h5 {
+      color: #007acc;
+      margin-bottom: 16px;
+    }
+
+    p {
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+  }
+
+  .tutorialFeatures {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .tutorialFeature {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: rgba(0, 122, 204, 0.05);
+    border-radius: 8px;
+    font-size: 13px;
+
+    .featureIcon {
+      font-size: 18px;
+    }
+  }
+
+  .startTutorialButton {
+    display: block;
+    margin: 0 auto;
+  }
+}
+
+// Troubleshooting
+.troubleshootingSection {
+  margin-bottom: 32px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  h5 {
+    color: #007acc;
+    border-bottom: 1px solid var(--color-border, #333);
+    padding-bottom: 8px;
+  }
+}
+
+.troubleshootingItem {
+  background: var(--color-card-bg, #252525);
+  border: 1px solid var(--color-border, #333);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+
+  h6 {
+    color: #ff6666;
+    margin: 0 0 8px 0;
+    font-size: 14px;
+  }
+
+  p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+
+    strong {
+      color: #00ff66;
+    }
+  }
+}
+
+.tipsList {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.tip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--color-card-bg, #252525);
+  border: 1px solid var(--color-border, #333);
+  border-radius: 8px;
+  font-size: 13px;
+
+  .tipIcon {
+    color: #ffaa00;
+    font-size: 16px;
+  }
+}
+
+.systemInfo {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.infoItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--color-card-bg, #252525);
+  border-radius: 6px;
+  font-size: 13px;
+
+  span:first-child {
+    color: var(--color-text-muted, #bbb);
+  }
+
+  span:last-child {
+    color: #007acc;
+    font-weight: 600;
+  }
+}
+
+// Settings
+.settingsSection {
+  margin-bottom: 32px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  h5 {
+    color: #007acc;
+    border-bottom: 1px solid var(--color-border, #333);
+    padding-bottom: 8px;
+  }
+
+  p {
+    margin: 12px 0 16px 0;
+    font-size: 13px;
+    color: var(--color-text-muted, #bbb);
+  }
+}
+
+.settingsActions,
+.resetActions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.exportButton,
+.importButton,
+.resetButton,
+.clearButton {
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.exportButton {
+  background: linear-gradient(135deg, #007acc, #005a9e);
+  color: white;
+  border-color: #007acc;
+
+  &:hover {
+    background: linear-gradient(135deg, #0099ff, #007acc);
+  }
+}
+
+.importButton {
+  background: transparent;
+  color: #007acc;
+  border-color: #007acc;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(0, 122, 204, 0.1);
+  }
+}
+
+.resetButton {
+  background: transparent;
+  color: #ffaa00;
+  border-color: #ffaa00;
+
+  &:hover {
+    background: rgba(255, 170, 0, 0.1);
+  }
+}
+
+.clearButton {
+  background: transparent;
+  color: #ff6666;
+  border-color: #ff6666;
+
+  &:hover {
+    background: rgba(255, 102, 102, 0.1);
+  }
+}
+
+.performanceInfo {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.performanceItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--color-card-bg, #252525);
+  border-radius: 6px;
+  font-size: 13px;
+
+  span:first-child {
+    color: var(--color-text-muted, #bbb);
+  }
+
+  span:last-child {
+    color: #007acc;
+    font-weight: 600;
+  }
+}
+
+// Help Footer
+.helpFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 28px;
+  background: var(--color-card-bg, #252525);
+  border-top: 1px solid var(--color-border, #333);
+  border-radius: 0 0 16px 16px;
+}
+
+.footerInfo {
+  font-size: 12px;
+  color: var(--color-text-muted, #888);
+
+  kbd {
+    font-size: 11px;
+  }
+}
+
+.footerActions {
+  .tutorialShortcut {
+    background: rgba(0, 122, 204, 0.1);
+    color: #007acc;
+    border: 1px solid rgba(0, 122, 204, 0.3);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+      background: rgba(0, 122, 204, 0.2);
+    }
+  }
+}
+
+// Animations
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+// Responsive Design
+@media (max-width: 768px) {
+  .helpContent {
+    margin: 10px;
+    max-height: 95vh;
+  }
+
+  .helpHeader {
+    padding: 16px 20px;
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+
+    .headerLeft {
+      flex-direction: column;
+      gap: 12px;
+      align-items: flex-start;
+
+      h3 {
+        font-size: 18px;
+      }
+    }
+
+    .searchContainer .searchInput {
+      width: 100%;
+    }
+  }
+
+  .helpTabs {
+    .tab {
+      padding: 12px 16px;
+      font-size: 12px;
+
+      .tabIcon {
+        font-size: 14px;
+      }
+
+      .tabLabel {
+        display: none;
+      }
+    }
+  }
+
+  .helpBody {
+    padding: 20px;
+  }
+
+  .featureGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .quickActions {
+    flex-direction: column;
+  }
+
+  .shortcutItem {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .settingsActions,
+  .resetActions {
+    flex-direction: column;
+  }
+
+  .helpFooter {
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .helpButton {
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
+  }
+
+  .tutorialFeatures {
+    grid-template-columns: 1fr;
+  }
+
+  .zoneGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+// Monitor container styles
+.monitorContainer {
+  background: var(--color-card-bg, #252525);
+  border: 1px solid var(--color-border, #333);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+  overflow: hidden;
+  
+  // Ensure the monitors fit well in the help context
+  & > * {
+    max-width: 100%;
+  }
+  
+  // Override any fixed positioning from the monitors
+  :global(.midiMonitor),
+  :global(.oscMonitor) {
+    position: static !important;
+    transform: none !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+  }
+}
+
+.section {
+  margin-bottom: 28px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  h5 {
+    color: #007acc;
+    border-bottom: 1px solid var(--color-border, #333);
+    padding-bottom: 8px;
+    margin-bottom: 16px;
+  }
+
+  p {
+    margin: 0 0 12px 0;
+    color: var(--color-text-muted, #bbb);
+  }
+
+  ul, ol {
+    margin: 0 0 16px 0;
+    padding-left: 20px;
+
+    li {
+      margin-bottom: 8px;
+      color: var(--color-text, #e0e0e0);
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
+}

@@ -1,0 +1,56 @@
+ArtBastard UI/UX Tour
+======================
+
+Per-screen action notes for the recorded demo reel and the still
+screenshot tour. Every screen is reachable via hash routing.
+
+SuperControl (Fixture page > Advanced Fixture Control)
+  Select All / Deselect All quick actions.
+  Empty states: no fixtures, no groups, no capabilities.
+  Quick tip text guides first-time users.
+  Modes: Fixtures, Groups, Channels, Capabilities.
+
+Screen 01: DMX Control Home  (#/)
+  Focus: 512-channel grid, filtering, master fader, MIDI/OSC monitors.
+  Demo actions: scroll the channel grid; pinned channels highlight.
+
+Screen 02: Fixture Setup  (#/fixture)
+  Focus: fixture definitions, addressing, groups; switching to the
+  Advanced Fixture Control tab to drive SuperControl.
+  Demo actions: switch tab, scroll fixture list.
+
+Screen 03: Scenes and Acts  (#/scenes-acts)
+  Focus: scene library, ACT triggers, scene timeline keyframes (DMX values),
+  optional act timeline (scene clips, gaps, playhead).
+  Demo actions: scroll, scrub scene timeline drag preview; if act editor open,
+  show clip drag, +2s gap, Sync to BPM hint (transport vs Link — see ACT_TIMELINE.md).
+
+Screen 04: Experimental Lab  (#/experimental)
+  Focus: tab navigation between OpenCV, OSC placeholder, and
+  TouchOSC layouts.
+  Demo actions: cycle tabs.
+
+Screen 05: TouchOSC Workflow  (#/experimental?tab=touchosc)
+  Focus: layout generator, upload pipeline, runtime download.
+  Demo actions: scroll the controls, hover the upload status badge.
+
+Screen 06: External Console  (#/external-console)
+  Focus: dedicated operator route, second-screen layout.
+  Demo actions: passive view; state mirrors the main app.
+
+Screen 07: Mobile Control Surface  (#/mobile)
+  Focus: touch-first 430x932 surface, simplified chrome, no floating
+  monitors by default.
+  Demo actions: scroll once or twice to show the layout adapting.
+
+Screen 08: Settings and In-App Help  (#/settings)
+  Focus: theme system, network detection, embedded HelpOverlay tabs.
+  Demo actions: scroll, switch help tabs (Overview, Timeline, MIDI,
+  OSC, Shortcuts, Address Sheet).
+
+Release page:
+  https://github.com/aday1/ArtBastard-DMX512/releases/tag/v5.12.0
+Public showcase (quick-jump hub):
+  https://aday1.github.io/artbastard.aday.net.au/
+Public showcase (full Photonic Tour):
+  https://aday1.github.io/artbastard.aday.net.au/website/

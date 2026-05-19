@@ -1,0 +1,40 @@
+// Overlay-style scrollbars: thin, inset, no chunky gutter beside panels.
+
+@mixin seamless-scroll {
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-primary, #d68706) 55%, transparent)
+    transparent;
+
+  &::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--color-primary, #d68706) 45%, rgba(255, 255, 255, 0.12));
+    border-radius: 999px;
+    border: 1px solid transparent;
+    background-clip: padding-box;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--color-primary, #d68706) 70%, rgba(255, 255, 255, 0.18));
+    background-clip: padding-box;
+  }
+
+  &::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+}
+
+:global(.ab-seamless-scroll) {
+  @include seamless-scroll;
+}

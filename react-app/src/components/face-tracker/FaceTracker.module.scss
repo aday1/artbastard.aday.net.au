@@ -1,0 +1,1575 @@
+// CSS variables are defined globally in styles/index.scss
+
+.faceTracker {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  padding: 1rem;
+  gap: 1rem;
+  overflow: hidden;
+}
+
+.mainContainer {
+  display: flex;
+  gap: 1rem;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.trackerSide {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden; // Changed from overflow-y: auto to allow sticky preview
+}
+
+.configSide {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.configButton,
+.startButton,
+.secondaryButton {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: var(--bg-hover);
+    border-color: var(--accent-color);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.startButton {
+  background: var(--success-color);
+  color: white;
+  border-color: var(--success-color);
+
+  &:hover:not(:disabled) {
+    background: var(--success-color-hover);
+  }
+
+  &.stopButton {
+    background: var(--error-color);
+    border-color: var(--error-color);
+
+    &:hover:not(:disabled) {
+      background: var(--error-color-hover);
+    }
+  }
+}
+
+// Toggle Switch Styles
+.toggleSwitch {
+  position: relative;
+  display: inline-block;
+  width: 80px;
+  height: 34px;
+  cursor: pointer;
+}
+
+.toggleInput {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  
+  &:disabled + .toggleSlider {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.toggleSlider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: 0.3s;
+  border-radius: 34px;
+  border: 2px solid var(--border-color);
+  
+  &:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 2px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+  
+  .toggleLabel {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    transition: 0.3s;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    white-space: nowrap;
+  }
+}
+
+.toggleInput:checked + .toggleSlider {
+  background-color: var(--success-color);
+  border-color: var(--success-color);
+  
+  &:before {
+    transform: translateX(46px);
+  }
+  
+  .toggleLabel {
+    color: white;
+  }
+}
+
+.toggleInput:not(:checked) + .toggleSlider {
+  background-color: var(--error-color);
+  border-color: var(--error-color);
+  
+  .toggleLabel {
+    color: white;
+  }
+}
+
+.toggleInput:focus + .toggleSlider {
+  box-shadow: 0 0 1px var(--accent-color);
+}
+
+.error {
+  padding: 1rem;
+  background: var(--error-bg);
+  color: var(--error-color);
+  border: 1px solid var(--error-color);
+  border-radius: 4px;
+}
+
+.configPanel {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 1rem;
+}
+
+.quickControls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.controlGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0; // Prevent overflow
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    border-color: var(--accent-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .helpText {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    padding: 0.5rem;
+    background: var(--bg-primary);
+    border-left: 3px solid var(--accent-color);
+    border-radius: 4px;
+    opacity: 0.9;
+  }
+
+  label,
+  .controlLabel {
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-bottom: 0.25rem;
+  }
+
+  input[type="number"] {
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    width: 100%;
+  }
+
+  select,
+  .selectInput {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    width: 100%;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    
+    &:hover:not(:disabled) {
+      border-color: var(--accent-color);
+      background: var(--bg-secondary);
+    }
+    
+    &:focus {
+      outline: none;
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.2);
+    }
+    
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    option {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      padding: 0.5rem;
+    }
+  }
+
+  input[type="checkbox"] {
+    width: auto;
+    cursor: pointer;
+  }
+}
+
+.sliderWrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 200px; // Ensure minimum width for slider to be usable
+  position: relative;
+  padding: 0.25rem 0; // Add vertical padding for easier clicking
+}
+
+.rangeLabel {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  min-width: 24px;
+  max-width: 24px;
+  text-align: center;
+  font-weight: 500;
+  flex-shrink: 0; // Prevent shrinking
+}
+
+.slider {
+  flex: 1;
+  height: 32px; // Bigger height for easier dragging
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  outline: none;
+  cursor: pointer;
+  margin: 0 0.5rem;
+  position: relative;
+  
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 40px; // Bigger thumb for easier grabbing
+    height: 40px; // Bigger thumb for easier grabbing
+    background: var(--accent-color, #00d4ff);
+    border: 3px solid var(--bg-primary);
+    border-radius: 50%;
+    cursor: grab;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6), 0 0 0 3px rgba(0, 212, 255, 0.4);
+    margin-top: -12px; // Center the thumb on the track
+    
+    &:hover {
+      transform: scale(1.15);
+      box-shadow: 0 6px 20px rgba(0, 212, 255, 0.8), 0 0 0 4px rgba(0, 212, 255, 0.5);
+    }
+    
+    &:active {
+      cursor: grabbing;
+      transform: scale(1.08);
+    }
+  }
+  
+  &::-moz-range-thumb {
+    width: 40px; // Bigger thumb for easier grabbing
+    height: 40px; // Bigger thumb for easier grabbing
+    background: var(--accent-color, #00d4ff);
+    border: 3px solid var(--bg-primary);
+    border-radius: 50%;
+    cursor: grab;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6), 0 0 0 3px rgba(0, 212, 255, 0.4);
+    
+    &:hover {
+      transform: scale(1.15);
+      box-shadow: 0 6px 20px rgba(0, 212, 255, 0.8), 0 0 0 4px rgba(0, 212, 255, 0.5);
+    }
+    
+    &:active {
+      cursor: grabbing;
+      transform: scale(1.08);
+    }
+  }
+  
+  &::-webkit-slider-runnable-track {
+    height: 16px; // Bigger track for easier interaction
+    background: rgba(60, 60, 60, 0.9); // Dark visible track with good contrast
+    border: 2px solid rgba(180, 180, 180, 0.7); // Bright visible border
+    border-radius: 8px;
+    width: 100%;
+    box-shadow: 
+      inset 0 2px 4px rgba(0, 0, 0, 0.6),
+      0 1px 2px rgba(255, 255, 255, 0.15);
+    cursor: pointer;
+  }
+  
+  &::-moz-range-track {
+    height: 16px; // Bigger track for easier interaction
+    background: rgba(60, 60, 60, 0.9); // Dark visible track with good contrast
+    border: 2px solid rgba(180, 180, 180, 0.7); // Bright visible border
+    border-radius: 8px;
+    width: 100%;
+    box-shadow: 
+      inset 0 2px 4px rgba(0, 0, 0, 0.6),
+      0 1px 2px rgba(255, 255, 255, 0.15);
+    cursor: pointer;
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    
+    &::-webkit-slider-thumb {
+      cursor: not-allowed;
+    }
+    
+    &::-moz-range-thumb {
+      cursor: not-allowed;
+    }
+  }
+}
+
+.numberInput {
+  width: 80px !important; // Wider for better visibility
+  min-width: 80px;
+  max-width: 120px; // Allow expansion for longer values
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  text-align: center;
+  font-family: 'Courier New', monospace;
+  
+  &:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.2);
+  }
+  
+  &:disabled {
+    opacity: 0.7; // Less faded when disabled
+    cursor: default;
+  }
+  
+  // For text inputs (OSC Host, etc.)
+  &[type="text"],
+  &.textInput {
+    width: 100% !important;
+    min-width: 200px;
+    max-width: 100%;
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    font-family: inherit; // Use default font for text inputs
+  }
+}
+
+.textInput {
+  width: 100% !important;
+  min-width: 200px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+
+.oscAddressRow {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  width: 100%;
+  
+  .textInput {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.quickBindButton {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--accent-color);
+  color: var(--text-primary);
+  border: 1px solid var(--accent-color);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: var(--accent-color-hover, var(--accent-color));
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+  
+  i {
+    font-size: 0.8rem;
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.cameraButtons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.cameraButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  width: 100%;
+  
+  &:hover:not(:disabled) {
+    background: var(--bg-hover);
+    border-color: var(--accent-color);
+    transform: translateX(2px);
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  svg {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+  }
+  
+  span {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  &.cameraButtonActive {
+    background: rgba(0, 212, 255, 0.15);
+    border-color: var(--accent-color);
+    border-width: 2px;
+    font-weight: 600;
+    
+    .cameraButtonCheck {
+      color: var(--accent-color);
+      width: 20px;
+      height: 20px;
+    }
+  }
+}
+
+.noCameras {
+  padding: 0.75rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.sliderValue {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--accent-color, #00d4ff);
+  min-width: 60px;
+  text-align: right;
+  font-family: 'Courier New', monospace;
+}
+
+.liveControlRow {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-primary);
+  padding: 1rem 0;
+  border-bottom: 2px solid var(--border-color);
+  margin-bottom: 1rem;
+  width: 100%;
+  resize: both;
+  overflow: auto;
+  min-width: 300px;
+  min-height: 150px;
+  cursor: move;
+}
+
+.previewSection {
+  display: grid;
+  grid-template-columns: 1fr 1fr; // 2 columns for camera and 3D model
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+  position: sticky;
+  top: 200px; /* Adjust based on liveControlRow height */
+  z-index: 99;
+  background: var(--bg-primary);
+  padding: 1rem;
+  border-bottom: 2px solid var(--border-color);
+  width: 100%;
+  box-sizing: border-box;
+  
+  // Shrink-wrap to content
+  height: fit-content;
+  min-height: auto;
+  
+  // Ensure preview containers fill their grid cells
+  > .previewContainer,
+  > .fixture3DContainer {
+    width: 100%;
+    min-width: 0;
+    height: fit-content; // Shrink to content
+    min-height: auto;
+  }
+  
+  @media (max-width: 1200px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.liveControlContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  width: 100%;
+  
+  .controlsTitle {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 0.5rem 0;
+  }
+}
+
+.liveControlSliders {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.liveControlSliderItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.liveControlSliderLabel {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.liveControlSlider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--bg-primary);
+  outline: none;
+  opacity: 0.8;
+  cursor: not-allowed;
+  
+  &::-webkit-slider-thumb {
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent-color);
+    cursor: not-allowed;
+  }
+  
+  &::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent-color);
+    cursor: not-allowed;
+    border: none;
+  }
+}
+
+.gestureIndicator {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+  
+  .gestureLabel {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .gestureDisplay {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+  }
+  
+  .gestureEmoji {
+    font-size: 2rem;
+    line-height: 1;
+    animation: gesturePulse 0.5s ease-in-out;
+  }
+  
+  .gestureText {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--accent-color);
+    text-align: center;
+    text-transform: capitalize;
+  }
+}
+
+@keyframes gesturePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.previewContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  position: relative;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.5rem;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  
+  // Shrink-wrap to content
+  width: 100%;
+  height: fit-content;
+  min-height: auto;
+  
+  &:hover {
+    border-color: var(--accent-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+  
+  // Hide preview when detached
+  &.detached {
+    .canvas,
+    .video {
+      display: none;
+    }
+  }
+  
+  // Placeholder state when tracker is off
+  &.placeholder {
+    opacity: 0.7;
+  }
+}
+
+.placeholderContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.fixture3DContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.5rem;
+  
+  // Shrink-wrap to content
+  width: 100%;
+  height: fit-content;
+  min-height: auto;
+  z-index: 10; /* Position above lattice/grid */
+  transition: all 0.2s ease;
+  
+  &:hover {
+    border-color: var(--accent-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+  
+  // Placeholder state when tracker is off
+  &.placeholder {
+    opacity: 0.7;
+  }
+  
+  // Make 3D model fill entire panel
+  > div {
+    flex: 1;
+    display: flex;
+    align-items: stretch;
+    justify-content: stretch;
+    min-height: 0;
+    width: 100%;
+    height: 100%;
+    
+    // Target the Fixture3DModel container
+    > div {
+      width: 100% !important;
+      height: 100% !important;
+      flex: 1;
+      min-height: 0;
+    }
+  }
+  
+  canvas {
+    z-index: 11; /* Ensure canvas is above everything */
+  }
+}
+
+.previewHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px 4px 0 0;
+  border-bottom: none;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.previewTitle {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.fpsCounters {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 0.75rem;
+  
+  .fpsCounterItem {
+    color: var(--text-secondary);
+    font-weight: 500;
+    padding: 0.25rem 0.5rem;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    
+    &:first-child {
+      color: var(--accent-color);
+    }
+    
+    &:nth-child(2) {
+      color: #4ade80; // Green for overlay
+    }
+    
+    &:nth-child(3) {
+      color: #fbbf24; // Yellow/amber for OpenCV
+    }
+  }
+}
+
+.refreshButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid var(--accent-color);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: rgba(0, 212, 255, 0.2);
+    border-color: var(--accent-color);
+    transform: scale(1.05);
+  }
+  
+  &:active {
+    transform: scale(0.95);
+  }
+  
+  i {
+    font-size: 0.7rem;
+  }
+}
+
+.opencvFpsControl {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  margin-top: 0.5rem;
+  background: rgba(0, 212, 255, 0.15);
+  border: 2px solid var(--accent-color);
+  border-radius: 8px;
+  backdrop-filter: blur(4px);
+}
+
+.opencvFpsLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--accent-color);
+  
+  i {
+    font-size: 0.85rem;
+  }
+}
+
+.opencvFpsSliderWrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.opencvFpsSlider {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+  
+  &::-webkit-slider-thumb {
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    background: var(--accent-color);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      transform: scale(1.2);
+      box-shadow: 0 0 8px var(--accent-color);
+    }
+  }
+  
+  &::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    background: var(--accent-color);
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      transform: scale(1.2);
+      box-shadow: 0 0 8px var(--accent-color);
+    }
+  }
+}
+
+.opencvFpsRangeLabel {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  min-width: 20px;
+  text-align: center;
+}
+
+.opencvFpsNumberInput {
+  width: 60px;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--accent-color);
+  border-radius: 4px;
+  text-align: center;
+  
+  &:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 8px rgba(0, 212, 255, 0.3);
+  }
+}
+
+.detachButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.8rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: var(--bg-hover);
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+  }
+  
+  i {
+    font-size: 0.8rem;
+  }
+}
+
+.video {
+  display: none; // Hidden, used as source for canvas
+}
+
+.canvas {
+  width: 100%;
+  height: auto;
+  max-height: 600px;
+  min-height: 200px;
+  object-fit: contain;
+  background: #000;
+  border: 2px solid var(--border-color);
+  border-radius: 4px;
+  resize: both;
+  overflow: auto;
+  box-sizing: border-box;
+  display: block;
+  max-width: 100%;
+  
+  // Maintain aspect ratio
+  aspect-ratio: auto;
+  
+  // Resize handle styling
+  &::-webkit-resizer {
+    background: var(--accent-color);
+    border-radius: 0 0 4px 0;
+  }
+}
+
+.noPreview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 400px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-secondary);
+}
+
+// Detached Preview Window
+.detachedPreview {
+  position: fixed;
+  z-index: 10000;
+  background: var(--bg-secondary);
+  border: 2px solid var(--accent-color);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  min-width: 400px;
+  max-width: 800px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  cursor: move;
+  
+  &:hover {
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.7);
+  }
+}
+
+.detachedPreviewHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
+  cursor: move !important;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  
+  &:hover {
+    background: var(--bg-hover);
+  }
+  
+  // Ensure the handle class works for react-draggable
+  &:global(.detachedPreviewHeader) {
+    cursor: move !important;
+  }
+}
+
+.detachedPreviewTitle {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--accent-color);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  
+  &::before {
+    content: '📹';
+    font-size: 1rem;
+  }
+}
+
+.closeDetachedButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: var(--error-color, #ff4444);
+    border-color: var(--error-color, #ff4444);
+    color: white;
+    transform: scale(1.1);
+  }
+}
+
+.detachedPreviewContent {
+  position: relative;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  width: 100%;
+  overflow: hidden;
+  
+  .video {
+    display: block; // Show video in detached view
+    width: 100%;
+    height: auto;
+    max-width: 100%;
+    max-height: 70vh;
+    object-fit: contain;
+  }
+  
+  .detachedCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none; // Allow interaction with video underneath
+  }
+}
+
+.detachedCanvas {
+  width: 100%;
+  height: auto;
+  max-height: 70vh;
+  min-height: 200px;
+  object-fit: contain;
+  background: #000;
+  border: 2px solid var(--border-color);
+  border-radius: 4px;
+  resize: both;
+  overflow: auto;
+  box-sizing: border-box;
+  display: block;
+  max-width: 100%;
+  
+  &::-webkit-resizer {
+    background: var(--accent-color);
+    border-radius: 0 0 4px 0;
+  }
+}
+
+.previewControls {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 1.5rem;
+  margin-top: 1rem;
+  overflow-y: auto;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  
+  // Shrink-wrap to content
+  height: fit-content;
+  min-height: auto;
+}
+
+.allControls {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); // Force 2 columns - USE FULL WIDTH
+  grid-auto-rows: auto; // Changed from minmax(auto, 1fr) to auto - shrink to content
+  gap: 1.5rem;
+  padding: 1.5rem;
+  overflow-y: auto;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  align-items: start; // Changed from stretch to start - align to top
+  
+  // Shrink-wrap to content
+  height: fit-content;
+  
+  // Ensure control sections fill their grid cells
+  > .controlSection {
+    width: 100%;
+    min-width: 0;
+    align-self: start; // Changed from stretch to start - align to top
+  }
+  
+  // On smaller screens, stack vertically
+  @media (max-width: 1400px) {
+    grid-template-columns: 1fr;
+    grid-auto-rows: auto;
+  }
+  
+  @media (max-width: 1200px) {
+    gap: 1rem;
+    padding: 1rem;
+  }
+  
+  // Better scrolling
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(78, 205, 196, 0.3);
+    border-radius: 4px;
+    
+    &:hover {
+      background: rgba(78, 205, 196, 0.5);
+    }
+  }
+}
+
+.controlSection {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  min-width: 0; // Prevent overflow
+  width: 100%;
+  max-width: 100%;
+  resize: both;
+  overflow: auto;
+  min-width: 250px; // Reduced from 300px
+  min-height: auto; // Changed from 200px to auto - shrink to content
+  cursor: move;
+  
+  // Ensure sections fill grid columns properly - each section takes 1 column
+  grid-column: span 1;
+  
+  // Shrink-wrap to content - align to top instead of stretching
+  align-self: start;
+  height: fit-content;
+  max-height: 100%;
+}
+
+.cameraControls {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.controlsTitle {
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.5rem;
+}
+
+.liveControlSection {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  
+  .controlsTitle {
+    margin: 0 0 1rem 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--accent-color);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
+
+.liveSlider {
+  // Make live sliders visually distinct with animation
+  &::-webkit-slider-thumb {
+    background: var(--accent-color, #00d4ff) !important;
+    box-shadow: 
+      0 2px 6px rgba(0, 0, 0, 0.4), 
+      0 0 0 2px rgba(0, 212, 255, 0.3),
+      0 0 12px rgba(0, 212, 255, 0.6) !important; // Glowing effect
+    animation: livePulse 2s ease-in-out infinite;
+  }
+  
+  &::-moz-range-thumb {
+    background: var(--accent-color, #00d4ff) !important;
+    box-shadow: 
+      0 2px 6px rgba(0, 0, 0, 0.4), 
+      0 0 0 2px rgba(0, 212, 255, 0.3),
+      0 0 12px rgba(0, 212, 255, 0.6) !important; // Glowing effect
+    animation: livePulse 2s ease-in-out infinite;
+  }
+  
+  &::-webkit-slider-runnable-track {
+    background: linear-gradient(
+      to right,
+      rgba(0, 212, 255, 0.3) 0%,
+      rgba(0, 212, 255, 0.5) 50%,
+      rgba(0, 212, 255, 0.3) 100%
+    ) !important;
+    border-color: rgba(0, 212, 255, 0.6) !important;
+  }
+  
+  &::-moz-range-track {
+    background: linear-gradient(
+      to right,
+      rgba(0, 212, 255, 0.3) 0%,
+      rgba(0, 212, 255, 0.5) 50%,
+      rgba(0, 212, 255, 0.3) 100%
+    ) !important;
+    border-color: rgba(0, 212, 255, 0.6) !important;
+  }
+  
+  &:disabled {
+    opacity: 1 !important; // Keep visible even when disabled
+    cursor: default;
+  }
+}
+
+@keyframes livePulse {
+  0%, 100% {
+    box-shadow: 
+      0 2px 6px rgba(0, 0, 0, 0.4), 
+      0 0 0 2px rgba(0, 212, 255, 0.3),
+      0 0 12px rgba(0, 212, 255, 0.6);
+  }
+  50% {
+    box-shadow: 
+      0 2px 6px rgba(0, 0, 0, 0.4), 
+      0 0 0 3px rgba(0, 212, 255, 0.5),
+      0 0 20px rgba(0, 212, 255, 0.9);
+  }
+}
+
+.status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  margin-top: 1rem;
+}
+
+.statusItem {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.statusLabel {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.running {
+  color: var(--success-color);
+}
+
+.stopped {
+  color: var(--text-secondary);
+}
+
+.detected {
+  color: var(--success-color);
+}
+
+.notDetected {
+  color: var(--text-secondary);
+}
+
+// OSC Endpoints Section
+.oscEndpoints {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 1rem;
+  
+  h4 {
+    margin: 0 0 0.75rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+}
+
+.endpointList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.endpointItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.endpointIcon {
+  width: 16px;
+  height: 16px;
+  color: var(--accent-color, #00d4ff);
+  flex-shrink: 0;
+}
+
+.endpointLabel {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  min-width: 40px;
+}
+
+.endpointAddress {
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  color: var(--accent-color, #00d4ff);
+  background: rgba(0, 212, 255, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 3px;
+  flex: 1;
+}
+
+// Fixture Selection Section
+.fixtureSelection {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 1rem;
+  
+  h4 {
+    margin: 0 0 0.75rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+}
+
+.fixtureList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.fixtureItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: rgba(0, 0, 0, 0.3);
+    border-color: var(--accent-color);
+  }
+  
+  &.selected {
+    background: rgba(0, 212, 255, 0.15);
+    border-color: var(--accent-color);
+  }
+  
+  input[type="checkbox"] {
+    width: auto;
+    cursor: pointer;
+  }
+}
+
+.fixtureName {
+  font-weight: 500;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.channelInfo {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-family: 'Courier New', monospace;
+  padding: 0.25rem 0.5rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 3px;
+}
+
+.noFixtures {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.fixtureHint {
+  margin-top: 0.75rem;
+  padding: 0.5rem;
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px dashed rgba(0, 212, 255, 0.3);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  color: var(--accent-color, #00d4ff);
+  text-align: center;
+}
+

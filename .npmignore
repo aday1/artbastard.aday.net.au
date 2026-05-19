@@ -1,0 +1,54 @@
+# Source files
+src/
+react-app/src/
+react-app/public/
+react-app/index.html
+react-app/vite.config.ts
+react-app/tsconfig*.json
+react-app/vitest.config.ts
+react-app/TESTING.md
+
+# Build files
+build-*.js
+build-without-*.js
+watchdog.js
+
+# Development files
+.agent/
+artbastard-nextjs-frontend/
+face-tracker/
+node_modules/
+.git/
+.github/
+.gitignore
+.gitattributes
+
+# Test files
+react-app/src/**/*.test.ts
+react-app/src/**/*.test.tsx
+react-app/src/test/
+
+# Config files
+.npmrc
+tsconfig.json
+*.log
+*.md
+!README.md
+
+# Data files (user data, not package)
+data/
+
+# Website (separate deployment)
+website/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+

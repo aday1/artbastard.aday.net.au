@@ -1,0 +1,10 @@
+.canvas {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-slider-track, #1f2937) 55%, #0b0f14);
+  border: 1px solid color-mix(in srgb, var(--color-primary, #d68706) 25%, transparent);
+  box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.35);
+}

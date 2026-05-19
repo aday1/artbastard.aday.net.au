@@ -1,0 +1,82 @@
+.tabNavigation {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  border-bottom: 2px solid var(--border-color);
+  background: var(--background-secondary);
+  border-radius: 8px 8px 0 0;
+  padding: 0.5rem 0.5rem 0 0.5rem;
+}
+
+.tabButton {
+  padding: 0.75rem 1.5rem;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 6px 6px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+  
+  &:hover {
+    background: rgba(var(--accent-color-rgb), 0.1);
+    color: var(--text-primary);
+    transform: translateY(-1px);
+  }
+  
+  &:focus {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
+  }
+  
+  &.active {
+    color: var(--accent-color);
+    border-bottom-color: var(--accent-color);
+    background: rgba(var(--accent-color-rgb), 0.05);
+    
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent-color);
+      border-radius: 1px;
+    }
+  }
+  
+  i {
+    font-size: 1rem;
+  }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .tabNavigation {
+    margin-top: 0.5rem;
+    padding: 0.25rem 0.25rem 0 0.25rem;
+  }
+  
+  .tabButton {
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+    
+    span {
+      display: none;
+    }
+  }
+}
+
+/* Dark theme enhancements */
+@media (prefers-color-scheme: dark) {
+  .tabNavigation {
+    background: rgba(255, 255, 255, 0.02);
+  }
+}

@@ -1,0 +1,113 @@
+.midiDebugger {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+  width: 300px;
+  max-height: 80vh;
+  overflow: hidden;
+  background-color: rgba(0, 0, 0, 0.85);
+  border-radius: 6px;
+  border: 1px solid #444;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.debuggerButton {
+  width: 100%;
+  padding: 8px;
+  background-color: #2c2c2c;
+  color: #00ff00;
+  border: none;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+  font-weight: bold;
+  
+  &:hover {
+    background-color: #3c3c3c;
+  }
+}
+
+.debuggerContent {
+  padding: 10px;
+  color: #ddd;
+  max-height: 70vh;
+  overflow-y: auto;
+  
+  h3 {
+    color: #00ff00;
+    margin-top: 0;
+    font-size: 16px;
+    border-bottom: 1px solid #444;
+    padding-bottom: 6px;
+  }
+  
+  h4 {
+    color: #00aaff;
+    margin: 10px 0 5px;
+    font-size: 14px;
+  }
+}
+
+.debugSection {
+  margin-bottom: 15px;
+}
+
+.messagesContainer {
+  background-color: #1a1a1a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  height: 200px;
+  overflow-y: auto;
+  font-family: monospace;
+  font-size: 12px;
+  padding: 8px;
+  
+  pre {
+    margin: 0 0 8px;
+    padding: 4px;
+    border-bottom: 1px dashed #333;
+    
+    &:last-child {
+      border: none;
+    }
+  }
+}
+
+.testButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.testButton {
+  background-color: #006600;
+  color: #f0f0f0;
+  padding: 5px 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  flex: 1;
+  min-width: 120px;
+  
+  &:hover {
+    background-color: #008800;
+  }
+
+  &:nth-child(2) {
+    background-color: #005580;
+    
+    &:hover {
+      background-color: #0077aa;
+    }
+  }
+  
+  &:nth-child(3) {
+    background-color: #7700aa;
+    
+    &:hover {
+      background-color: #9900cc;
+    }
+  }
+}

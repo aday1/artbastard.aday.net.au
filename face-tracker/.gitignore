@@ -1,0 +1,38 @@
+# Build directories
+build/
+bin/
+
+# Compiled binaries
+face-tracker
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+
+# CMake cache
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+*.cmake
+!CMakeLists.txt
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Model files (they're large - optional to commit)
+# Uncomment if you want to ignore them:
+# haarcascade_frontalface_alt.xml
+# lbfmodel.yaml
+
+# Config (may contain local settings)
+# face-tracker-config.json
+
+# OS files
+.DS_Store
+Thumbs.db
+

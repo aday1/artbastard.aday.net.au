@@ -1,0 +1,224 @@
+.targetSelector {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--card-background, #1a1a1a);
+  border: 2px solid var(--primary-color, #3b82f6);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  min-width: 500px;
+  max-width: 600px;
+}
+
+.selectorHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color, #333);
+  background: var(--background-color, #0f0f0f);
+
+  h4 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--text-color, #fff);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .closeButton {
+    background: transparent;
+    border: none;
+    color: var(--text-muted-color, #888);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: var(--danger-color, #ef4444);
+      color: white;
+    }
+  }
+}
+
+.selectorContent {
+  padding: 20px;
+}
+
+.typeSelector {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.typeButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 8px;
+  background: var(--background-color, #0f0f0f);
+  border: 2px solid var(--border-color, #333);
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--text-color, #fff);
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: var(--primary-color, #3b82f6);
+    transform: translateY(-2px);
+  }
+
+  &.active {
+    background: var(--primary-color, #3b82f6);
+    border-color: var(--primary-color, #3b82f6);
+    color: white;
+  }
+}
+
+.targetSelection {
+  margin-bottom: 20px;
+}
+
+.targetList {
+  margin-bottom: 16px;
+
+  label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-color, #fff);
+  }
+
+  .targetSelect {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color, #333);
+    border-radius: 6px;
+    background: var(--background-color, #0f0f0f);
+    color: var(--text-color, #fff);
+    font-size: 0.9rem;
+
+    &:focus {
+      outline: none;
+      border-color: var(--primary-color, #3b82f6);
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
+  }
+}
+
+.valueInput {
+  margin-top: 16px;
+
+  label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-color, #fff);
+  }
+
+  .valueControls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .valueSlider {
+      flex: 1;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--border-color, #333);
+      outline: none;
+
+      &::-webkit-slider-thumb {
+        appearance: none;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: var(--primary-color, #3b82f6);
+        cursor: pointer;
+      }
+
+      &::-moz-range-thumb {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: var(--primary-color, #3b82f6);
+        cursor: pointer;
+        border: none;
+      }
+    }
+
+    .valueNumber {
+      width: 80px;
+      padding: 8px;
+      border: 1px solid var(--border-color, #333);
+      border-radius: 6px;
+      background: var(--background-color, #0f0f0f);
+      color: var(--text-color, #fff);
+      font-size: 0.9rem;
+      text-align: center;
+
+      &:focus {
+        outline: none;
+        border-color: var(--primary-color, #3b82f6);
+      }
+    }
+  }
+}
+
+.selectorActions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color, #333);
+
+  button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+
+    &:hover:not(:disabled) {
+      transform: translateY(-1px);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    &.confirmButton {
+      background: var(--success-color, #10b981);
+      color: white;
+
+      &:hover:not(:disabled) {
+        background: var(--success-hover-color, #059669);
+      }
+    }
+
+    &.cancelButton {
+      background: var(--text-muted-color, #666);
+      color: white;
+
+      &:hover {
+        background: var(--text-color, #888);
+      }
+    }
+  }
+}

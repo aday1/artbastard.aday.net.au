@@ -1,0 +1,269 @@
+.oscMonitor {
+  position: fixed;
+  right: 280px; /* Move left to avoid overlapping with right-side navbar */
+  bottom: 20px; /* Bottom positioning */
+  width: 400px;
+  max-height: 300px; /* This will be the overall max-height including header */
+  background-color: #2a2a2a;
+  border: 2px solid #555;
+  border-radius: 6px;
+  color: #eaeaea;
+  font-family: monospace;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  z-index: 1040; /* Slightly lower than MidiMonitor if they overlap */
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+
+  /* Removed pinned class section */
+  
+  &.collapsed {
+    width: auto; /* Adjust width to content when collapsed */
+    min-width: 180px; /* Ensure a minimum width */
+    height: auto;
+    max-height: none; /* Allow header to define height */
+  }
+  
+  &.flash {
+    border-color: #ff6600; /* OSC flash color - orange */
+    box-shadow: 0 0 10px #ff6600;
+  }
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #333;
+  padding: 6px 10px; /* Adjusted padding */
+  /* cursor: grab; */ /* Indicate draggable - REMOVED */
+  user-select: none;
+  
+  &:hover {
+    background-color: #444;
+  }
+}
+
+.dragHandle {
+  margin-right: 8px;
+  color: #888;
+  /* cursor: grab; */ /* REMOVED */
+  display: none; /* Hide the drag handle element */
+}
+
+.title {
+  font-weight: bold;
+  color: #ff6600; /* OSC title color */
+  margin-right: auto; /* Push controls to the right */
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.scrollbackSetting {
+  font-size: 0.75em;
+  color: #aaa;
+  font-weight: normal;
+}
+
+.scrollbackValue {
+  cursor: pointer;
+  text-decoration: underline;
+  color: #ffaa00;
+  
+  &:hover {
+    color: #ffcc00;
+  }
+}
+
+.scrollbackInput {
+  width: 50px;
+  padding: 2px 4px;
+  background: #222;
+  border: 1px solid #555;
+  border-radius: 3px;
+  color: #fff;
+  font-size: 0.75em;
+  text-align: center;
+  
+  &:focus {
+    outline: none;
+    border-color: #ff6600;
+  }
+}
+
+.status {
+  margin-right: 10px; /* Adjusted margin */
+  font-size: 0.9em;
+  color: #aaa;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  button {
+    background: none;
+    border: none;
+    color: #ccc;
+    padding: 4px;
+    border-radius: 3px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+      background-color: #555;
+      color: #f0f0f0;
+    }
+
+    &.active {
+      background-color: #007bff; /* Same active color as MIDI monitor for consistency */
+      color: #f0f0f0;
+    }
+    
+    &.dismissButton {
+      color: #ff6b6b;
+      
+      &:hover {
+        background-color: rgba(255, 107, 107, 0.2);
+        color: #ff8e8e;
+      }
+    }
+  }
+}
+
+/* .toggle class removed */
+
+.content {
+  padding: 10px;
+  overflow-y: auto;
+  background-color: #222;
+  border-top: 1px solid #444;
+  flex-grow: 1;
+  scroll-behavior: smooth;
+}
+
+.noData {
+  color: #aaa;
+  font-style: italic;
+  margin: 4px 0;
+  text-align: center;
+}
+
+.messageRow {
+  display: flex;
+  flex-wrap: wrap; /* Allow args to wrap */
+  margin-bottom: 6px;
+  padding: 4px;
+  background-color: #252525;
+  border-left: 3px solid #ff6600; /* OSC message color */
+  font-size: 0.9em;
+  border-radius: 3px;
+  cursor: default; /* Remove pointer cursor from message row if not interactive */
+  transition: background-color 0.2s ease;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+  
+  /* Hover effect on message row can be kept if desired, or removed if tooltip is sufficient */
+  /* &:hover {
+    background-color: #2a2a2a;
+    border-left-color: #ffaa00;
+  } */
+}
+
+.address {
+  font-weight: bold;
+  color: #ff6600; /* OSC address color */
+  margin-right: 10px;
+  word-break: break-all; /* Break long addresses */
+}
+
+.args {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: #66ccff; /* OSC args color */
+}
+
+.arg {
+  background-color: #383838;
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+.source { /* If we add source later */
+  flex: 1;
+  text-align: right;
+  color: #aaa;
+  font-size: 0.8em;
+  align-self: center;
+  margin-left: 10px;
+}
+
+/* Hover tooltip styles */
+.hoverTooltip {
+  position: fixed;
+  background: rgba(0, 0, 0, 0.9);
+  color: #f0f0f0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  max-width: 300px;
+  z-index: 10000;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 102, 0, 0.3);
+}
+
+/* Added direct styling for tooltip header and content for clarity */
+.tooltipHeader {
+  font-weight: bold;
+  color: #ff6600; /* OSC theme color */
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(255, 102, 0, 0.5);
+}
+
+.tooltipContent {
+  font-size: 0.75rem; /* Slightly larger for readability */
+  
+  div {
+    margin-bottom: 3px;
+  }
+  strong {
+    color: #ccc; /* Lighter color for labels */
+  }
+}
+
+.argsDetail {
+  margin-top: 4px;
+  padding-left: 10px;
+  border-left: 2px solid rgba(255, 102, 0, 0.4);
+}
+
+.argDetail {
+  display: flex; /* Align type and value nicely */
+  margin-bottom: 2px;
+}
+
+.argType {
+  color: #66ccff; /* Consistent with message row args */
+  font-weight: bold;
+  margin-right: 6px;
+  min-width: 20px; /* For alignment */
+}
+
+.argValue {
+  color: #f0f0f0;
+  word-break: break-all; /* Prevent overflow */
+}
+
+/* Removed duplicated .tooltipArgs, .tooltipArg, .argType, .argValue from here as they are now direct children of .hoverTooltip or part of new structure */

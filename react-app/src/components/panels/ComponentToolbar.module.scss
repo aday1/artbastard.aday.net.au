@@ -1,0 +1,745 @@
+.componentToolbar {
+  position: fixed;
+  top: 20px;
+  right: calc(var(--navbar-expanded-width, 240px) + 20px); // Dynamic spacing from navbar
+  width: 320px;
+  max-height: calc(100vh - 40px); // Account for top/bottom spacing
+  background: rgba(0, 0, 0, 0.98) !important; // More opaque for visibility
+  border: 2px solid rgba(78, 205, 196, 0.5) !important; // More visible border
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8) !important; // Stronger shadow
+  z-index: 1020; // Below navbar (1030) but above content
+  transition: all 0.3s ease;
+  overflow: hidden;
+
+  // Adjust position when navbar is collapsed
+  :global(body.navbar-is-collapsed) & {
+    right: calc(var(--navbar-collapsed-width, 64px) + 20px);
+  }
+
+  // Slideout variant - slides out from panel edge
+  &.slideout {
+    position: fixed !important;
+    z-index: 10000 !important; // Very high z-index to ensure visibility
+    animation: slideOutRight 0.3s ease-out;
+    max-height: calc(100vh - 20px);
+    background: rgba(0, 0, 0, 0.98) !important; // More opaque background
+    border: 2px solid rgba(78, 205, 196, 0.5) !important; // More visible border
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8) !important; // Stronger shadow
+
+    // For left panels, slide from left
+    &[data-panel-side="left"] {
+      animation: slideOutLeft 0.3s ease-out;
+    }
+
+    // For right panels, slide from right
+    &[data-panel-side="right"] {
+      animation: slideOutRight 0.3s ease-out;
+    }
+  }
+
+  @keyframes slideOutRight {
+    from {
+      opacity: 0;
+      transform: translateX(100%);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slideOutLeft {
+    from {
+      opacity: 0;
+      transform: translateX(-100%);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  &.collapsed {
+    height: auto;
+    max-height: 60px;
+  }
+
+  &.docked {
+    position: fixed;
+    right: 0;
+    top: 0;
+    width: 300px;
+    max-height: 100vh;
+    border-radius: 0;
+    border-right: none;
+    border-top: none;
+    z-index: 999;
+  }
+
+  &.minimized {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    right: 20px;
+    top: 20px;
+
+    .toolbarHeader {
+      padding: 0;
+      justify-content: center;
+      border-bottom: none;
+
+      .toolbarTitle {
+        font-size: 1.2rem;
+        margin: 0;
+      }
+
+      .toolbarControls {
+        display: none;
+      }
+    }
+  }
+
+  .toolbarHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background: rgba(0, 0, 0, 0.8);
+    border-bottom: 1px solid rgba(78, 205, 196, 0.2);
+    user-select: none; // Prevent text selection while dragging
+
+    &:not(:has(.toolbarControls:hover)) {
+      cursor: move;
+    }
+
+    .toolbarTitle {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #4ecdc4;
+
+      i {
+        font-size: 0.9em;
+      }
+    }
+
+    .toolbarControls {
+      display: flex;
+      gap: 0.25rem;
+
+      .controlButton {
+        background: transparent;
+        border: 1px solid rgba(78, 205, 196, 0.2);
+        border-radius: 4px;
+        color: rgba(78, 205, 196, 0.7);
+        cursor: pointer;
+        padding: 0.25rem 0.5rem;
+        transition: all 0.2s ease;
+        font-size: 0.8rem;
+
+        &:hover {
+          color: #4ecdc4;
+          border-color: rgba(78, 205, 196, 0.5);
+          background: rgba(78, 205, 196, 0.1);
+        }
+      }
+
+      .collapseButton {
+        background: transparent;
+        border: 1px solid rgba(78, 205, 196, 0.3);
+        border-radius: 4px;
+        color: #4ecdc4;
+        cursor: pointer;
+        padding: 0.25rem 0.5rem;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background: rgba(78, 205, 196, 0.1);
+          border-color: rgba(78, 205, 196, 0.5);
+        }
+      }
+    }
+  }
+
+  .toolbarContent {
+    padding: 1rem;
+    overflow-y: auto;
+    max-height: calc(80vh - 70px);
+
+    .activeChannelsIndicator {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(71, 85, 105, 0.3);
+      border-radius: 6px;
+      padding: 8px;
+      margin-bottom: 12px;
+    }
+
+    .indicatorHeader {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #94a3b8;
+    }
+
+    .squareIndicator {
+      width: 10px;
+      height: 10px;
+      background: #10b981;
+      border: 1px solid rgba(16, 185, 129, 0.5);
+      border-radius: 0;
+      flex-shrink: 0;
+      box-shadow: 0 0 4px rgba(16, 185, 129, 0.4);
+    }
+
+    .indicatorLabel {
+      flex: 1;
+    }
+
+    .indicatorCount {
+      background: rgba(16, 185, 129, 0.2);
+      color: #10b981;
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .channelIndicators {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 3px;
+      width: 100%;
+    }
+
+    .channelIndicator {
+      aspect-ratio: 1;
+      width: 100%;
+      min-width: 28px;
+      min-height: 28px;
+      border-radius: 0 !important; // Force square corners
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.3);
+
+      &:hover {
+        transform: scale(1.1);
+        z-index: 10;
+        box-shadow:
+          inset 0 0 2px rgba(0, 0, 0, 0.3),
+          0 0 8px rgba(16, 185, 129, 0.6);
+        border-color: rgba(16, 185, 129, 0.7);
+      }
+
+      .channelNumber {
+        font-size: 11px;
+        font-weight: 900;
+        color: #ffffff !important;
+        text-shadow:
+          0 1px 3px rgba(0, 0, 0, 1),
+          0 0 6px rgba(0, 0, 0, 0.9),
+          -1px -1px 2px rgba(0, 0, 0, 1),
+          1px 1px 2px rgba(0, 0, 0, 1);
+        pointer-events: none;
+        line-height: 1;
+        letter-spacing: -0.3px;
+        display: block;
+        opacity: 1 !important;
+        visibility: visible !important;
+      }
+    }
+
+    .moreIndicator {
+      aspect-ratio: 1;
+      width: 100%;
+      min-width: 28px;
+      min-height: 28px;
+      border-radius: 0 !important; // Force square corners
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-weight: 700;
+      color: #94a3b8;
+      background: rgba(71, 85, 105, 0.3);
+      border: 1px solid rgba(71, 85, 105, 0.5);
+      cursor: help;
+      box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.3);
+    }
+
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: rgba(78, 205, 196, 0.3);
+      border-radius: 3px;
+
+      &:hover {
+        background: rgba(78, 205, 196, 0.5);
+      }
+    }
+  }
+
+  .layoutControls {
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(78, 205, 196, 0.1);
+
+    .controlGroup {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+
+      .controlButton {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        padding: 0.5rem 0.75rem;
+        background: rgba(78, 205, 196, 0.1);
+        border: 1px solid rgba(78, 205, 196, 0.3);
+        border-radius: 4px;
+        color: #4ecdc4;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background: rgba(78, 205, 196, 0.2);
+          border-color: rgba(78, 205, 196, 0.5);
+        }
+
+        i {
+          font-size: 0.8em;
+        }
+      }
+    }
+
+    .saveDialog {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+
+      .layoutNameInput {
+        flex: 1;
+        padding: 0.5rem;
+        background: rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(78, 205, 196, 0.3);
+        border-radius: 4px;
+        color: white;
+        font-size: 0.85rem;
+
+        &::placeholder {
+          color: rgba(255, 255, 255, 0.5);
+        }
+
+        &:focus {
+          outline: none;
+          border-color: rgba(78, 205, 196, 0.6);
+          background: rgba(0, 0, 0, 0.7);
+        }
+      }
+
+      .saveButton {
+        padding: 0.5rem 1rem;
+        background: rgba(78, 205, 196, 0.2);
+        border: 1px solid rgba(78, 205, 196, 0.4);
+        border-radius: 4px;
+        color: #4ecdc4;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+
+        &:hover:not(:disabled) {
+          background: rgba(78, 205, 196, 0.3);
+        }
+
+        &:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+      }
+    }
+
+    .savedLayouts {
+      label {
+        display: block;
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.7);
+        margin-bottom: 0.5rem;
+      }
+
+      .layoutList {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+
+        .layoutItem {
+          display: flex;
+          align-items: center;
+          gap: 0.25rem;
+        }
+
+        .layoutButton {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.4rem 0.6rem;
+          background: rgba(0, 0, 0, 0.5);
+          border: 1px solid rgba(78, 205, 196, 0.2);
+          border-radius: 4px;
+          color: rgba(255, 255, 255, 0.8);
+          cursor: pointer;
+          font-size: 0.8rem;
+          text-align: left;
+          transition: all 0.2s ease;
+          flex: 1;
+
+          &:hover {
+            background: rgba(78, 205, 196, 0.1);
+            border-color: rgba(78, 205, 196, 0.4);
+            color: #4ecdc4;
+          }
+
+          i {
+            font-size: 0.7em;
+            color: rgba(78, 205, 196, 0.6);
+          }
+
+          &.blankLayoutButton {
+            background: rgba(0, 100, 0, 0.2);
+            border-color: rgba(0, 255, 0, 0.3);
+
+            &:hover {
+              background: rgba(0, 255, 0, 0.1);
+              border-color: rgba(0, 255, 0, 0.5);
+            }
+
+            i {
+              color: rgba(0, 255, 0, 0.6);
+            }
+          }
+        }
+
+        .deleteButton {
+          padding: 0.4rem;
+          background: rgba(255, 0, 0, 0.1);
+          border: 1px solid rgba(255, 0, 0, 0.3);
+          border-radius: 4px;
+          color: rgba(255, 100, 100, 0.8);
+          cursor: pointer;
+          font-size: 0.7rem;
+          transition: all 0.2s ease;
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          &:hover {
+            background: rgba(255, 0, 0, 0.2);
+            border-color: rgba(255, 0, 0, 0.5);
+            color: #ff6b6b;
+          }
+        }
+      }
+
+      .deleteConfirmDialog {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 12000;
+
+        .confirmContent {
+          background: rgba(0, 0, 0, 0.95);
+          border: 1px solid rgba(78, 205, 196, 0.3);
+          border-radius: 8px;
+          padding: 1.5rem;
+          max-width: 300px;
+          text-align: center;
+
+          p {
+            margin: 0 0 1rem 0;
+            color: white;
+            font-size: 0.9rem;
+          }
+
+          .confirmButtons {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+
+            .confirmDeleteButton {
+              padding: 0.5rem 1rem;
+              background: rgba(255, 0, 0, 0.2);
+              border: 1px solid rgba(255, 0, 0, 0.4);
+              border-radius: 4px;
+              color: #ff6b6b;
+              cursor: pointer;
+              font-size: 0.85rem;
+              transition: all 0.2s ease;
+
+              &:hover {
+                background: rgba(255, 0, 0, 0.3);
+                border-color: rgba(255, 0, 0, 0.6);
+              }
+            }
+
+            .cancelButton {
+              padding: 0.5rem 1rem;
+              background: rgba(78, 205, 196, 0.1);
+              border: 1px solid rgba(78, 205, 196, 0.3);
+              border-radius: 4px;
+              color: #4ecdc4;
+              cursor: pointer;
+              font-size: 0.85rem;
+              transition: all 0.2s ease;
+
+              &:hover {
+                background: rgba(78, 205, 196, 0.2);
+                border-color: rgba(78, 205, 196, 0.5);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .categoryFilter {
+    margin-bottom: 1rem;
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 0.5rem;
+    }
+
+    .categorySelect {
+      width: 100%;
+      padding: 0.5rem;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(78, 205, 196, 0.3);
+      border-radius: 4px;
+      color: white;
+      font-size: 0.85rem;
+
+      &:focus {
+        outline: none;
+        border-color: rgba(78, 205, 196, 0.6);
+      }
+
+      option {
+        background: #1a1a1a;
+        color: white;
+      }
+    }
+  }
+
+  .componentList {
+    .listHeader {
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 0.75rem;
+    }
+
+    .components {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+  }
+
+  .draggableComponent {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(78, 205, 196, 0.2);
+    border-radius: 8px;
+    cursor: grab;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(78, 205, 196, 0.1), transparent);
+      transition: left 0.5s ease;
+    }
+
+    &:hover {
+      background: rgba(78, 205, 196, 0.15);
+      border-color: rgba(78, 205, 196, 0.5);
+      transform: translateY(-2px) scale(1.02);
+      box-shadow:
+        0 4px 12px rgba(0, 0, 0, 0.3),
+        0 0 20px rgba(78, 205, 196, 0.2);
+
+      &::before {
+        left: 100%;
+      }
+
+      .dragIndicator {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    &.hovered {
+      border-color: rgba(78, 205, 196, 0.6);
+    }
+
+    &.dragging {
+      opacity: 0.4;
+      cursor: grabbing;
+      transform: scale(0.95);
+      border-color: rgba(78, 205, 196, 0.8);
+      box-shadow: 0 0 20px rgba(78, 205, 196, 0.4);
+    }
+
+    .componentIcon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      background: rgba(78, 205, 196, 0.2);
+      border-radius: 4px;
+      color: #4ecdc4;
+      font-size: 1rem;
+    }
+
+    .dragIndicator {
+      opacity: 0;
+      transform: translateX(-5px);
+      transition: all 0.3s ease;
+      color: rgba(78, 205, 196, 0.6);
+      font-size: 0.85rem;
+    }
+
+    .componentInfo {
+      flex: 1;
+      min-width: 0;
+
+      .componentTitle {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: white;
+        margin-bottom: 0.2rem;
+        line-height: 1.2;
+      }
+
+      .componentCategory {
+        font-size: 0.75rem;
+        color: rgba(78, 205, 196, 0.7);
+        text-transform: uppercase;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+      }
+    }
+  }
+}
+
+.layoutModeSwitcher {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 0.5rem;
+  margin-top: 0.5rem;
+
+  label {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+}
+
+.modeButtons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.modeButton {
+  flex: 1;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.375rem;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #f8fafc;
+  }
+
+  &.active {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: white;
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+  }
+
+  i {
+    font-size: 1rem;
+  }
+}
+
+// Mobile responsive
+@media (max-width: 768px) {
+  .componentToolbar {
+    position: relative;
+    top: auto;
+    right: auto;
+    width: 100%;
+    max-height: none;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+}

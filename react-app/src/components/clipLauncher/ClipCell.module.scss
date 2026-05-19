@@ -1,0 +1,228 @@
+.clipCell {
+  position: relative;
+  background: var(--card-background, #1a1a1a);
+  border: 2px solid var(--border-color, #333);
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 120px;
+  
+  &:hover {
+    border-color: var(--primary-color, #3b82f6);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+  
+  &.empty {
+    border-style: dashed;
+    opacity: 0.6;
+    
+    &:hover {
+      opacity: 1;
+      border-color: var(--primary-color, #3b82f6);
+    }
+  }
+  
+  &.playing {
+    border-color: var(--accent-color, #f59e0b);
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2), 0 0 12px rgba(245, 158, 11, 0.4);
+    animation: playingPulse 2s ease-in-out infinite;
+  }
+  
+  &.queued {
+    border-color: var(--primary-color, #3b82f6);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+  }
+  
+  &.recording {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+  }
+}
+
+@keyframes playingPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2), 0 0 12px rgba(245, 158, 11, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.4), 0 0 16px rgba(245, 158, 11, 0.6);
+  }
+}
+
+.clipHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.clipName {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-color, #fff);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.loopIndicator {
+  color: var(--accent-color, #f59e0b);
+  display: flex;
+  align-items: center;
+}
+
+.clipContent {
+  flex: 1;
+  position: relative;
+  min-height: 60px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.emptySlot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted-color, #888);
+  gap: 8px;
+  
+  span {
+    font-size: 0.75rem;
+  }
+}
+
+.scenePreview {
+  width: 100%;
+  height: 100%;
+  background: var(--clip-color, #64748b);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.playheadProgress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(0, 0, 0, 0.3);
+  
+  .playheadBar {
+    height: 100%;
+    background: var(--accent-color, #f59e0b);
+    width: 50%; // This would be calculated from actual playback position
+    animation: playheadMove 2s linear infinite;
+  }
+}
+
+@keyframes playheadMove {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+.clipControls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.launchButton,
+.recordButton,
+.loopButton {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-color, #333);
+  border-radius: 4px;
+  padding: 6px;
+  color: var(--text-color, #fff);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: var(--primary-color, #3b82f6);
+  }
+  
+  &.playing {
+    background: var(--accent-color, #f59e0b);
+    border-color: var(--accent-color, #f59e0b);
+    color: white;
+  }
+  
+  &.active {
+    background: var(--primary-color, #3b82f6);
+    border-color: var(--primary-color, #3b82f6);
+    color: white;
+  }
+}
+
+.recordingIndicator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #ef4444;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  z-index: 10;
+  
+  .recordingPulse {
+    width: 8px;
+    height: 8px;
+    background: white;
+    border-radius: 50%;
+    animation: recordingPulse 1s ease-in-out infinite;
+  }
+}
+
+@keyframes recordingPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.2);
+  }
+}
+
+.queuedIndicator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--primary-color, #3b82f6);
+  color: white;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+

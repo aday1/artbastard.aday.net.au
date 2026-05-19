@@ -1,0 +1,185 @@
+$form-h: 2.25rem;
+$thumb-d: $form-h;
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  min-height: 10rem;
+  flex: 1;
+  width: 100%;
+  touch-action: none;
+}
+
+.label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-secondary, #94a3b8);
+  margin-bottom: 0.25rem;
+}
+
+.faderShell {
+  flex: 1;
+  position: relative;
+  width: calc(#{$thumb-d} + 1rem);
+  min-height: 9rem;
+  height: 100%;
+  margin: 0 auto;
+}
+
+.input {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--fader-length, 10rem);
+  height: $form-h;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: $form-h;
+  transform: translate(-50%, -50%) rotate(-90deg);
+  transform-origin: center center;
+  cursor: ns-resize;
+  touch-action: none;
+  -webkit-appearance: none;
+  appearance: none;
+  background: linear-gradient(var(--color-card-bg), var(--color-slider-track));
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--color-primary, #d68706) 35%, transparent));
+
+  &::-webkit-slider-runnable-track,
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+  }
+
+  &::-webkit-slider-runnable-track {
+    margin: 0.375em;
+    height: calc(#{$form-h} - 0.75em);
+    border-radius: 999px;
+    box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.4);
+    background:
+      repeating-linear-gradient(
+        to right,
+        transparent 0,
+        transparent calc(100% / var(--steps) - 2px),
+        rgba(218, 151, 78, 0.5) calc(100% / var(--steps) - 2px),
+        rgba(218, 151, 78, 0.5) calc(100% / var(--steps))
+      ),
+      linear-gradient(var(--color-card-bg), var(--color-slider-track));
+  }
+
+  &::-webkit-slider-thumb {
+    box-sizing: border-box;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    border: 2px solid var(--color-accent, #f8dd36);
+    background: linear-gradient(
+      -45deg,
+      #3a3534 15%,
+      var(--color-primary, #d68706) 50%,
+      #3a3534 50%
+    );
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+    cursor: grab;
+  }
+
+  &::-moz-range-track {
+    height: calc(#{$form-h} - 0.75em);
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.6);
+  }
+
+  &::-moz-range-thumb {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    border: 2px solid var(--color-accent, #f8dd36);
+    background: var(--color-primary, #d68706);
+    cursor: grab;
+  }
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.tickName {
+  margin-top: 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--color-accent, #f8dd36);
+  text-align: center;
+  line-height: 1.25;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.tickMeta {
+  font-size: 0.6rem;
+  color: #64748b;
+  text-align: center;
+}
+
+.tickButtons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  width: 100%;
+  max-height: 5rem;
+  overflow-y: auto;
+  margin-top: 0.35rem;
+}
+
+.tickBtn {
+  padding: 0.2rem 0.35rem;
+  font-size: 0.6rem;
+  border-radius: 4px;
+  border: 1px solid #475569;
+  background: #0f172a;
+  color: #cbd5e1;
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  &:hover {
+    border-color: var(--color-primary, #d68706);
+  }
+
+  &.active {
+    border-color: var(--color-accent, #f8dd36);
+    background: color-mix(in srgb, var(--color-primary, #d68706) 22%, #0f172a);
+    color: #f8fafc;
+  }
+}
+
+.disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.sizeTouch {
+  min-height: 0;
+
+  .faderShell {
+    width: calc(3.75rem + 2rem);
+    min-height: 0;
+  }
+
+  .input::-webkit-slider-thumb {
+    width: 3rem;
+    height: 3rem;
+  }
+
+  .input::-moz-range-thumb {
+    width: 3rem;
+    height: 3rem;
+  }
+}

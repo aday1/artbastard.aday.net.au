@@ -1,0 +1,151 @@
+.fancyQuote {
+  font-style: italic;
+  color: var(--text-secondary);
+  margin: 1rem 0;
+  padding: 1.5rem;
+  border-left: 4px solid var(--accent-color, #4ecdc4);
+  background: rgba(78, 205, 196, 0.05);
+  transition: opacity 1s ease, transform 1s ease, border-color 1s ease, background-color 1s ease;
+  position: relative;
+  border-radius: 0 8px 8px 0;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+  animation: colorPulse 8s infinite alternate;
+  
+  .dismissButton {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: rgba(0, 0, 0, 0.1);
+    border: none;
+    border-radius: 4px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text-secondary);
+    opacity: 0.6;
+    transition: all 0.2s ease;
+    z-index: 10;
+    
+    &:hover {
+      opacity: 1;
+      background: rgba(0, 0, 0, 0.2);
+      color: var(--text-primary);
+      transform: scale(1.1);
+    }
+    
+    svg {
+      width: 14px;
+      height: 14px;
+    }
+  }
+  
+  &::before {
+    content: '"';
+    font-size: 4rem;
+    position: absolute;
+    opacity: 0.1;
+    top: 1rem;
+    left: 1rem;
+    font-family: Georgia, serif;
+    z-index: 0;
+  }
+  
+  q {
+    position: relative;
+    z-index: 1;
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 300;
+    
+    &::before, &::after {
+      content: none;
+    }
+  }
+  
+  .quoteSignature {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    text-align: right;
+    font-style: normal;
+    font-weight: 500;
+    opacity: 0.9;
+    transition: color 1s ease;
+    animation: signatureFlash 4s infinite alternate;
+  }
+  
+  &.visible {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  
+  &.hidden {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  
+  // Different styling for different themes
+  :global(.artsnob) & {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.2rem;
+    
+    .quoteSignature {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.85rem;
+      letter-spacing: 0.5px;
+    }
+  }
+  
+  :global(.standard) & {
+    font-family: 'Georgia', serif;
+  }
+  
+  :global(.minimal) & {
+    padding: 1rem;
+    border-width: 2px;
+    margin: 0.5rem 0;
+    font-size: 0.95rem;
+  }
+  
+  @media (max-width: 768px) {
+    font-size: 0.95rem;
+    padding: 1rem;
+    
+    &::before {
+      font-size: 3rem;
+      top: 0.5rem;
+      left: 0.5rem;
+    }
+  }
+}
+
+@keyframes colorPulse {
+  0% {
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+  }
+  50% {
+    box-shadow: 0 3px 15px rgba(var(--accent-rgb, 78, 205, 196), 0.3);
+  }
+  100% {
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+  }
+}
+
+@keyframes signatureFlash {
+  0% {
+    opacity: 0.7;
+    text-shadow: none;
+  }
+  90% {
+    opacity: 1;
+    text-shadow: 0 0 3px rgba(255, 255, 255, 0.2);
+  }
+  100% {
+    opacity: 1;
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+  }
+}

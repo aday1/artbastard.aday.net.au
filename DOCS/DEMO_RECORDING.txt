@@ -1,0 +1,94 @@
+ArtBastard Demo Recording Guide
+================================
+
+How to capture screenshots and demo videos for the showcase page,
+release notes, and bug reports.
+
+------------------------------------------------------------------
+1. Prerequisites
+------------------------------------------------------------------
+
+- Build first if dist/ is missing:    npm run build
+- Start the backend (or let the capture scripts start it):
+    node dist/server.js
+  Server runs at http://localhost:3030 (or your configured port).
+- Required tools (already present in the project's dev container):
+    google-chrome        (or chromium)
+    Xvfb                 (X virtual framebuffer)
+    ffmpeg               (recording / encoding)
+    xdotool              (synthetic input for video interactions)
+    curl, jq, file       (helpers)
+
+------------------------------------------------------------------
+2. Screenshots
+------------------------------------------------------------------
+
+Capture seven still frames of every major route:
+
+    npm run demo:capture-screenshots
+
+Output: /tmp/artbastard-demo-screenshots-YYYYMMDD-HHMMSS/
+
+Routes captured:
+    dmx-control, fixture-page, scenes-acts-page,
+    experimental-page, touchosc-page, external-console, mobile
+
+------------------------------------------------------------------
+3. Videos
+------------------------------------------------------------------
+
+Capture eight short WebM clips for the showcase demo reel:
+
+    npm run demo:capture-videos
+
+Output: website/videos/<name>.webm + <name>.jpg poster.
+
+Clip matrix:
+    dmx-control       1280x720  ~12s
+    fixture-page      1280x720  ~12s
+    scenes-acts       1280x720  ~12s
+    experimental      1280x720  ~10s
+    touchosc          1280x720  ~10s
+    external-console  1280x720  ~10s
+    mobile             430x932  ~10s
+    settings-help     1280x720  ~12s
+
+Tweak via environment variables (see DOCS/SHOWCASE.md):
+    CAPTURE_FRAMERATE        default 24
+    CAPTURE_VBITRATE         default 800k
+    CAPTURE_DURATION_SEC     override per-clip
+    CAPTURE_CLIP_LIST        comma list, e.g. dmx-control,mobile
+    CAPTURE_DISPLAY_NUM      default 99
+    CAPTURE_KEEP_SERVER      1 to skip auto-start of the backend
+
+------------------------------------------------------------------
+4. Combined evidence
+------------------------------------------------------------------
+
+    npm run demo:evidence         smoke + screenshots
+    npm run demo:evidence-full    smoke + screenshots + videos
+
+Use demo:evidence-full when preparing release artefacts.
+
+------------------------------------------------------------------
+5. Manual recording (when scripted capture is not enough)
+------------------------------------------------------------------
+
+When you want narrated walkthroughs, use OBS / QuickTime / ffmpeg
+directly. Suggestions:
+
+- Resolution: 1600x1200 desktop, 430x932 mobile.
+- Frame rate: 24 or 30 fps.
+- Keep clips under 2 minutes each for release notes.
+- Pre-show the empty state of SuperControl on a fresh install:
+  Fixtures > Control > "Add fixtures in Fixture Setup".
+
+------------------------------------------------------------------
+6. Publishing
+------------------------------------------------------------------
+
+- Showcase: anything in website/videos/ ships automatically with
+  the GitHub Pages deploy (deploy-website.yml).
+- GitHub Releases: attach the screenshot directory as a tarball,
+  reference the showcase URL for video links.
+- Bug reports: drag the .webm into the issue body.

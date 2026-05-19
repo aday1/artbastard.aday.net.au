@@ -1,0 +1,56 @@
+/**
+ * Font fallback styles to improve font loading and prevent layout shifts
+ * Add this CSS to your main styles or include as a separate file
+ */
+
+// Import Google Fonts instead of local font files to avoid build errors
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Source+Sans+Pro:wght@300;400;600&family=Space+Mono:wght@400&display=swap');
+
+/* System font fallback stack with offline and emoji support */
+:root {
+  --emoji-fonts: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Segoe UI Symbol";
+  
+  /* Improved system font stacks with appropriate fallbacks */
+  --system-serif: "Playfair Display", "Georgia", "Times New Roman", serif, var(--emoji-fonts);
+  --system-sans: "Source Sans Pro", -apple-system, BlinkMacSystemFont, 
+                 "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif,
+                 var(--emoji-fonts);
+  --system-mono: "Space Mono", SFMono-Regular, Menlo, Monaco, Consolas, 
+                 "Liberation Mono", "Courier New", monospace, var(--emoji-fonts);
+}
+
+/* Apply font-family settings to override the global styles */
+body.artsnob {
+  --font-heading: var(--system-serif);
+  
+  h1, h2, h3, h4, h5, button {
+    font-family: var(--system-serif);
+  }
+}
+
+body.standard {
+  --font-heading: var(--system-sans);
+  
+  h1, h2, h3, h4, h5 {
+    font-family: var(--system-sans);
+    font-weight: 600;
+  }
+}
+
+body.minimal {
+  --font-heading: var(--system-sans);
+  --font-body: var(--system-sans);
+  
+  h1, h2, h3, h4, h5 {
+    font-family: var(--system-sans);
+    font-weight: 300;
+  }
+}
+
+body {
+  font-family: var(--system-sans);
+}
+
+pre, code, .monospace {
+  font-family: var(--system-mono);
+}

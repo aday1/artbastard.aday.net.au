@@ -1,0 +1,1614 @@
+.timelineEditor {
+  background: var(--card-background, #1a1a1a);
+  border: 1px solid var(--border-color, #333);
+  border-radius: 12px;
+  margin-top: 20px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 120px); // Increased height - use more of viewport
+  min-height: 800px; // Increased minimum height
+  max-height: calc(100vh - 100px); // Allow it to use almost full viewport;
+  transition: all 0.3s ease;
+
+  &.fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+    margin: 0;
+    border-radius: 0;
+    z-index: 9999;
+  }
+}
+
+.timelineRulerContainer {
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-color, #333);
+  background: var(--background-color, #0f0f0f);
+  overflow-x: auto;
+  overflow-y: hidden;
+  cursor: pointer;
+  user-select: none;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.02);
+  }
+  
+  &:active {
+    cursor: ew-resize;
+  }
+}
+
+.editorHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  background: var(--background-color, #0f0f0f);
+  border-bottom: 1px solid var(--border-color, #333);
+  flex-shrink: 0;
+
+  .headerLeft {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    h3 {
+      margin: 0;
+      font-size: 1.2rem;
+      color: var(--text-color, #fff);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .durationControl {
+      display: flex;
+      align-items: center;
+
+      .durationButton {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        background: var(--card-background, #1a1a1a);
+        border: 1px solid var(--border-color, #333);
+        border-radius: 6px;
+        color: var(--text-color, #fff);
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background: var(--background-color, #0f0f0f);
+          border-color: var(--primary-color, #3b82f6);
+        }
+      }
+
+      .durationInput {
+        width: 80px;
+        padding: 6px 12px;
+        background: var(--background-color, #0f0f0f);
+        border: 1px solid var(--primary-color, #3b82f6);
+        border-radius: 6px;
+        color: var(--text-color, #fff);
+        font-size: 0.9rem;
+        text-align: center;
+
+        &:focus {
+          outline: none;
+          box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+      }
+    }
+
+    .timelineToggle {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+
+      label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.9rem;
+        color: var(--text-color, #fff);
+        cursor: pointer;
+
+        input[type="checkbox"] {
+          width: 18px;
+          height: 18px;
+          cursor: pointer;
+        }
+      }
+    }
+  }
+
+  .dawControls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px;
+    background: var(--card-background, #1a1a1a);
+    border: 1px solid var(--border-color, #333);
+    border-radius: 6px;
+    flex-wrap: wrap;
+
+    .playbackButtons {
+      display: flex;
+      gap: 8px;
+
+      button {
+        background: var(--primary-color, #3b82f6);
+        border: none;
+        color: white;
+        cursor: pointer;
+        padding: 8px 16px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.9rem;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background: var(--primary-hover-color, #2563eb);
+          transform: translateY(-1px);
+        }
+
+        &.playButton {
+          background: var(--success-color, #10b981);
+          
+          &:hover {
+            background: var(--success-hover-color, #059669);
+          }
+        }
+
+        &.stopButton {
+          background: var(--danger-color, #ef4444);
+          
+          &:hover {
+            background: var(--danger-hover-color, #dc2626);
+          }
+        }
+      }
+    }
+
+    .playbackMode,
+    .speedControl,
+    .bpmSync {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      color: var(--text-color, #fff);
+
+      label {
+        white-space: nowrap;
+      }
+
+      select {
+        background: var(--background-color, #0f0f0f);
+        border: 1px solid var(--border-color, #333);
+        color: var(--text-color, #fff);
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        cursor: pointer;
+      }
+
+      input[type="range"] {
+        width: 80px;
+        cursor: pointer;
+      }
+
+      input[type="checkbox"] {
+        cursor: pointer;
+      }
+
+      span {
+        min-width: 35px;
+        text-align: right;
+      }
+    }
+
+    .audioImport {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      .importButton {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        background: var(--accent-color, #f59e0b);
+        color: white;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background: var(--accent-hover-color, #d97706);
+        }
+
+        input[type="file"] {
+          display: none;
+        }
+      }
+
+      .audioName {
+        font-size: 0.8rem;
+        color: var(--text-muted-color, #888);
+        max-width: 150px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+  }
+
+  .headerActions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    max-width: 100%;
+    overflow-x: auto;
+    padding-top: 8px;
+
+    .undoRedoControls {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--card-background, #1a1a1a);
+      border: 1px solid var(--border-color, #333);
+      border-radius: 6px;
+      padding: 4px;
+
+      button {
+        background: transparent;
+        border: none;
+        color: var(--text-color, #fff);
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        transition: all 0.2s ease;
+
+        &:hover:not(:disabled) {
+          background: var(--primary-color, #3b82f6);
+          color: white;
+        }
+
+        &:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+      }
+    }
+
+    .snapControls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--card-background, #1a1a1a);
+      border: 1px solid var(--border-color, #333);
+      border-radius: 6px;
+      padding: 6px 12px;
+
+      label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.85rem;
+        color: var(--text-color, #fff);
+        cursor: pointer;
+
+        input[type="checkbox"] {
+          cursor: pointer;
+        }
+      }
+
+      .snapInterval {
+        padding: 4px 8px;
+        background: var(--background-color, #0f0f0f);
+        border: 1px solid var(--border-color, #333);
+        border-radius: 4px;
+        color: var(--text-color, #fff);
+        font-size: 0.85rem;
+        cursor: pointer;
+
+        &:focus {
+          outline: none;
+          border-color: var(--primary-color, #3b82f6);
+        }
+      }
+    }
+
+    .zoomControls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: var(--card-background, #1a1a1a);
+      border: 1px solid var(--border-color, #333);
+      border-radius: 6px;
+      
+      button {
+        padding: 6px 10px;
+        background: var(--background-color, #0f0f0f);
+        border: 1px solid var(--border-color, #333);
+        border-radius: 4px;
+        color: var(--text-color, #fff);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        
+        &:hover {
+          background: var(--primary-color, #3b82f6);
+          border-color: var(--primary-color, #3b82f6);
+        }
+      }
+      
+      .zoomLevel {
+        min-width: 80px;
+        text-align: center;
+        font-size: 0.85rem;
+        color: var(--text-muted-color, #888);
+        font-weight: 600;
+      }
+    }
+
+    .trackHeightControls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: var(--card-background, #1a1a1a);
+      border: 1px solid var(--border-color, #333);
+      border-radius: 6px;
+      
+      button {
+        padding: 6px 10px;
+        background: var(--background-color, #0f0f0f);
+        border: 1px solid var(--border-color, #333);
+        border-radius: 4px;
+        color: var(--text-color, #fff);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        
+        &:hover {
+          background: var(--primary-color, #3b82f6);
+          border-color: var(--primary-color, #3b82f6);
+        }
+      }
+      
+      .trackHeightSlider {
+        width: 120px;
+        height: 4px;
+        background: var(--border-color, #333);
+        border-radius: 2px;
+        outline: none;
+        cursor: pointer;
+        
+        &::-webkit-slider-thumb {
+          appearance: none;
+          width: 14px;
+          height: 14px;
+          background: var(--primary-color, #3b82f6);
+          border-radius: 50%;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          
+          &:hover {
+            background: var(--primary-hover-color, #2563eb);
+            transform: scale(1.2);
+          }
+        }
+        
+        &::-moz-range-thumb {
+          width: 14px;
+          height: 14px;
+          background: var(--primary-color, #3b82f6);
+          border: none;
+          border-radius: 50%;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          
+          &:hover {
+            background: var(--primary-hover-color, #2563eb);
+            transform: scale(1.2);
+          }
+        }
+      }
+      
+      .trackHeightValue {
+        min-width: 60px;
+        text-align: center;
+        font-size: 0.85rem;
+        color: var(--text-muted-color, #888);
+        font-weight: 600;
+      }
+
+      .zoomLevel {
+        min-width: 50px;
+        text-align: center;
+        font-size: 0.85rem;
+        color: var(--text-color, #fff);
+      }
+    }
+
+    .addKeyframeButton {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--success-color, #22c55e);
+      color: white;
+      transition: all 0.2s ease;
+
+      &:hover:not(:disabled) {
+        background: var(--success-color-dark, #16a34a);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(34, 197, 94, 0.3);
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+
+    .captureButton,
+    .duplicateButton,
+    .smoothButton,
+    .saveButton,
+    .closeButton {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+
+      &:hover:not(:disabled) {
+        transform: translateY(-1px);
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+
+    .captureButton {
+      background: var(--accent-color, #f59e0b);
+      color: white;
+
+      &:hover:not(:disabled) {
+        background: var(--accent-hover-color, #d97706);
+      }
+    }
+
+    .duplicateButton {
+      background: var(--primary-color, #3b82f6);
+      color: white;
+
+      &:hover:not(:disabled) {
+        background: var(--primary-hover-color, #2563eb);
+      }
+    }
+
+    .smoothButton {
+      background: var(--success-color, #10b981);
+      color: white;
+
+      &:hover:not(:disabled) {
+        background: var(--success-hover-color, #059669);
+      }
+    }
+
+    .waveformMenuContainer {
+      position: relative;
+
+      .waveformButton {
+        padding: 8px 16px;
+        border: 2px solid var(--accent-color, #f59e0b);
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s ease;
+        background: var(--accent-color, #f59e0b);
+        color: white;
+        position: relative;
+        box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+
+        &:hover {
+          background: var(--accent-hover-color, #d97706);
+          border-color: var(--accent-hover-color, #d97706);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(245, 158, 11, 0.5);
+        }
+
+        &:active {
+          transform: translateY(0);
+        }
+
+        .waveformDropdown {
+          position: absolute;
+          top: calc(100% + 4px);
+          left: 0;
+          background: var(--card-background, #1a1a1a);
+          border: 1px solid var(--border-color, #333);
+          border-radius: 6px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+          z-index: 1000;
+          min-width: 160px;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+
+          button {
+            padding: 10px 16px;
+            border: none;
+            background: transparent;
+            color: var(--text-color, #fff);
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-radius: 4px;
+            transition: all 0.15s ease;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color, #333);
+
+            &:last-child {
+              border-bottom: none;
+            }
+
+            &:hover {
+              background: var(--accent-color, #f59e0b);
+              color: white;
+              transform: translateX(4px);
+              box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+            }
+            
+            &:active {
+              transform: translateX(2px);
+            }
+
+            svg {
+              width: 16px;
+              height: 16px;
+            }
+          }
+        }
+      }
+    }
+
+    .saveButton {
+      background: var(--success-color, #10b981);
+      color: white;
+
+      &:hover {
+        background: var(--success-hover-color, #059669);
+      }
+    }
+
+    .closeButton {
+      background: var(--danger-color, #ef4444);
+      color: white;
+
+      &:hover {
+        background: var(--danger-hover-color, #dc2626);
+      }
+    }
+
+    .markerButton {
+      background: var(--accent-color, #f59e0b);
+      color: white;
+
+      &:hover:not(:disabled) {
+        background: var(--accent-hover-color, #d97706);
+      }
+    }
+
+    .importButton {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      background: var(--primary-color, #3b82f6);
+      color: white;
+
+      &:hover {
+        background: var(--primary-hover-color, #2563eb);
+        transform: translateY(-1px);
+      }
+
+      input[type="file"] {
+        display: none;
+      }
+    }
+
+    .exportButton {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      background: var(--primary-color, #3b82f6);
+      color: white;
+
+      &:hover:not(:disabled) {
+        background: var(--primary-hover-color, #2563eb);
+        transform: translateY(-1px);
+      }
+    }
+  }
+}
+
+.channelSelectorPrompt {
+  padding: 40px 20px;
+  text-align: center;
+  background: var(--card-background, #1a1a1a);
+  border: 2px dashed var(--border-color, #333);
+  border-radius: 8px;
+  margin: 20px;
+  color: var(--text-color, #fff);
+
+  h4 {
+    margin: 16px 0 8px;
+    color: var(--text-color, #fff);
+    font-size: 1.1rem;
+  }
+
+  p {
+    margin: 8px 0;
+    color: var(--text-muted-color, #888);
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+
+  .channelSelectorInline {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+
+    label {
+      font-weight: 500;
+      color: var(--text-color, #fff);
+    }
+
+    select {
+      padding: 8px 12px;
+      background: var(--background-color, #0f0f0f);
+      border: 1px solid var(--border-color, #333);
+      border-radius: 6px;
+      color: var(--text-color, #fff);
+      font-size: 0.9rem;
+      min-width: 250px;
+      cursor: pointer;
+
+      &:hover {
+        border-color: var(--primary-color, #3b82f6);
+      }
+
+      &:focus {
+        outline: none;
+        border-color: var(--primary-color, #3b82f6);
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+      }
+    }
+  }
+}
+
+.channelIndicator {
+  margin-left: 6px;
+  padding: 2px 6px;
+  background: var(--accent-color, #f59e0b);
+  color: white;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.viewModeToggle {
+  display: flex;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--card-background, #1a1a1a);
+  border-bottom: 1px solid var(--border-color, #333);
+  flex-shrink: 0;
+  align-items: center;
+
+  button {
+    padding: 6px 12px;
+    border: 1px solid var(--border-color, #333);
+    background: var(--background-color, #0f0f0f);
+    color: var(--text-color, #fff);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: var(--card-background, #1a1a1a);
+      border-color: var(--primary-color, #3b82f6);
+    }
+
+    &.active {
+      background: var(--primary-color, #3b82f6);
+      border-color: var(--primary-color, #3b82f6);
+      color: white;
+
+      &:hover {
+        background: var(--primary-hover-color, #2563eb);
+      }
+    }
+  }
+
+  .addChannelControl {
+    margin-left: auto;
+    
+    select {
+      padding: 6px 12px;
+      background: var(--background-color, #0f0f0f);
+      border: 1px solid var(--border-color, #333);
+      border-radius: 6px;
+      color: var(--text-color, #fff);
+      font-size: 0.85rem;
+      cursor: pointer;
+      min-width: 180px;
+
+      &:hover {
+        border-color: var(--primary-color, #3b82f6);
+      }
+
+      &:focus {
+        outline: none;
+        border-color: var(--primary-color, #3b82f6);
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+      }
+    }
+  }
+}
+
+.deleteChannelButton {
+  padding: 4px 6px;
+  background: transparent;
+  border: 1px solid var(--danger-color, #ef4444);
+  border-radius: 4px;
+  color: var(--danger-color, #ef4444);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: var(--danger-color, #ef4444);
+    color: white;
+  }
+}
+
+.emptyChannelTrack {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100px;
+  color: var(--text-muted-color, #888);
+  font-size: 0.85rem;
+  border: 1px dashed var(--border-color, #333);
+  border-radius: 4px;
+  margin: 4px;
+  background: var(--background-color, #0f0f0f);
+
+  p {
+    margin: 0;
+    text-align: center;
+  }
+}
+
+.markerLane {
+  height: 40px;
+  background: var(--card-background, #1a1a1a);
+  border-bottom: 1px solid var(--border-color, #333);
+  position: relative;
+  flex-shrink: 0;
+  overflow: visible;
+
+  .timelineMarker {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    z-index: 50;
+    transition: all 0.2s ease;
+
+    &:hover {
+      transform: scale(1.1);
+      z-index: 51;
+    }
+
+    .markerLine {
+      width: 2px;
+      height: 24px;
+      background: currentColor;
+      margin-bottom: 2px;
+    }
+
+    .markerLabel {
+      font-size: 0.7rem;
+      color: var(--text-color, #fff);
+      background: currentColor;
+      padding: 2px 6px;
+      border-radius: 999px;
+      white-space: nowrap;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    }
+  }
+}
+
+.timelineContainer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+  min-width: 0; // Allow flex shrinking
+}
+
+.waveformTrack {
+  position: relative;
+  height: 120px;
+  background: var(--card-background, #1a1a1a);
+  border-bottom: 1px solid var(--border-color, #333);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.waveformCanvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.timeRuler {
+  height: 50px;
+  background: var(--background-color, #0f0f0f);
+  border-bottom: 2px solid var(--border-color, #333);
+  position: relative;
+  flex-shrink: 0;
+  overflow: visible;
+
+  .playhead {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--danger-color, #ef4444);
+    z-index: 100;
+    pointer-events: none;
+    box-shadow: 0 0 4px rgba(239, 68, 68, 0.6);
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: -4px;
+      left: -4px;
+      width: 10px;
+      height: 10px;
+      background: var(--danger-color, #ef4444);
+      border-radius: 50%;
+      box-shadow: 0 0 6px rgba(239, 68, 68, 0.8);
+    }
+  }
+}
+
+.timeMarker {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  .markerLine {
+    width: 1px;
+    height: 20px;
+    background: var(--border-color, #555);
+  }
+
+  .markerLabel {
+    font-size: 0.85rem;
+    color: #e5edf9;
+    margin-top: 2px;
+    white-space: nowrap;
+    font-family: monospace;
+    padding: 1px 4px;
+    border-radius: 4px;
+    background: radial-gradient(circle at center, rgba(15,23,42,0.9) 0%, rgba(15,23,42,0.6) 60%, transparent 100%);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  }
+}
+
+.timelineTrack {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: auto;
+  background: var(--card-background, #1a1a1a);
+  position: relative;
+  min-height: 600px; // Increased minimum height for better visibility
+  height: 100%; // Use full available height
+  
+  .trackPlayhead {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--danger-color, #ef4444);
+    z-index: 50;
+    pointer-events: none;
+    box-shadow: 0 0 4px rgba(239, 68, 68, 0.6);
+  }
+}
+
+.multiChannelTimeline {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.channelTrack {
+  display: flex;
+  border-bottom: 1px solid var(--border-color, #333);
+  // min-height is set dynamically via inline style based on trackHeight state
+  background: rgba(59, 130, 246, 0.02);
+  transition: opacity 0.2s ease;
+
+  &:hover {
+    background: rgba(59, 130, 246, 0.05);
+  }
+
+  &.muted {
+    opacity: 0.4;
+    background: rgba(239, 68, 68, 0.05);
+  }
+
+  &.soloed {
+    background: rgba(245, 158, 11, 0.1);
+    border-left: 3px solid var(--accent-color, #f59e0b);
+  }
+
+  &.hidden {
+    display: none;
+  }
+
+  .channelTrackLabel {
+    width: 220px;
+    flex-shrink: 0;
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border-right: 1px solid var(--border-color, #333);
+    background: var(--background-color, #0f0f0f);
+
+    .channelInfo {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .channelNumber {
+      font-weight: 600;
+      color: var(--primary-color, #3b82f6);
+      font-size: 0.9rem;
+    }
+
+    .channelName {
+      font-size: 0.75rem;
+      color: var(--text-muted-color, #888);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .laneControls {
+      display: flex;
+      gap: 4px;
+
+      button {
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        border: 1px solid var(--border-color, #333);
+        background: var(--card-background, #1a1a1a);
+        color: var(--text-muted-color, #888);
+        border-radius: 4px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        font-size: 0.85rem;
+
+        &:hover {
+          background: var(--background-color, #0f0f0f);
+          border-color: var(--primary-color, #3b82f6);
+          color: var(--text-color, #fff);
+        }
+
+        &.active {
+          border-color: var(--primary-color, #3b82f6);
+          color: var(--primary-color, #3b82f6);
+        }
+      }
+
+      .muteButton {
+        &.active {
+          background: var(--danger-color, #ef4444);
+          border-color: var(--danger-color, #ef4444);
+          color: white;
+
+          &:hover {
+            background: var(--danger-hover-color, #dc2626);
+          }
+        }
+      }
+
+      .soloButton {
+        &.active {
+          background: var(--accent-color, #f59e0b);
+          border-color: var(--accent-color, #f59e0b);
+          color: white;
+
+          &:hover {
+            background: var(--accent-hover-color, #d97706);
+          }
+        }
+      }
+    }
+  }
+
+  .channelTrackContent {
+    flex: 1;
+    position: relative;
+    padding: 8px 0;
+    overflow: visible;
+
+    .trackPlayhead {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--danger-color, #ef4444);
+      z-index: 50;
+      pointer-events: none;
+      box-shadow: 0 0 4px rgba(239, 68, 68, 0.6);
+    }
+
+    .channelCurve {
+      width: 100%;
+      // height is set dynamically via inline style based on trackHeight state
+      display: block;
+      cursor: crosshair;
+      
+      &:hover {
+        background: rgba(59, 130, 246, 0.02);
+      }
+    }
+  }
+}
+
+.timelineContent {
+  min-height: 100%;
+  min-width: 100%;
+  position: relative;
+  padding: 20px 0;
+  width: max-content;
+  display: flex;
+  flex-direction: column;
+  
+  // Ensure content stretches to fill available width
+  & > * {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+.selectionBox {
+  position: absolute;
+  border: 2px dashed var(--primary-color, #3b82f6);
+  background: rgba(59, 130, 246, 0.1);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.keyframeMarker {
+  position: absolute;
+  // top is set dynamically based on DMX value in single view mode
+  // In multi view mode, keyframes are positioned within their channel tracks
+  cursor: move;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  transform: translateX(-50%); // Center the marker on its X position
+
+  &.selected {
+    z-index: 20;
+
+    .keyframeDot {
+      background: var(--accent-color, #f59e0b) !important;
+      border-color: var(--accent-color, #f59e0b) !important;
+      box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.4), 0 4px 12px rgba(245, 158, 11, 0.6);
+      transform: scale(1.2);
+    }
+
+    .keyframeLabel {
+      background: var(--accent-color, #f59e0b);
+      color: white;
+      border-color: var(--accent-color, #f59e0b);
+      box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+    }
+  }
+
+  &.dragging {
+    opacity: 0.9;
+    z-index: 30;
+    cursor: grabbing;
+    
+    .keyframeDot {
+      transform: scale(1.15);
+    }
+  }
+
+  &.hovered {
+    .keyframeDot {
+      transform: scale(1.15);
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5), 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+    
+    .keyframeLabel {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+  }
+
+  .keyframeDot {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--keyframe-color, var(--primary-color, #3b82f6));
+    border: 3px solid white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.3);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    
+    svg {
+      width: 12px;
+      height: 12px;
+      fill: white;
+      opacity: 0.9;
+    }
+  }
+
+  .keyframeLabel {
+    background: var(--card-background, #1a1a1a);
+    border: 2px solid var(--border-color, #333);
+    border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 1rem;
+  font-weight: 800;
+    color: var(--text-color, #fff);
+  white-space: nowrap;
+    pointer-events: none;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-width: 50px;
+  text-align: center;
+    justify-content: center;
+    
+    .valueLabel {
+    font-size: 1.15rem;
+    font-weight: 900;
+      color: var(--text-color, #fff);
+      line-height: 1.2;
+    }
+    
+    .percentageLabel {
+      font-size: 0.7rem;
+      opacity: 0.8;
+      color: var(--text-muted-color, #888);
+      line-height: 1;
+    }
+    
+    // Legacy support
+    .channelCount {
+      font-size: 0.95rem;
+      font-weight: 800;
+    }
+    
+    .channelText {
+      font-size: 0.75rem;
+      opacity: 0.8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+  }
+
+  &:hover {
+    .keyframeDot {
+      transform: scale(1.15);
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5), 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+    
+    .keyframeLabel {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+  }
+}
+
+.curveVisualization {
+  position: absolute;
+  top: 10px;
+  left: 0;
+  pointer-events: none;
+  z-index: 5;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  padding: 8px;
+}
+
+.curveOverlay {
+  width: 100%;
+  height: 100%;
+  opacity: 0.8;
+}
+
+.curvePath {
+  filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.8)) drop-shadow(0 0 8px rgba(139, 92, 246, 0.4));
+  transition: all 0.2s ease;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  
+  &:hover {
+    filter: drop-shadow(0 0 6px rgba(59, 130, 246, 1)) drop-shadow(0 0 12px rgba(139, 92, 246, 0.6));
+    stroke-width: 2.5;
+  }
+}
+
+.fullscreenButton {
+  padding: 6px 10px;
+  background: var(--background-color, #0f0f0f);
+  border: 1px solid var(--border-color, #333);
+  border-radius: 4px;
+  color: var(--text-color, #fff);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: var(--primary-color, #3b82f6);
+    border-color: var(--primary-color, #3b82f6);
+  }
+}
+
+.emptyTimeline {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -40%);
+  text-align: center;
+  color: var(--text-muted-color, #888);
+  max-width: 80%;
+  z-index: 10;
+
+  p {
+    margin-top: 8px;
+    font-size: 0.9rem;
+
+    &:first-of-type {
+      font-size: 1rem;
+      font-weight: 500;
+    }
+  }
+}
+
+.dragPreview {
+  position: absolute;
+  top: 0;
+  pointer-events: none;
+  z-index: 25;
+  transform: translateX(-50%);
+}
+
+.dragPreviewLine {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  height: 100%;
+  background: var(--accent-color, #f59e0b);
+  opacity: 0.7;
+  box-shadow: 0 0 4px rgba(245, 158, 11, 0.6);
+}
+
+.dragPreviewLabel {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--accent-color, #f59e0b);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.propertiesPanel {
+  border-top: 1px solid var(--border-color, #333);
+  background: var(--background-color, #0f0f0f);
+  padding: 20px;
+  flex-shrink: 0;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.propertiesContent {
+  h4 {
+    margin: 0 0 16px 0;
+    font-size: 1rem;
+    color: var(--text-color, #fff);
+  }
+
+  .propertyGroup {
+    margin-bottom: 16px;
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-color, #fff);
+
+      .helpText {
+        color: var(--text-muted-color, #888);
+        cursor: help;
+        display: flex;
+        align-items: center;
+        
+        &:hover {
+          color: var(--primary-color, #3b82f6);
+        }
+      }
+    }
+
+    .fieldDescription {
+      display: block;
+      margin-top: 4px;
+      font-size: 0.75rem;
+      color: var(--text-muted-color, #888);
+      font-style: italic;
+    }
+
+    input,
+    select {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--border-color, #333);
+      border-radius: 6px;
+      background: var(--card-background, #1a1a1a);
+      color: var(--text-color, #fff);
+      font-size: 0.9rem;
+
+      &:focus {
+        outline: none;
+        border-color: var(--primary-color, #3b82f6);
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+      }
+    }
+  }
+
+  .curvePreview {
+    margin-top: 8px;
+    padding: 8px;
+    background: var(--card-background, #1a1a1a);
+    border-radius: 6px;
+  }
+
+  .channelList {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color, #333);
+    border-radius: 6px;
+    padding: 12px;
+    background: var(--card-background, #1a1a1a);
+  }
+
+  .channelItem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+    font-size: 0.85rem;
+
+    span:first-child {
+      min-width: 60px;
+      color: var(--text-muted-color, #888);
+    }
+
+    input[type="range"] {
+      flex: 1;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--border-color, #333);
+      outline: none;
+
+      &::-webkit-slider-thumb {
+        appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--primary-color, #3b82f6);
+        cursor: pointer;
+      }
+
+      &::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--primary-color, #3b82f6);
+        cursor: pointer;
+        border: none;
+      }
+    }
+
+    .channelValueInput {
+      width: 60px;
+      padding: 4px 8px;
+      background: var(--card-background, #1a1a1a);
+      border: 1px solid var(--border-color, #333);
+      border-radius: 4px;
+      color: var(--text-color, #fff);
+      font-size: 0.85rem;
+      text-align: center;
+
+      &:focus {
+        outline: none;
+        border-color: var(--primary-color, #3b82f6);
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+      }
+    }
+
+    .channelRangeInfo {
+      min-width: 70px;
+      font-size: 0.7rem;
+      color: var(--text-muted-color, #888);
+      font-style: italic;
+      text-align: right;
+    }
+  }
+
+  .moreChannels {
+    text-align: center;
+    color: var(--text-muted-color, #888);
+    font-size: 0.8rem;
+    font-style: italic;
+    padding: 8px;
+  }
+
+  .propertyActions {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color, #333);
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+
+    .saveButton {
+      background: var(--success-color, #10b981);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      font-weight: 500;
+
+      &:hover {
+        background: var(--success-hover-color, #059669);
+        transform: translateY(-1px);
+      }
+    }
+
+    .deleteButton {
+      background: var(--danger-color, #ef4444);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background: var(--danger-hover-color, #dc2626);
+        transform: translateY(-1px);
+      }
+    }
+  }
+}

@@ -1,0 +1,652 @@
+// Debug Menu Styles
+.toggleButton {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #007acc, #005aa3);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 122, 204, 0.3);
+  font-variant-emoji: emoji;
+  text-rendering: optimizeSpeed;
+
+  &:hover {
+    background: linear-gradient(135deg, #0099ff, #007acc);
+    box-shadow: 0 4px 12px rgba(0, 122, 204, 0.4);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(0, 122, 204, 0.3);
+  }
+}
+
+.debugPanel {
+  width: 100%;
+  max-width: 1200px;
+  min-width: 800px;
+  max-height: 90vh;
+  background: linear-gradient(145deg, 
+    rgba(15, 15, 25, 0.95), 
+    rgba(25, 25, 40, 0.95)
+  );
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 11px;
+  overflow: hidden;
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  animation: slideIn 0.3s ease-out;
+  margin: 0 auto;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: linear-gradient(90deg, 
+    rgba(0, 122, 204, 0.2), 
+    rgba(102, 51, 153, 0.2)
+  );
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  h3 {
+    margin: 0;
+    color: #00ffff;
+    font-size: 14px;
+    font-weight: 700;
+    text-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+  }
+}
+
+.headerControls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.minimizeButton {
+  background: rgba(255, 255, 0, 0.2);
+  color: #ffff00;
+  border: 1px solid rgba(255, 255, 0, 0.3);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: bold;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background: rgba(255, 255, 0, 0.4);
+    transform: scale(1.1);
+  }
+}
+
+.closeButton {
+  background: rgba(255, 68, 68, 0.2);
+  color: #ff4444;
+  border: 1px solid rgba(255, 68, 68, 0.3);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(255, 68, 68, 0.4);
+    transform: scale(1.1);
+  }
+}
+
+.tabNav {
+  display: flex;
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  overflow-x: auto;
+}
+
+.tabButton {
+  flex: 1;
+  padding: 12px 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  border: none;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+  transition: all 0.3s ease;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+
+  &:hover {
+    color: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  &.active {
+    color: #00ffff;
+    background: rgba(0, 255, 255, 0.1);
+    border-bottom-color: #00ffff;
+    text-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+  }
+}
+
+.tabContent {
+  padding: 16px 20px;
+  max-height: 600px;
+  overflow-y: auto;
+  
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 255, 255, 0.3);
+    border-radius: 3px;
+    
+    &:hover {
+      background: rgba(0, 255, 255, 0.5);
+    }
+  }
+}
+
+.section {
+  margin-bottom: 20px;
+  
+  h4 {
+    margin: 0 0 10px 0;
+    color: #ffff00;
+    font-size: 12px;
+    font-weight: 700;
+    text-shadow: 0 0 8px rgba(255, 255, 0, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+.infoGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  
+  div {
+    color: #e0e0e0;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 6px 10px;
+    border-radius: 4px;
+    border-left: 2px solid rgba(0, 255, 255, 0.3);
+    font-size: 10px;
+  }
+}
+
+.buttonGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.testButton {
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #006600, #004400);
+  color: #f0f0f0;
+  border: 1px solid rgba(0, 255, 0, 0.2);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  text-align: center;
+
+  &:hover {
+    background: linear-gradient(135deg, #008800, #006600);
+    border-color: rgba(0, 255, 0, 0.4);
+    box-shadow: 0 0 12px rgba(0, 255, 0, 0.2);
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+}
+
+.generateButton {
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #007acc, #005aa3);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 3px 10px rgba(0, 122, 204, 0.3);
+  margin: 5px;
+  flex: 1;
+  min-width: 150px;
+
+  &:hover:not(:disabled) {
+    background: linear-gradient(135deg, #0099ff, #007acc);
+    box-shadow: 0 5px 15px rgba(0, 122, 204, 0.4);
+    transform: translateY(-2px);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(0, 122, 204, 0.3);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+}
+
+.crashProofButton {
+  background: linear-gradient(135deg, #28a745, #1e7e34) !important;
+  border: 2px solid rgba(40, 167, 69, 0.3);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '🔧';
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 14px;
+  }
+
+  &:hover:not(:disabled) {
+    background: linear-gradient(135deg, #34ce57, #28a745) !important;
+    box-shadow: 0 5px 20px rgba(40, 167, 69, 0.5);
+    border-color: rgba(40, 167, 69, 0.5);
+  }
+}
+
+.inputGroup {
+  margin-bottom: 12px;
+  
+  label {
+    display: block;
+    color: #00ffff;
+    font-size: 10px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    text-shadow: 0 0 6px rgba(0, 255, 255, 0.3);
+  }
+}
+
+.input {
+  width: 100%;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 11px;
+  transition: all 0.3s ease;
+
+  &:focus {
+    outline: none;
+    border-color: #00ffff;
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 0 8px rgba(0, 255, 255, 0.2);
+  }
+
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+  }
+}
+
+.messageList {
+  max-height: 120px;
+  overflow-y: auto;
+  background: rgba(0, 255, 0, 0.05);
+  border: 1px solid rgba(0, 255, 0, 0.2);
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.message {
+  color: #00ff00;
+  font-size: 9px;
+  margin-bottom: 4px;
+  padding: 4px;
+  background: rgba(0, 255, 0, 0.1);
+  border-radius: 3px;
+  word-break: break-all;
+}
+
+.noMessages {
+  color: rgba(255, 255, 255, 0.4);
+  font-style: italic;
+  text-align: center;
+  padding: 20px;
+}
+
+.errorList {
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.error {
+  padding: 8px;
+  margin: 8px 0;
+  background: rgba(255, 68, 68, 0.1);
+  border: 1px solid rgba(255, 68, 68, 0.3);
+  border-radius: 6px;
+}
+
+.errorMessage {
+  color: #ff6666;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.errorDetails {
+  color: #cccccc;
+  font-size: 9px;
+  margin-bottom: 2px;
+}
+
+.errorTime {
+  color: #aaaaaa;
+  font-size: 9px;
+}
+
+.connectionStatus {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  text-align: center;
+  font-weight: 600;
+  
+  &:has-text("Connected") {
+    color: #00ff00;
+    border-left: 3px solid #00ff00;
+  }
+  
+  &:has-text("Disconnected") {
+    color: #ff4444;
+    border-left: 3px solid #ff4444;
+  }
+}
+
+.infoText {
+  margin-top: 16px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  border-left: 3px solid rgba(0, 255, 255, 0.5);
+  
+  p {
+    margin: 0 0 8px 0;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 10px;
+    line-height: 1.4;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+    
+    strong {
+      color: #00ffff;
+      font-weight: 700;
+    }
+  }
+}
+
+.infoBox {
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(0, 255, 255, 0.1);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  border-radius: 6px;
+  
+  strong {
+    display: block;
+    color: #00ffff;
+    font-size: 11px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    text-shadow: 0 0 6px rgba(0, 255, 255, 0.3);
+  }
+}
+
+.subSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  
+  > strong {
+    color: #ffff00;
+    font-size: 11px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    text-shadow: 0 0 6px rgba(255, 255, 0, 0.3);
+  }
+}
+
+.ipAddress {
+  color: #e0e0e0;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 6px 10px;
+  border-radius: 4px;
+  border-left: 2px solid rgba(0, 255, 255, 0.3);
+  font-size: 10px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  
+  strong {
+    color: #00ffff;
+    font-weight: 600;
+  }
+}
+
+.internalLabel {
+  color: #888;
+  font-size: 9px;
+  font-style: italic;
+  margin-left: 4px;
+}
+
+.noData {
+  color: rgba(255, 255, 255, 0.4);
+  font-style: italic;
+  font-size: 10px;
+  padding: 6px 10px;
+}
+
+.serverInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.serverDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 10px;
+  
+  div {
+    color: #e0e0e0;
+    
+    strong {
+      color: #00ffff;
+      font-weight: 600;
+    }
+  }
+}
+
+.oscDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 10px;
+  
+  div {
+    color: #e0e0e0;
+    
+    strong {
+      color: #00ffff;
+      font-weight: 600;
+    }
+  }
+}
+
+.configBlock {
+  margin-top: 8px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 10px;
+  
+  div {
+    color: #e0e0e0;
+    margin-bottom: 4px;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+    
+    strong {
+      color: #00ffff;
+      font-weight: 600;
+    }
+  }
+}
+
+// Tab-specific styles
+.systemTab, .midiTab, .oscTab, .dmxTab, .touchoscTab {
+  animation: fadeIn 0.2s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+// Responsive design for smaller screens
+@media (max-width: 768px) {
+  .debugPanel {
+    width: 95vw;
+    max-width: 500px;
+  }
+  
+  .infoGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .buttonGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .tabButton {
+    font-size: 9px;
+    padding: 10px 6px;
+  }
+}
+
+// Dark mode compatibility
+@media (prefers-color-scheme: dark) {
+  .debugPanel {
+    background: linear-gradient(145deg, 
+      rgba(10, 10, 15, 0.98), 
+      rgba(20, 20, 30, 0.98)
+    );
+  }
+}
+
+.mappingsList {
+  max-height: 120px;
+  overflow-y: auto;
+  background: rgba(0, 255, 255, 0.1);
+  border-radius: 4px;
+  padding: 0.5rem;
+
+  .mappingItem {
+    font-family: monospace;
+    font-size: 11px;
+    margin-bottom: 4px;
+    color: #00ffff;
+    padding: 2px 4px;
+    background: rgba(0, 255, 255, 0.05);
+    border-radius: 2px;
+  }
+
+  .noMappings {
+    color: #888;
+    font-style: italic;
+    text-align: center;
+    padding: 1rem;
+  }
+}
+
+// High contrast mode
+@media (prefers-contrast: high) {
+  .debugPanel {
+    border: 2px solid #ffffff;
+    background: rgba(0, 0, 0, 0.95);
+  }
+  
+  .tabButton.active {
+    background: #000000;
+    color: #ffffff;
+  }
+}

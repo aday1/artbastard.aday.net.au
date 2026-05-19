@@ -1,0 +1,309 @@
+.midiMonitor {
+  position: fixed;
+  left: 20px; /* Changed from right to left */
+  bottom: 20px;
+  width: 500px; /* Increased width to accommodate DMX info */
+  max-height: 500px; /* Increased to show more messages with scrolling */
+  background-color: #2a2a2a;
+  border: 2px solid #555;
+  border-radius: 6px;
+  color: #eaeaea;
+  font-family: monospace;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  z-index: 1050;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+
+  /* Removed pinned class section */
+  
+  &.collapsed {
+    width: auto; /* Adjust width to content when collapsed */
+    min-width: 180px; /* Ensure a minimum width */
+    height: auto;
+    max-height: none; /* Allow header to define height */
+  }
+  
+  &.flash {
+    border-color: #00ff66;
+    box-shadow: 0 0 10px #00ff66;
+  }
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #333;
+  padding: 6px 10px; /* Adjusted padding */
+  /* cursor: grab; */ /* Indicate draggable - REMOVED */
+  user-select: none;
+  
+  &:hover {
+    background-color: #444;
+  }
+}
+
+.dragHandle {
+  margin-right: 8px;
+  color: #888;
+  /* cursor: grab; */ /* REMOVED */
+  display: none; /* Hide the drag handle as it's not used */
+}
+
+.title {
+  font-weight: bold;
+  color: #00ff66;
+  margin-right: auto; /* Push controls to the right */
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.scrollbackSetting {
+  font-size: 0.75em;
+  color: #aaa;
+  font-weight: normal;
+}
+
+.scrollbackValue {
+  cursor: pointer;
+  text-decoration: underline;
+  color: #ffaa00;
+  
+  &:hover {
+    color: #ffcc00;
+  }
+}
+
+.scrollbackInput {
+  width: 50px;
+  padding: 2px 4px;
+  background: #222;
+  border: 1px solid #555;
+  border-radius: 3px;
+  color: #fff;
+  font-size: 0.75em;
+  text-align: center;
+  
+  &:focus {
+    outline: none;
+    border-color: #00ff66;
+  }
+}
+
+.status {
+  /* margin-left: auto; */ /* Removed this */
+  margin-right: 10px; /* Adjusted margin */
+  font-size: 0.9em;
+  color: #aaa;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 6px; /* Space between buttons */
+
+  button {
+    background: none;
+    border: none;
+    color: #ccc;
+    padding: 4px;
+    border-radius: 3px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+      background-color: #555;
+      color: #f0f0f0;
+    }
+
+    &.active {
+      background-color: #007bff;
+      color: #f0f0f0;
+    }
+    
+    &.dismissButton {
+      color: #ff6b6b;
+      
+      &:hover {
+        background-color: rgba(255, 107, 107, 0.2);
+        color: #ff8e8e;
+      }
+    }
+  }
+}
+
+/* .toggle class removed as it's replaced by icon buttons */
+
+.content {
+  padding: 10px;
+  max-height: 400px; /* Increased to show more messages with scrolling */
+  overflow-y: auto;
+  background-color: #222; /* Slightly different background for content area */
+  border-top: 1px solid #444; /* Separator line */
+  flex-grow: 1; /* Allow content to take available space */
+  
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 255, 102, 0.3);
+    border-radius: 3px;
+    
+    &:hover {
+      background: rgba(0, 255, 102, 0.5);
+    }
+  }
+}
+
+.noData {
+  color: #aaa;
+  font-style: italic;
+  margin: 4px 0;
+  text-align: center;
+}
+
+.messageRow {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 8px;
+  padding: 6px;
+  background-color: #252525;
+  border-left: 3px solid #00ff66;
+  font-size: 0.9em;
+  border-radius: 3px;
+  gap: 4px;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.messageRowMain {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.type {
+  width: 40px;
+  font-weight: bold;
+  color: #00ff66;
+}
+
+.channel {
+  width: 50px;
+  color: #66ccff;
+}
+
+.controller, .note {
+  width: 60px;
+  color: #ffcc00;
+}
+
+.value, .velocity {
+  width: 50px;
+  color: #ff66cc;
+}
+
+.source {
+  flex: 1;
+  text-align: right;
+  color: #aaa;
+  font-size: 0.8em;
+  align-self: center;
+}
+
+.dmxInfo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding-top: 4px;
+  border-top: 1px solid rgba(0, 255, 102, 0.2);
+  margin-top: 4px;
+}
+
+.dmxLabel {
+  color: #00ff66;
+  font-weight: 600;
+  font-size: 0.85em;
+}
+
+.dmxChannel {
+  background: rgba(0, 255, 102, 0.15);
+  border: 1px solid rgba(0, 255, 102, 0.3);
+  border-radius: 4px;
+  padding: 2px 6px;
+  color: #00ff66;
+  font-size: 0.85em;
+  font-weight: 500;
+}
+
+/* Hover tooltip styles */
+.hoverTooltip {
+  position: fixed;
+  background: rgba(0, 0, 0, 0.9);
+  color: #f0f0f0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  max-width: 300px;
+  z-index: 10000;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(0, 255, 102, 0.3);
+}
+
+.tooltipHeader {
+  font-weight: bold;
+  color: #00ff66; /* MIDI theme color */
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(0, 255, 102, 0.5);
+}
+
+.tooltipContent {
+  font-size: 0.75rem;
+  
+  div {
+    margin-bottom: 3px;
+  }
+  strong {
+    color: #ccc;
+  }
+}
+
+.argsDetail {
+  margin-top: 4px;
+  padding-left: 10px;
+  border-left: 2px solid rgba(0, 255, 102, 0.4);
+}
+
+.argDetail {
+  display: flex;
+  margin-bottom: 2px;
+}
+
+.argType {
+  color: #66ccff;
+  font-weight: bold;
+  margin-right: 6px;
+  min-width: 20px;
+}
+
+.argValue {
+  color: #f0f0f0;
+  word-break: break-all;
+}

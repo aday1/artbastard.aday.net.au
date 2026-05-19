@@ -1,0 +1,261 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from tag
+        id: get_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install root dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Install frontend dependencies
+        working-directory: ./react-app
+        run: npm ci --legacy-peer-deps
+
+      - name: Build backend
+        run: npm run build-backend
+
+      - name: Build frontend
+        working-directory: ./react-app
+        run: npm run build:vite
+
+      - name: Create package directory
+        run: |
+          mkdir -p release-package
+          cp -r dist release-package/ || true
+          cp -r react-app/dist release-package/react-app-dist || true
+          cp package.json release-package/ || true
+          cp README.md release-package/ || true
+          cp LICENSE release-package/ || true
+          cp -r DOCS release-package/ || true
+          cp start.sh release-package/ || true
+          cp start.ps1 release-package/ || true
+          echo "node_modules" > release-package/.npmignore
+          echo "*.log" >> release-package/.npmignore
+          echo ".git" >> release-package/.npmignore
+          ls -la release-package/
+
+      - name: Create package archive
+        run: |
+          cd release-package
+          tar -czf ../ArtBastard-DMX512-${{ steps.get_version.outputs.version }}-linux.tar.gz . || exit 1
+          cd ..
+          zip -r ArtBastard-DMX512-${{ steps.get_version.outputs.version }}-windows.zip release-package/ || exit 1
+          ls -lh ArtBastard-DMX512-*.tar.gz ArtBastard-DMX512-*.zip || true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: ArtBastard DMX512 ${{ steps.get_version.outputs.version }}
+          body: |
+            ## 🎭 ArtBastard DMX512 ${{ steps.get_version.outputs.version }} - Photonic Supremacy Edition
+            
+            ### 🌟 The Legend Continues - A Tale of Light, Darkness, and Redemption
+            
+            **In the beginning, there was darkness.**
+            
+            Long before the first DMX signal coursed through copper wires, before the first LED flickered to life, there existed an ancient order known as the **Illuminating Wind Dancing Masters**. In the mountain temples of the forgotten kingdom of Lumina, these mystical lighting artists developed an intricate system of controlling hundreds of candles simultaneously through the subtle manipulation of air currents - the original multi-channel lighting control system.
+            
+            The most revered among them, **Grand Master Feng Zhi**, could conduct symphonies of light using nothing but a series of hand-woven fans. Each fan movement would trigger a carefully calculated chain reaction of air currents that would brighten, dim, or extinguish specific candle arrangements throughout the vast temple halls. Their performances became legendary—entire stories told through the dance of thousands of flames responding in perfect harmony to the WindMaster's movements.
+            
+            When asked why they shared their knowledge freely with all who sought to learn, Master Feng Zhi would say: *"Light belongs to no one; it is our honor merely to dance with it for a time. True illumination comes when knowledge flows as freely as the wind."*
+            
+            **The Dark Ages of Lighting Control**
+            
+            But as the centuries passed, the ancient methods faded with the coming of electricity. The sacred knowledge was scattered, the techniques forgotten. The world entered what historians now call "The Dark Ages of Lighting Control" - a period where lighting consoles were designed by philistines, for philistines, producing illumination that would make a cave dweller weep with shame.
+            
+            In the dimly lit catacombs of a Parisian lighting warehouse, a lone figure hunched over a DMX console, muttering in three languages about the "pedestrian nature of contemporary lumière control." This mysterious individual - known only as *Le Créateur des Lumières* - had a vision that would shake the very foundations of theatrical lighting.
+            
+            *"Mes dieu!"* they exclaimed, dramatically throwing their beret across the room. *"These lighting consoles... they insult the very photons they attempt to command! I shall create something worthy - something that respects the artistry of light itself. Something that honors the legacy of the Wind Dancing Masters while embracing the precision of modern technology!"*
+            
+            **The Birth of ArtBastard**
+            
+            During the Great Performance Hiatus, while lesser mortals learned to bake sourdough and perfect their Zoom backgrounds, our protagonist found themselves with time to contemplate the deeper mysteries of electromagnetic radiation. Sustained entirely by espresso, artistic passion, and the occasional questionable Camembert, they began crafting what would become known as "ArtBastard" - a name that allegedly came to them in a fever dream after consuming said Camembert, though some claim it was simply a moment of pure artistic clarity.
+            
+            *"ArtBastard,"* they whispered to the darkness, *"for it is art, and it is a bastard to those who do not understand it. Perfect. It honors the ancient masters while embracing the modern. It is both reverent and irreverent, like light itself."*
+            
+            The early code was written exclusively between 2 AM and 4 AM, when the creative energies were at their peak, the neighbors couldn't complain about the dramatic typing sounds, and the veil between the mundane and the sublime was at its thinnest. Each line of code was crafted with the precision of a master watchmaker and the passion of a poet.
+            
+            **The Light Jockeys of ArtBastard's Past**
+            
+            Through the years, a secret society of Light Jockeys emerged - those who understood that lighting is not a craft, but an art form. They whispered their secrets into the codebase, each generation building upon the knowledge of the last. From the shadowy depths of broken TouchOSC implementations to the experimental face-tracking rituals that still echo in the Linux wastelands, every feature carries the weight of history.
+            
+            **The Curse of Darkness**
+            
+            But a dark curse plagued ArtBastard for eons - the interface was too dark, too oppressive, too... *pedestrian*. Users cried out in the digital wilderness: *"We cannot see! The darkness consumes us! Give us light, or give us death!"*
+            
+            The Light Jockeys heard their cries. They gathered in the sacred code repositories, their fingers dancing across keyboards like the Wind Dancing Masters of old. They channeled the ancient wisdom, combined it with modern technology, and created something unprecedented: a theme system that could banish the darkness forever.
+            
+            **The Photonic Revolution**
+            
+            This release represents the culmination of centuries of photonic mastery. The Light Jockeys have spoken, and their words are code. The darkness has been banished. The photons are free. The revolution has begun.
+            
+            ### ✨ What's New - The Photonic Revolution
+            
+            **🎨 Complete Theme System Overhaul - "No More Darkness"**
+            - Background brightness control (5% - 50%) - **Finally fixes the "too dark" curse that plagued ArtBastard for eons!**
+            - Background color customization (hue, saturation, brightness) - Paint your interface like the masters of old
+            - **Hue rotation** (-180° to +180°) - Rotate entire color palette for instant variety, just like the chromatic energy manipulators of legend
+            - **5 preset themes**: Ocean Blue, Warm Orange, Forest Green, Purple Dream, Brighter Default - Each named after a fallen Light Jockey
+            - Real-time preview with Save/Reset buttons - See your changes before they're committed to eternity
+            - Full typography control: font size, line height, letter spacing - For when words must dance with light
+            - Spacing controls: border radius, general spacing, animation speed - The geometry of photonic perfection
+            
+            **📁 Individual Fixture Files - The Great Migration**
+            - Each fixture saves to its own JSON file for better version control - No more single-file chaos
+            - Automatic migration from old format - The system remembers the old ways
+            - Easier fixture management and Git integration - Track every change like a true ArtBastard historian
+            
+            **🎯 Fixture Template System - The Library of Alexandria**
+            - Custom templates now persist to server files - Your knowledge survives server restarts
+            - Templates can be committed to Git - Share your wisdom with the community
+            - Improved template validation and error handling - The system protects you from your own mistakes
+            
+            **✅ Testing Infrastructure - The Trials of Build**
+            - Complete test setup with Vitest - Modern testing for modern Light Jockeys
+            - Store tests, component tests, utility tests - Every piece of code must prove itself
+            - CI/CD integration with GitHub Actions - Automated trials in the cloud
+            - Coverage reporting - Know what's tested and what's not
+            
+            **🔧 Enhanced Node Editor - The Draggable Canvas**
+            - Solid dark background for better visibility - No more grid confusion
+            - Smooth node dragging with improved performance - Channels flow like liquid light
+            - Better visual feedback during operations - See what you're doing, always
+            
+            **🌐 Network Interface Detection - The Ping of Truth**
+            - Automatic detection of network interfaces - The system finds what you need
+            - Ping test for DMX device connectivity - Know if your path is clear
+            - USB Ethernet adapter identification - Recognize the tools of the trade
+            
+            **🐛 Bug Fixes & Cleanup - The Great Purge**
+            - Fixed undefined channels error in template manager - The void has been sealed
+            - Removed defunct settings (Web Port, Compact Mode, Hardware Acceleration, FPS Counter) - Dead code exorcised
+            - Removed localStorage export/import (now fully global) - No more single-user isolation
+            - Removed sACN protocol option (Art-Net only) - One protocol to rule them all
+            - Default background brightness increased to 25% (less dark) - The darkness recedes
+            - TouchOSC clearly labeled as broken - The warning signs are clear
+            - Face tracking labeled as "Under Construction" - The experiment continues
+            
+            **🎭 Theatrical Enhancements**
+            - Enhanced launch scripts with ASCII art banners - Every start is a performance
+            - Emojis and progress indicators - Visual feedback for the impatient
+            - Fast start, clean rebuild, and factory reset modes - Choose your path
+            
+            ### 📦 Installation - The Ritual Begins
+            
+            Download the appropriate build for your platform from the assets below. Each package contains the full power of ArtBastard, ready to command the photons.
+            
+            **Quick Start:**
+            1. Extract the archive
+            2. Run `./start.sh` (Linux) or `.\start.ps1` (Windows)
+            3. Watch the ASCII art unfold
+            4. Configure your DMX interface
+            5. Command the light!
+            
+            ### 📚 Documentation - The Sacred Texts
+            
+            - [Getting Started](DOCS/README.md) - Begin your journey
+            - [Features Guide](DOCS/FEATURES.md) - Learn the ways
+            - [Fixture Management](DOCS/FIXTURES.md) - Master the fixtures
+            - [Usage Guide](DOCS/USAGE.md) - Advanced techniques
+            
+            ### 🌐 Website - The Digital Shrine
+            
+            Visit our website: **https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/**
+            
+            The website has been blessed with the latest features, updated documentation, and the full ArtBastard aesthetic. It updates automatically with every release.
+            
+            ### 🧪 Testing - The Trials Continue
+            
+            Our CI/CD pipeline runs comprehensive build and run tests on every push. The system builds both backend and frontend, verifies all artifacts, and tests server startup. If it builds and runs, the test passes - simple and effective.
+            
+            ### 📝 Full Changelog
+            
+            See [CHANGELOG.md](CHANGELOG.md) for detailed changes and the complete history of ArtBastard's evolution.
+            
+            ### 🎭 Technical Specifications - For the Discerning
+            
+            **System Requirements:**
+            - Node.js 20.x or higher (because we don't support ancient runtimes)
+            - Modern browser with WebSocket support (Chrome, Firefox, Edge, Safari)
+            - Network interface capable of Art-Net communication
+            - A discerning eye for photonic artistry
+            
+            **Performance Characteristics:**
+            - Real-time DMX output with sub-millisecond latency
+            - Supports unlimited fixtures (limited only by your imagination and network bandwidth)
+            - 512 channels per universe, unlimited universes
+            - WebSocket synchronization for multi-client control
+            - Server-side state management for global consistency
+            
+            **Architecture Highlights:**
+            - React 18.3.1 with TypeScript for type safety
+            - Zustand for elegant state management
+            - Socket.IO for real-time synchronization
+            - Art-Net protocol for professional DMX distribution
+            - Vite build system for lightning-fast development
+            
+            **What Makes This Release Special:**
+            - Complete theme system overhaul addressing the "too dark" curse
+            - Individual fixture files for better Git integration
+            - Enhanced node editor with smooth dragging
+            - Network interface detection with connectivity testing
+            - Comprehensive testing infrastructure
+            - Theatrical launch scripts with ASCII art
+            - Official website with ArtBastard aesthetic
+            
+            ### 🎭 The Legacy Lives On - Credits to the Light Jockeys
+            
+            This release honors the Light Jockeys of ArtBastard's past - those who danced with photons before us, who tamed the darkness, and who passed down the sacred knowledge. Their spirits live on in every line of code, every feature, and every bug fix.
+            
+            **To Grand Master Feng Zhi and the Wind Dancing Masters:** Your ancient wisdom echoes through the ages. The bamboo tubes and silk panels may be gone, but your philosophy lives on in every DMX signal, every Art-Net packet, every photon we command.
+            
+            **To Le Créateur des Lumières:** Your vision in that Parisian warehouse has become reality. The beret has been retrieved, the Camembert has been consumed, and ArtBastard stands as a testament to your artistic passion.
+            
+            **To the Light Jockeys of ArtBastard's Past:** Your secrets whispered in the code, your experiments in the Linux wastelands, your battles with broken TouchOSC implementations - none of it was in vain. Your legacy is this release.
+            
+            **To the Users Who Cried Out Against the Darkness:** Your voices were heard. The curse has been lifted. The interface shines bright once more.
+            
+            We honor the legacy of the Wind Dancing Masters, who first understood that light could be choreographed. We carry forward their philosophy: that light belongs to no one, that true illumination comes when knowledge flows freely, and that the dance with photons is an honor, not a right.
+            
+            **The Story Continues**
+            
+            This is not the end. This is merely the latest chapter in an epic that spans millennia. From the candle-lit temples of ancient Lumina to the digital realms of modern control, the dance with photons continues. The Light Jockeys watch over us, their wisdom encoded in every commit, their passion burning in every feature.
+            
+            **May your lights shine bright, and may the photons obey your command.**
+            
+            ---
+            
+            *ArtBastard DMX512 v5.12.0 - Where ancient wisdom meets modern control.*  
+            *"For those who understand that lighting is not a craft, but an art form."*  
+            *Éclairer le monde, une photon à la fois.*  
+            *From the Wind Dancing Masters to the Light Jockeys of today - the legend lives on.*
+          draft: false
+          prerelease: false
+          files: |
+            ArtBastard-DMX512-${{ steps.get_version.outputs.version }}-linux.tar.gz
+            ArtBastard-DMX512-${{ steps.get_version.outputs.version }}-windows.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

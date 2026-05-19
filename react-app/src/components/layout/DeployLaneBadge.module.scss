@@ -1,0 +1,49 @@
+.corner {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 10001;
+  font: 700 10px/1.2 ui-monospace, Consolas, monospace;
+  letter-spacing: 0.14em;
+  padding: 4px 8px;
+  border-radius: 3px;
+  border: 1px solid rgba(76, 255, 138, 0.55);
+  pointer-events: none;
+}
+
+.topbar {
+  font: 700 9px/1.2 ui-monospace, Consolas, monospace;
+  letter-spacing: 0.12em;
+  padding: 3px 6px;
+  border-radius: 3px;
+  border: 1px solid rgba(76, 255, 138, 0.55);
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.inline {
+  margin-right: 0.45em;
+}
+
+.corner[data-lane='live'],
+.topbar[data-lane='live'],
+.inline[data-lane='live'] {
+  color: #efffef;
+  background: rgba(46, 204, 113, 0.35);
+}
+
+.corner[data-lane='dev'],
+.topbar[data-lane='dev'],
+.inline[data-lane='dev'] {
+  color: #fff4d6;
+  background: rgba(232, 160, 32, 0.4);
+  border-color: rgba(255, 196, 64, 0.65);
+}
+
+.corner[data-lane='aday'],
+.topbar[data-lane='aday'],
+.inline[data-lane='aday'] {
+  color: #f0e6ff;
+  background: rgba(176, 128, 255, 0.35);
+  border-color: rgba(200, 160, 255, 0.65);
+}

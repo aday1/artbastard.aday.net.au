@@ -1,0 +1,974 @@
+.pinnedChannelsContainer {
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  width: 280px;
+  min-width: 200px;
+  max-width: 500px;
+  display: flex;
+  flex-direction: row;
+  background: var(--color-surface, rgba(15, 23, 42, 0.95));
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border-right: 1px solid var(--color-border, rgba(71, 85, 105, 0.3));
+  box-shadow: var(--shadow-xl, 0 20px 25px -5px rgba(0, 0, 0, 0.1));
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: var(--z-fixed, 1000);
+  overflow: hidden;
+
+  &.collapsed {
+    width: 64px !important;
+  }
+
+  .pinnedContent {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: var(--space-sm, 12px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  .headerRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .quickSceneControls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--color-border, rgba(71, 85, 105, 0.3));
+  }
+
+  .quickSaveButton,
+  .quickLoadButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid;
+    flex: 1;
+    white-space: nowrap;
+
+    svg {
+      flex-shrink: 0;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  .quickSaveButton {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: rgba(16, 185, 129, 0.4);
+    color: #10b981;
+
+    &:hover:not(:disabled) {
+      background: rgba(16, 185, 129, 0.25);
+      border-color: rgba(16, 185, 129, 0.6);
+      transform: translateY(-1px);
+    }
+
+    &:active:not(:disabled) {
+      transform: translateY(0);
+    }
+  }
+
+  .quickLoadButton {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.4);
+    color: #3b82f6;
+
+    &:hover:not(:disabled) {
+      background: rgba(59, 130, 246, 0.25);
+      border-color: rgba(59, 130, 246, 0.6);
+      transform: translateY(-1px);
+    }
+
+    &:active:not(:disabled) {
+      transform: translateY(0);
+    }
+  }
+
+  .quickLoadSelect {
+    padding: 8px 12px;
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.4);
+    border-radius: 6px;
+    color: #3b82f6;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 120px;
+    max-width: 200px;
+
+    &:hover {
+      background: rgba(59, 130, 246, 0.25);
+      border-color: rgba(59, 130, 246, 0.6);
+    }
+
+    &:focus {
+      outline: none;
+      border-color: rgba(59, 130, 246, 0.8);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    option {
+      background: #1e293b;
+      color: #e2e8f0;
+    }
+  }
+
+  .scenesSection {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--color-border, rgba(71, 85, 105, 0.3));
+  }
+
+  .sectionHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .sectionTitle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-primary, #e2e8f0);
+  }
+
+  .sceneCount {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--color-text-secondary, #94a3b8);
+    background: rgba(71, 85, 105, 0.3);
+    padding: 2px 6px;
+    border-radius: 10px;
+  }
+
+  .scenesList {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 200px;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .sceneItemWrapper {
+    width: 100%;
+    margin-bottom: 4px;
+  }
+
+  .sceneItem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: rgba(15, 23, 42, 0.4);
+    border: 1px solid rgba(71, 85, 105, 0.3);
+    border-radius: 6px;
+    color: var(--color-text-primary, #e2e8f0);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+    width: 100%;
+    position: relative;
+
+    svg {
+      flex-shrink: 0;
+      color: rgba(16, 185, 129, 0.7);
+    }
+
+    &:hover {
+      background: rgba(15, 23, 42, 0.7);
+      border-color: rgba(16, 185, 129, 0.5);
+      transform: translateX(2px);
+
+      .sceneRenameButton {
+        opacity: 1;
+      }
+    }
+
+    &:active {
+      transform: translateX(0);
+    }
+
+    .sceneName {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .sceneRenameButton {
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      padding: 2px 4px;
+      background: rgba(59, 130, 246, 0.2);
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: auto;
+      flex-shrink: 0;
+
+      &:hover {
+        background: rgba(59, 130, 246, 0.3);
+        border-color: rgba(59, 130, 246, 0.6);
+      }
+
+      svg {
+        color: rgba(59, 130, 246, 0.9);
+      }
+    }
+  }
+
+  .sceneItemEditing {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 10px;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(59, 130, 246, 0.5);
+    border-radius: 6px;
+    width: 100%;
+
+    .sceneNameInput {
+      flex: 1;
+      padding: 4px 8px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(59, 130, 246, 0.5);
+      border-radius: 4px;
+      color: var(--color-text-primary, #e2e8f0);
+      font-size: 12px;
+      font-weight: 500;
+      outline: none;
+      transition: all 0.2s ease;
+
+      &:focus {
+        border-color: rgba(59, 130, 246, 0.8);
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+      }
+    }
+
+    .sceneEditButton {
+      padding: 4px 6px;
+      background: rgba(59, 130, 246, 0.2);
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+
+      &:hover {
+        background: rgba(59, 130, 246, 0.3);
+        border-color: rgba(59, 130, 246, 0.6);
+      }
+
+      &:last-of-type {
+        background: rgba(239, 68, 68, 0.2);
+        border-color: rgba(239, 68, 68, 0.4);
+
+        &:hover {
+          background: rgba(239, 68, 68, 0.3);
+          border-color: rgba(239, 68, 68, 0.6);
+        }
+
+        svg {
+          color: rgba(239, 68, 68, 0.9);
+        }
+      }
+
+      svg {
+        color: rgba(59, 130, 246, 0.9);
+      }
+    }
+  }
+
+  .scenesList::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .scenesList::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 2px;
+  }
+
+  .scenesList::-webkit-scrollbar-thumb {
+    background: rgba(71, 85, 105, 0.5);
+    border-radius: 2px;
+
+    &:hover {
+      background: rgba(71, 85, 105, 0.7);
+    }
+  }
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(71, 85, 105, 0.5);
+    border-radius: 3px;
+
+    &:hover {
+      background: rgba(71, 85, 105, 0.7);
+    }
+  }
+}
+
+.collapseToggle {
+  background: var(--color-surface, rgba(15, 23, 42, 0.8));
+  border: 1px solid var(--color-border, rgba(71, 85, 105, 0.3));
+  color: var(--color-text-primary, #e2e8f0);
+  font-size: var(--text-sm, 14px);
+  cursor: pointer;
+  padding: var(--space-sm, 12px);
+  border-radius: var(--radius-md, 8px);
+  transition: all 0.2s ease;
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  height: 48px;
+  touch-action: manipulation;
+
+  svg {
+    width: 20px;
+    height: 20px;
+    opacity: 1;
+    transition: all 0.2s ease;
+  }
+
+  &:hover {
+    background: var(--color-neutral-100, rgba(71, 85, 105, 0.5));
+    border-color: var(--color-primary, #10b981);
+  }
+}
+
+.resizeHandle {
+  width: 6px;
+  background: rgba(71, 85, 105, 0.3);
+  cursor: col-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.2s ease;
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 20;
+  margin-right: -3px;
+
+  &:hover {
+    background: rgba(16, 185, 129, 0.5);
+    width: 8px;
+  }
+
+  &:active {
+    background: rgba(16, 185, 129, 0.7);
+    width: 8px;
+  }
+
+  svg {
+    color: rgba(255, 255, 255, 0.5);
+    pointer-events: none;
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border, rgba(71, 85, 105, 0.3));
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary, #e2e8f0);
+}
+
+.count {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary, #94a3b8);
+  background: rgba(71, 85, 105, 0.3);
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.channelsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pinnedChannel {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(71, 85, 105, 0.3);
+  border-radius: 8px;
+  padding: 12px;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: rgba(16, 185, 129, 0.4);
+    background: rgba(15, 23, 42, 0.8);
+  }
+}
+
+.channelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.channelActions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-shrink: 0;
+
+  button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    svg {
+      width: 14px;
+      height: 14px;
+      display: block;
+    }
+  }
+}
+
+.channelInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  overflow: hidden;
+}
+
+.topRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.bottomRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.envelopeBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.5);
+  color: #bfdbfe;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+
+  svg {
+    width: 10px;
+    height: 10px;
+  }
+}
+
+.envelopeRunning {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: rgba(16, 185, 129, 0.7);
+  color: #bbf7d0;
+}
+
+.channelNumber {
+  font-size: 10px;
+  font-weight: 800;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+  padding: 1px 4px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.fixtureName {
+  font-size: 11px;
+  font-weight: 700;
+  color: #e2e8f0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.channelName {
+  font-size: 13px;
+  color: #94a3b8;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jumpButton {
+  padding: 4px 6px;
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 4px;
+  color: #3b82f6;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  &:hover {
+    background: rgba(59, 130, 246, 0.25);
+    border-color: rgba(59, 130, 246, 0.6);
+    transform: scale(1.1);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.envelopeButton {
+  padding: 4px 6px;
+  background: rgba(71, 85, 105, 0.3);
+  border: 1px solid rgba(71, 85, 105, 0.5);
+  border-radius: 4px;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  &:hover:not(:disabled) {
+    background: rgba(71, 85, 105, 0.5);
+    border-color: rgba(16, 185, 129, 0.4);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &.active {
+    background: rgba(231, 76, 60, 0.2);
+    border-color: #e74c3c;
+    color: #e74c3c;
+
+    &:hover:not(:disabled) {
+      background: rgba(231, 76, 60, 0.3);
+      border-color: #e74c3c;
+    }
+  }
+}
+
+.unpinButton {
+  padding: 4px 6px;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 4px;
+  color: #fca5a5;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  &:hover {
+    background: rgba(239, 68, 68, 0.3);
+    border-color: #ef4444;
+    color: #ef4444;
+  }
+}
+
+.valueDisplay {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.percent {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.sliderContainer {
+  width: 100%;
+}
+
+.slider {
+  width: 100%;
+  height: 28px;
+  background: rgba(71, 85, 105, 0.3);
+  border-radius: 14px;
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 100;
+
+  &::-webkit-slider-track {
+    height: 28px;
+    background: rgba(71, 85, 105, 0.3);
+    border-radius: 14px;
+  }
+
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 56px;
+    height: 56px;
+    background: #10b981;
+    border-radius: 50%;
+    cursor: grab;
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.8), 0 0 0 6px rgba(16, 185, 129, 0.4);
+    border: 5px solid rgba(255, 255, 255, 0.95);
+    transition: all 0.2s ease;
+    pointer-events: auto !important;
+    position: relative;
+    z-index: 101;
+    margin-top: -14px; // Center on track
+
+    &:hover {
+      transform: scale(1.25);
+      box-shadow: 0 10px 24px rgba(16, 185, 129, 1.0), 0 0 0 7px rgba(16, 185, 129, 0.5);
+    }
+
+    &:active {
+      cursor: grabbing;
+      transform: scale(1.2);
+      box-shadow: 0 8px 20px rgba(16, 185, 129, 1.0), 0 0 0 8px rgba(16, 185, 129, 0.6);
+    }
+  }
+
+  &::-moz-range-track {
+    height: 28px;
+    background: rgba(71, 85, 105, 0.3);
+    border-radius: 14px;
+    border: none;
+  }
+
+  &::-moz-range-thumb {
+    width: 56px;
+    height: 56px;
+    background: #10b981;
+    border-radius: 50%;
+    cursor: grab;
+    border: 5px solid rgba(255, 255, 255, 0.95);
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.8), 0 0 0 6px rgba(16, 185, 129, 0.4);
+    transition: all 0.2s ease;
+    pointer-events: auto !important;
+    position: relative;
+    z-index: 101;
+
+    &:hover {
+      transform: scale(1.25);
+      box-shadow: 0 10px 24px rgba(16, 185, 129, 1.0), 0 0 0 7px rgba(16, 185, 129, 0.5);
+    }
+
+    &:active {
+      cursor: grabbing;
+      transform: scale(1.2);
+      box-shadow: 0 8px 20px rgba(16, 185, 129, 1.0), 0 0 0 8px rgba(16, 185, 129, 0.6);
+    }
+  }
+}
+
+@keyframes flash {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.5;
+    transform: scale(0.95);
+    background-color: #ef4444;
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.flashing {
+  animation: flash 0.8s infinite ease-in-out;
+  border-color: #ef4444 !important;
+  color: white !important;
+}
+
+.midiControls {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.learnMidiButton {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: rgba(139, 92, 246, 0.15);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 4px;
+  color: #a78bfa;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(139, 92, 246, 0.25);
+    border-color: rgba(139, 92, 246, 0.6);
+  }
+}
+
+.midiInfo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.midiBadge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  background: rgba(139, 92, 246, 0.2);
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  border-radius: 4px;
+  color: #c4b5fd;
+  font-size: 10px;
+  font-weight: 700;
+  flex: 1;
+}
+
+.forgetMidiButton {
+  padding: 3px 6px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 4px;
+  color: #fca5a5;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: #ef4444;
+    color: #ef4444;
+  }
+}
+
+.channelNameInput {
+  padding: 2px 6px;
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  border-radius: 4px;
+  color: #e2e8f0;
+  font-size: 13px;
+  font-weight: 600;
+  width: 100%;
+  font-family: inherit;
+  
+  &:focus {
+    outline: none;
+    border-color: rgba(59, 130, 246, 0.8);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  }
+}
+
+.oscControls {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.oscDisplayButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  border-radius: 4px;
+  color: #00d4ff;
+  font-size: 10px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+  justify-content: flex-start;
+  font-family: 'Courier New', monospace;
+  
+  &:hover {
+    background: rgba(0, 212, 255, 0.2);
+    border-color: rgba(0, 212, 255, 0.5);
+  }
+  
+  svg {
+    flex-shrink: 0;
+  }
+  
+  .oscAddressText {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+}
+
+.oscEditRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.oscInput {
+  flex: 1;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(0, 212, 255, 0.4);
+  border-radius: 4px;
+  color: #e2e8f0;
+  font-size: 10px;
+  font-family: 'Courier New', monospace;
+  
+  &:focus {
+    outline: none;
+    border-color: rgba(0, 212, 255, 0.8);
+    box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.2);
+  }
+  
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+  }
+}
+
+.oscSaveButton,
+.oscCancelButton {
+  padding: 4px 6px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  
+  svg {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+.oscSaveButton {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  
+  &:hover {
+    background: rgba(16, 185, 129, 0.3);
+    border-color: rgba(16, 185, 129, 0.6);
+  }
+}
+
+.oscCancelButton {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  
+  &:hover {
+    background: rgba(239, 68, 68, 0.3);
+    border-color: rgba(239, 68, 68, 0.6);
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .pinnedChannelsContainer {
+    width: 240px;
+
+    &.collapsed {
+      width: 48px;
+    }
+  }
+}

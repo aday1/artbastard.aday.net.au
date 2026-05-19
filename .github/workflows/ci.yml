@@ -1,0 +1,135 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: react-app/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: ./react-app
+      run: npm ci
+    
+    - name: Run linter
+      working-directory: ./react-app
+      run: |
+        if npm run | grep -q "lint"; then
+          npm run lint || true
+        else
+          echo "No lint script found, skipping..."
+        fi
+    
+    - name: Run type check
+      working-directory: ./react-app
+      run: |
+        if npm run | grep -q "type-check"; then
+          npm run type-check || true
+        else
+          npx tsc --noEmit || true
+        fi
+    
+    - name: Run tests
+      working-directory: ./react-app
+      run: npm test -- --run || true
+    
+    - name: Build
+      working-directory: ./react-app
+      run: npm run build
+
+  backend-test:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run backend tests
+      run: npm test || true
+    
+    - name: Check TypeScript
+      run: npx tsc --noEmit || true
+
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+    
+    - name: Check for TODO/FIXME comments
+      run: |
+        echo "Checking for TODO/FIXME comments..."
+        count=$(grep -r "TODO\|FIXME\|XXX\|HACK\|BUG" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" react-app/src src | wc -l || echo "0")
+        echo "Found $count TODO/FIXME comments"
+        if [ "$count" -gt 0 ]; then
+          echo "::warning::Found $count TODO/FIXME comments that should be addressed"
+        fi
+    
+    - name: Check file sizes
+      run: |
+        echo "Checking for large files..."
+        find react-app/src -type f -size +500k -exec ls -lh {} \; || true
+
+  build-check:
+    name: Build Verification
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        cache-dependency-path: react-app/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: ./react-app
+      run: npm ci
+    
+    - name: Build React app
+      working-directory: ./react-app
+      run: npm run build
+    
+    - name: Check build artifacts
+      run: |
+        if [ ! -d "react-app/dist" ]; then
+          echo "::error::Build failed - dist directory not found"
+          exit 1
+        fi
+        echo "Build successful"
+

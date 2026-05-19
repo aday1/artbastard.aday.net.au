@@ -1,0 +1,74 @@
+.menu {
+  position: fixed;
+  z-index: 20000;
+  min-width: 200px;
+  max-width: min(320px, calc(100vw - 16px));
+  padding: 4px;
+  border-radius: 6px;
+  border: 1px solid rgba(76, 255, 138, 0.45);
+  background: rgba(8, 12, 18, 0.96);
+  color: #e8fff0;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+  font: 12px/1.35 ui-monospace, Consolas, monospace;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: rgba(76, 255, 138, 0.14);
+  }
+}
+
+.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.danger {
+  color: #ffb4b4;
+
+  &:hover:not(:disabled) {
+    background: rgba(200, 60, 60, 0.2);
+  }
+}
+
+.checked .label {
+  font-weight: 700;
+}
+
+.icon {
+  display: flex;
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.iconPlaceholder {
+  width: 14px;
+  flex-shrink: 0;
+}
+
+.label {
+  flex: 1;
+}
+
+.check {
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.separator {
+  height: 1px;
+  margin: 4px 6px;
+  background: rgba(76, 255, 138, 0.25);
+}

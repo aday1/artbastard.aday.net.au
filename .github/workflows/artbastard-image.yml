@@ -1,0 +1,95 @@
+name: artbastard-image
+
+on:
+  push:
+    branches: [ main, dev ]
+    tags: [ "v*" ]
+  workflow_dispatch:
+    inputs:
+      track:
+        description: "Deploy track (dev|live)"
+        required: true
+        default: "dev"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine track
+        id: track
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TRACK="${{ github.event.inputs.track }}"
+          elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            TRACK="live"
+          elif [ "${GITHUB_REF}" = "refs/heads/dev" ]; then
+            TRACK="dev"
+          else
+            TRACK="live"
+          fi
+          echo "track=$TRACK" >> "$GITHUB_OUTPUT"
+
+      - name: Write deploy metadata
+        run: |
+          SHORT_SHA="$(echo "$GITHUB_SHA" | cut -c1-12)"
+          BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          mkdir -p react-app/public
+          LANE_SYNC="$(bash ops/compute-lane-sync.sh)"
+          cat > react-app/public/deploy-meta.json <<EOF
+          {
+            "site": "artbastard.aday.net.au",
+            "branch": "${GITHUB_REF_NAME}",
+            "track": "${{ steps.track.outputs.track }}",
+            "version": "${SHORT_SHA}",
+            "build_date": "${BUILD_DATE}",
+            "last_git_sha_short": "${SHORT_SHA}",
+            "last_git_sha": "${GITHUB_SHA}",
+            "last_git_url": "https://github.com/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}",
+            "last_build_at": "${BUILD_DATE}",
+            "last_deployed_at": "${BUILD_DATE}",
+            "changelog_url": "https://github.com/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}",
+            "commits_history_url": "https://github.com/${GITHUB_REPOSITORY}/commits/${GITHUB_REF_NAME}",
+            "changelog_md_url": "https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/CHANGELOG.md",
+            "releases_url": "https://github.com/${GITHUB_REPOSITORY}/releases",
+            "workflow_run_url": "https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}",
+            "deploy_note": "GHCR image built in CI; Linode compose pull (deploy-linode) may lag a few seconds.",
+          $LANE_SYNC
+            "deploy_switcher": {
+              "live_url": "https://artbastard.aday.net.au/",
+              "dev_url": "https://artbastard-dev.aday.net.au/"
+            },
+            "bridge_title": "Raspberry Pi LAN bridge (Art-Net / Ableton Link)",
+            "bridge_doc_url": "https://github.com/aday1/artbastard.aday.net.au/blob/main/DOCS/BRIDGE.md",
+            "bridge_agent_url": "https://github.com/aday1/artbastard.aday.net.au/tree/main/bridge-agent",
+            "run_id": "${GITHUB_RUN_ID}",
+            "run_number": "${GITHUB_RUN_NUMBER}"
+          }
+          EOF
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/artbastard:${{ steps.track.outputs.track }}
+            ghcr.io/${{ github.repository }}/artbastard:${{ steps.track.outputs.track }}-${{ github.sha }}

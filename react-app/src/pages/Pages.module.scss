@@ -1,0 +1,1228 @@
+.pageContainer {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  gap: 1rem;
+  overflow: auto; /* Allow scrolling on long pages (Electron) */
+}
+
+
+.pageHeader {
+  flex-shrink: 0;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.headerContent {
+  flex: 1;
+}
+
+.topBarTools {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.pageHeader h2 {
+  margin: 0 0 0.5rem 0;
+  color: var(--text-primary);
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.pageHeader p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+/* Tab Navigation */
+.tabNavigation {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  border-bottom: 2px solid var(--border-color);
+  background: var(--background-secondary);
+  border-radius: 8px 8px 0 0;
+  padding: 0.5rem 0.5rem 0 0.5rem;
+}
+
+.tabButton {
+  padding: 0.75rem 1.5rem;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 6px 6px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+  
+  &:hover {
+    background: rgba(var(--accent-color-rgb), 0.1);
+    color: var(--text-primary);
+    transform: translateY(-1px);
+  }
+  
+  &.active {
+    color: var(--accent-color);
+    border-bottom-color: var(--accent-color);
+    background: rgba(var(--accent-color-rgb), 0.05);
+    
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent-color);
+      border-radius: 1px;
+    }
+  }
+  
+  i {
+    font-size: 1rem;
+  }
+}
+
+.pageContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  overflow: auto; /* Enable vertical scroll when content exceeds viewport */
+  min-height: 0; /* Allow shrinking below content size */
+}
+
+/* Control Setup Page */
+.setupSection {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto; /* Allow scrolling if content exceeds height */
+}
+
+.monitorSection {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  min-height: 0;
+}
+
+.monitorPanel {
+  background: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1rem;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.monitorPanel h3 {
+  margin: 0 0 1rem 0;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+}
+
+/* Fixture Page */
+.visualizationSection {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  min-height: 0;
+}
+
+.visualPanel {
+  background: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1rem;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.visualPanel h3 {
+  margin: 0 0 1rem 0;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+}
+
+/* Scene Library Page */
+.controlSection {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  max-height: 30%;
+}
+
+/* Fixture Page - Controller Section */
+.controlSection.fixtureController {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 400px; /* Minimum reasonable height */
+  max-height: none;
+  grid-template-columns: none;
+  overflow: visible; /* Changed from hidden to allow canvas to display fully */
+  height: 100%; /* Take full available height */
+  
+  /* Ensure the controller takes full available space */
+  > * {
+    flex: 1;
+    min-height: 400px; /* Match parent minimum */
+    height: 100%;
+  }
+}
+
+/* Setup section styling */
+.setupSection {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.quickLaunchPanel,
+.autoControlPanel {
+  background: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1rem;
+  overflow: hidden;
+}
+
+.quickLaunchPanel h3,
+.autoControlPanel h3 {
+  margin: 0 0 1rem 0;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+}
+
+.gallerySection {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Audio Analysis Page */
+.audioSection {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Remote Control Page */
+.remoteSection {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  overflow: auto;
+}
+
+.configPanel,
+.connectionPanel,
+.layoutPanel,
+.instructionsPanel {
+  background: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.configPanel h3,
+.connectionPanel h3,
+.layoutPanel h3,
+.instructionsPanel h3 {
+  margin: 0 0 1.5rem 0;
+  color: var(--text-primary);
+  font-size: 1.2rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.configPanel h3 i,
+.connectionPanel h3 i,
+.layoutPanel h3 i,
+.instructionsPanel h3 i {
+  color: var(--accent-color);
+}
+
+/* OSC Configuration */
+.configGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.configGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.configGroup label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.configGroup label i {
+  color: var(--accent-color);
+  width: 16px;
+  margin-right: 0.5rem;
+}
+
+.configGroup input[type="text"],
+.configGroup input[type="number"] {
+  padding: 0.75rem;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  transition: border-color 0.2s ease;
+}
+
+.configGroup input[type="text"]:focus,
+.configGroup input[type="number"]:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+.configHint {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.checkboxLabel {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 0.75rem !important;
+  cursor: pointer;
+}
+
+.checkboxLabel input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--accent-color);
+}
+
+/* Connection Status */
+.connectionInfo {
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.statusRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.statusRow:last-child {
+  border-bottom: none;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+}
+
+.status.connected {
+  color: #27ae60;
+  background: rgba(39, 174, 96, 0.1);
+}
+
+.status.connecting {
+  color: #f39c12;
+  background: rgba(243, 156, 18, 0.1);
+}
+
+.status.disconnected {
+  color: #e74c3c;
+  background: rgba(231, 76, 60, 0.1);
+}
+
+.address {
+  font-family: 'Courier New', monospace;
+  background: var(--bg-primary);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  color: var(--accent-color);
+  font-weight: 600;
+}
+
+.clientCount {
+  background: var(--accent-color);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-weight: 600;
+  min-width: 24px;
+  text-align: center;
+}
+
+.clientsList {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.clientsList h4 {
+  margin: 0 0 0.75rem 0;
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.clientItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: var(--bg-secondary);
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+  color: var(--text-secondary);
+}
+
+.clientItem i {
+  color: var(--accent-color);
+}
+
+.connectionControls {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.startButton,
+.stopButton {
+  flex: 1;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.startButton {
+  background: var(--accent-green);
+  color: white;
+}
+
+.startButton:hover {
+  background: var(--accent-green-hover);
+  transform: translateY(-1px);
+}
+
+.stopButton {
+  background: #e74c3c;
+  color: white;
+}
+
+.stopButton:hover {
+  background: #c0392b;
+  transform: translateY(-1px);
+}
+
+/* TouchOSC Export */
+.exportSettings {
+  margin-bottom: 1.5rem;
+}
+
+.settingsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.settingGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.settingGroup label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.settingGroup select {
+  padding: 0.75rem;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  transition: border-color 0.2s ease;
+}
+
+.settingGroup select:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+.exportStats {
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 1rem;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.stat span:first-child {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.25rem;
+}
+
+.stat span:last-child {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent-color);
+}
+
+.exportActions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.exportButton {
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, var(--accent-color), var(--accent-blue));
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  box-shadow: 0 4px 15px rgba(78, 205, 196, 0.3);
+}
+
+.exportButton:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(78, 205, 196, 0.4);
+}
+
+.exportButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.exportInfo {
+  background: rgba(78, 205, 196, 0.1);
+  border: 1px solid rgba(78, 205, 196, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.exportInfo p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.exportInfo i {
+  color: var(--accent-color);
+  flex-shrink: 0;
+}
+
+/* Setup Instructions */
+.setupSteps {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.step {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.stepNumber {
+  width: 32px;
+  height: 32px;
+  background: var(--accent-color);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.stepContent h4 {
+  margin: 0 0 0.5rem 0;
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.stepContent p {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.stepContent code {
+  background: var(--bg-secondary);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  color: var(--accent-color);
+  font-weight: 600;
+}
+
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .monitorSection,
+  .visualizationSection,
+  .controlSection {
+    grid-template-columns: 1fr;
+  }
+  
+  .remoteSection {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+  }
+  
+  .infoPanel {
+    grid-column: 1;
+  }
+  
+  .settingsSection {
+    grid-template-columns: 1fr;
+  }
+  
+  .configGrid,
+  .settingsGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .exportStats {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .pageContainer {
+    padding: 0.5rem;
+    gap: 0.5rem;
+  }
+  
+  .pageHeader {
+    padding-bottom: 0.5rem;
+  }
+  
+  .pageHeader h2 {
+    font-size: 1.2rem;
+  }
+  
+  .tabNavigation {
+    margin-top: 0.5rem;
+    padding: 0.25rem 0.25rem 0 0.25rem;
+  }
+  
+  .tabButton {
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+    
+    span {
+      display: none;
+    }
+  }
+  
+  .connectionControls {
+    flex-direction: column;
+  }
+  
+  .step {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .stepNumber {
+    align-self: center;
+  }
+}
+
+/* Dark theme enhancements */
+@media (prefers-color-scheme: dark) {
+  .tabNavigation {
+    background: rgba(255, 255, 255, 0.02);
+  }
+  
+  .pageHeader {
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* Animation for tab switching */
+.pageContent {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Loading states */
+.loadingSpinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  color: var(--text-secondary);
+  
+  &::before {
+    content: '';
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--border-color);
+    border-top: 2px solid var(--accent-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-right: 0.5rem;
+  }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Error states */
+.errorMessage {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  color: var(--color-error-600);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1rem 0;
+  
+  i {
+    color: var(--color-error-500);
+  }
+}
+
+/* Success states */
+.successMessage {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  color: var(--color-success-600);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1rem 0;
+  
+  i {
+    color: var(--color-success-500);
+  }
+}
+
+/* Empty states */
+.emptyState {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-secondary);
+  
+  i {
+    font-size: 3rem;
+    color: var(--text-tertiary);
+    margin-bottom: 1rem;
+    display: block;
+  }
+  
+  h3 {
+    margin: 0 0 0.5rem 0;
+    color: var(--text-primary);
+  }
+  
+  p {
+    margin: 0;
+    font-size: 0.9rem;
+  }
+}
+
+/* Enhanced TouchOSC Interface Styling */
+.touchOSCLayout {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr;
+  gap: 2rem;
+  height: 100%;
+  min-height: 600px;
+}
+
+.configurationPanel,
+.previewPanel,
+.exportPanel {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.9));
+  border: 1px solid rgba(59, 130, 246, 0.1);
+  border-radius: 16px;
+  padding: 0;
+  box-shadow: 
+    0 10px 25px rgba(0, 0, 0, 0.08),
+    0 4px 10px rgba(0, 0, 0, 0.03);
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.configurationPanel:hover,
+.previewPanel:hover,
+.exportPanel:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.12),
+    0 8px 16px rgba(0, 0, 0, 0.06);
+}
+
+.panelSection {
+  padding: 2rem;
+  
+  &:not(:last-child) {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  }
+  
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0 0 1.5rem 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    
+    i {
+      color: var(--accent-color);
+      font-size: 1.1rem;
+    }
+  }
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.statusBadge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  
+  &.connected {
+    background: rgba(16, 185, 129, 0.1);
+    color: #047857;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+  }
+  
+  &.connecting {
+    background: rgba(245, 158, 11, 0.1);
+    color: #92400e;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+  }
+  
+  &.disconnected {
+    background: rgba(239, 68, 68, 0.1);
+    color: #b91c1c;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
+}
+
+.configGrid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.configGroup {
+  display: flex;
+  flex-direction: column;
+  
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+}
+
+.labelText {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  
+  i {
+    color: var(--accent-color);
+    width: 16px;
+  }
+}
+
+.configInput,
+.configSelect {
+  padding: 0.75rem 1rem;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(5px);
+  
+  &:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: rgba(255, 255, 255, 0.95);
+  }
+  
+  &:hover {
+    border-color: rgba(59, 130, 246, 0.3);
+  }
+}
+
+.configHint {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.checkboxLabel {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.checkboxWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.checkbox {
+  opacity: 0;
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.checkboxCustom {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  
+  i {
+    color: white;
+    font-size: 12px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+}
+
+.checkbox:checked + .checkboxCustom {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  
+  i {
+    opacity: 1;
+  }
+}
+
+.checkbox:hover + .checkboxCustom {
+  border-color: var(--accent-color);
+  transform: scale(1.05);
+}
+
+.connectionActions,
+.exportActions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.primaryButton,
+.secondaryButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.primaryButton {
+  background: linear-gradient(135deg, var(--accent-color), var(--accent-color-hover));
+  color: white;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+}
+
+.secondaryButton {
+  background: rgba(107, 114, 128, 0.1);
+  color: var(--text-primary);
+  border: 1px solid rgba(107, 114, 128, 0.3);
+  
+  &:hover {
+    background: rgba(107, 114, 128, 0.2);
+    transform: translateY(-1px);
+  }
+}
+
+.previewContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+}
+
+.devicePreview {
+  position: relative;
+}
+
+.deviceFrame {
+  width: 200px;
+  height: 320px;
+  background: #1a1a1a;
+  border-radius: 20px;
+  padding: 16px;
+  box-shadow: 
+    0 15px 35px rgba(0, 0, 0, 0.2),
+    inset 0 2px 0 rgba(255, 255, 255, 0.1);
+}
+
+.deviceScreen {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.previewPlaceholder {
+  text-align: center;
+  color: var(--text-secondary);
+  
+  i {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    color: var(--accent-color);
+  }
+  
+  p {
+    margin: 0;
+    font-size: 0.9rem;
+  }
+  
+  .subText {
+    font-size: 0.8rem;
+    color: var(--text-disabled);
+  }
+}
+
+.infoGrid {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.infoItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.infoLabel {
+  font-weight: 500;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.infoValue {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.clientsList {
+  margin-top: 1rem;
+  
+  h4 {
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    color: var(--text-primary);
+  }
+}
+
+.clientsGrid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.clientCard {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 8px;
+  color: #047857;
+  
+  i {
+    color: #059669;
+  }
+  
+  span {
+    flex: 1;
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+}
+
+.clientStatus {
+  i {
+    color: #10b981;
+    font-size: 0.7rem;
+  }
+}
+
+.exportHint {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: rgba(59, 130, 246, 0.05);
+  border: 1px solid rgba(59, 130, 246, 0.1);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  
+  i {
+    color: var(--accent-color);
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+}
+
+.networkComponents {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}

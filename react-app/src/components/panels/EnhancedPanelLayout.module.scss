@@ -1,0 +1,117 @@
+.layoutContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.panelLayout {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  user-select: none;
+}
+
+.mainPanelArea {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.topSection {
+  display: flex;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.bottomSection {
+  display: flex;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.topLeft,
+.topRight,
+.bottomLeft,
+.bottomRight {
+  overflow: hidden;
+  position: relative;
+  height: 100%;
+}
+
+.splitter {
+  background: rgba(255, 255, 255, 0.05);
+  position: relative;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 40;
+}
+
+.splitter:hover {
+  background: #3b82f6;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+}
+
+.horizontalSplitter {
+  width: 6px;
+  cursor: col-resize;
+  margin: 0 -3px;
+  /* Overlap slightly */
+}
+
+.verticalSplitter {
+  height: 6px;
+  cursor: row-resize;
+  margin: -3px 0;
+  /* Overlap slightly */
+}
+
+.splitterHandle {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.75rem;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+.splitter:hover .splitterHandle {
+  opacity: 1;
+  color: white;
+}
+
+.topLeftPanel,
+.topRightPanel,
+.bottomPanel {
+  height: 100%;
+  width: 100%;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .splitter {
+    width: 8px;
+    height: 8px;
+  }
+
+  .horizontalSplitter {
+    width: 8px;
+    margin: 0 -4px;
+  }
+
+  .verticalSplitter {
+    height: 8px;
+    margin: -4px 0;
+  }
+}

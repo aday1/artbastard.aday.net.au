@@ -1,0 +1,328 @@
+.autopilotControls {
+  background: var(--panel-bg);
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  max-width: 600px;
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+
+    h3 {
+      margin: 0;
+      color: var(--text-primary);
+      font-size: 1.2rem;
+    }
+
+    .stats {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+
+      .stat {
+        background: var(--accent-color);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        font-weight: 500;
+      }
+
+      .bpm {
+        background: var(--success-color);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        font-weight: 500;
+      }
+    }
+  }
+
+  .section {
+    margin-bottom: 24px;
+    padding: 16px;
+    background: var(--secondary-bg);
+    border-radius: 6px;
+    border: 1px solid var(--border-light);
+
+    h4 {
+      margin: 0 0 16px 0;
+      color: var(--text-primary);
+      font-size: 1rem;
+      font-weight: 600;
+    }
+  }
+
+  .channelSelector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+
+    label {
+      color: var(--text-secondary);
+      font-weight: 500;
+      min-width: 60px;
+    }
+
+    select {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      background: var(--input-bg);
+      color: var(--text-primary);
+      font-size: 0.9rem;
+
+      option {
+        background: var(--input-bg);
+        color: var(--text-primary);
+      }
+    }
+  }
+
+  .configGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .configRow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 32px;
+
+    label {
+      color: var(--text-secondary);
+      font-weight: 500;
+      min-width: 80px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+
+      input[type="checkbox"] {
+        margin-right: 6px;
+      }
+    }
+
+    select {
+      flex: 1;
+      padding: 6px 8px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      background: var(--input-bg);
+      color: var(--text-primary);
+      font-size: 0.9rem;
+    }
+
+    input[type="range"] {
+      flex: 1;
+      margin: 0 8px;
+    }
+
+    input[type="number"] {
+      width: 60px;
+      padding: 4px 6px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      background: var(--input-bg);
+      color: var(--text-primary);
+      font-size: 0.9rem;
+      text-align: center;
+    }
+
+    span {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      min-width: 40px;
+      text-align: right;
+    }
+  }
+
+  .rangeInputs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+
+    span {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+  }
+
+  .buttonRow {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-light);
+  }
+
+  .applyButton {
+    background: var(--success-color);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+
+    &:hover {
+      background: color-mix(in srgb, var(--success-color) 80%, black);
+    }
+  }
+
+  .removeButton {
+    background: var(--danger-color);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+
+    &:hover {
+      background: color-mix(in srgb, var(--danger-color) 80%, black);
+    }
+  }
+
+  .activeList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .activeItem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 12px;
+    background: var(--primary-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+
+    span {
+      color: var(--text-primary);
+      font-size: 0.9rem;
+      font-weight: 500;
+
+      &:first-child {
+        font-weight: 600;
+        color: var(--accent-color);
+      }
+
+      &:last-child {
+        color: var(--success-color);
+        font-weight: 600;
+      }
+    }
+  }
+
+  .removeSmall {
+    background: var(--danger-color);
+    color: white;
+    border: none;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    min-width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+      background: color-mix(in srgb, var(--danger-color) 80%, black);
+    }
+  }
+
+  /* Dark theme adjustments */
+  [data-theme="dark"] & {
+    .section {
+      background: color-mix(in srgb, var(--secondary-bg) 50%, black);
+    }
+
+    .activeItem {
+      background: color-mix(in srgb, var(--primary-bg) 80%, black);
+    }
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    padding: 12px;
+
+    .header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+
+      .stats {
+        flex-wrap: wrap;
+      }
+    }
+
+    .configRow {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
+
+      label {
+        min-width: auto;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        margin: 4px 0;
+      }
+    }
+
+    .buttonRow {
+      flex-direction: column;
+    }
+
+    .activeItem {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+  }
+}
+
+// Custom path editor button
+.customPathButton {
+  background: linear-gradient(135deg, #00d4ff, #0099cc);
+  border: 1px solid #00d4ff;
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 212, 255, 0.2);
+  width: 100%;
+  
+  &:hover {
+    background: linear-gradient(135deg, #1ae4ff, #00b8e6);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
+  }
+  
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(0, 212, 255, 0.2);
+  }
+}

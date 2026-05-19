@@ -1,0 +1,98 @@
+{
+  "name": "artbastard-dmx512",
+  "version": "5.12.0",
+  "description": "ArtBastard DMX512 Controller - Photonic Supremacy Edition. Élite Illumination Control for the Discerning Luminaire Artist.",
+  "main": "dist/server.js",
+  "bin": {
+    "artbastard": "./dist/server.js"
+  },
+  "keywords": [
+    "dmx",
+    "dmx512",
+    "lighting",
+    "artnet",
+    "theater",
+    "stage",
+    "lighting-control",
+    "midi",
+    "osc",
+    "photonic",
+    "lighting-design",
+    "theatrical-lighting"
+  ],
+  "author": "Le Créateur des Lumières",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aday1/ArtBastard-DMX512.git"
+  },
+  "homepage": "https://github.com/aday1/ArtBastard-DMX512#readme",
+  "bugs": {
+    "url": "https://github.com/aday1/ArtBastard-DMX512/issues"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "files": [
+    "dist",
+    "react-app/dist",
+    "package.json",
+    "README.md",
+    "LICENSE",
+    "start.sh",
+    "start.ps1",
+    "DOCS"
+  ],
+  "scripts": {
+    "build": "npm run build-backend && npm run build-frontend",
+    "build-backend": "node build-backend.js",
+    "build-backend-fast": "node build-backend-fast.js",
+    "build-frontend": "cd react-app && npm run build",
+    "build-fast": "npm run build-backend-fast",
+    "start": "npm run build-backend && node dist/server.js",
+    "dev": "powershell -ExecutionPolicy Bypass -File start.ps1",
+    "dev:backend": "nodemon src/main.ts",
+    "dev:frontend": "cd react-app && npm run dev",
+    "copy-static": "copyfiles -u 1 src/public/**/* dist",
+    "watch": "npx tsc -w",
+    "test": "cd react-app && npm test",
+    "test:coverage": "cd react-app && npm run test:coverage"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-svg-core": "^6.7.2",
+    "@fortawesome/free-solid-svg-icons": "^6.7.2",
+    "@fortawesome/react-fontawesome": "^0.2.2",
+    "@julusian/midi": "^3.6.1",
+    "@types/cors": "^2.8.17",
+    "@types/ping": "^0.4.4",
+    "@types/react-grid-layout": "^1.3.5",
+    "boxen": "^5.1.2",
+    "chalk": "^4.1.2",
+    "concurrently": "^8.2.2",
+    "cors": "^2.8.5",
+    "dmxnet": "^0.9.0",
+    "easymidi": "^3.1.0",
+    "express": "^4.21.0",
+    "framer-motion": "^12.15.0",
+    "jszip": "^3.10.1",
+    "konva": "^9.3.22",
+    "lucide-react": "^0.546.0",
+    "osc": "^2.4.3",
+    "ping": "^0.4.4",
+    "react-beautiful-dnd": "^13.1.1",
+    "react-draggable": "^4.4.6",
+    "react-grid-layout": "^1.5.1",
+    "react-konva": "^19.0.7",
+    "react-toastify": "^11.0.5",
+    "socket.io": "^4.8.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^18.19.111",
+    "copyfiles": "^2.4.1",
+    "nodemon": "^3.1.10",
+    "ts-node": "^10.9.1",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^4.9.5"
+  }
+}

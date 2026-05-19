@@ -1,0 +1,26 @@
+.timelineCurve {
+  position: absolute;
+  top: 0;
+  pointer-events: stroke;
+  z-index: 2;
+  overflow: visible;
+}
+
+.curvePath {
+  filter: drop-shadow(0 0 2px currentColor);
+  transition: stroke 0.2s ease;
+  
+  &:hover {
+    stroke-width: 3;
+    cursor: crosshair;
+  }
+}
+
+.midline {
+  stroke: var(--border-color, #333);
+  stroke-width: 0.5;
+  stroke-dasharray: 4 4;
+  opacity: 0.3;
+  pointer-events: none;
+}
+

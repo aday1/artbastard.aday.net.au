@@ -1,0 +1,12 @@
+.link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--color-primary, #d68706) 50%, transparent);
+  text-underline-offset: 0.2em;
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+
+  &:hover {
+    color: var(--color-accent, var(--color-primary, #f8dd36));
+    text-decoration-color: var(--color-accent, var(--color-primary, #f8dd36));
+  }
+}

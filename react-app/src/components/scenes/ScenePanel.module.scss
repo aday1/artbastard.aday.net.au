@@ -1,0 +1,642 @@
+.scenePanel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  box-shadow: var(--shadow-lg);
+  min-width: 360px;
+  max-width: 480px;
+  user-select: none;
+  transition: all var(--transition-normal);
+  backdrop-filter: blur(15px);
+  
+  &.transitioning {
+    box-shadow: 0 8px 32px rgba(var(--color-interactive), 0.3);
+    border-color: var(--color-interactive);
+  }
+}
+
+.docked {
+  margin: 0 8px;
+}
+
+.floating {
+  background: var(--bg-primary);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-md) var(--space-lg);
+  background: var(--color-interactive);
+  border-bottom: 1px solid var(--color-border);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  position: relative;
+  overflow: hidden;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--color-interactive), #00d4ff, var(--color-interactive));
+    background-size: 200% 100%;
+    animation: shimmer 3s ease-in-out infinite;
+  }
+}
+
+.floating .header {
+  background: linear-gradient(135deg, var(--accent-color) 0%, #00d4ff 100%);
+  color: white;
+  
+  .title {
+    color: white;
+  }
+  
+  .titleIcon {
+    color: white;
+  }
+}
+
+.titleSection {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.titleIcon {
+  width: 16px;
+  height: 16px;
+  color: var(--accent-color);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
+  color: var(--color-text-inverse);
+  letter-spacing: 0.5px;
+}
+
+.transitionIndicator {
+  display: flex;
+  align-items: center;
+  margin-left: 8px;
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+  width: 14px;
+  height: 14px;
+  color: var(--accent-color);
+}
+
+.controls {
+  display: flex;
+  gap: 6px;
+}
+
+.expandButton,
+.dockButton,
+.transitionButton {
+  @extend .touch-target !optional;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--radius-md);
+  width: var(--touch-target-comfortable);
+  height: var(--touch-target-comfortable);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--color-text-inverse);
+  transition: all var(--transition-fast);
+  backdrop-filter: blur(10px);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.3);
+    color: var(--color-text-inverse);
+    transform: scale(1.05);
+    border-color: rgba(255, 255, 255, 0.5);
+  }
+  
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.transitionButton {
+  &.active {
+    background: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+  }
+}
+
+.content {
+  padding: var(--space-lg);
+  max-height: 500px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.transitionControls {
+  background: var(--color-neutral-50);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  
+  h4 {
+    margin: 0 0 var(--space-md) 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-primary);
+    font-weight: var(--font-semibold);
+  }
+}
+
+.transitionRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  
+  label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    min-width: 80px;
+  }
+}
+
+.transitionSlider {
+  @extend .slider !optional;
+  flex: 1;
+  height: 8px;
+  background: var(--color-border);
+  border-radius: var(--radius-full);
+  outline: none;
+  
+  &::-webkit-slider-thumb {
+    appearance: none;
+    width: 40px;
+    height: 40px;
+    background: var(--color-interactive);
+    border-radius: 50%;
+    cursor: grab;
+    border: 3px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 0 3px rgba(var(--color-interactive-rgb, 0, 123, 255), 0.2);
+    transition: all 0.2s ease;
+    
+    &:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6), 0 0 0 4px rgba(var(--color-interactive-rgb, 0, 123, 255), 0.3);
+    }
+    
+    &:active {
+      cursor: grabbing;
+      transform: scale(1.05);
+    }
+  }
+  
+  &::-moz-range-thumb {
+    width: 40px;
+    height: 40px;
+    background: var(--color-interactive);
+    border-radius: 50%;
+    cursor: grab;
+    border: 3px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 0 3px rgba(var(--color-interactive-rgb, 0, 123, 255), 0.2);
+    transition: all 0.2s ease;
+    
+    &:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6), 0 0 0 4px rgba(var(--color-interactive-rgb, 0, 123, 255), 0.3);
+    }
+    
+    &:active {
+      cursor: grabbing;
+      transform: scale(1.05);
+    }
+  }
+}
+
+.transitionValue {
+  font-size: 11px;
+  color: var(--text-secondary);
+  min-width: 50px;
+  text-align: right;
+}
+
+.transitionSelect {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.navigationSection {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.navigationButtons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.navButton,
+.randomButton {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+  
+  &:hover:not(:disabled) {
+    background: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+    transform: scale(1.05);
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.randomButton {
+  background: linear-gradient(135deg, #8b5cf6, #a855f7);
+  color: white;
+  border-color: #8b5cf6;
+  
+  &:hover:not(:disabled) {
+    background: linear-gradient(135deg, #7c3aed, #9333ea);
+    border-color: #7c3aed;
+  }
+}
+
+.currentSceneInfo {
+  flex: 1;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.currentSceneName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.sceneCounter {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.saveSection {
+  display: flex;
+  gap: 8px;
+}
+
+.sceneInput {
+  @extend .input !optional;
+  flex: 1;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+}
+
+.sceneInput:focus {
+  outline: none;
+  border-color: var(--color-interactive);
+  box-shadow: 0 0 0 3px rgba(var(--color-interactive), 0.1);
+}
+
+.saveButton {
+  @extend .btn !optional;
+  @extend .btn-primary !optional;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-interactive);
+  color: var(--color-text-inverse);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  box-shadow: var(--shadow-md);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  
+  &:hover:not(:disabled) {
+    background: var(--color-interactive-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-lg);
+  }
+  
+  &:disabled {
+    background: var(--color-neutral-300);
+    color: var(--color-text-disabled);
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+  }
+}
+
+.sceneList h4 {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.noScenes {
+  color: var(--text-disabled);
+  font-style: italic;
+  font-size: 12px;
+  margin: 8px 0;
+  text-align: center;
+}
+
+.scenes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sceneItem {
+  @extend .touch-target !optional;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-neutral-50);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sceneItem:hover {
+  background: var(--color-neutral-100);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.sceneInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  overflow: hidden;
+}
+
+.sceneName {
+  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.automationBadge {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  color: white;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+  animation: pulse 2s infinite;
+  
+  &:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  }
+}
+
+.automationIcon {
+  font-size: 9px;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.2));
+}
+
+.automationCount {
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.legacyAutopilotBadge {
+  display: flex;
+  align-items: center;
+  padding: 2px 4px;
+  background: rgba(59, 130, 246, 0.2);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  border-radius: 8px;
+  font-size: 10px;
+}
+
+.legacyIcon {
+  font-size: 9px;
+  color: #3b82f6;
+  animation: spin 4s linear infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { 
+    opacity: 1; 
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.8;
+    transform: scale(0.98);
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.sceneButtons {
+  display: flex;
+  gap: 4px;
+}
+
+.loadButton,
+.deleteButton {
+  @extend .touch-target !optional;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.loadButton {
+  background: var(--color-interactive);
+  color: var(--color-text-inverse);
+  border-color: var(--color-interactive);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  
+  &.active {
+    background: var(--color-success-500);
+    border-color: var(--color-success-500);
+    animation: pulse 2s infinite;
+  }
+  
+  &:hover:not(:disabled) {
+    background: var(--color-interactive-hover);
+    transform: scale(1.05);
+  }
+}
+
+.deleteButton {
+  background: transparent;
+  color: var(--color-text-secondary);
+  width: var(--touch-target-comfortable);
+  height: var(--touch-target-comfortable);
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  
+  &:hover {
+    background: var(--color-error-500);
+    color: var(--color-text-inverse);
+    border-color: var(--color-error-500);
+    transform: scale(1.05);
+  }
+}
+
+/* Scrollbar styling */
+.content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.content::-webkit-scrollbar-track {
+  background: var(--color-neutral-100);
+  border-radius: var(--radius-sm);
+}
+
+.content::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.content::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
+}
+
+/* Animation for expanding/collapsing */
+.scenePanel .content {
+  transition: all var(--transition-normal);
+}
+
+.expanded .content {
+  opacity: 1;
+}
+
+.scenesReportTable {
+  margin-bottom: 1rem;
+  overflow-x: auto;
+  
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    
+    thead {
+      background: var(--bg-primary-accent, rgba(0,0,0,0.05));
+      
+      th {
+        padding: 0.75rem 0.5rem;
+        text-align: left;
+        font-weight: 600;
+        font-size: 0.8rem;
+        border-bottom: 2px solid var(--color-border);
+        color: var(--text-secondary);
+      }
+    }
+    
+    tbody {
+      tr {
+        border-bottom: 1px solid var(--color-border);
+        
+        &:hover {
+          background: var(--bg-primary-accent, rgba(0,0,0,0.05));
+        }
+        
+        &:last-child {
+          border-bottom: none;
+        }
+      }
+      
+      td {
+        padding: 0.75rem 0.5rem;
+        color: var(--text-primary);
+        
+        &:first-child {
+          font-weight: 500;
+        }
+      }
+    }
+  }
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .scenePanel {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+  
+  .floating {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  }
+}

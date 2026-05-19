@@ -1,0 +1,151 @@
+.midiButtonContainer {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.learnButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 10px;
+  border-radius: var(--border-radius);
+  font-size: 0.8rem;
+  transition: all var(--transition-speed) ease;
+  position: relative;
+  gap: 6px;
+  min-width: 100px;
+  overflow: hidden;
+  border: 1px solid var(--color-card-border);
+  
+  &:hover {
+    transform: translateY(-1px);
+  }
+  
+  &.default {
+    background-color: var(--color-card-bg);
+    color: var(--color-text);
+    opacity: 0.7;
+    
+    &:hover {
+      opacity: 1;
+      border-color: var(--color-primary);
+    }
+  }
+  
+  &.learning {
+    background-color: var(--color-primary);
+    color: #f0f0f0;
+    animation: pulse 1.5s infinite, glow 2s ease-in-out infinite alternate;
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    transform: scale(1.05);
+  }
+  
+  &.success {
+    background-color: var(--color-success);
+    color: #f0f0f0;
+    animation: successPulse 0.6s ease-out;
+    border: 2px solid rgba(255, 255, 255, 0.9);
+  }
+  
+  &.error {
+    background-color: var(--color-error);
+    color: #f0f0f0;
+    animation: errorShake 0.5s ease-in-out;
+  }
+  
+  &.mapped {
+    background-color: rgba(var(--color-primary-rgb), 0.2);
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+    font-weight: 600;
+    
+    &:hover {
+      background-color: rgba(var(--color-primary-rgb), 0.3);
+    }
+  }
+}
+
+.forgetButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 8px;
+  border-radius: var(--border-radius);
+  font-size: 0.75rem;
+  transition: all var(--transition-speed) ease;
+  gap: 4px;
+  min-width: 70px;
+  border: 1px solid var(--color-card-border);
+  background-color: var(--color-card-bg);
+  color: var(--color-text-secondary);
+  
+  &:hover {
+    background-color: var(--color-error);
+    color: #f0f0f0;
+    border-color: var(--color-error);
+    transform: translateY(-1px);
+  }
+}
+
+.pulsingDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.9);
+  animation: dotPulse 0.75s infinite alternate;
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.8);
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(var(--color-primary-rgb), 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(var(--color-primary-rgb), 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(var(--color-primary-rgb), 0);
+  }
+}
+
+@keyframes glow {
+  from {
+    box-shadow: 0 0 5px rgba(var(--color-primary-rgb), 0.5), 0 0 10px rgba(var(--color-primary-rgb), 0.3);
+  }
+  to {
+    box-shadow: 0 0 15px rgba(var(--color-primary-rgb), 0.8), 0 0 25px rgba(var(--color-primary-rgb), 0.4);
+  }
+}
+
+@keyframes successPulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+  }
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 10px rgba(40, 167, 69, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+  }
+}
+
+@keyframes errorShake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-3px); }
+  20%, 40%, 60%, 80% { transform: translateX(3px); }
+}
+
+@keyframes dotPulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}

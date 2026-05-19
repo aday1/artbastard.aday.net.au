@@ -1,0 +1,19 @@
+.grid-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.grid-overlay svg {
+  transition: opacity 0.2s ease-in-out;
+}
+
+@media (max-width: 768px) {
+  .grid-overlay {
+    display: none; /* Hide grid on mobile for performance */
+  }
+}

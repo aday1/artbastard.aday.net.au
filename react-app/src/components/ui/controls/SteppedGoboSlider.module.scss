@@ -1,0 +1,198 @@
+// Gobo cubes — thebabydino bNQeeV; progress/output — vsync mdEJMLv
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  width: 100%;
+}
+
+.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.nudge {
+  padding: 0.25rem 0.55rem;
+  border: 1px solid rgba(218, 151, 78, 0.55);
+  border-radius: 4px;
+  background: linear-gradient(180deg, #4a4038, #2e2824);
+  color: #f5f8eb;
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  &:not(:disabled):hover {
+    border-color: #da974e;
+  }
+}
+
+.fineToggle {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.68rem;
+  color: #c4b8a8;
+  cursor: pointer;
+}
+
+.rangeSlider {
+  --pos: 0%;
+  --primary-color: #da974e;
+  position: relative;
+  width: 100%;
+  max-width: 36rem;
+  margin: 0 auto;
+  padding: 2.75rem 0.35rem 1.75rem;
+  border-radius: 0.35em;
+  background: radial-gradient(at 50% 0, #e9d7ab, rgba(#e9d7ab, 0) 70%) border-box #f78f01;
+  background-size: 100% 45%;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+.cubeTrack {
+  position: absolute;
+  left: 0.35rem;
+  right: 0.35rem;
+  top: 0.65rem;
+  height: 1.75rem;
+  pointer-events: none;
+}
+
+.cube {
+  position: absolute;
+  bottom: 0;
+  width: 0.875em;
+  height: 0.875em;
+  margin-left: -0.4375em;
+  transform: rotate(30deg) skewY(30deg) scaleX(0.866);
+  background: linear-gradient(-30deg, transparent 25%, #7cc600 25%, #7cc600 75%, transparent 75%);
+  opacity: 0.45;
+  transition: opacity 0.2s ease, filter 0.2s ease;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: inherit;
+  }
+
+  &::before {
+    transform: rotate(-60deg);
+    background: linear-gradient(30deg, transparent 25%, #8cd60d 25%, #8cd60d 75%, transparent 75%);
+  }
+
+  &::after {
+    transform: rotate(60deg);
+    background: linear-gradient(-30deg, transparent 25%, #adce32 25%, #adce32 75%, transparent 75%);
+  }
+}
+
+.cubeLit {
+  opacity: 1;
+  filter: drop-shadow(0 0 4px rgba(173, 206, 50, 0.75));
+}
+
+.input {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  margin: 0;
+  height: 0.5em;
+  background: transparent;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+
+  &::-webkit-slider-runnable-track {
+    box-sizing: border-box;
+    height: 0.5em;
+    border: 1px solid #da974e;
+    border-radius: 0.25em;
+    background: linear-gradient(90deg, #da974e 0.125em, transparent 0.125em) -1px 0 / 1.25em 100% #f5f8eb;
+  }
+
+  &::-moz-range-track {
+    height: 0.5em;
+    border: 1px solid #da974e;
+    border-radius: 0.25em;
+    background: #f5f8eb;
+  }
+
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 1.25em;
+    height: 1.25em;
+    margin-top: -0.375em;
+    border-radius: 0.2em;
+    transform: rotate(30deg) skewY(30deg) scaleX(0.866);
+    box-shadow: inset -1px -1px #3a3534;
+    background: linear-gradient(-45deg, #3a3534 20%, #60858a 50%, #3a3534 50%, #3a3534 52%, transparent 52%);
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
+  }
+
+  &::-moz-range-thumb {
+    width: 1.25em;
+    height: 1.25em;
+    border: none;
+    border-radius: 0.2em;
+    background: linear-gradient(-45deg, #60858a, #3a3534);
+  }
+}
+
+.progress {
+  position: absolute;
+  left: 0.35rem;
+  right: 0.35rem;
+  bottom: 1.15rem;
+  height: 0.35em;
+  border-radius: 999px;
+  pointer-events: none;
+  background: linear-gradient(to right, var(--primary-color), #f5f8eb);
+  width: var(--pos);
+  max-width: calc(100% - 0.7rem);
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2) inset;
+  transition: width 0.12s ease-out;
+}
+
+.output {
+  position: absolute;
+  left: 50%;
+  bottom: 0.35rem;
+  transform: translateX(-50%);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  background: rgba(58, 53, 52, 0.85);
+  color: #f5f8eb;
+  font: bold 0.75rem/1.2 'Courier New', Courier, monospace;
+  white-space: nowrap;
+}
+
+.valueReadout {
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--color-text-secondary, #aab4c4);
+}
+
+.dmxValue {
+  display: block;
+  margin-top: 0.15rem;
+  font-family: monospace;
+  font-size: 0.72rem;
+  opacity: 0.85;
+}

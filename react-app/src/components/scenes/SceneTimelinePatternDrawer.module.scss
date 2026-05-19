@@ -1,0 +1,13 @@
+.drawer {
+  margin-top: 0.75rem;
+  padding: 0.5rem;
+  border-top: 2px solid var(--rk-bevel-lo, var(--border-color));
+  background: var(--rk-bg, var(--bg-primary));
+}
+
+.hint {
+  margin-top: 0.5rem;
+  font-family: var(--rk-mono, monospace);
+  font-size: 10px;
+  color: var(--rk-label-dim, var(--text-secondary));
+}

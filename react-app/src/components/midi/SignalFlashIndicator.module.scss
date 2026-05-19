@@ -1,0 +1,178 @@
+.signalContainer {
+  position: fixed;
+  z-index: 999;
+  display: flex;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+
+.signalContainer.top-left {
+  top: 20px;
+  left: 20px;
+  flex-direction: column;
+}
+
+.signalContainer.top-right {
+  top: 20px;
+  right: 20px;
+  flex-direction: column;
+}
+
+.signalContainer.bottom-left {
+  bottom: 20px;
+  left: 20px;
+  flex-direction: column;
+}
+
+.signalContainer.bottom-right {
+  bottom: 20px;
+  right: 20px;
+  flex-direction: column;
+}
+
+.signalIndicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  backdrop-filter: blur(10px);
+  transition: all 0.1s ease;
+  min-width: 80px;
+}
+
+.signalIndicator.midiFlash {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 15px rgba(0, 123, 255, 0.8);
+  animation: midiFlash 0.15s ease-out;
+}
+
+.signalIndicator.oscFlash {
+  border-color: var(--accent-green);
+  box-shadow: 0 0 15px rgba(0, 255, 123, 0.8);
+  animation: oscFlash 0.15s ease-out;
+}
+
+@keyframes midiFlash {
+  0% {
+    background: rgba(0, 123, 255, 0.1);
+    transform: scale(1);
+  }
+  50% {
+    background: rgba(0, 123, 255, 0.3);
+    transform: scale(1.05);
+  }
+  100% {
+    background: rgba(0, 0, 0, 0.7);
+    transform: scale(1);
+  }
+}
+
+@keyframes oscFlash {
+  0% {
+    background: rgba(0, 255, 123, 0.1);
+    transform: scale(1);
+  }
+  50% {
+    background: rgba(0, 255, 123, 0.3);
+    transform: scale(1.05);
+  }
+  100% {
+    background: rgba(0, 0, 0, 0.7);
+    transform: scale(1);
+  }
+}
+
+.signalLabel {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+  min-width: 30px;
+}
+
+.signalDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+  transition: all 0.1s ease;
+  flex-shrink: 0;
+}
+
+.signalDot.active {
+  transform: scale(1.5);
+  box-shadow: 0 0 10px currentColor;
+}
+
+.midiFlash .signalDot.active {
+  background: var(--accent-blue);
+  color: var(--accent-blue);
+}
+
+.oscFlash .signalDot.active {
+  background: var(--accent-green);
+  color: var(--accent-green);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .signalContainer {
+    gap: 0.25rem;
+  }
+  
+  .signalContainer.top-left,
+  .signalContainer.bottom-left {
+    left: 10px;
+  }
+  
+  .signalContainer.top-right,
+  .signalContainer.bottom-right {
+    right: 10px;
+  }
+  
+  .signalContainer.top-left,
+  .signalContainer.top-right {
+    top: 10px;
+  }
+  
+  .signalContainer.bottom-left,
+  .signalContainer.bottom-right {
+    bottom: 10px;
+  }
+  
+  .signalIndicator {
+    padding: 0.4rem 0.6rem;
+    min-width: 70px;
+  }
+  
+  .signalLabel {
+    font-size: 0.6rem;
+    min-width: 25px;
+  }
+  
+  .signalDot {
+    width: 6px;
+    height: 6px;
+  }
+}
+
+/* Ultra compact mode for very small screens */
+@media (max-width: 480px) {
+  .signalContainer {
+    flex-direction: row;
+  }
+  
+  .signalIndicator {
+    padding: 0.3rem 0.5rem;
+    min-width: 60px;
+  }
+  
+  .signalLabel {
+    font-size: 0.5rem;
+    min-width: 20px;
+  }
+}

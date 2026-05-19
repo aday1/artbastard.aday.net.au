@@ -1,0 +1,41 @@
+name: deploy-linode
+
+on:
+  workflow_run:
+    workflows: ["artbastard-image"]
+    types: [completed]
+    branches: [main, dev]
+  workflow_dispatch:
+    inputs:
+      track:
+        description: "Track to deploy (dev|live)"
+        required: true
+        default: "dev"
+
+jobs:
+  deploy:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger remote compose refresh
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.LINODE_HOST }}
+          username: ${{ secrets.LINODE_USER }}
+          key: ${{ secrets.LINODE_SSH_KEY }}
+          script: |
+            flock /tmp/macroverse-deploy.lock bash -lc '
+              set -e
+              cd ~/compose/macroverse.aday.net.au
+              if [ -f nginx/auth/aday.htpasswd ] && ! git ls-files --error-unmatch nginx/auth/aday.htpasswd >/dev/null 2>&1; then
+                mv nginx/auth/aday.htpasswd "nginx/auth/aday.htpasswd.bak.$(date +%s)"
+              fi
+              git pull --ff-only origin main
+              if [ -f nginx/auth/aday.htpasswd ]; then
+                sed -i "s/\r$//" nginx/auth/aday.htpasswd
+              fi
+              docker compose pull
+              docker compose up -d --remove-orphans
+              docker compose exec -T nginx nginx -t
+              docker restart edge_nginx
+            '

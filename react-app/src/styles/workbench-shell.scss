@@ -1,0 +1,442 @@
+// Macroverse "Wired Atelier" workbench chrome for ArtBastard DMX surfaces.
+// https://macroverse.aday.net.au/
+
+:root,
+[data-theme='dark'] {
+  --wb-bg: #1a1530;
+  --wb-surface: #251c44;
+  --wb-panel: #2d2350;
+  --wb-bevel-light: #5a48a0;
+  --wb-bevel-dark: #110a25;
+  --wb-text: #ece4f8;
+  --wb-text-dim: #9c8cc8;
+  --wb-accent: #6aa6e6;
+  --wb-copper: #ffa044;
+  --wb-amber: #f8dd36;
+  --wb-danger: #ff6b6b;
+  --wb-mono: 'Share Tech Mono', 'Lucida Console', Consolas, ui-monospace, monospace;
+}
+
+[data-theme='dark'] body {
+  --color-background: var(--wb-bg);
+  --color-card-bg: var(--wb-panel);
+  --color-card-border: var(--wb-bevel-dark);
+  --color-text: var(--wb-text);
+  --color-secondary: var(--wb-text-dim);
+  --color-primary: var(--wb-accent);
+  --color-accent: var(--wb-copper);
+  --bg-primary: var(--wb-bg);
+  --bg-secondary: var(--wb-panel);
+  --bg-tertiary: var(--wb-surface);
+  --text-primary: var(--wb-text);
+  --text-secondary: var(--wb-text-dim);
+  --border-color: var(--wb-bevel-dark);
+  --header-bg: var(--wb-surface);
+  --input-bg: var(--wb-bg);
+  --color-slider-track: var(--wb-bg);
+  --color-slider-thumb: var(--wb-copper);
+}
+
+// ─── Physical panel frame ───────────────────────────────────────────────────
+.ab-workbench-panel {
+  background: var(--wb-panel);
+  border: 1px solid var(--wb-bevel-dark);
+  box-shadow:
+    inset 0 0 0 1px var(--wb-bevel-light),
+    inset 0 -8px 24px rgb(0 0 0 / 0.35),
+    0 4px 16px rgb(0 0 0 / 0.45);
+  border-radius: 3px;
+  min-width: 0;
+}
+
+.ab-workbench-panel__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.35rem 0.55rem;
+  font-family: var(--wb-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--wb-copper);
+  background: repeating-linear-gradient(
+    90deg,
+    var(--wb-surface) 0 2px,
+    var(--wb-panel) 2px 4px
+  );
+  border-bottom: 2px solid var(--wb-bevel-dark);
+  border-top: 1px solid var(--wb-bevel-light);
+}
+
+.ab-workbench-panel__body {
+  padding: 0.5rem;
+}
+
+// ─── Bevel buttons (wire-btn) ─────────────────────────────────────────────
+.ab-wire-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: var(--touch-target-min, 36px);
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--wb-bevel-dark);
+  border-top-color: var(--wb-bevel-light);
+  border-left-color: var(--wb-bevel-light);
+  border-radius: 2px;
+  background: var(--wb-surface);
+  color: var(--wb-accent);
+  font-family: var(--wb-mono);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease,
+    border-color 0.12s ease;
+
+  &:hover:not(:disabled) {
+    color: var(--wb-text);
+    background: var(--wb-panel);
+  }
+
+  &:active:not(:disabled),
+  &.pressed {
+    border-top-color: var(--wb-bevel-dark);
+    border-left-color: var(--wb-bevel-dark);
+    border-bottom-color: var(--wb-bevel-light);
+    border-right-color: var(--wb-bevel-light);
+    background: var(--wb-bg);
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.ab-wire-btn--compact {
+  min-height: 2rem;
+  padding: 0.2rem 0.5rem;
+  font-size: 10px;
+}
+
+.ab-wire-btn--pill {
+  border-radius: 999px;
+}
+
+.ab-wire-btn--wide {
+  width: 100%;
+}
+
+.ab-wire-btn--active {
+  background: var(--wb-accent);
+  color: var(--wb-bg);
+  border-color: var(--wb-accent);
+  text-shadow: 0 0 8px rgb(106 166 230 / 0.45);
+}
+
+.ab-wire-btn--accent-copper.ab-wire-btn--active {
+  background: var(--wb-copper);
+  border-color: var(--wb-copper);
+  color: var(--wb-bg);
+}
+
+.ab-wire-btn--accent-green.ab-wire-btn--active {
+  background: #34d399;
+  border-color: #34d399;
+  color: #0a1a12;
+}
+
+// ─── Segmented tabs (selection row) ───────────────────────────────────────
+.ab-view-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 4px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--wb-surface) 0 2px,
+    var(--wb-panel) 2px 4px
+  );
+  border: 1px solid var(--wb-bevel-dark);
+  border-radius: 2px;
+}
+
+.ab-view-tab {
+  flex: 1 1 auto;
+  min-width: 4.5rem;
+}
+
+// Map legacy skeuo class names to workbench (SkeuoButton still emits ab-skeuo-*)
+.ab-skeuo-btn {
+  @extend .ab-wire-btn;
+}
+
+.ab-skeuo-btn--compact {
+  @extend .ab-wire-btn--compact;
+}
+
+.ab-skeuo-btn--pill {
+  @extend .ab-wire-btn--pill;
+}
+
+.ab-skeuo-btn--wide {
+  @extend .ab-wire-btn--wide;
+}
+
+.ab-skeuo-btn--active {
+  @extend .ab-wire-btn--active;
+}
+
+.ab-skeuo-btn--accent-purple.ab-skeuo-btn--active {
+  @extend .ab-wire-btn--accent-copper;
+}
+
+.ab-skeuo-btn--accent-green.ab-skeuo-btn--active {
+  @extend .ab-wire-btn--accent-green;
+}
+
+.ab-skeuo-btn__mask,
+.ab-skeuo-btn__light,
+.ab-skeuo-btn__ring,
+.ab-skeuo-btn__inner {
+  display: none !important;
+}
+
+.ab-skeuo-btn__label {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.ab-skeuo-square-group {
+  @extend .ab-view-tabs;
+}
+
+.ab-skeuo-panel {
+  @extend .ab-workbench-panel;
+}
+
+// ─── DMX desk fader (replaces metallic chrome on channel strips) ──────────
+.ab-dmx-range {
+  &,
+  &::-webkit-slider-runnable-track,
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+
+  &::-webkit-slider-runnable-track {
+    height: 10px;
+    border-radius: 2px;
+    border: 1px solid var(--wb-bevel-dark);
+    background: var(--wb-bg);
+    box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.55);
+  }
+
+  &.ab-dmx-range--horizontal::-webkit-slider-runnable-track {
+    height: 12px;
+  }
+
+  &::-moz-range-track {
+    height: 8px;
+    border-radius: 2px;
+    border: 1px solid var(--wb-bevel-dark);
+    background: var(--wb-bg);
+    box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.55);
+  }
+
+  &.ab-dmx-range--horizontal::-webkit-slider-thumb {
+    width: 22px;
+    height: 26px;
+    margin-top: -9px;
+  }
+
+  &::-webkit-slider-thumb {
+    width: 18px;
+    height: 22px;
+    margin-top: -8px;
+    border-radius: 2px;
+    border: 1px solid var(--wb-bevel-light);
+    border-bottom-color: var(--wb-bevel-dark);
+    border-right-color: var(--wb-bevel-dark);
+    background: linear-gradient(180deg, #c8b8e8 0%, #6a5898 45%, #3d2f68 100%);
+    box-shadow: 0 2px 6px rgb(0 0 0 / 0.5);
+    cursor: ew-resize;
+  }
+
+  &::-moz-range-thumb {
+    width: 18px;
+    height: 22px;
+    border-radius: 2px;
+    border: 1px solid var(--wb-bevel-light);
+    background: linear-gradient(180deg, #c8b8e8, #3d2f68);
+    cursor: ew-resize;
+  }
+
+  &:focus {
+    outline: none;
+  }
+
+  &:focus-visible {
+    outline: 1px solid var(--wb-copper);
+    outline-offset: 2px;
+  }
+}
+
+.ab-dmx-range--vertical {
+  /* Prefer DmxVerticalFader for strips; this backs MasterStyledSlider vertical fallback */
+  --fader-form-h: 2.85rem;
+  --fader-thumb-d: 2.65rem;
+  box-sizing: border-box;
+  width: var(--fader-length, 14rem);
+  height: var(--fader-form-h);
+  max-width: none;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  transform: rotate(-90deg);
+
+  &::-webkit-slider-runnable-track {
+    height: calc(var(--fader-form-h) - 0.4em);
+    border-radius: 3px;
+  }
+
+  &::-webkit-slider-thumb {
+    width: var(--fader-thumb-d);
+    height: calc(var(--fader-thumb-d) * 0.72);
+    margin-top: calc((var(--fader-form-h) - var(--fader-thumb-d) * 0.72) / 2 - 0.1em);
+    cursor: ns-resize;
+  }
+
+  &::-moz-range-thumb {
+    width: var(--fader-thumb-d);
+    height: calc(var(--fader-thumb-d) * 0.72);
+    cursor: ns-resize;
+  }
+}
+
+.ab-dmx-range--compact {
+  &::-webkit-slider-thumb,
+  &::-moz-range-thumb {
+    width: 14px;
+    height: 16px;
+    margin-top: -5px;
+  }
+}
+
+.ab-dmx-range-host--vertical {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--fader-thumb-d, 2.65rem) + 2.5rem);
+  min-width: 4.75rem;
+  height: 14.5rem;
+  min-height: 12rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid var(--wb-bevel-dark);
+  background: linear-gradient(180deg, var(--wb-surface), var(--wb-panel));
+  box-shadow: inset 0 0 0 1px var(--wb-bevel-light);
+  overflow: visible;
+}
+
+// Envelope editor tool row
+.ab-envelope-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-bottom: 0.35rem;
+}
+
+// ─── Channel strip / pinned vertical fader (DmxVerticalFader) ─────────────
+.ab-styled-fader {
+  &,
+  &::-webkit-slider-runnable-track,
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  background: transparent !important;
+  box-shadow: none !important;
+
+  &::-webkit-slider-runnable-track {
+    margin: 0.2em;
+    height: calc(var(--fader-form-h, 2.75rem) - 0.4em);
+    border-radius: 3px;
+    border: 1px solid var(--wb-bevel-dark);
+    box-shadow: inset 0 2px 6px rgb(0 0 0 / 0.55);
+    background:
+      linear-gradient(
+        90deg,
+        var(--wb-copper, #ffa044),
+        var(--wb-accent, #6aa6e6)
+      )
+      0 / var(--pos, 0%) no-repeat,
+      linear-gradient(180deg, var(--wb-bg, #14102a), var(--wb-surface, #251c44));
+  }
+
+  &::-moz-range-track {
+    height: calc(var(--fader-form-h, 2.75rem) - 0.4em);
+    border-radius: 3px;
+    border: 1px solid var(--wb-bevel-dark);
+    background: linear-gradient(180deg, var(--wb-bg), var(--wb-surface));
+    box-shadow: inset 0 2px 6px rgb(0 0 0 / 0.55);
+  }
+
+  &::-moz-range-progress {
+    height: calc(var(--fader-form-h, 2.75rem) - 0.4em);
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--wb-copper), var(--wb-accent));
+  }
+
+  &::-webkit-slider-thumb {
+    box-sizing: border-box;
+    width: var(--fader-thumb-d, 2.5rem);
+    height: calc(var(--fader-thumb-d, 2.5rem) * 0.72);
+    margin-top: calc((var(--fader-form-h, 2.75rem) - var(--fader-thumb-d, 2.5rem) * 0.72) / 2 - 0.1em);
+    border-radius: 3px;
+    border: 1px solid var(--wb-bevel-light);
+    border-bottom-color: var(--wb-bevel-dark);
+    border-right-color: var(--wb-bevel-dark);
+    background: linear-gradient(180deg, #e8e0f8 0%, #9a88c8 40%, #4a3a78 100%);
+    box-shadow:
+      0 3px 8px rgb(0 0 0 / 0.55),
+      inset 0 1px 0 rgb(255 255 255 / 0.35);
+    cursor: grab;
+  }
+
+  &::-webkit-slider-thumb:active {
+    cursor: grabbing;
+  }
+
+  &::-moz-range-thumb {
+    width: var(--fader-thumb-d, 2.5rem);
+    height: calc(var(--fader-thumb-d, 2.5rem) * 0.72);
+    border-radius: 3px;
+    border: 1px solid var(--wb-bevel-light);
+    background: linear-gradient(180deg, #e8e0f8, #4a3a78);
+    box-shadow: 0 3px 8px rgb(0 0 0 / 0.55);
+    cursor: grab;
+  }
+}

@@ -1,0 +1,110 @@
+.visualizerContainer {
+  width: 100%;
+  height: 200px;
+  margin-bottom: 1.5rem;
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  background-color: var(--color-card-bg);
+  box-shadow: var(--card-shadow);
+  position: relative;
+  transition: box-shadow 0.3s ease;
+  
+  &.sticky {
+    position: sticky;
+    top: 75px; // Positioned below the navbar
+    z-index: 90;
+    margin-top: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12), 0 1px 5px rgba(0, 0, 0, 0.1);
+    
+    .stickyToggle i {
+      transform: rotate(45deg);
+    }
+  }
+  
+  .stickyToggle {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    color: #f0f0f0;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    opacity: 0.6;
+    transition: all 0.3s ease;
+    z-index: 2;
+    backdrop-filter: blur(3px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    
+    &:hover {
+      opacity: 1;
+      background: rgba(0, 0, 0, 0.7);
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+      transform: translateY(-1px);
+    }
+    
+    &:active {
+      transform: translateY(1px);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+    
+    i {
+      font-size: 0.9rem;
+      transition: transform 0.3s ease;
+    }
+  }
+  
+  .stickyNotification {
+    position: absolute;
+    left: 50%;
+    bottom: 20px;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: #f0f0f0;
+    padding: 10px 15px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 3;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(4px);
+    animation: fadeInOut 2s ease-in-out forwards;
+    
+    i {
+      font-size: 1rem;
+      color: var(--accent-color, #4ecdc4);
+    }
+  }
+}
+
+@keyframes fadeInOut {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 10px);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  85% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -10px);
+  }
+}
+
+.visualizer {
+  width: 100%;
+  height: 100%;
+  display: block;
+}

@@ -1,0 +1,11 @@
+.git
+.github
+node_modules
+react-app/node_modules
+website
+artbastard-nextjs-frontend
+face-tracker
+DOCS
+scripts
+*.ps1
+*.sh

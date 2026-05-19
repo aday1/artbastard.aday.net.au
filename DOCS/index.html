@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ArtBastard // Documentation hub and showcase mirror</title>
+  <meta name="description" content="ArtBastard documentation index, operator guides, and the same Luminary quote deck as the in-app ArtSnob theme.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Montserrat:wght@500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-deep: #08080f;
+      --bg-panel: rgba(18, 18, 30, 0.92);
+      --line: #2f3f62;
+      --text: #e4e8f2;
+      --muted: #98a4bd;
+      --accent: #7eb8ff;
+      --accent2: #c9a6ff;
+      --warn: #ffd58c;
+      --glow: rgba(120, 170, 255, 0.35);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, sans-serif;
+      color: var(--text);
+      line-height: 1.55;
+      min-height: 100vh;
+      background: var(--bg-deep);
+      overflow-x: hidden;
+    }
+    .backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse 80% 50% at 15% 0%, rgba(74, 120, 200, 0.18), transparent 55%),
+        radial-gradient(ellipse 70% 45% at 90% 20%, rgba(138, 80, 200, 0.12), transparent 50%),
+        radial-gradient(circle at 50% 100%, rgba(30, 45, 80, 0.5), var(--bg-deep));
+      animation: breathe 22s ease-in-out infinite;
+    }
+    @keyframes breathe {
+      0%, 100% { opacity: 1; filter: saturate(1); }
+      50% { opacity: 0.92; filter: saturate(1.08); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .backdrop { animation: none; }
+    }
+    .scan {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.04;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(255, 255, 255, 0.04) 2px,
+        rgba(255, 255, 255, 0.04) 3px
+      );
+    }
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.85rem 1.25rem;
+      border-bottom: 1px solid var(--line);
+      background: rgba(8, 10, 18, 0.88);
+      backdrop-filter: blur(14px);
+    }
+    .brand {
+      font-family: "JetBrains Mono", monospace;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      font-size: 0.95rem;
+      background: linear-gradient(90deg, #9ecbff, #d4b8ff);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 1rem;
+    }
+    .nav-links a {
+      font-size: 0.85rem;
+      color: var(--accent);
+      text-decoration: none;
+      font-family: "JetBrains Mono", monospace;
+    }
+    .nav-links a:hover { color: #c8e6ff; text-decoration: underline; }
+    main {
+      position: relative;
+      z-index: 1;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 1.75rem 1.25rem 3rem;
+    }
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--bg-panel);
+      box-shadow: 0 0 28px var(--glow);
+      padding: 1.5rem 1.35rem;
+      margin-bottom: 1.5rem;
+    }
+    .chip {
+      display: inline-block;
+      padding: 5px 11px;
+      border: 1px solid #4f6a9a;
+      color: var(--accent);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-size: 0.68rem;
+      font-family: "JetBrains Mono", monospace;
+      background: rgba(22, 35, 58, 0.9);
+    }
+    h1 {
+      margin: 12px 0 6px;
+      font-family: "Cormorant Garamond", Georgia, serif;
+      font-weight: 600;
+      font-size: 2rem;
+      letter-spacing: 0.02em;
+    }
+    .lede { color: var(--muted); font-size: 0.98rem; max-width: 62ch; }
+    h2 {
+      margin: 0 0 0.75rem;
+      font-size: 1.05rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-family: Montserrat, sans-serif;
+      font-weight: 600;
+      color: #b8c9e8;
+    }
+    .grid {
+      display: grid;
+      gap: 0.75rem;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    }
+    .grid a {
+      color: var(--accent);
+      text-decoration: none;
+      display: block;
+      padding: 0.75rem 0.9rem;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(14, 22, 38, 0.75);
+      transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+    }
+    .grid a:hover {
+      border-color: var(--accent);
+      color: #d4e9ff;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 18px rgba(80, 140, 220, 0.2);
+    }
+    .grid a strong {
+      display: block;
+      color: #fff;
+      font-weight: 600;
+    }
+    .grid a span { display: block; color: var(--muted); font-size: 0.85rem; margin-top: 0.25rem; }
+    .notice {
+      border-left: 3px solid var(--warn);
+      background: rgba(40, 32, 18, 0.45);
+      padding: 10px 12px;
+      margin: 14px 0;
+      color: #ffe8c8;
+      font-size: 0.92rem;
+    }
+    .notice a {
+      color: #9fd4ff;
+      display: inline;
+      padding: 0;
+      border: none;
+      background: none;
+    }
+    .quote-section { margin-top: 0.25rem; }
+    .quote-stage {
+      position: relative;
+      margin-top: 0.85rem;
+      padding: 1.35rem 1.15rem 1.15rem 1.35rem;
+      border-radius: 0 10px 10px 0;
+      border-left: 4px solid #4ecdc4;
+      background: rgba(20, 28, 42, 0.85);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+      transition: border-color 0.6s ease, background 0.6s ease, opacity 0.8s ease;
+    }
+    .quote-stage.dim { opacity: 0; }
+    .quote-stage q {
+      display: block;
+      position: relative;
+      z-index: 1;
+      font-family: "Cormorant Garamond", Georgia, serif;
+      font-style: italic;
+      font-size: 1.2rem;
+      font-weight: 400;
+      line-height: 1.55;
+      color: #dfe8f5;
+      quotes: none;
+    }
+    .quote-stage q::before, .quote-stage q::after { content: none; }
+    .quote-deco {
+      position: absolute;
+      top: 0.6rem;
+      left: 0.9rem;
+      font-size: 3.2rem;
+      font-family: Georgia, serif;
+      opacity: 0.08;
+      pointer-events: none;
+      line-height: 1;
+    }
+    .quote-author {
+      margin-top: 0.85rem;
+      text-align: right;
+      font-family: Montserrat, sans-serif;
+      font-size: 0.82rem;
+      font-weight: 500;
+      letter-spacing: 0.03em;
+      opacity: 0.92;
+    }
+    .quote-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+      margin-top: 1rem;
+    }
+    .quote-toolbar button {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.72rem;
+      padding: 0.45rem 0.75rem;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      background: rgba(30, 42, 68, 0.9);
+      color: var(--accent);
+      cursor: pointer;
+    }
+    .quote-toolbar button:hover {
+      border-color: var(--accent);
+      color: #e8f2ff;
+    }
+    .quote-meta {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.65rem;
+      color: var(--muted);
+      margin-left: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="backdrop" aria-hidden="true"></div>
+  <div class="scan" aria-hidden="true"></div>
+  <header class="nav">
+    <div class="brand">ArtBastard / DOCS</div>
+    <nav class="nav-links" aria-label="Showcase links">
+      <a href="../website/index.html">Full showcase</a>
+      <a href="https://artbastard.aday.net.au">Live app</a>
+      <a href="https://github.com/aday1/artbastard.aday.net.au">Repo</a>
+    </nav>
+  </header>
+  <main>
+    <div class="panel">
+      <span class="chip">Documentation hub</span>
+      <h1>Documentation and operator index</h1>
+      <p class="lede">v5.15.0 Tracker Columns Edition. Guides, reference pages, and the demo reel metadata live here. The Luminary quote deck below is the same text as the in-app ArtSnob theme (rotating fancy quotes).</p>
+      <p class="notice">Production lighting control runs at
+        <a href="https://artbastard.aday.net.au">artbastard.aday.net.au</a>. This static tree is safe to browse on GitHub Pages and mirrors.</p>
+
+      <section class="quote-section" aria-labelledby="quotes-h">
+        <h2 id="quotes-h">Luminary quotes</h2>
+        <p class="lede">Pretentious lighting nonsense for exhibits B through infinity. Auto-rotates like the live app; use the buttons when you need a fresh insult to photonics.</p>
+        <div id="quoteBox" class="quote-stage" role="status" aria-live="polite">
+          <span class="quote-deco" aria-hidden="true">&ldquo;</span>
+          <q id="quoteText">Loading the photonic manifesto...</q>
+          <div id="quoteAuthor" class="quote-author"></div>
+          <div class="quote-toolbar">
+            <button type="button" id="btnNext">Another quote</button>
+            <button type="button" id="btnRandom">Random</button>
+            <button type="button" id="btnPause">Pause rotation</button>
+            <span class="quote-meta" id="quoteMeta"></span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="panel">
+      <h2>Getting started</h2>
+      <div class="grid">
+        <a href="README.md"><strong>README</strong><span>Documentation index and rebuild status.</span></a>
+        <a href="INSTALL.md"><strong>Install</strong><span>Setup, launch scripts, factory reset.</span></a>
+        <a href="USAGE.md"><strong>Usage</strong><span>Operator workflows and routes.</span></a>
+        <a href="ACT_TIMELINE.md"><strong>Act timeline</strong><span>Clips, gaps, triggers vs BPM vs Link.</span></a>
+        <a href="FEATURES.md"><strong>Features</strong><span>What ships in v5.12.0, by subsystem.</span></a>
+        <a href="FIXTURES.md"><strong>Fixtures</strong><span>Profiles, addressing, planning.</span></a>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Reference</h2>
+      <div class="grid">
+        <a href="HELP.md"><strong>Help (offline mirror)</strong><span>Plain-text mirror of the in-app help overlay.</span></a>
+        <a href="SHORTCUTS.md"><strong>Keyboard shortcuts</strong><span>Master shortcut table.</span></a>
+        <a href="MIDI_TEMPLATES.md"><strong>MIDI templates</strong><span>X-Touch Mackie plus APC40 MK1.</span></a>
+        <a href="OSC_REFERENCE.md"><strong>OSC reference</strong><span>Every SuperControl OSC address.</span></a>
+        <a href="UI_UX_TOUR.txt"><strong>UI and UX tour</strong><span>Per-screen action notes.</span></a>
+        <a href="HISTORY.md"><strong>History</strong><span>Theatrical project history.</span></a>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Showcase and demos</h2>
+      <div class="grid">
+        <a href="SHOWCASE.md"><strong>Showcase notes</strong><span>How the public showcase is built.</span></a>
+        <a href="DEMO_RECORDING.txt"><strong>Demo recording</strong><span>Capturing screenshots and videos.</span></a>
+        <a href="../website/videos/"><strong>Video reel</strong><span>Eight WebM clips of every major surface.</span></a>
+      </div>
+    </div>
+  </main>
+
+  <script src="showcase-quotes-data.js"></script>
+  <script>
+    (function () {
+      var quotes = window.AB_LUXURY_QUOTES || [];
+      var reduceMotion = false;
+      try {
+        reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      } catch (e) {}
+
+      var elBox = document.getElementById("quoteBox");
+      var elText = document.getElementById("quoteText");
+      var elAuthor = document.getElementById("quoteAuthor");
+      var elMeta = document.getElementById("quoteMeta");
+      var btnNext = document.getElementById("btnNext");
+      var btnRandom = document.getElementById("btnRandom");
+      var btnPause = document.getElementById("btnPause");
+
+      var idx = 0;
+      var playing = !reduceMotion;
+      var timer = null;
+      var intervalMs = reduceMotion ? 0 : 22000;
+
+      function pickRandomIndex() {
+        if (quotes.length <= 1) return 0;
+        var n = Math.floor(Math.random() * quotes.length);
+        return n === idx ? (n + 1) % quotes.length : n;
+      }
+
+      function paint(i, fade) {
+        if (!quotes.length) {
+          elText.textContent = "Quote data failed to load.";
+          elAuthor.textContent = "";
+          elMeta.textContent = "";
+          return;
+        }
+        var q = quotes[i];
+        var rgb = hexToRgb(q.color || "#4ecdc4");
+        function apply() {
+          elText.textContent = q.text;
+          elAuthor.textContent = "\u2014 " + q.author;
+          elAuthor.style.color = q.color || "#4ecdc4";
+          elBox.style.borderLeftColor = q.color || "#4ecdc4";
+          elBox.style.background = "rgba(" + rgb + ", 0.08)";
+          elMeta.textContent = "quote " + (i + 1) + " / " + quotes.length;
+        }
+        if (fade && !reduceMotion) {
+          elBox.classList.add("dim");
+          setTimeout(function () {
+            apply();
+            elBox.classList.remove("dim");
+          }, 420);
+        } else {
+          apply();
+        }
+      }
+
+      function hexToRgb(hex) {
+        hex = String(hex || "").replace("#", "");
+        if (hex.length === 3) {
+          hex = hex.split("").map(function (c) { return c + c; }).join("");
+        }
+        var r = parseInt(hex.slice(0, 2), 16);
+        var g = parseInt(hex.slice(2, 4), 16);
+        var b = parseInt(hex.slice(4, 6), 16);
+        return r + ", " + g + ", " + b;
+      }
+
+      function schedule() {
+        clearInterval(timer);
+        if (!playing || intervalMs <= 0) return;
+        timer = setInterval(function () {
+          idx = (idx + 1) % quotes.length;
+          paint(idx, true);
+        }, intervalMs);
+      }
+
+      idx = quotes.length ? pickRandomIndex() : 0;
+      paint(idx, false);
+
+      btnNext.addEventListener("click", function () {
+        idx = (idx + 1) % quotes.length;
+        paint(idx, !reduceMotion);
+        if (playing) schedule();
+      });
+      btnRandom.addEventListener("click", function () {
+        idx = pickRandomIndex();
+        paint(idx, !reduceMotion);
+        if (playing) schedule();
+      });
+      btnPause.addEventListener("click", function () {
+        playing = !playing;
+        btnPause.textContent = playing ? "Pause rotation" : "Resume rotation";
+        schedule();
+      });
+
+      schedule();
+    })();
+  </script>
+</body>
+</html>

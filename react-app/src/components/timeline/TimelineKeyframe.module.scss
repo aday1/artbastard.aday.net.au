@@ -1,0 +1,123 @@
+.keyframe {
+  position: absolute;
+  cursor: move;
+  z-index: 10;
+  transform: translate(-50%, -50%);
+  transition: all 0.1s ease;
+  
+  &.selected {
+    z-index: 20;
+    
+    .keyframeDiamond {
+      border-color: var(--accent-color, #f59e0b);
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.3), 0 0 8px rgba(245, 158, 11, 0.6);
+      transform: scale(1.3);
+    }
+    
+    .keyframeLabel {
+      opacity: 1;
+      transform: translateY(-100%);
+    }
+  }
+  
+  &.dragging {
+    z-index: 30;
+    cursor: grabbing;
+    opacity: 0.9;
+    
+    .keyframeDiamond {
+      transform: scale(1.2);
+    }
+  }
+  
+  &.hovered {
+    z-index: 15;
+    
+    .keyframeDiamond {
+      transform: scale(1.15);
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5), 0 0 8px rgba(0, 0, 0, 0.4);
+    }
+    
+    .keyframeLabel {
+      opacity: 0.9;
+    }
+  }
+}
+
+.keyframeMarker {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.keyframeDiamond {
+  width: 16px;
+  height: 16px;
+  background: var(--keyframe-color, #3b82f6);
+  border: 2px solid white;
+  transform: rotate(45deg);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  transition: all 0.2s ease;
+}
+
+.keyframeLabel {
+  position: absolute;
+  top: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--card-background, #1a1a1a);
+  border: 1px solid var(--border-color, #333);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 100;
+  
+  .valueLabel {
+    font-weight: 700;
+    color: var(--text-color, #fff);
+    display: block;
+  }
+  
+  .percentageLabel {
+    font-size: 0.65rem;
+    color: var(--text-muted-color, #888);
+    display: block;
+  }
+}
+
+.keyframeHandles {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100px;
+  height: 20px;
+  pointer-events: none;
+  
+  .handle {
+    position: absolute;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    background: var(--accent-color, #f59e0b);
+    border: 1px solid white;
+    border-radius: 50%;
+    transform: translateY(-50%);
+    pointer-events: all;
+    cursor: ew-resize;
+    
+    &[data-handle="left"] {
+      left: -40px;
+    }
+    
+    &[data-handle="right"] {
+      right: -40px;
+    }
+  }
+}
+

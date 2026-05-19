@@ -1,0 +1,66 @@
+.shell {
+  position: fixed;
+  bottom: 20px;
+  z-index: 1050;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+
+  @media (max-width: 1279px) {
+    display: none !important;
+  }
+}
+
+.anchorLeft {
+  left: 20px;
+}
+
+.anchorRight {
+  right: 20px;
+}
+
+.body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.gripRight {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8px;
+  bottom: 8px;
+  cursor: ew-resize;
+  z-index: 3;
+}
+
+.gripBottom {
+  position: absolute;
+  left: 0;
+  right: 8px;
+  bottom: 0;
+  height: 8px;
+  cursor: ns-resize;
+  z-index: 3;
+}
+
+.gripCorner {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  cursor: nwse-resize;
+  z-index: 4;
+  background: linear-gradient(
+    135deg,
+    transparent 45%,
+    color-mix(in srgb, var(--color-primary, #d68706) 55%, transparent) 45%
+  );
+}

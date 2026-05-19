@@ -1,0 +1,659 @@
+.masterFader {
+  background: var(--color-card-bg);
+  padding: 0.5rem; /* Reduced from 0.75rem for more compact design */
+  border-radius: 12px; /* Reduced from 15px */
+  border: 1px solid var(--color-card-border);
+  box-shadow: 0 -2px 8px rgba(78, 205, 196, 0.15); /* Reduced shadow for less visual weight */
+  
+  /* Default styles - positioning will be handled by parent container */
+  width: 100%;
+  max-width: 600px; /* Reduced from 1000px for more reasonable size */
+  min-width: 350px; /* Reduced from 500px for better flexibility */
+  transition: width 0.3s ease, height 0.3s ease, padding 0.3s ease;
+  
+  /* Ensure component stays within viewport bounds */
+  max-width: calc(100vw - 20px); /* Reduced margin for more available space */
+  min-width: min(350px, calc(100vw - 20px)); /* Responsive min-width */
+
+  /* Compact mode styles */
+  &.compact {
+    padding: 0.25rem;
+    max-width: 500px;
+    min-width: 300px;
+    
+    .masterFaderContent {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 0.5rem;
+      height: 80px;
+    }
+    
+    .headerActions {
+      flex-shrink: 0;
+      margin-bottom: 0;
+      gap: 0.25rem;
+      
+      .fullOnButton, .blackoutButton, .setToZeroButton, .slowFadeoutButton, .fadeBackupButton {
+        min-width: 60px;
+        padding: 0.4rem 0.5rem;
+        font-size: 0.8rem;
+        height: 32px;
+      }
+    }
+    
+    .faderContainer {
+      flex: 1;
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      margin: 0;
+      
+      .sliderWrapper {
+        flex: 1;
+        padding: 0.5rem;
+        min-height: 50px;
+        min-width: 200px;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      
+      .verticalSlider {
+        height: 16px;
+        min-width: 150px;
+      }
+      
+      .valueDisplay {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.9rem;
+        min-width: 50px;
+      }
+        .controls {
+        display: none; // Hide all detailed controls in compact mode
+      }
+    }
+  }
+  
+  .masterFaderContent {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    
+    &.compact {
+      flex-direction: row;
+      align-items: center;
+      gap: 0.5rem;
+      height: 80px;
+    }
+    
+    &.minimized {
+      .faderContainer {
+        display: none;
+      }
+    }
+  }
+
+  &.minimized {
+    padding: 0.4rem; /* Keep reduced padding */
+    height: auto;
+    width: 100%; /* Use full width of parent container */
+    max-width: min(500px, calc(100vw - 20px)); /* Reduced max width when minimized */
+    min-width: min(320px, calc(100vw - 20px)); /* Smaller min-width for better mobile support */
+
+    .header h3 {
+      font-size: 0.9rem; /* Keep reduced font size */
+    }
+    
+    .faderContainer {
+      display: none; /* Hide fader when minimized */
+    }
+
+    .headerActions {
+      gap: 0.5rem; /* Increased from 0.4rem for better button spacing */
+      width: 100%;
+      justify-content: center; /* Center buttons for better appearance */
+      flex-wrap: wrap; /* Allow wrapping if needed on very small screens */
+      
+      .fullOnButton, .blackoutButton, .setToZeroButton, .slowFadeoutButton, .fadeBackupButton {
+        min-width: 80px; /* Increased from 40px for better usability */
+        max-width: none; /* Allow buttons to grow if space permits */
+        padding: 0.6rem 0.8rem; /* Increased from 0.4rem for better touch targets */
+        font-size: 0.85rem; /* Restored text visibility instead of font-size: 0 */
+        flex-shrink: 0; /* Prevent buttons from shrinking too much */
+        height: 40px; /* Set consistent height */
+        
+        i {
+          margin-right: 0.3rem; /* Add space between icon and text */
+        }
+      }
+    }
+  }
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem; /* Reduced from 1rem */
+    padding-bottom: 0.4rem; /* Reduced from 0.5rem */
+    border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+    cursor: grab;
+
+    h3 {
+      color: var(--text-primary);
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1rem; /* Explicit size for consistency */
+
+      &::before {
+        content: "🎚️";
+        font-size: 1.1em; /* Slightly reduced emoji size */
+      }
+    }
+
+    .windowControls {
+      display: flex;
+      gap: 0.5rem;
+
+      .minimizeButton {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 1rem;
+        padding: 0.25rem;
+        &:hover {
+          color: var(--text-primary);
+        }
+      }
+    }
+  }  .headerActions {
+    display: flex;
+    gap: 0.6rem; /* Reduced from 0.75rem for slightly more compact layout */
+    align-items: center;
+    flex-wrap: wrap; /* Allow buttons to wrap if needed */
+    justify-content: center; /* Center the buttons in the available space */
+    width: 100%; /* Full width for better button distribution */
+    margin-bottom: 0.75rem; /* Reduced from 1rem */
+    
+    /* Ensure buttons stay within container bounds */
+    box-sizing: border-box;
+    overflow: visible; /* Ensure buttons are always visible */
+    min-height: 44px; /* Minimum height to prevent cramping */
+
+    // Button styles for all action buttons - Made more usable
+    .fullOnButton, .blackoutButton, .setToZeroButton, .slowFadeoutButton, .fadeBackupButton {
+      padding: 0.6rem 1rem; /* Increased from 0.5rem 0.8rem for better touch targets */
+      color: #f0f0f0;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.9rem; /* Slightly increased from 0.85rem for better readability */
+      min-width: 110px; /* Increased from 100px for better usability */
+      height: 44px; /* Increased from 36px for better touch targets */
+      position: relative;
+      overflow: hidden;
+      
+      // Add shimmer effect for better visual feedback
+      &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        transition: left 0.5s;
+      }
+      
+      &:hover::before {
+        left: 100%;
+      }
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+      }
+      &:active {
+        transform: translateY(0);
+      }
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+    }
+
+    // Specific button styles with better colors and active states
+    .fullOnButton {
+      background: linear-gradient(135deg, #ffa502, #ff6348);
+      &:hover:not(:disabled) {
+        box-shadow: 0 8px 25px rgba(255, 165, 2, 0.4);
+      }
+      &.active {
+        background: linear-gradient(135deg, #2ed573, #1abc9c);
+        box-shadow: 0 4px 15px rgba(46, 213, 115, 0.4);
+        animation: glow 2s ease-in-out infinite alternate;
+      }
+    }
+
+    .blackoutButton {
+      background: linear-gradient(135deg, #ff4757, #ff3742);
+      &:hover:not(:disabled) {
+        box-shadow: 0 8px 25px rgba(255, 71, 87, 0.4);
+      }
+      &.active {
+        background: linear-gradient(135deg, #1e3c72, #2a5298);
+        box-shadow: 0 4px 15px rgba(30, 60, 114, 0.4);
+        animation: pulse 1.5s ease-in-out infinite;
+      }
+    }
+
+    .setToZeroButton {
+      background: linear-gradient(135deg, #c44569, #8b2635);
+      &:hover:not(:disabled) {
+        box-shadow: 0 8px 25px rgba(196, 69, 105, 0.4);
+      }
+      &.active {
+        background: linear-gradient(135deg, #8b2635, #5a1a1f);
+        box-shadow: 0 4px 15px rgba(139, 38, 53, 0.4);
+        animation: hardResetPulse 1s ease-in-out infinite;
+      }
+    }
+
+    .slowFadeoutButton {
+      background: linear-gradient(135deg, #4e54c8, #8f94fb);
+      &:hover:not(:disabled) {
+        box-shadow: 0 8px 25px rgba(78, 84, 200, 0.4);
+      }
+      &.active {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        animation: fadeGlow 2.5s ease-in-out infinite;
+      }
+    }
+
+    .fadeBackupButton {
+      background: linear-gradient(135deg, #11998e, #38ef7d);
+      &:hover:not(:disabled) {
+        box-shadow: 0 8px 25px rgba(17, 153, 142, 0.4);
+      }
+      &.active {
+        background: linear-gradient(135deg, #56ab2f, #a8e6cf);
+        box-shadow: 0 4px 15px rgba(86, 171, 47, 0.4);
+        animation: riseGlow 2s ease-in-out infinite alternate;
+      }
+    }
+
+    // Animation keyframes for active states
+    @keyframes glow {
+      from { box-shadow: 0 4px 15px rgba(46, 213, 115, 0.4); }
+      to { box-shadow: 0 6px 20px rgba(46, 213, 115, 0.8); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
+    @keyframes fadeGlow {
+      0% { box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); }
+      50% { box-shadow: 0 6px 20px rgba(102, 126, 234, 0.8); }
+      100% { box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); }
+    }
+
+    @keyframes riseGlow {
+      from { box-shadow: 0 4px 15px rgba(86, 171, 47, 0.4); }
+      to { box-shadow: 0 6px 20px rgba(86, 171, 47, 0.8); }
+    }
+
+    @keyframes hardResetPulse {
+      0%, 100% { 
+        box-shadow: 0 4px 15px rgba(139, 38, 53, 0.4);
+        transform: scale(1);
+      }
+      50% { 
+        box-shadow: 0 6px 20px rgba(139, 38, 53, 0.8);
+        transform: scale(1.02);
+      }
+    }
+  }
+    .faderContainer {
+    display: flex;
+    gap: 2rem; /* Increased from 1.5rem for better spacing */
+    align-items: flex-start;
+
+    .sliderWrapper {
+      display: flex;
+      flex-direction: row; // Horizontal layout for better UX
+      align-items: center; 
+      gap: 1.5rem; // Increased gap for horizontal layout
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      padding: 1.5rem; /* Increased padding for better proportions */
+      border: 2px solid var(--accent-color);
+      position: relative;
+      z-index: 10;
+      flex: 1; /* Allow the slider wrapper to expand */
+      min-height: 80px; /* Increased minimum height for better touch targets */
+      min-width: 400px; /* Added minimum width to ensure adequate slider space */
+      
+      // Allow pointer events on the wrapper
+      pointer-events: auto;
+    }    // Renamed from .verticalSlider conceptually, but keeping class name for now as per task
+    .verticalSlider {
+      -webkit-appearance: none; /* Remove default WebKit appearance */
+      appearance: none; /* Remove default platform appearance */
+      width: 100%; /* Slider takes full width of its parent */
+      min-width: 300px; /* Ensure minimum clickable width for better UX */
+      height: 24px; /* Increased height of the slider track for better touch targets */
+      background: linear-gradient(to right, var(--accent-color) 0%, var(--accent-color) var(--slider-progress, 0%), var(--color-slider-track) var(--slider-progress, 0%), var(--color-slider-track) 100%);
+      border-radius: 12px; /* Increased border radius to match new height */
+      outline: none;
+      cursor: pointer;
+      transition: all 0.2s ease; // Keep existing transitions
+      position: relative; // Keep for z-index context if needed
+      z-index: 1000; // Keep for potential stacking issues
+      border: 1px solid rgba(78, 205, 196, 0.3); /* Add subtle border for better definition */
+      
+      pointer-events: auto !important;
+      touch-action: none; // Keep for touch devices
+      
+      &:hover, &:active, &:focus {
+        z-index: 1001; // Keep for potential stacking issues
+        transform: scaleY(1.1); /* Slight vertical scale on hover for feedback */
+        box-shadow: 0 2px 8px rgba(78, 205, 196, 0.3); /* Add glow on hover */
+      }
+
+      &::-webkit-slider-thumb {
+        -webkit-appearance: none; /* Required for custom thumb styling */
+        appearance: none;
+        width: 45px;   /* Increased width of the thumb for better interaction */
+        height: 45px;  /* Increased height of the thumb for better interaction */
+        background: linear-gradient(135deg, var(--color-slider-thumb), rgba(78, 205, 196, 0.8));
+        border: 4px solid var(--accent-color);
+        border-radius: 50%; /* Circular thumb */
+        cursor: grab;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4), 0 0 0 3px rgba(78, 205, 196, 0.25);
+        transition: all 0.2s ease;
+        margin-top: -10px; /* Adjust thumb position to be centered on the track */
+      }
+
+      &::-webkit-slider-thumb:hover {
+        transform: scale(1.15); /* Increased hover scale for better feedback */
+        box-shadow: 0 7px 20px rgba(78, 205, 196, 0.5), 0 0 0 4px rgba(78, 205, 196, 0.35);
+      }
+
+      &::-webkit-slider-thumb:active {
+        cursor: grabbing;
+        transform: scale(1.08);
+        box-shadow: 0 5px 15px rgba(78, 205, 196, 0.7), 0 0 0 5px rgba(78, 205, 196, 0.45);
+      }
+
+      &::-moz-range-thumb {
+        width: 45px;   /* Increased width of the thumb for better interaction */
+        height: 45px;  /* Increased height of the thumb for better interaction */
+        background: linear-gradient(135deg, var(--color-slider-thumb), rgba(78, 205, 196, 0.8));
+        border: 4px solid var(--accent-color);
+        border-radius: 50%; /* Circular thumb */
+        cursor: grab;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4), 0 0 0 3px rgba(78, 205, 196, 0.25);
+        transition: all 0.2s ease;
+        
+        &:hover {
+          transform: scale(1.15);
+          box-shadow: 0 7px 20px rgba(78, 205, 196, 0.5), 0 0 0 4px rgba(78, 205, 196, 0.35);
+        }
+        
+        &:active {
+          cursor: grabbing;
+          transform: scale(1.08);
+          box-shadow: 0 5px 15px rgba(78, 205, 196, 0.7), 0 0 0 5px rgba(78, 205, 196, 0.45);
+        }
+      }
+
+      /* For Firefox range track styling */
+      &::-moz-range-track {
+        height: 24px;
+        background: linear-gradient(to right, var(--accent-color) 0%, var(--accent-color) var(--slider-progress, 0%), var(--color-slider-track) var(--slider-progress, 0%), var(--color-slider-track) 100%);
+        border-radius: 12px;
+        border: 1px solid rgba(78, 205, 196, 0.3);
+      }
+    }.valueDisplay {
+      background: var(--bg-primary);
+      color: var(--accent-color);
+      padding: 0.75rem 1rem; // Increased padding for better visibility
+      border-radius: 8px; // Increased border-radius for better appearance
+      font-weight: bold;
+      font-size: 1.2rem; // Increased font-size for better readability
+      border: 2px solid var(--accent-color);
+      min-width: 80px; // Increased min-width for consistency
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(78, 205, 196, 0.2);
+      white-space: nowrap; /* Prevent text wrapping */
+    }
+  }
+
+  .controls {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem; // Adjusted gap
+
+    .oscConfig {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+
+      label {
+        color: var(--text-primary);
+        font-weight: 600;
+      }
+
+      .addressInput {
+        padding: 0.6rem; // Adjusted padding
+        border: 2px solid var(--border-color);
+        border-radius: 6px; // Adjusted border-radius
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        font-family: 'Courier New', monospace;
+        transition: border-color 0.2s ease;
+
+        &:focus {
+          outline: none;
+          border-color: var(--accent-color);
+          box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.1);
+        }
+      }
+    }
+
+    .midiConfig {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem; // Adjusted gap
+
+      .midiStatus {
+        .midiAssigned {
+          color: var(--accent-color);
+          font-weight: 600;
+          padding: 0.4rem; // Adjusted padding
+          background: rgba(78, 205, 196, 0.1);
+          border-radius: 4px; // Adjusted border-radius
+          display: inline-block;
+        }
+
+        .midiUnassigned {
+          color: var(--text-secondary);
+          font-style: italic;
+        }
+      }
+
+      .midiActions {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+
+        .learnButton {
+          padding: 0.6rem 1.2rem; // Adjusted padding
+          background: var(--accent-color);
+          color: #f0f0f0;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          font-weight: 600;
+          transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+
+          &:hover:not(.learning) {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+          }
+
+          &.learning {
+            background: #ffa502;
+            animation: learnPulse 1.5s infinite;
+          }
+
+          @keyframes learnPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+          }
+        }
+
+        .clearButton {
+          padding: 0.4rem; // Adjusted padding
+          background: #ff4757;
+          color: #f0f0f0;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          
+          &:hover {
+            background: #ff3742;
+            transform: scale(1.1);
+          }
+        }
+      }
+    }
+
+    .channelInfo {
+      padding: 0.6rem; // Adjusted padding
+      background: var(--bg-primary);
+      border-radius: 6px; // Adjusted border-radius
+      border-left: 4px solid var(--accent-color);
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+  }
+  @media (max-width: 768px) {
+    width: calc(100vw - 20px) !important; /* Full width on mobile with small margin */
+    max-width: calc(100vw - 20px) !important;
+    min-width: auto !important; /* Remove min-width constraint on mobile */
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    border-radius: 15px 15px 0 0;
+    
+    &.minimized {
+      width: calc(100vw - 20px) !important;
+      max-width: calc(100vw - 20px) !important;
+      min-width: auto !important;
+      
+      .headerActions {
+        gap: 0.3rem;
+        padding: 0 0.2rem; /* Add small horizontal padding */
+        
+        .fullOnButton, .blackoutButton, .setToZeroButton, .slowFadeoutButton, .fadeBackupButton {
+          min-width: 35px;
+          padding: 0.3rem 0.2rem;
+          height: 32px;
+          flex: 1; /* Distribute space evenly */
+          max-width: calc(20% - 0.3rem); /* Ensure 5 buttons fit */
+          
+          /* Hide text on very small screens, keep icons */
+          span {
+            display: none;
+          }
+        }
+      }
+    }
+
+    .header {
+      flex-direction: column;
+      gap: 0.5rem;
+      align-items: stretch;
+    }
+
+    .headerActions {
+      width: 100%;
+      justify-content: space-between;
+      gap: 0.3rem;
+      padding: 0 0.2rem; /* Add small horizontal padding */
+      
+      .fullOnButton,
+      .blackoutButton,
+      .setToZeroButton,
+      .slowFadeoutButton,
+      .fadeBackupButton {
+        flex: 1;
+        min-width: auto;
+        max-width: calc(20% - 0.3rem); /* Ensure 5 buttons fit */
+        padding: 0.5rem 0.2rem;
+        font-size: 0.8rem;
+        
+        /* Adjust text for mobile */
+        span {
+          font-size: 0.7rem;
+        }
+      }
+    }
+
+    .faderContainer {
+      .controls {
+        width: 100%;
+      }
+    }
+  }
+
+  /* Extra small screens */
+  @media (max-width: 480px) {
+    &.minimized {
+      .headerActions {
+        .fullOnButton, .blackoutButton, .setToZeroButton, .slowFadeoutButton, .fadeBackupButton {
+          min-width: 30px;
+          padding: 0.25rem;
+          height: 30px;
+          font-size: 0;
+          
+          i {
+            font-size: 0.8rem;
+          }
+        }
+      }
+    }
+    
+    .headerActions {
+      .fullOnButton,
+      .blackoutButton,
+      .setToZeroButton,
+      .slowFadeoutButton,
+      .fadeBackupButton {
+        font-size: 0.7rem;
+        padding: 0.4rem 0.1rem;
+        
+        span {
+          display: none; /* Hide text on extra small screens */
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,104 @@
+.strip {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 4px 2px 0;
+  border-top: 1px solid rgba(71, 85, 105, 0.35);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  justify-content: center;
+}
+
+.btn {
+  min-width: 0;
+  padding: 3px 5px;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  border-radius: 3px;
+  border: 1px solid rgba(71, 85, 105, 0.55);
+  background: rgba(15, 23, 42, 0.85);
+  color: #cbd5e1;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+
+  &:hover:not(:disabled) {
+    border-color: rgba(248, 221, 54, 0.55);
+    color: #f8fafc;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(248, 221, 54, 0.7);
+    outline-offset: 1px;
+  }
+}
+
+.btnPlay {
+  flex: 1 1 auto;
+  min-width: 2.4rem;
+}
+
+.btnActive {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+}
+
+.btnRunning {
+  border-color: #e74c3c;
+  background: rgba(231, 76, 60, 0.18);
+  color: #fca5a5;
+}
+
+.btnModeActive {
+  border-color: rgba(248, 221, 54, 0.75);
+  background: rgba(248, 221, 54, 0.12);
+  color: #fde68a;
+}
+
+.hint {
+  font-size: 8px;
+  text-align: center;
+  color: #64748b;
+  line-height: 1.2;
+}
+
+.quickEdit {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px;
+  margin-top: 2px;
+  border-radius: 4px;
+  border: 1px solid rgba(71, 85, 105, 0.45);
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.quickDraw {
+  height: 72px;
+  min-height: 72px;
+  overflow: hidden;
+  border-radius: 3px;
+}
+
+.quickLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 8px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}

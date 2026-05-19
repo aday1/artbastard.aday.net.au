@@ -1,0 +1,187 @@
+// Styled native range — thebabydino CodePen #54 (JovQwE)
+// https://codepen.io/thebabydino/pen/JovQwE
+
+$theme-u: 0.375em;
+$theme-g: repeating-conic-gradient(hsla(0, 0%, 0%, 0.235) 0% 25%, transparent 0% 50%) 0 0 / #{$theme-u}
+  #{$theme-u};
+
+@mixin track-fill {
+  margin: var(--input-p);
+  height: var(--track-h);
+  border-radius: var(--track-h);
+  box-shadow: inset 0 0 0 2px #000;
+  background-color: #000;
+  background-image: var(--track-e), #{$theme-g}, var(--track-g);
+  background-size: var(--track-r), auto, var(--pos) 100%;
+  background-repeat: no-repeat;
+  background-position: 0 0, 0 0, 0 0;
+}
+
+@mixin thumb-style {
+  box-sizing: border-box;
+  border: solid var(--thumb-b, 2px) var(--thumb-c, transparent);
+  width: var(--thumb-w, var(--thumb-h));
+  height: var(--thumb-h);
+  border-radius: var(--thumb-r, 50%);
+  box-shadow:
+    0 -1px #000,
+    inset 0 -1px #8a8a8a;
+  background:
+    conic-gradient(
+        #fefefe,
+        #ebebeb,
+        #989898 25%,
+        #808080 0%,
+        #797979,
+        #b3b3b3 50%,
+        #bdbdbd 0%,
+        #d3d3d3,
+        #989898,
+        #d8d8d8,
+        #fefefe
+      )
+      padding-box,
+    linear-gradient(#f9f9f9, #8d8d8c) border-box;
+  clip-path: var(--thumb-p, inset(0));
+  cursor: ew-resize;
+}
+
+.input {
+  &,
+  &::-webkit-slider-runnable-track,
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  --min: 0;
+  --max: 255;
+  --val: 0;
+  --rng: calc(var(--max) - var(--min));
+  --pos: calc((var(--val) - var(--min)) / var(--rng) * 100%);
+  --input-p: 0.5em;
+  --input-h: calc(var(--track-h) + 2 * var(--input-p));
+  --track-w: calc(100% - 2 * var(--input-p));
+  --track-h: 0.875em;
+  --track-r: calc(0.5 * var(--track-h));
+  --track-e: radial-gradient(
+      circle farthest-side at 100%,
+      transparent calc(100% - 2px),
+      #000 calc(100% - 1px)
+    )
+    0 / var(--track-r) no-repeat;
+  --track-c0: #dcb004;
+  --track-c1: #e34f1e;
+  --track-g: linear-gradient(90deg, var(--track-c0), var(--track-c1));
+  --thumb-h: 1.75em;
+  --thumb-b: 2px;
+  --thumb-c: transparent;
+  --thumb-w: var(--thumb-h);
+  --thumb-r: 50%;
+  --thumb-p: inset(0);
+
+  display: block;
+  width: 100%;
+  max-width: 23em;
+  height: var(--input-h);
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--input-h);
+  box-shadow:
+    0 1px 1px hsla(0, 0%, 100%, 0.1),
+    inset 0 1px 0 2px #0d0d0d;
+  background: linear-gradient(#0a0a0a, #111 15%, #272727, #1d1d1d);
+  font: inherit;
+  transition: box-shadow 0.3s ease;
+  cursor: pointer;
+  touch-action: none;
+
+  &::-webkit-slider-container {
+    -webkit-user-modify: read-only;
+    @include track-fill;
+  }
+
+  &::-webkit-slider-runnable-track {
+    margin: var(--input-p);
+    height: var(--track-h);
+    border-radius: var(--track-h);
+    box-shadow: inset 0 0 0 2px #000;
+    background-color: #000;
+    background-image: var(--track-e), #{$theme-g}, var(--track-g);
+    background-size: var(--track-r), auto, var(--pos) 100%;
+    background-repeat: no-repeat;
+    filter: drop-shadow(0 4px 3px hsla(0, 0%, 0%, 0.9));
+  }
+
+  &::-moz-range-track {
+    margin: var(--input-p);
+    height: var(--track-h);
+    border-radius: var(--track-h);
+    box-shadow: inset 0 0 0 2px #000;
+    background: #000;
+  }
+
+  &::-moz-range-progress {
+    height: var(--track-h);
+    border: solid var(--input-p) transparent;
+    border-right-width: 0;
+    border-radius: var(--input-h) 0 0 var(--input-h);
+    box-shadow: inset 0 0 0 2px #000;
+    background: var(--track-g);
+  }
+
+  &::-webkit-slider-thumb {
+    @include thumb-style;
+  }
+
+  &::-moz-range-thumb {
+    @include thumb-style;
+  }
+
+  &:hover,
+  &:focus-visible {
+    outline: solid 2px var(--track-c1);
+    outline-offset: 0.35em;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.variantRed {
+  --track-c0: #cc040d;
+  --track-c1: #ff5a3a;
+  --thumb-p: polygon(
+    50% 0%,
+    61% 35%,
+    98% 35%,
+    68% 57%,
+    79% 91%,
+    50% 70%,
+    21% 91%,
+    32% 57%,
+    2% 35%,
+    39% 35%
+  );
+}
+
+.variantGreen {
+  --track-c0: #08c300;
+  --track-c1: #aaca00;
+  --thumb-w: 2em;
+  --thumb-h: 1.125em;
+  --thumb-r: var(--thumb-h);
+}
+
+.variantBlue {
+  --track-c0: #0010d5;
+  --track-c1: #00d1de;
+}
+
+.variantGeneric {
+  --track-c0: #dcb004;
+  --track-c1: #e34f1e;
+}

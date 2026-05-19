@@ -1,0 +1,77 @@
+@use 'sass:color';
+@import '../../styles/variables'; // Adjusted path
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 ($spacing-unit * 2.5);
+  height: $header-height;
+  background-color: $background-dark-secondary; // Using theme variable
+  color: $text-color-light;
+  border-bottom: 2px solid $primary-color;
+  box-shadow: $box-shadow-md;
+  z-index: $z-index-header; // Ensure header is above other content
+
+  a {
+    color: $text-color-light;
+    text-decoration: none;
+    padding: ($spacing-unit) ($spacing-unit * 1.5);
+    transition: color $transition-fast, text-shadow $transition-fast, background-color $transition-fast;
+    font-weight: 500;
+    display: flex; // For aligning icon and text
+    align-items: center;
+    border-radius: $border-radius;
+
+
+    &:hover {
+      color: $secondary-color;
+      text-shadow: 0 0 5px rgba(color.scale($secondary-color, $alpha: -0.5), 0.7);
+      background-color: rgba(color.scale($secondary-color, $alpha: -0.8), 0.1);
+    }
+
+    svg { // Targeting FontAwesomeIcon
+      margin-right: $spacing-unit * 0.75;
+      width: $font-size-base; // Control icon size explicitly
+    }
+  }
+}
+
+.logo {
+  font-size: $font-size-lg; // Using theme variable
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+
+  a {
+    padding-left: 0;
+    color: $primary-color; // Logo text in primary color
+    background-color: transparent !important; // Ensure logo link hover is clean
+
+     &:hover {
+      color: color.scale($primary-color, $lightness: 15%);
+      text-shadow: 0 0 8px rgba(color.scale($primary-color, $alpha: -0.7), 0.5);
+    }
+
+    svg { // Targeting FontAwesomeIcon in logo
+      color: $secondary-color; // Icon in secondary color for logo
+      width: $font-size-lg; // Control icon size explicitly
+    }
+  }
+}
+
+.logoIcon { // This specific class is used for the main logo icon in the Header.tsx
+  margin-right: $spacing-unit;
+  // color is handled by svg target in .logo a svg
+  // font-size is handled by svg target in .logo a svg
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+
+  a {
+    margin-left: $spacing-unit; // Reduced margin as padding is on link now
+    font-size: $font-size-base; // Using theme variable
+  }
+}

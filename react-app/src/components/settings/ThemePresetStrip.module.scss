@@ -1,0 +1,47 @@
+.strip {
+  margin-bottom: 1rem;
+}
+
+.hint {
+  font-size: 0.85rem;
+  color: var(--text-secondary, var(--rk-label-dim));
+  margin-bottom: 0.5rem;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  font-family: var(--rk-mono, var(--font-mono));
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  border: 1px solid var(--rk-bevel-lo, var(--border-color));
+  border-radius: 2px;
+  background: var(--rk-surface, var(--bg-secondary));
+  color: var(--rk-label, var(--text-primary));
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 var(--rk-bevel-hi, transparent);
+}
+
+.chip:hover {
+  border-color: var(--rk-accent, var(--color-primary));
+}
+
+.chipActive {
+  border-color: var(--rk-accent, var(--color-accent));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--rk-accent, orange) 40%, transparent);
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid rgb(0 0 0 / 0.35);
+}

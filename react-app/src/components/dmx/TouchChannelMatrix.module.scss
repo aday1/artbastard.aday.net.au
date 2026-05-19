@@ -1,0 +1,438 @@
+// Touch-Friendly Channel Matrix
+.touchChannelMatrix {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  border: 2px solid var(--color-border);
+  box-shadow: var(--shadow-md);
+  transition: all var(--transition-normal);
+  
+  &:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+  }
+  
+  
+  &.compact {
+    padding: var(--space-md);
+    
+    .channel {
+      min-height: 120px;
+    }
+  }
+}
+
+// Master Controls
+.masterControls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-lg);
+  padding: var(--space-md);
+  background: var(--color-background);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  
+}
+
+.masterFader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex: 1;
+  
+  label {
+    font-size: var(--text-sm);
+    font-weight: var(--font-semibold);
+    color: var(--color-text-primary);
+    min-width: 60px;
+  }
+}
+
+.masterSlider {
+  flex: 1;
+  height: 12px;
+  background: var(--color-border);
+  border-radius: var(--radius-full);
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    background: var(--color-interactive);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: all var(--transition-fast);
+    
+    &:hover {
+      transform: scale(1.2);
+      box-shadow: var(--shadow-md);
+    }
+  }
+  
+  &::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+    background: var(--color-interactive);
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+    box-shadow: var(--shadow-sm);
+    transition: all var(--transition-fast);
+    
+    &:hover {
+      transform: scale(1.2);
+      box-shadow: var(--shadow-md);
+    }
+  }
+}
+
+.masterButtons {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.masterButton {
+  @extend .touch-target !optional;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+  }
+  
+  &.blackout {
+    border-color: var(--color-error-500);
+    color: var(--color-error-500);
+    
+    &:hover {
+      background: var(--color-error-500);
+      color: var(--color-text-inverse);
+    }
+  }
+  
+  &.fullOn {
+    border-color: var(--color-success-500);
+    color: var(--color-success-500);
+    
+    &:hover {
+      background: var(--color-success-500);
+      color: var(--color-text-inverse);
+    }
+  }
+}
+
+// Channel Grid
+.channelGrid {
+  display: grid;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+// Individual Channel
+.channel {
+  @extend .touch-target !optional;
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  position: relative;
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  
+  &:hover {
+    border-color: var(--color-interactive);
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-1px);
+  }
+  
+  &.selected {
+    border-color: var(--color-interactive);
+    background: rgba(78, 205, 196, 0.1);
+    box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.2);
+  }
+  
+  &.compact {
+    min-height: 120px;
+    padding: var(--space-sm);
+  }
+  
+  &.fixtureAssigned {
+    border-left-width: 3px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    
+    &:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+  }
+}
+
+// Channel Header
+.channelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-xs);
+}
+
+.channelNumber {
+  font-size: var(--text-sm);
+  font-weight: var(--font-bold);
+  color: var(--color-interactive);
+  background: var(--color-background);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  min-width: 40px;
+  text-align: center;
+}
+
+.channelName {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  flex: 1;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fixtureInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: center;
+}
+
+.fixtureBadge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.channelFunction {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.channelTypeLabel {
+  font-size: 8px;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+}
+
+.channelValue {
+  font-size: var(--text-sm);
+  font-weight: var(--font-bold);
+  color: var(--color-text-primary);
+  background: var(--color-background);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  min-width: 40px;
+  text-align: center;
+}
+
+// Slider Container
+.sliderContainer {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  margin: var(--space-sm) 0;
+}
+
+.slider {
+  width: 100%;
+  height: 16px;
+  background: var(--color-border);
+  border-radius: var(--radius-full);
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: all var(--transition-fast);
+  
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 28px;
+    height: 28px;
+    background: var(--color-interactive);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: all var(--transition-fast);
+    border: 2px solid var(--color-background);
+    
+    &:hover {
+      transform: scale(1.2);
+      box-shadow: var(--shadow-md);
+    }
+    
+    &:active {
+      transform: scale(1.1);
+    }
+  }
+  
+  &::-moz-range-thumb {
+    width: 28px;
+    height: 28px;
+    background: var(--color-interactive);
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid var(--color-background);
+    box-shadow: var(--shadow-sm);
+    transition: all var(--transition-fast);
+    
+    &:hover {
+      transform: scale(1.2);
+      box-shadow: var(--shadow-md);
+    }
+    
+    &:active {
+      transform: scale(1.1);
+    }
+  }
+}
+
+// Intensity Bar
+.intensityBar {
+  height: 20px;
+  background: var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  position: relative;
+  margin: var(--space-xs) 0;
+}
+
+.intensityFill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  transition: height var(--transition-fast);
+  border-radius: var(--radius-sm);
+}
+
+// Quick Controls
+.quickControls {
+  display: flex;
+  gap: var(--space-xs);
+  justify-content: center;
+}
+
+.quickButton {
+  @extend .touch-target !optional;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-background);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  &:hover {
+    border-color: var(--color-interactive);
+    color: var(--color-interactive);
+    transform: scale(1.1);
+  }
+  
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+// Status Bar
+.statusBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-background);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  
+}
+
+.statusItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  
+  span {
+    font-weight: var(--font-medium);
+  }
+}
+
+// Responsive Design
+@media (max-width: 768px) {
+  .touchChannelMatrix {
+    padding: var(--space-md);
+  }
+  
+  .channel {
+    min-height: 140px;
+  }
+  
+  .masterControls {
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+  
+  .masterFader {
+    width: 100%;
+  }
+  
+  .masterButtons {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .channel {
+    min-height: 120px;
+    padding: var(--space-sm);
+  }
+  
+  .channelHeader {
+    flex-direction: column;
+    gap: var(--space-xs);
+    text-align: center;
+  }
+  
+  .channelName {
+    display: none;
+  }
+}

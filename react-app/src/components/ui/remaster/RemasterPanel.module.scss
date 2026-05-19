@@ -1,0 +1,13 @@
+.rackWrap {
+  width: 100%;
+}
+
+.accent :global(.ab-rack-module__head) {
+  color: var(--rk-accent, var(--color-accent));
+}
+
+.bodyInner {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}

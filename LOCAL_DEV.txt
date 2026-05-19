@@ -1,0 +1,45 @@
+ArtBastard - local dev (matches Linode image, without Docker)
+
+Repo path (your machine):
+  c:\Users\aday\Desktop\Obsidian\YomikosPapers\temp_\cloudflare_pages_repos\artbastard.aday.net.au
+
+FIRST TIME ONLY
+  cd <repo>
+  npm ci
+  npm --prefix react-app ci
+
+FAST DEV (hot reload UI) - recommended before a Linode push
+  Terminal 1:
+    npm run local:backend
+  Terminal 2:
+    npm run local:frontend
+
+  Open: http://localhost:3001
+  Vite proxies /api and Socket.IO to the backend on port 3030.
+
+  Or one command (both processes):
+    npm run local
+
+PRODUCTION-LIKE LOCAL (same as Linode container: built React in dist/)
+  npm run local:prod
+  Open: http://localhost:3030
+
+WINDOWS ALL-IN-ONE (builds, optional MIDI picker, serves 3030)
+  .\start.ps1
+
+VERIFY BEFORE DEPLOY
+  cd react-app
+  npx tsc --noEmit
+  npx vite build
+  cd ..
+  npm run test:api-contract
+
+DEPLOY TO LINODE (from repo root, on main)
+  git push origin main
+  -> artbastard-image (GHCR :live)
+  -> deploy-linode (Macroverse compose on VPS)
+
+Live:  https://artbastard.aday.net.au/
+Dev:   https://dev.artbastard.aday.net.au/
+
+Build footer on the live site shows the git SHA after deploy completes.

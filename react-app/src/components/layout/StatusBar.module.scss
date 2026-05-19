@@ -1,0 +1,92 @@
+.statusBar {
+  background: rgba(0, 0, 0, 0.1);
+  padding: 0.5rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative; /* allow absolute centering of left section */
+
+  .left {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    position: absolute; /* center the network status button */
+    left: 50%;
+    transform: translateX(-50%);
+
+    .networkButton {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      padding: 0.5rem;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+      font-size: 0.9rem;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-primary);
+      }
+
+      i {
+        font-size: 1rem;
+      }
+
+      @media (max-width: 768px) {
+        span {
+          display: none;
+        }
+      }
+    }
+  }
+
+  .right {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+
+    .connectionStatus {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+
+      &.connected {
+        background: rgba(46, 213, 115, 0.1);
+        color: #2ed573;
+      }
+
+      &.disconnected {
+        background: rgba(255, 71, 87, 0.1);
+        color: #ff4757;
+      }
+
+      i {
+        font-size: 1rem;
+      }
+
+      @media (max-width: 768px) {
+        span {
+          display: none;
+        }
+        padding: 0.25rem;
+      }
+    }
+  }
+}
+
+// Dark theme variations
+:global([data-theme="dark"]) {
+  .statusBar {
+    background: rgba(255, 255, 255, 0.05);
+    border-top-color: rgba(255, 255, 255, 0.05);
+  }
+}

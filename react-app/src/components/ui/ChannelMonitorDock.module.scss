@@ -1,0 +1,84 @@
+.dock {
+  position: fixed;
+  top: calc(4.5rem + var(--safe-top, 0px));
+  right: var(--safe-right, 0px);
+  bottom: calc(1rem + var(--safe-bottom, 0px));
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid rgba(0, 212, 255, 0.35);
+  background: linear-gradient(
+    90deg,
+    rgba(8, 12, 22, 0.72) 0%,
+    rgba(12, 18, 32, 0.96) 18%,
+    rgba(12, 18, 32, 0.98) 100%
+  );
+  backdrop-filter: blur(14px);
+  box-shadow: -8px 0 28px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  min-height: 14rem;
+  max-height: calc(100vh - 6rem - var(--safe-top, 0px) - var(--safe-bottom, 0px));
+}
+
+.gripTop {
+  flex: 0 0 auto;
+  height: 8px;
+  cursor: ns-resize;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 212, 255, 0.2) 0%,
+    rgba(0, 212, 255, 0.05) 100%
+  );
+  border-bottom: 1px solid rgba(0, 212, 255, 0.2);
+
+  &:hover {
+    background: linear-gradient(180deg, rgba(0, 212, 255, 0.45) 0%, rgba(0, 212, 255, 0.12) 100%);
+  }
+}
+
+.gripLeft {
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 0;
+  width: 8px;
+  z-index: 2;
+  cursor: ew-resize;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 212, 255, 0.25) 0%,
+    rgba(0, 212, 255, 0.05) 100%
+  );
+
+  &:hover {
+    background: linear-gradient(90deg, rgba(0, 212, 255, 0.5) 0%, rgba(0, 212, 255, 0.15) 100%);
+  }
+}
+
+.scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 10px 8px 12px 12px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 212, 255, 0.45) rgba(255, 255, 255, 0.06);
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 999px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 212, 255, 0.45);
+    border-radius: 999px;
+  }
+}

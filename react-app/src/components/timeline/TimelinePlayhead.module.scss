@@ -1,0 +1,32 @@
+.playhead {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  pointer-events: none;
+  z-index: 100;
+  transition: left 0.05s linear;
+}
+
+.playheadLine {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  height: 100%;
+  background: var(--accent-color, #f59e0b);
+  box-shadow: 0 0 4px rgba(245, 158, 11, 0.8);
+}
+
+.playheadHandle {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12px;
+  height: 12px;
+  background: var(--accent-color, #f59e0b);
+  border-radius: 50% 50% 0 0;
+  box-shadow: 0 0 4px rgba(245, 158, 11, 0.8);
+}
+

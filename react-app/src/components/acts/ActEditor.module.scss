@@ -1,0 +1,819 @@
+.actEditor {
+  background: var(--card-background);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  margin-top: 20px;
+  overflow: hidden;
+
+  .editorHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background: var(--background-color);
+    border-bottom: 1px solid var(--border-color);
+
+    h3 {
+      margin: 0;
+      font-size: 1.3rem;
+      color: var(--text-color);
+
+      i {
+        margin-right: 10px;
+        color: var(--primary-color);
+      }
+    }
+
+    .editorActions {
+      display: flex;
+      gap: 10px;
+
+      button {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: all 0.2s ease;
+
+        i {
+          margin-right: 5px;
+        }
+
+        &.saveButton {
+          background: var(--success-color);
+          color: white;
+
+          &:hover {
+            background: var(--success-hover-color);
+            transform: translateY(-1px);
+          }
+        }
+
+        &.closeButton {
+          background: var(--danger-color);
+          color: white;
+
+          &:hover {
+            background: var(--danger-hover-color);
+            transform: translateY(-1px);
+          }
+        }
+      }
+    }
+  }
+
+  .editorContent {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+  }
+
+  .actProperties {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+
+    .propertyGroup {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+
+      label {
+        font-weight: 500;
+        color: var(--text-color);
+        font-size: 0.9rem;
+      }
+
+      input, textarea, select {
+        padding: 10px 12px;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        background: var(--input-background);
+        color: var(--text-color);
+        font-size: 0.9rem;
+
+        &:focus {
+          outline: none;
+          border-color: var(--primary-color);
+          box-shadow: 0 0 0 2px var(--primary-color-alpha);
+        }
+
+        &::placeholder {
+          color: var(--text-muted-color);
+        }
+      }
+
+      textarea {
+        resize: vertical;
+        min-height: 60px;
+      }
+    }
+  }
+
+  .stepsSection {
+    .stepsHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+
+      h4 {
+        margin: 0;
+        font-size: 1.2rem;
+        color: var(--text-color);
+
+        i {
+          margin-right: 8px;
+          color: var(--primary-color);
+        }
+      }
+
+      .stepsActions {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+
+        .totalDuration {
+          color: var(--text-muted-color);
+          font-size: 0.9rem;
+          font-weight: 500;
+        }
+
+        .addStepButton {
+          background: var(--primary-color);
+          color: white;
+          border: none;
+          padding: 8px 16px;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 0.9rem;
+          transition: all 0.2s ease;
+
+          &:hover {
+            background: var(--primary-hover-color);
+            transform: translateY(-1px);
+          }
+
+          i {
+            margin-right: 5px;
+          }
+        }
+      }
+    }
+
+    .addStepForm {
+      background: var(--background-color);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+
+      h5 {
+        margin: 0 0 15px 0;
+        font-size: 1.1rem;
+        color: var(--text-color);
+      }
+
+      .stepForm {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        align-items: end;
+
+        .formGroup {
+          display: flex;
+          flex-direction: column;
+          gap: 5px;
+
+          label {
+            font-weight: 500;
+            color: var(--text-color);
+            font-size: 0.85rem;
+          }
+
+          input, select {
+            padding: 8px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--input-background);
+            color: var(--text-color);
+            font-size: 0.85rem;
+
+            &:focus {
+              outline: none;
+              border-color: var(--primary-color);
+            }
+          }
+        }
+
+        .formActions {
+          display: flex;
+          gap: 10px;
+          grid-column: 1 / -1;
+          justify-content: flex-end;
+          margin-top: 10px;
+
+          button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+
+            i {
+              margin-right: 5px;
+            }
+
+            &.addButton {
+              background: var(--success-color);
+              color: white;
+
+              &:hover:not(:disabled) {
+                background: var(--success-hover-color);
+              }
+
+              &:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+              }
+            }
+
+            &.cancelButton {
+              background: var(--text-muted-color);
+              color: white;
+
+              &:hover {
+                background: var(--text-color);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    .stepsList {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .stepItem {
+      background: var(--background-color);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 15px;
+      display: flex;
+      gap: 15px;
+      transition: all 0.2s ease;
+
+      &:hover {
+        border-color: var(--primary-color);
+        box-shadow: 0 2px 8px var(--shadow-color);
+      }
+
+      &.dragging {
+        transform: rotate(2deg);
+        box-shadow: 0 4px 12px var(--shadow-color);
+      }
+
+      .stepDragHandle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        color: var(--text-muted-color);
+        cursor: grab;
+
+        &:active {
+          cursor: grabbing;
+        }
+
+        i {
+          font-size: 1rem;
+        }
+      }
+
+      .stepContent {
+        flex: 1;
+
+        .stepHeader {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 10px;
+
+          .stepNumber {
+            background: var(--primary-color);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+          }
+
+          .stepScene {
+            flex: 1;
+            margin: 0 15px;
+            font-weight: 500;
+            color: var(--text-color);
+          }
+
+          .stepActions {
+            display: flex;
+            gap: 5px;
+
+            button {
+              width: 28px;
+              height: 28px;
+              border: none;
+              border-radius: 4px;
+              cursor: pointer;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              transition: all 0.2s ease;
+
+              i {
+                font-size: 0.7rem;
+              }
+
+              &.editStepButton {
+                background: var(--primary-color);
+                color: white;
+
+                &:hover {
+                  background: var(--primary-hover-color);
+                  transform: scale(1.1);
+                }
+              }
+
+              &.removeStepButton {
+                background: var(--danger-color);
+                color: white;
+
+                &:hover {
+                  background: var(--danger-hover-color);
+                  transform: scale(1.1);
+                }
+              }
+            }
+          }
+        }
+
+        .stepDetails {
+          display: flex;
+          gap: 20px;
+          margin-bottom: 10px;
+
+          .stepDetail {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.85rem;
+            color: var(--text-muted-color);
+
+            i {
+              color: var(--accent-color);
+            }
+          }
+        }
+
+        .stepEditForm {
+          background: var(--card-background);
+          border: 1px solid var(--border-color);
+          border-radius: 6px;
+          padding: 15px;
+          margin-top: 10px;
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          gap: 10px;
+
+          .editFormGroup {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+
+            label {
+              font-weight: 500;
+              color: var(--text-color);
+              font-size: 0.8rem;
+            }
+
+            input, select {
+              padding: 6px 8px;
+              border: 1px solid var(--border-color);
+              border-radius: 4px;
+              background: var(--input-background);
+              color: var(--text-color);
+              font-size: 0.8rem;
+
+              &:focus {
+                outline: none;
+                border-color: var(--primary-color);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    .autopilotSettings {
+      grid-column: 1 / -1;
+      background: var(--card-background);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 15px;
+      margin-top: 10px;
+
+      h6 {
+        margin: 0 0 10px 0;
+        font-size: 0.9rem;
+        color: var(--text-color);
+        font-weight: 500;
+      }
+
+      .autopilotGroup {
+        display: grid;
+        grid-template-columns: 1fr 1fr auto auto auto auto auto;
+        gap: 8px;
+        align-items: center;
+        padding: 8px;
+        background: var(--background-color);
+        border-radius: 4px;
+        margin-bottom: 8px;
+
+        select, input[type="range"] {
+          padding: 4px 6px;
+          border: 1px solid var(--border-color);
+          border-radius: 3px;
+          background: var(--input-background);
+          color: var(--text-color);
+          font-size: 0.8rem;
+
+          &:focus {
+            outline: none;
+            border-color: var(--primary-color);
+          }
+        }
+
+        input[type="range"] {
+          width: 60px;
+          height: 20px;
+        }
+
+        span {
+          font-size: 0.8rem;
+          color: var(--text-muted-color);
+          min-width: 30px;
+          text-align: center;
+        }
+
+        button {
+          width: 24px;
+          height: 24px;
+          border: none;
+          border-radius: 3px;
+          background: var(--danger-color);
+          color: white;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 0.7rem;
+
+          &:hover {
+            background: var(--danger-hover-color);
+          }
+        }
+      }
+
+      > button {
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.8rem;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background: var(--primary-hover-color);
+        }
+
+        i {
+          margin-right: 5px;
+        }
+      }
+    }
+  }
+
+  .triggersSection {
+    .triggersHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+
+      h4 {
+        margin: 0;
+        font-size: 1.2rem;
+        color: var(--text-color);
+
+        i {
+          margin-right: 8px;
+          color: var(--accent-color);
+        }
+      }
+
+      .triggersActions {
+        .addTriggerButton {
+          background: var(--accent-color);
+          color: white;
+          border: none;
+          padding: 8px 16px;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 0.9rem;
+          transition: all 0.2s ease;
+
+          &:hover {
+            background: var(--accent-hover-color);
+            transform: translateY(-1px);
+          }
+
+          i {
+            margin-right: 5px;
+          }
+        }
+      }
+    }
+
+    .addTriggerForm {
+      background: var(--background-color);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+
+      h5 {
+        margin: 0 0 15px 0;
+        font-size: 1.1rem;
+        color: var(--text-color);
+      }
+
+      .triggerForm {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        align-items: end;
+
+        .formGroup {
+          display: flex;
+          flex-direction: column;
+          gap: 5px;
+
+          label {
+            font-weight: 500;
+            color: var(--text-color);
+            font-size: 0.85rem;
+          }
+
+          input, select {
+            padding: 8px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--input-background);
+            color: var(--text-color);
+            font-size: 0.85rem;
+
+            &:focus {
+              outline: none;
+              border-color: var(--primary-color);
+            }
+          }
+        }
+
+        .formActions {
+          display: flex;
+          gap: 10px;
+          grid-column: 1 / -1;
+          justify-content: flex-end;
+          margin-top: 10px;
+
+          button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+
+            i {
+              margin-right: 5px;
+            }
+
+            &.addButton {
+              background: var(--success-color);
+              color: white;
+
+              &:hover:not(:disabled) {
+                background: var(--success-hover-color);
+              }
+
+              &:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+              }
+            }
+
+            &.cancelButton {
+              background: var(--text-muted-color);
+              color: white;
+
+              &:hover {
+                background: var(--text-color);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    .triggersList {
+      .emptyTriggers {
+        text-align: center;
+        padding: 40px 20px;
+        color: var(--text-muted-color);
+
+        i {
+          font-size: 2rem;
+          margin-bottom: 10px;
+          color: var(--accent-color);
+          opacity: 0.7;
+        }
+
+        p {
+          margin: 5px 0;
+          font-size: 0.9rem;
+
+          &:first-of-type {
+            font-size: 1rem;
+            font-weight: 500;
+          }
+        }
+      }
+
+      .triggerItem {
+        background: var(--background-color);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 10px;
+        transition: all 0.2s ease;
+
+        &:hover {
+          border-color: var(--primary-color);
+          box-shadow: 0 2px 8px var(--shadow-color);
+        }
+
+        .triggerHeader {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+
+          .triggerInfo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex: 1;
+
+            .triggerType {
+              display: flex;
+              align-items: center;
+              gap: 5px;
+              background: var(--primary-color);
+              color: white;
+              padding: 4px 8px;
+              border-radius: 4px;
+              font-size: 0.8rem;
+              font-weight: 600;
+
+              i {
+                font-size: 0.7rem;
+              }
+            }
+
+            .triggerAddress {
+              font-weight: 500;
+              color: var(--text-color);
+              font-size: 0.9rem;
+            }
+
+            .triggerAction {
+              display: flex;
+              align-items: center;
+              gap: 5px;
+              color: var(--accent-color);
+              font-size: 0.85rem;
+              font-weight: 500;
+
+              i {
+                font-size: 0.8rem;
+              }
+            }
+          }
+
+          .triggerActions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+
+            .toggleSwitch {
+              position: relative;
+              display: inline-block;
+              width: 40px;
+              height: 20px;
+
+              input {
+                opacity: 0;
+                width: 0;
+                height: 0;
+
+                &:checked + .slider {
+                  background-color: var(--success-color);
+
+                  &:before {
+                    transform: translateX(20px);
+                  }
+                }
+              }
+
+              .slider {
+                position: absolute;
+                cursor: pointer;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-color: var(--text-muted-color);
+                transition: 0.2s;
+                border-radius: 20px;
+
+                &:before {
+                  position: absolute;
+                  content: "";
+                  height: 16px;
+                  width: 16px;
+                  left: 2px;
+                  bottom: 2px;
+                  background-color: white;
+                  transition: 0.2s;
+                  border-radius: 50%;
+                }
+              }
+            }
+
+            .removeTriggerButton {
+              width: 28px;
+              height: 28px;
+              border: none;
+              border-radius: 4px;
+              background: var(--danger-color);
+              color: white;
+              cursor: pointer;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 0.7rem;
+              transition: all 0.2s ease;
+
+              &:hover {
+                background: var(--danger-hover-color);
+                transform: scale(1.1);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// Dark mode adjustments
+@media (prefers-color-scheme: dark) {
+  .actEditor {
+    .stepItem {
+      &:hover {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      }
+
+      &.dragging {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      }
+    }
+  }
+}

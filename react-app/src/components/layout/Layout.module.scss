@@ -1,0 +1,245 @@
+/* Define navbar width variables here too, or import from a global sheet if available */
+:root {
+  --navbar-expanded-width: 220px; /* Ensure consistency if not globally defined */
+  --navbar-collapsed-width: 56px; /* Ensure consistency */
+}
+
+.layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--background);
+  color: var(--text-primary);
+  position: relative; // Added to contain absolute children like Sparkles
+
+  .contentWrapper {
+    flex: 1;
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+    padding-right: calc(var(--navbar-expanded-width) + 1rem); /* Add right padding for vertical navbar */
+    padding-left: calc(var(--pinned-channels-width, 0px) + 1rem); /* Add left padding for pinned channels */
+    position: relative;
+    overflow: visible;
+    transition: padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Styling for when navbar is collapsed - applied via body class */
+    :global(body.navbar-is-collapsed) & {
+      padding-right: calc(var(--navbar-collapsed-width) + 1rem); /* Reduced padding for collapsed navbar */
+    }
+
+    .statusPanel {
+      width: 300px;
+      flex-shrink: 0;
+      position: sticky;
+      top: 1rem;
+      height: fit-content;
+      z-index: 10;
+      
+      @media (max-width: 1024px) {
+        display: none;
+      }
+    }
+
+    .mainContent {
+      flex: 1;
+      min-width: 0; // Prevent flex item from overflowing
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+
+      .title {
+        font-size: 2rem;
+        margin: 0;
+        color: var(--text-primary);
+        
+        span {
+          font-weight: 300;
+          margin-left: 0.5rem;
+          color: var(--text-secondary);
+          background: linear-gradient(45deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3);
+          background-size: 400% 400%;
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          animation: rainbowCycle 3s ease-in-out infinite;
+        }
+      }
+
+      .serverInfo {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        opacity: 0.7;
+        margin-top: -0.5rem;
+        margin-bottom: 0.5rem;
+        font-family: 'Courier New', monospace;
+      }
+
+      .titleControls {
+        margin: 1rem 0;
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        align-items: center;
+      }
+
+      .artQuote {
+        font-style: italic;
+        color: var(--text-secondary);
+        margin: 1rem 0;
+        padding: 1rem;
+        border-left: 3px solid var(--accent-color, #4ecdc4);
+        background: rgba(78, 205, 196, 0.05);
+
+        .artSignature {
+          margin-top: 0.5rem;
+          font-size: 0.9rem;
+          text-align: right;
+        }
+      }
+
+      .contentArea {
+        flex: 1;
+      }
+
+      .bottomControls {
+        margin: 1rem 0;
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        align-items: center;
+        padding: 1rem 0;
+        border-top: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+      }
+
+      .themeControls {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+      }
+
+      .themeButton {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        min-width: 100px; // Ensure uniform width
+        justify-content: center;
+        background: var(--color-surface, rgba(255, 255, 255, 0.1));
+        border: 1px solid var(--color-border, rgba(255, 255, 255, 0.2));
+        border-radius: 6px;
+        color: var(--color-text-primary, #ffffff);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 0.9rem;
+        
+        &:hover {
+          background: var(--color-interactive, rgba(78, 205, 196, 0.2));
+          border-color: var(--color-interactive, #4ecdc4);
+          transform: translateY(-1px);
+        }
+        
+        svg {
+          width: 16px;
+          height: 16px;
+        }
+        
+        // Language-specific styles
+        &.artsnob {
+          background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
+          border-color: #D2691E;
+          color: #FFF8DC;
+          
+          &:hover {
+            background: linear-gradient(135deg, #A0522D 0%, #CD853F 100%);
+            border-color: #F4A460;
+          }
+        }
+        
+        &.standard {
+          background: var(--color-surface, rgba(255, 255, 255, 0.1));
+          border-color: var(--color-border, rgba(255, 255, 255, 0.2));
+          
+          &:hover {
+            background: var(--color-interactive, rgba(78, 205, 196, 0.2));
+            border-color: var(--color-interactive, #4ecdc4);
+          }
+        }
+      }
+    }
+
+    /*
+    .themeToggle { // This class has been removed as the component is now ThemeToggleButton.tsx
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--accent-color, #4ecdc4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      z-index: 100;
+
+      &:hover {
+        transform: scale(1.1);
+      }
+
+      i {
+        color: #f0f0f0;
+        font-size: 1.2rem;
+      }
+    }
+    */
+  }
+}
+
+// Theme variations
+.artsnob {
+  .mainContent {
+    .title {
+      font-family: 'Playfair Display', serif;
+      letter-spacing: -0.02em;
+    }
+
+    .artQuote {
+      font-family: 'Playfair Display', serif;
+    }
+  }
+}
+
+.minimal {
+  .mainContent {
+    .title {
+      font-size: 1.5rem;
+    }
+  }
+}
+
+// Dark mode
+.dark {
+  .contentWrapper {
+    .mainContent {
+      .artQuote {
+        background: rgba(78, 205, 196, 0.1);
+      }
+    }
+  }
+}
+
+// Rainbow animation keyframes
+@keyframes rainbowCycle {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
