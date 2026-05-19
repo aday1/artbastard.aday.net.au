@@ -1,6 +1,5 @@
 import React from 'react';
 import { LucideIcon } from '../ui/LucideIcon';
-import styles from '../pages/DmxChannelControlPage.module.scss';
 
 export type FaderOrientation = 'horizontal' | 'vertical';
 
@@ -15,24 +14,24 @@ export const FaderOrientationSwitch: React.FC<FaderOrientationSwitchProps> = ({
   onChange,
   className,
 }) => (
-  <div className={className || styles.viewModeButtons} role="group" aria-label="Fader orientation">
+  <div className={className || 'ab-view-tabs'} role="group" aria-label="Fader orientation">
     <button
       type="button"
-      className={`${styles.viewModeButton} ${value === 'horizontal' ? styles.active : ''}`}
+      className={`ab-wire-btn ab-view-tab ${value === 'horizontal' ? 'ab-wire-btn--active' : ''}`}
       onClick={() => onChange('horizontal')}
       title="Horizontal sliders"
     >
       <LucideIcon name="AlignJustify" />
-      Horizontal Sliders
+      Horizontal
     </button>
     <button
       type="button"
-      className={`${styles.viewModeButton} ${value === 'vertical' ? styles.active : ''}`}
+      className={`ab-wire-btn ab-view-tab ${value === 'vertical' ? 'ab-wire-btn--active' : ''}`}
       onClick={() => onChange('vertical')}
       title="Vertical channel strip sliders"
     >
       <LucideIcon name="GripVertical" />
-      Vertical Sliders
+      Vertical
     </button>
   </div>
 );

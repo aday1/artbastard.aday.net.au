@@ -14,10 +14,11 @@ import {
   HorizontalFader,
   RangeWindowControl,
   SteppedGoboSlider,
-  DmxTickChannelMeter,
+  DmxLedChannelMeter,
   SkeuoKnobSlider,
 } from '../ui/controls';
 import { SkeuoButton } from '../ui/SkeuoButton';
+import { ChannelMonitorDock } from '../ui/ChannelMonitorDock';
 import { SelectedChannelsFaderStrip } from './SelectedChannelsFaderStrip';
 import { debugLog } from '../../utils/debugLog';
 import { rangesToTickSteps } from '../../utils/fixtureChannelTicks';
@@ -1334,7 +1335,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
           <div className={styles.gridItemContent}>
             {/* Selection Mode */}
             <div className={styles.fixtureSelection}>
-              <div className={`${styles.selectionTabs} ab-skeuo-square-group`}>
+              <div className={`${styles.selectionTabs} ab-view-tabs`}>
                 <SkeuoButton
                   compact
                   active={selectionMode === 'channels'}
@@ -1499,9 +1500,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                   </span>
                 </div>
 
-                <div className={styles.channelMonitorDock} role="region" aria-label="Active channel meters">
-                  <div className={styles.dockResizeGrip} aria-hidden />
-                  <div className={styles.channelMonitorScroll}>
+                <ChannelMonitorDock className={styles.channelMonitorDock}>
                   {getAffectedFixtures().map(({ fixture, channels }, index) => (
                     <div key={`${fixture.id}-${index}`} className={styles.fixtureMonitor}>
                       <div className={styles.fixtureHeader}>
@@ -1556,7 +1555,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                           })();
 
                           return (
-                            <DmxTickChannelMeter
+                            <DmxLedChannelMeter
                               key={`${dmxAddress}-${channelType}`}
                               value={currentValue}
                               label={channelType}
@@ -1568,8 +1567,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                       </div>
                     </div>
                   ))}
-                  </div>
-                </div>
+                </ChannelMonitorDock>
 
                 {/* Real-time control indicators */}
                 <div className={styles.controlIndicators}>
@@ -2065,13 +2063,14 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
             <div className={styles.colorSection}>
               <div className={styles.colorWheelWrap}>
               <div
-                className={`${styles.colorWheel} ${!hasSelection ? styles.colorWheelDisabled : ''}`}
+                className={`${styles.colorWheelHousing} ${!hasSelection ? styles.colorWheelDisabled : ''}`}
                 ref={colorWheelRef}
                 onPointerDown={handleColorWheelPointerDown}
                 onPointerMove={handleColorWheelPointerMove}
                 onPointerUp={endColorWheelDrag}
                 onPointerCancel={endColorWheelDrag}
               >
+                <div className={styles.colorWheel}>
                 <div className={styles.colorSaturation}>
                   <div
                     className={styles.colorHandle}
@@ -2081,6 +2080,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                     }}
                   />
                 </div>
+              </div>
               </div>
               </div>
               <div className={styles.colorReadout}>
@@ -2104,6 +2104,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                 <DmxFaderRow
                   label="Red"
                   fullWidth
+                  colorChannel="red"
                   value={red}
                   disabled={!hasSelection}
                   oscAddress="/red"
@@ -2118,6 +2119,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                 <DmxFaderRow
                   label="Green"
                   fullWidth
+                  colorChannel="green"
                   value={green}
                   disabled={!hasSelection}
                   oscAddress="/green"
@@ -2132,6 +2134,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                 <DmxFaderRow
                   label="Blue"
                   fullWidth
+                  colorChannel="blue"
                   value={blue}
                   disabled={!hasSelection}
                   oscAddress="/blue"

@@ -8,6 +8,7 @@ import { DmxFaderRow, HorizontalFader, RangeWindowControl } from '../ui/controls
 import styles from './PinnedChannels.module.scss';
 import { debugLog } from '../../utils/debugLog';
 import { useAppContextMenu } from '../../context/ContextMenuContext';
+import { MetronomePanel } from '../audio/MetronomePanel';
 
 
 export interface PinnedChannelsProps {
@@ -766,98 +767,14 @@ export const PinnedChannels: React.FC<PinnedChannelsProps> = ({ variant = 'sideb
               marginBottom: '8px',
               backgroundColor: 'rgba(15, 23, 42, 0.4)'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                 <LucideIcon name="Music" size={14} />
                 <span style={{ fontSize: '11px', fontWeight: '600', color: '#94a3b8' }}>Tempo</span>
-                <div style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  justifyContent: 'flex-end'
-                }}>
-                  {/* Clock Indicator */}
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    fontSize: '10px',
-                    color: midiClockIsPlaying ? '#10b981' : '#64748b',
-                    fontWeight: '600',
-                    padding: '2px 6px',
-                    backgroundColor: midiClockIsPlaying ? 'rgba(16, 185, 129, 0.1)' : 'rgba(71, 85, 105, 0.1)',
-                    borderRadius: '4px',
-                    border: `1px solid ${midiClockIsPlaying ? 'rgba(16, 185, 129, 0.3)' : 'rgba(71, 85, 105, 0.3)'}`
-                  }}>
-                    <LucideIcon name="Radio" size={10} />
-                    <span>{midiClockCurrentBar || 1}.{midiClockCurrentBeat || 1}</span>
-                  </div>
-                  {/* BPM Counter */}
-                  <span style={{
-                    fontSize: '14px',
-                    fontWeight: '700',
-                    color: isFlashing ? '#10b981' : '#e2e8f0',
-                    transition: 'color 0.15s ease',
-                    minWidth: '40px',
-                    textAlign: 'right'
-                  }}>
-                    {Math.round(currentBpm || midiClockBpm || 120)}
-                  </span>
-                  <span style={{ fontSize: '10px', color: '#64748b' }}>BPM</span>
-                </div>
               </div>
-              
-              <div style={{ display: 'flex', gap: '4px', marginBottom: '6px', flexDirection: 'column' }}>
-                <div style={{ display: 'flex', gap: '4px' }}>
-                  <button
-                    onClick={handlePlayPause}
-                    style={{
-                      flex: 1,
-                      padding: '6px 8px',
-                      backgroundColor: midiClockIsPlaying ? '#10b981' : '#475569',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      fontSize: '11px',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '4px',
-                      transition: 'all 0.2s ease'
-                    }}
-                    title={midiClockIsPlaying ? 'Stop tempo' : 'Start tempo'}
-                  >
-                    <LucideIcon name={midiClockIsPlaying ? "Pause" : "Play"} size={12} />
-                    {midiClockIsPlaying ? 'Stop' : 'Play'}
-                  </button>
-                
-                <button
-                  onClick={handleTapTempo}
-                  style={{
-                    flex: 1,
-                    padding: '6px 8px',
-                    backgroundColor: tapCount > 0 ? '#8b5cf6' : '#475569',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    fontSize: '11px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '4px',
-                    transition: 'all 0.2s ease'
-                  }}
-                  title="Tap tempo"
-                >
-                    <LucideIcon name="Hand" size={12} />
-                  Tap {tapCount > 0 ? `(${tapCount})` : ''}
-                </button>
-                </div>
 
+              <MetronomePanel compact showBpmInput={false} />
+
+              <div style={{ display: 'flex', gap: '4px', marginBottom: '6px', flexDirection: 'column' }}>
                 {/* MIDI/OSC Learn Controls for Tempo Play/Pause */}
                 <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
                   {/* MIDI Learn Button */}

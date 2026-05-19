@@ -1,7 +1,7 @@
 .wrap {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: 0.35rem;
   width: 100%;
 }
@@ -18,78 +18,25 @@
   text-align: center;
 }
 
-.knobHost {
-  position: relative;
-  width: min(100%, 11rem);
-  aspect-ratio: 1;
+.housing {
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #5a6678 0%, #3d4858 50%, #2a3344 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -4px 8px rgba(0, 0, 0, 0.35),
+    0 2px 6px rgba(0, 0, 0, 0.25);
 }
 
 .input {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  opacity: 0;
-  cursor: grab;
-  touch-action: none;
-
-  &:active {
-    cursor: grabbing;
-  }
-}
-
-.svg {
   display: block;
   width: 100%;
-  height: 100%;
-}
-
-.circle {
-  fill: #202528;
-  stroke: #080516;
-  stroke-width: 10px;
-}
-
-.gradate line {
-  --deg: 0deg;
-  --h: 135;
-  --s: 10%;
-  --a: 0.22;
-  stroke-linecap: round;
-  stroke-width: 10px;
-  stroke: hsla(var(--h), var(--s), 55%, var(--a));
-  transform: rotate(var(--deg));
-  transform-origin: 50% 50%;
-  transition: stroke 0.12s ease-out;
-}
-
-.tickActive {
-  --a: 1;
-  --s: 62%;
-  stroke: hsl(var(--h), var(--s), 58%);
-  filter: drop-shadow(0 0 4px rgba(0, 212, 255, 0.45));
-}
-
-.sliderWrap {
-  transform-origin: 50% 50%;
-  transition: transform 0.12s ease-out;
-}
-
-.sliderShadow {
-  fill: rgba(0, 0, 0, 0.35);
-}
-
-.slider {
-  fill: hsl(171, 85%, 58%);
-  stroke: rgba(255, 255, 255, 0.35);
-  stroke-width: 1px;
 }
 
 .readout {
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 0.8rem;
+  text-align: center;
+  font-size: 0.78rem;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
   color: var(--color-text-primary, #e2e8f0);
 }

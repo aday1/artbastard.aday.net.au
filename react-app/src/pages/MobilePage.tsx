@@ -45,7 +45,7 @@ const MobilePage: React.FC = () => {
     <div className={styles.mobilePage}>
       <div className={styles.mobileHeader}>
         <h1 className={styles.mobileTitle}>ArtBastard</h1>
-        <div className={`${styles.tabNavigation} ab-skeuo-square-group`} role="tablist" aria-label="Mobile control tabs">
+        <div className={`${styles.tabNavigation} ab-view-tabs`} role="tablist" aria-label="Mobile control tabs">
           {tabs.map((tab) => (
             <SkeuoButton
               key={tab.id}

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useId, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import styles from './SteppedGoboSlider.module.scss';
 
 export interface GoboStep {
@@ -54,49 +54,102 @@ export const SteppedGoboSlider: React.FC<SteppedGoboSliderProps> = ({
   className = '',
 }) => {
   const listId = useId().replace(/:/g, '');
-  const rangeRef = useRef<HTMLDivElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [fine, setFine] = useState(false);
   const tickmarks = useMemo(() => steps.map((s) => s.value), [steps]);
   const activeIndex = nearestStepIndex(steps, value);
   const activeStep = steps[activeIndex];
+  const snapped = snapToNearestTick(tickmarks, value);
+  const progressPct = (snapped / DMX_MAX) * 100;
 
-  const updateFill = useCallback((dmxVal: number) => {
-    const wrap = rangeRef.current;
-    if (!wrap) return;
-    const w = wrap.clientWidth;
-    const fillPx = (dmxVal / DMX_MAX) * w;
-    wrap.style.setProperty('--fill-w', `${fillPx}px`);
-  }, []);
+  const syncVars = useCallback(
+    (dmxVal: number) => {
+      const wrap = wrapRef.current;
+      if (!wrap) return;
+      wrap.style.setProperty('--value', String(dmxVal));
+      wrap.style.setProperty('--pos', `${(dmxVal / DMX_MAX) * 100}%`);
+      wrap.style.setProperty('--step-index', String(nearestStepIndex(steps, dmxVal)));
+      wrap.style.setProperty('--step-count', String(Math.max(1, steps.length)));
+    },
+    [steps]
+  );
 
   useEffect(() => {
-    const snapped = snapToNearestTick(tickmarks, value);
-    const input = inputRef.current;
-    if (input) input.value = String(snapped);
-    updateFill(snapped);
-  }, [value, tickmarks, updateFill]);
+    const v = snapToNearestTick(tickmarks, value);
+    if (inputRef.current) inputRef.current.value = String(v);
+    syncVars(v);
+  }, [value, tickmarks, syncVars]);
 
-  useEffect(() => {
-    const wrap = rangeRef.current;
-    if (!wrap || typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(() => {
-      const snapped = snapToNearestTick(tickmarks, Number(inputRef.current?.value ?? value));
-      updateFill(snapped);
-    });
-    ro.observe(wrap);
-    return () => ro.disconnect();
-  }, [tickmarks, value, updateFill]);
+  const applyValue = (raw: number) => {
+    const next = snapToNearestTick(tickmarks, raw);
+    if (inputRef.current) inputRef.current.value = String(next);
+    syncVars(next);
+    onChange(next);
+  };
 
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = parseFloat(e.target.value);
-    const snapped = snapToNearestTick(tickmarks, raw);
-    if (inputRef.current) inputRef.current.value = String(snapped);
-    updateFill(snapped);
-    onChange(snapped);
+    applyValue(parseFloat(e.target.value));
+  };
+
+  const nudge = (dir: -1 | 1) => {
+    const idx = nearestStepIndex(steps, snapped);
+    const nextIdx = Math.min(steps.length - 1, Math.max(0, idx + dir));
+    applyValue(steps[nextIdx]?.value ?? snapped);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      nudge(-1);
+    } else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      nudge(1);
+    }
   };
 
   return (
-    <div className={`${styles.root} ${className} ${disabled ? styles.disabled : ''}`}>
-      <div ref={rangeRef} className={styles.range}>
+    <div
+      className={`${styles.root} ${className} ${disabled ? styles.disabled : ''} ${fine ? styles.fine : ''}`}
+      ref={wrapRef}
+      style={
+        {
+          '--value': snapped,
+          '--pos': `${progressPct}%`,
+          '--step-index': activeIndex,
+          '--step-count': Math.max(1, steps.length),
+        } as React.CSSProperties
+      }
+    >
+      <div className={styles.toolbar}>
+        <button type="button" className={styles.nudge} disabled={disabled || activeIndex <= 0} onClick={() => nudge(-1)}>
+          Prev
+        </button>
+        <label className={styles.fineToggle}>
+          <input type="checkbox" checked={fine} onChange={(e) => setFine(e.target.checked)} disabled={disabled} />
+          Fine
+        </label>
+        <button
+          type="button"
+          className={styles.nudge}
+          disabled={disabled || activeIndex >= steps.length - 1}
+          onClick={() => nudge(1)}
+        >
+          Next
+        </button>
+      </div>
+
+      <div className={styles.rangeSlider}>
+        <div className={styles.cubeTrack} aria-hidden>
+          {steps.map((s, i) => (
+            <span
+              key={`${s.value}-${i}`}
+              className={[styles.cube, i <= activeIndex ? styles.cubeLit : ''].filter(Boolean).join(' ')}
+              style={{ left: `${(s.value / DMX_MAX) * 100}%` }}
+              title={s.label}
+            />
+          ))}
+        </div>
         <input
           ref={inputRef}
           type="range"
@@ -104,37 +157,31 @@ export const SteppedGoboSlider: React.FC<SteppedGoboSliderProps> = ({
           list={listId}
           min={0}
           max={DMX_MAX}
-          step={1}
-          defaultValue={snapToNearestTick(tickmarks, value)}
+          step={fine ? 1 : 1}
+          defaultValue={snapped}
           disabled={disabled || steps.length === 0}
           onInput={handleInput}
           onChange={handleInput}
+          onKeyDown={handleKeyDown}
           aria-label="Gobo wheel"
-          aria-valuemin={0}
-          aria-valuemax={DMX_MAX}
-          aria-valuenow={snapToNearestTick(tickmarks, value)}
-          aria-valuetext={activeStep?.label ?? String(value)}
+          aria-valuenow={snapped}
+          aria-valuetext={activeStep?.label ?? String(snapped)}
         />
-        <datalist id={listId} className={styles.datalist}>
+        <datalist id={listId}>
           {steps.map((s, i) => (
             <option key={`${s.value}-${i}`} value={s.value} label={s.label} />
           ))}
         </datalist>
-        <div
-          className={styles.rangeValue}
-          style={{ left: `${(snapToNearestTick(tickmarks, value) / DMX_MAX) * 100}%` }}
-          aria-hidden
-        >
-          {activeStep?.label ?? '—'}
-        </div>
+        <div className={styles.progress} aria-hidden />
+        <output className={styles.output}>{activeStep?.label ?? snapped}</output>
       </div>
+
       <div className={styles.valueReadout}>
-        {activeStep?.label ?? '—'}
+        {activeStep?.label ?? '-'}
         <span className={styles.dmxValue}>
-          DMX {activeStep?.min ?? '—'}-{activeStep?.max ?? '—'} ({snapToNearestTick(tickmarks, value)})
+          DMX {activeStep?.min ?? '-'} - {activeStep?.max ?? '-'} ({snapped})
         </span>
       </div>
     </div>
   );
 };
-
