@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useStore, Fixture, MasterSlider } from '../../store' 
 import useStoreUtils from '../../store/storeUtils'
 import { useTheme } from '../../context/ThemeContext'
@@ -19,6 +19,9 @@ import { BridgeSettings } from './BridgeSettings'
 import { FaderOrientationSwitch } from '../dmx/FaderOrientationSwitch'
 import { HelpOverlay } from '../ui/HelpOverlay'
 import { HorizontalFader } from '../ui/controls'
+import { ThemePresetStrip } from './ThemePresetStrip'
+import { useDebouncedAppearanceSave } from '../../hooks/useDebouncedAppearanceSave'
+import { applyRackChrome, getPresetById } from '../../utils/themeUtils'
 import styles from './UnifiedSettings.module.scss'
 
 type SuperControlSettingsExport = SuperControlPreferences
@@ -76,6 +79,8 @@ export const UnifiedSettings: React.FC = () => {
     },
     themeColors,
     updateThemeColors,
+    saveAppearanceToServer,
+    loadAppearanceFromServer,
     uiSettings,
     updateUiSettings,
     setDmxVisualEffects,
@@ -91,6 +96,8 @@ export const UnifiedSettings: React.FC = () => {
     debugTools: state.debugTools,
     themeColors: state.themeColors,
     updateThemeColors: state.updateThemeColors,
+    saveAppearanceToServer: state.saveAppearanceToServer,
+    loadAppearanceFromServer: state.loadAppearanceFromServer,
     uiSettings: state.uiSettings,
     updateUiSettings: state.updateUiSettings,
     setDmxVisualEffects: state.setDmxVisualEffects,
@@ -155,165 +162,81 @@ export const UnifiedSettings: React.FC = () => {
     fontWeight: uiSettings.fontWeight ?? 400,
     fontWeightHeading: uiSettings.fontWeightHeading ?? 600
   });
-  const [hasUnsavedThemeChanges, setHasUnsavedThemeChanges] = useState(false);
+  const [serverSyncPending, setServerSyncPending] = useState(false);
+  const { scheduleSave, flushSave } = useDebouncedAppearanceSave();
+  const liveApplyReady = React.useRef(false);
+  const skipStoreToPreviewRef = React.useRef(false);
+  const scheduleSaveRef = useRef(scheduleSave);
+  scheduleSaveRef.current = scheduleSave;
 
-  // Update preview state when store values change (e.g., on load)
+  // Keep local slider state aligned when appearance loads from server / other clients
   useEffect(() => {
+    if (skipStoreToPreviewRef.current) {
+      skipStoreToPreviewRef.current = false;
+      return;
+    }
     setPreviewThemeColors(themeColors);
     setPreviewUiSettings(uiSettings);
-    setHasUnsavedThemeChanges(false);
   }, [themeColors, uiSettings]);
 
-  // Apply preview values to CSS custom properties in real-time
+  // Apply color + typography changes to the whole app immediately (store + CSS)
   useEffect(() => {
-    const root = document.documentElement;
-    
-    // Calculate rotated hues if hue rotation is set
-    const rotation = previewThemeColors.hueRotation || 0;
-    const applyRotation = (hue: number) => ((hue + rotation + 360) % 360);
-    
-    // Apply theme colors
-    root.style.setProperty('--theme-primary-hue', `${applyRotation(previewThemeColors.primaryHue)}`);
-    root.style.setProperty('--theme-primary-saturation', `${previewThemeColors.primarySaturation}%`);
-    root.style.setProperty('--theme-primary-brightness', `${previewThemeColors.primaryBrightness}%`);
-    root.style.setProperty('--theme-secondary-hue', `${applyRotation(previewThemeColors.secondaryHue)}`);
-    root.style.setProperty('--theme-secondary-saturation', `${previewThemeColors.secondarySaturation}%`);
-    root.style.setProperty('--theme-secondary-brightness', `${previewThemeColors.secondaryBrightness}%`);
-    root.style.setProperty('--theme-accent-hue', `${applyRotation(previewThemeColors.accentHue)}`);
-    root.style.setProperty('--theme-accent-saturation', `${previewThemeColors.accentSaturation}%`);
-    root.style.setProperty('--theme-accent-brightness', `${previewThemeColors.accentBrightness}%`);
-    
-    // Background controls
-    const bgBrightness = previewThemeColors.backgroundBrightness ?? 25;
-    const bgHue = previewThemeColors.backgroundHue ?? 220;
-    const bgSaturation = previewThemeColors.backgroundSaturation ?? 20;
-    root.style.setProperty('--theme-background-hue', `${bgHue}`);
-    root.style.setProperty('--theme-background-saturation', `${bgSaturation}%`);
-    root.style.setProperty('--theme-background-brightness', `${bgBrightness}%`);
-    
-    // Apply background color
-    const bgColor = `hsl(${bgHue}, ${bgSaturation}%, ${bgBrightness}%)`;
-    root.style.setProperty('--color-background', bgColor);
-    root.style.setProperty('--bg-primary', bgColor);
-    
-    // Semantic colors
-    root.style.setProperty('--theme-success-hue', `${applyRotation(previewThemeColors.successHue ?? 142)}`);
-    root.style.setProperty('--theme-success-saturation', `${previewThemeColors.successSaturation ?? 71}%`);
-    root.style.setProperty('--theme-success-brightness', `${previewThemeColors.successBrightness ?? 47}%`);
-    root.style.setProperty('--theme-warning-hue', `${applyRotation(previewThemeColors.warningHue ?? 38)}`);
-    root.style.setProperty('--theme-warning-saturation', `${previewThemeColors.warningSaturation ?? 92}%`);
-    root.style.setProperty('--theme-warning-brightness', `${previewThemeColors.warningBrightness ?? 51}%`);
-    root.style.setProperty('--theme-error-hue', `${applyRotation(previewThemeColors.errorHue ?? 0)}`);
-    root.style.setProperty('--theme-error-saturation', `${previewThemeColors.errorSaturation ?? 84}%`);
-    root.style.setProperty('--theme-error-brightness', `${previewThemeColors.errorBrightness ?? 60}%`);
-    root.style.setProperty('--theme-info-hue', `${applyRotation(previewThemeColors.infoHue ?? 217)}`);
-    root.style.setProperty('--theme-info-saturation', `${previewThemeColors.infoSaturation ?? 91}%`);
-    root.style.setProperty('--theme-info-brightness', `${previewThemeColors.infoBrightness ?? 59}%`);
-    
-    // Text colors
-    const textHue = bgHue;
-    root.style.setProperty('--theme-text-primary-brightness', `${previewThemeColors.textPrimaryBrightness ?? 90}%`);
-    root.style.setProperty('--theme-text-secondary-brightness', `${previewThemeColors.textSecondaryBrightness ?? 65}%`);
-    root.style.setProperty('--theme-text-tertiary-brightness', `${previewThemeColors.textTertiaryBrightness ?? 50}%`);
-    const textPrimaryColor = `hsl(${textHue}, ${bgSaturation}%, ${previewThemeColors.textPrimaryBrightness ?? 90}%)`;
-    const textSecondaryColor = `hsl(${textHue}, ${bgSaturation}%, ${previewThemeColors.textSecondaryBrightness ?? 65}%)`;
-    const textTertiaryColor = `hsl(${textHue}, ${bgSaturation}%, ${previewThemeColors.textTertiaryBrightness ?? 50}%)`;
-    root.style.setProperty('--color-text', textPrimaryColor);
-    root.style.setProperty('--text-primary', textPrimaryColor);
-    root.style.setProperty('--text-secondary', textSecondaryColor);
-    root.style.setProperty('--text-tertiary', textTertiaryColor);
-    
-    // Border colors
-    const borderBrightness = previewThemeColors.borderBrightness ?? 30;
-    const borderSaturation = previewThemeColors.borderSaturation ?? 15;
-    const borderColor = `hsl(${bgHue}, ${borderSaturation}%, ${borderBrightness}%)`;
-    root.style.setProperty('--color-border', borderColor);
-    root.style.setProperty('--border-color', borderColor);
-    root.style.setProperty('--color-card-border', borderColor);
-    
-    // Card/Surface colors
-    const cardBrightness = Math.min(100, bgBrightness + (previewThemeColors.cardBrightness ?? 8));
-    const cardSaturation = previewThemeColors.cardSaturation ?? bgSaturation;
-    const cardColor = `hsl(${bgHue}, ${cardSaturation}%, ${cardBrightness}%)`;
-    root.style.setProperty('--color-card-bg', cardColor);
-    root.style.setProperty('--bg-secondary', cardColor);
-    
-    // Status colors
-    root.style.setProperty('--theme-status-connected-hue', `${previewThemeColors.statusConnectedHue ?? 142}`);
-    root.style.setProperty('--theme-status-disconnected-hue', `${previewThemeColors.statusDisconnectedHue ?? 0}`);
-    root.style.setProperty('--theme-status-active-hue', `${previewThemeColors.statusActiveHue ?? 142}`);
-    root.style.setProperty('--theme-status-inactive-brightness', `${previewThemeColors.statusInactiveBrightness ?? 50}%`);
-    const statusConnectedColor = `hsl(${previewThemeColors.statusConnectedHue ?? 142}, 71%, 47%)`;
-    const statusDisconnectedColor = `hsl(${previewThemeColors.statusDisconnectedHue ?? 0}, 84%, 60%)`;
-    const statusActiveColor = `hsl(${previewThemeColors.statusActiveHue ?? 142}, 71%, 47%)`;
-    const statusInactiveColor = `hsl(${bgHue}, ${bgSaturation}%, ${previewThemeColors.statusInactiveBrightness ?? 50}%)`;
-    root.style.setProperty('--color-status-connected', statusConnectedColor);
-    root.style.setProperty('--color-status-disconnected', statusDisconnectedColor);
-    root.style.setProperty('--color-status-active', statusActiveColor);
-    root.style.setProperty('--color-status-inactive', statusInactiveColor);
-    
-    // Apply UI settings
-    if (previewUiSettings.fontSize !== undefined) {
-      root.style.setProperty('--ui-font-size', `${previewUiSettings.fontSize}`);
+    if (!liveApplyReady.current) {
+      liveApplyReady.current = true;
+      return;
     }
-    if (previewUiSettings.lineHeight !== undefined) {
-      root.style.setProperty('--ui-line-height', `${previewUiSettings.lineHeight}`);
+    const current = useStore.getState().themeColors;
+    if (JSON.stringify(current) === JSON.stringify(previewThemeColors)) {
+      return;
     }
-    if (previewUiSettings.letterSpacing !== undefined) {
-      root.style.setProperty('--ui-letter-spacing', `${previewUiSettings.letterSpacing}px`);
-    }
-    if (previewUiSettings.borderRadius !== undefined) {
-      root.style.setProperty('--ui-border-radius', `${previewUiSettings.borderRadius}px`);
-    }
-    if (previewUiSettings.spacing !== undefined) {
-      root.style.setProperty('--ui-spacing', `${previewUiSettings.spacing}`);
-    }
-    if (previewUiSettings.animationSpeed !== undefined) {
-      root.style.setProperty('--ui-animation-speed', `${previewUiSettings.animationSpeed}`);
-    }
-    if (previewUiSettings.fontFamily !== undefined) {
-      root.style.setProperty('--ui-font-family', previewUiSettings.fontFamily);
-      document.body.style.fontFamily = previewUiSettings.fontFamily;
-    }
-    if (previewUiSettings.fontFamilyHeading !== undefined) {
-      root.style.setProperty('--ui-font-family-heading', previewUiSettings.fontFamilyHeading);
-    }
-    if (previewUiSettings.fontWeight !== undefined) {
-      root.style.setProperty('--ui-font-weight', `${previewUiSettings.fontWeight}`);
-    }
-    if (previewUiSettings.fontWeightHeading !== undefined) {
-      root.style.setProperty('--ui-font-weight-heading', `${previewUiSettings.fontWeightHeading}`);
-    }
-  }, [previewThemeColors, previewUiSettings]);
-
-  // Check for unsaved changes
-  useEffect(() => {
-    const colorsChanged = JSON.stringify(previewThemeColors) !== JSON.stringify(themeColors);
-    const uiChanged = JSON.stringify(previewUiSettings) !== JSON.stringify(uiSettings);
-    setHasUnsavedThemeChanges(colorsChanged || uiChanged);
-  }, [previewThemeColors, previewUiSettings, themeColors, uiSettings]);
-
-  // Save theme changes
-  const handleSaveTheme = () => {
+    skipStoreToPreviewRef.current = true;
     updateThemeColors(previewThemeColors);
+    const presetId = localStorage.getItem('themePresetId');
+    const preset = presetId ? getPresetById(presetId) : undefined;
+    if (preset) applyRackChrome(preset.rack);
+    setServerSyncPending(true);
+    scheduleSaveRef.current({ themeColors: previewThemeColors });
+  }, [previewThemeColors, updateThemeColors]);
+
+  useEffect(() => {
+    if (!liveApplyReady.current) return;
+    const current = useStore.getState().uiSettings;
+    if (JSON.stringify(current) === JSON.stringify(previewUiSettings)) {
+      return;
+    }
+    skipStoreToPreviewRef.current = true;
     updateUiSettings(previewUiSettings);
-    setHasUnsavedThemeChanges(false);
+    setServerSyncPending(true);
+    scheduleSaveRef.current({ themeColors: previewThemeColors });
+  }, [previewUiSettings, updateUiSettings, previewThemeColors]);
+
+  useEffect(() => {
+    if (!serverSyncPending) return;
+    const t = setTimeout(() => setServerSyncPending(false), 700);
+    return () => clearTimeout(t);
+  }, [serverSyncPending, previewThemeColors, previewUiSettings]);
+
+  const handleSaveTheme = () => {
+    flushSave({ themeColors: previewThemeColors });
+    setServerSyncPending(false);
     addNotification({
-      message: 'Theme settings saved successfully',
+      message: 'Theme synced to server now',
       type: 'success',
-      priority: 'normal'
+      priority: 'normal',
     });
   };
 
-  // Reset to saved values
   const handleResetTheme = () => {
-    setPreviewThemeColors(themeColors);
-    setPreviewUiSettings(uiSettings);
-    setHasUnsavedThemeChanges(false);
-    addNotification({
-      message: 'Theme settings reset to saved values',
-      type: 'info',
-      priority: 'normal'
+    void loadAppearanceFromServer().then(() => {
+      const state = useStore.getState();
+      setPreviewThemeColors(state.themeColors);
+      setPreviewUiSettings(state.uiSettings);
+      setServerSyncPending(false);
+      addNotification({
+        message: 'Theme reloaded from server',
+        type: 'info',
+        priority: 'normal',
+      });
     });
   };
 
@@ -367,7 +290,8 @@ export const UnifiedSettings: React.FC = () => {
     if (theme.uiSettings) {
       setPreviewUiSettings(theme.uiSettings);
     }
-    setHasUnsavedThemeChanges(true);
+    setServerSyncPending(true);
+    scheduleSave({ themeColors: theme.colors });
     addNotification({
       message: `Theme "${theme.name}" loaded`,
       type: 'info',
@@ -441,20 +365,22 @@ export const UnifiedSettings: React.FC = () => {
 
   // Theme change handlers
   const handleThemeChange = (newTheme: 'artsnob' | 'standard' | 'minimal') => {
-    setTheme(newTheme)
+    setTheme(newTheme);
+    scheduleSave({ theme: newTheme });
     addNotification({
       message: `Theme changed to ${newTheme}`,
-      type: 'success'
-    })
-  }
+      type: 'success',
+    });
+  };
 
   const handleDarkModeToggle = () => {
-    toggleDarkMode()
+    toggleDarkMode();
+    scheduleSave({ darkMode: !darkMode });
     addNotification({
       message: darkMode ? 'Light mode enabled' : 'Dark mode enabled',
-      type: 'success'
-    })
-  }
+      type: 'success',
+    });
+  };
 
   // Factory reset handler
   const handleFactoryReset = async () => {
@@ -938,30 +864,31 @@ export const UnifiedSettings: React.FC = () => {
                         Custom Color Themes
                       </label>
                       <p className={styles.settingDescription}>
-                        Customize the color scheme of your interface with hue, saturation, and brightness controls.
-                        Changes preview in real-time. Click Save to apply.
+                        Customize colors and typography. Changes apply instantly across the app;
+                        the server syncs automatically after you stop adjusting.
                       </p>
                     </div>
-                    {hasUnsavedThemeChanges && (
-                      <div className={styles.themeActions}>
-                        <button
-                          className={styles.saveButton}
-                          onClick={handleSaveTheme}
-                          title="Save theme changes"
-                        >
-                          <i className="fas fa-save"></i>
-                          Save Theme
-                        </button>
-                        <button
-                          className={styles.resetButton}
-                          onClick={handleResetTheme}
-                          title="Reset to saved values"
-                        >
-                          <i className="fas fa-undo"></i>
-                          Reset
-                        </button>
-                      </div>
-                    )}
+                    <div className={styles.themeActions}>
+                      {serverSyncPending && (
+                        <span className={styles.settingDescription}>Syncing to server...</span>
+                      )}
+                      <button
+                        className={styles.saveButton}
+                        onClick={handleSaveTheme}
+                        title="Push theme to server immediately"
+                      >
+                        <i className="fas fa-cloud-upload-alt"></i>
+                        Sync now
+                      </button>
+                      <button
+                        className={styles.resetButton}
+                        onClick={handleResetTheme}
+                        title="Reload appearance from server"
+                      >
+                        <i className="fas fa-undo"></i>
+                        Reload
+                      </button>
+                    </div>
                   </div>
 
                   {/* Color Category Tabs */}
@@ -1195,80 +1122,17 @@ export const UnifiedSettings: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Preset Themes */}
-                  <div className={styles.colorControlGroup}>
-                    <h4>Preset Themes</h4>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
-                      Quick theme presets for instant variety
-                    </p>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                      <button
-                        className={styles.toolButton}
-                        onClick={() => setPreviewThemeColors({
-                          ...previewThemeColors,
-                          primaryHue: 220, primarySaturation: 70, primaryBrightness: 50,
-                          secondaryHue: 280, secondarySaturation: 60, secondaryBrightness: 45,
-                          accentHue: 340, accentSaturation: 80, accentBrightness: 60,
-                          backgroundBrightness: 30, backgroundHue: 220, backgroundSaturation: 20, hueRotation: 0
-                        })}
-                        style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
-                      >
-                        Ocean Blue
-                      </button>
-                      <button
-                        className={styles.toolButton}
-                        onClick={() => setPreviewThemeColors({
-                          ...previewThemeColors,
-                          primaryHue: 0, primarySaturation: 70, primaryBrightness: 50,
-                          secondaryHue: 15, secondarySaturation: 60, secondaryBrightness: 45,
-                          accentHue: 30, accentSaturation: 80, accentBrightness: 60,
-                          backgroundBrightness: 30, backgroundHue: 0, backgroundSaturation: 15, hueRotation: 0
-                        })}
-                        style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
-                      >
-                        Warm Orange
-                      </button>
-                      <button
-                        className={styles.toolButton}
-                        onClick={() => setPreviewThemeColors({
-                          ...previewThemeColors,
-                          primaryHue: 120, primarySaturation: 70, primaryBrightness: 50,
-                          secondaryHue: 150, secondarySaturation: 60, secondaryBrightness: 45,
-                          accentHue: 180, accentSaturation: 80, accentBrightness: 60,
-                          backgroundBrightness: 30, backgroundHue: 120, backgroundSaturation: 20, hueRotation: 0
-                        })}
-                        style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
-                      >
-                        Forest Green
-                      </button>
-                      <button
-                        className={styles.toolButton}
-                        onClick={() => setPreviewThemeColors({
-                          ...previewThemeColors,
-                          primaryHue: 300, primarySaturation: 70, primaryBrightness: 50,
-                          secondaryHue: 320, secondarySaturation: 60, secondaryBrightness: 45,
-                          accentHue: 340, accentSaturation: 80, accentBrightness: 60,
-                          backgroundBrightness: 30, backgroundHue: 300, backgroundSaturation: 20, hueRotation: 0
-                        })}
-                        style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
-                      >
-                        Purple Dream
-                      </button>
-                      <button
-                        className={styles.toolButton}
-                        onClick={() => setPreviewThemeColors({
-                          ...previewThemeColors,
-                          primaryHue: 220, primarySaturation: 70, primaryBrightness: 50,
-                          secondaryHue: 280, secondarySaturation: 60, secondaryBrightness: 45,
-                          accentHue: 340, accentSaturation: 80, accentBrightness: 60,
-                          backgroundBrightness: 40, backgroundHue: 220, backgroundSaturation: 15, hueRotation: 0
-                        })}
-                        style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
-                      >
-                        Brighter Default
-                      </button>
-                    </div>
-                  </div>
+                  <ThemePresetStrip
+                    onPreview={(colors) => {
+                      setPreviewThemeColors(colors);
+                    }}
+                    onPreferDark={(prefer) => {
+                      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                      if (prefer && !isDark) toggleDarkMode();
+                      if (!prefer && isDark) toggleDarkMode();
+                      scheduleSave({ darkMode: prefer });
+                    }}
+                  />
 
                   {/* Custom Saved Themes */}
                   {savedThemes.length > 0 && (

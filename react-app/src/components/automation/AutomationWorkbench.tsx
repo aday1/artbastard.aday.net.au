@@ -13,7 +13,7 @@ export const AutomationWorkbench: React.FC = () => {
   const [tab, setTab] = useState<AutomationTab>('tracker');
 
   const tabs = [
-    { id: 'tracker', label: theme === 'minimal' ? 'Trk' : 'Renoise tracker' },
+    { id: 'tracker', label: theme === 'minimal' ? 'DMX' : 'DMX Tracker' },
     { id: 'envelopes', label: theme === 'minimal' ? 'Env' : 'Envelopes' },
   ];
 

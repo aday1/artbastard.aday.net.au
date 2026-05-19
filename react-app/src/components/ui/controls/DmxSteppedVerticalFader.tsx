@@ -5,6 +5,7 @@ import {
   findTickIndexForValue,
   rangesToTickSteps,
 } from '../../../utils/fixtureChannelTicks';
+import { useRangeTouchGuard } from './useRangeTouchGuard';
 import { useVerticalFaderLength } from './useVerticalFaderLength';
 import type { DmxFaderSize } from './DmxVerticalFader';
 import styles from './DmxSteppedVerticalFader.module.scss';
@@ -44,6 +45,7 @@ export const DmxSteppedVerticalFader: React.FC<DmxSteppedVerticalFaderProps> = (
 
   const active = steps[activeIndex];
   const faderShellRef = useVerticalFaderLength<HTMLDivElement>();
+  const touchGuard = useRangeTouchGuard(disabled || steps.length === 0);
 
   return (
     <div
@@ -53,6 +55,7 @@ export const DmxSteppedVerticalFader: React.FC<DmxSteppedVerticalFaderProps> = (
       <span className={styles.label}>{label}</span>
       <div ref={faderShellRef} className={styles.faderShell}>
         <input
+          ref={touchGuard.inputRef}
           type="range"
           className={`${styles.input} ab-styled-fader`}
           min={1}
@@ -62,6 +65,11 @@ export const DmxSteppedVerticalFader: React.FC<DmxSteppedVerticalFaderProps> = (
           disabled={disabled || steps.length === 0}
           onChange={handleInput}
           onInput={handleInput}
+          onPointerDown={touchGuard.onPointerDown}
+          onPointerUp={touchGuard.onPointerUp}
+          onPointerCancel={touchGuard.onPointerUp}
+          onTouchStart={touchGuard.onTouchStart}
+          onTouchEnd={touchGuard.onTouchEnd}
           aria-label={`${label} selection`}
         />
       </div>

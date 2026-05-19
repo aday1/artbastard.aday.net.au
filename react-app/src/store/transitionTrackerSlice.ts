@@ -53,6 +53,7 @@ export interface TransitionTrackerSlice {
   addPatternChannel: (patternId: string, channelIndex: number) => void;
   removePatternChannel: (patternId: string, channelIndex: number) => void;
   mergeSelectionIntoPattern: (patternId: string, channelIndices: number[]) => void;
+  mergePinnedIntoPattern: (patternId: string) => void;
   setPatternPageChannels: (
     patternId: string,
     channelIndices: number[],
@@ -151,6 +152,9 @@ export const createTransitionTrackerSlice = (
 ): TransitionTrackerSlice => {
   const initialPatterns = loadPatternsFromStorage();
   const initialActive = initialPatterns[0]?.id ?? null;
+  if (initialPatterns.length > 0) {
+    savePatterns(initialPatterns, initialActive);
+  }
 
   return {
     transitionPatterns: initialPatterns,
@@ -354,6 +358,12 @@ export const createTransitionTrackerSlice = (
 
     mergeSelectionIntoPattern: (patternId, channelIndices) => {
       get().setPatternPageChannels(patternId, channelIndices, 'merge');
+    },
+
+    mergePinnedIntoPattern: (patternId) => {
+      const pinned = get().pinnedChannels ?? [];
+      if (pinned.length === 0) return;
+      get().setPatternPageChannels(patternId, pinned, 'merge');
     },
 
     clearPatternPageChannels: (patternId) => {

@@ -28,6 +28,16 @@
   :global(.dmx-fader-row) {
     min-height: 48px;
   }
+
+  .monitoringSection {
+    --channel-dock-width: clamp(9.5rem, 34vw, 13rem);
+    padding-right: calc(var(--channel-dock-width) + 8px);
+  }
+
+  .channelMonitorDock {
+    top: calc(3.25rem + var(--safe-top, 0px));
+    min-height: 11rem;
+  }
 }
 
 .header {
@@ -686,35 +696,7 @@
 }
 
 .navBtn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
-  border: none;
-  border-radius: 6px;
-  color: white;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-  
-  &:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
-  }
-  
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
-    background: #666;
-  }
-  
-  svg {
-    width: 16px;
-    height: 16px;
-  }
+  flex: 0 0 auto;
 }
 
 .currentSelection {
@@ -758,34 +740,7 @@
 }
 
 .sceneBtn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
-  border: none;
-  border-radius: 4px;
-  color: white;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  
-  &:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 3px 8px rgba(155, 89, 182, 0.3);
-  }
-  
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
-    background: #666;
-  }
-  
-  svg {
-    width: 14px;
-    height: 14px;
-  }
+  flex: 0 0 auto;
 }
 
 .sceneInfo {
@@ -901,29 +856,7 @@
 }
 
 .loadSceneBtn {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  width: 100%;
-  justify-content: center;
-  padding: 6px;
-  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
-  border: none;
-  border-radius: 4px;
-  color: white;
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 3px 8px rgba(46, 204, 113, 0.3);
-  }
-  
-  svg {
-    width: 12px;
-    height: 12px;
-  }
+  margin-top: 0.35rem;
 }
 
 // Scene Connection Controls
@@ -1466,12 +1399,35 @@
   }
 }
 
-// Color Wheel
-.colorWheel {
-  width: min(100%, 320px);
+// Color wheel — metallic housing matches thebabydino range sliders (JovQwE)
+$color-wheel-checker: repeating-conic-gradient(
+    hsla(0, 0%, 0%, 0.235) 0% 25%,
+    transparent 0% 50%
+  )
+  0 0 / 0.375em 0.375em;
+
+.colorWheelHousing {
+  width: min(100%, 340px);
   aspect-ratio: 1;
-  min-width: 220px;
-  max-width: 360px;
+  min-width: 228px;
+  max-width: 380px;
+  padding: 0.55em;
+  border-radius: 50%;
+  box-shadow:
+    0 1px 1px hsla(0, 0%, 100%, 0.1),
+    inset 0 1px 0 2px #0d0d0d,
+    0 8px 24px rgba(0, 0, 0, 0.45);
+  background:
+    $color-wheel-checker,
+    linear-gradient(#0a0a0a, #111 15%, #272727, #1d1d1d);
+  cursor: crosshair !important;
+  touch-action: none;
+  user-select: none;
+}
+
+.colorWheel {
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
   background: conic-gradient(
     from 0deg,
@@ -1490,11 +1446,7 @@
     #ff0000 360deg
   );
   position: relative;
-  cursor: crosshair !important;
-  border: 3px solid rgba(255, 255, 255, 0.25);
-  touch-action: none;
-  user-select: none;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  box-shadow: inset 0 0 0 2px #000;
 
   .colorSaturation {
     width: 100%;
@@ -1505,20 +1457,26 @@
   }
 
   .colorHandle {
-    width: 22px;
-    height: 22px;
-    background: #ffffff;
-    border: 3px solid #0f172a;
+    width: 1.35em;
+    height: 1.35em;
+    border: solid 2px transparent;
     border-radius: 50%;
     position: absolute;
     transform: translate(-50%, -50%);
     cursor: grab !important;
-    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85), 0 2px 10px rgba(0, 0, 0, 0.55);
+    box-shadow:
+      0 -1px #000,
+      inset 0 -1px #8a8a8a,
+      0 4px 6px rgba(0, 0, 0, 0.65);
+    background:
+      conic-gradient(#fefefe, #ebebeb, #989898 25%, #808080 0%, #797979, #b3b3b3 50%, #fefefe)
+        padding-box,
+      linear-gradient(#f9f9f9, #8d8d8c) border-box;
     pointer-events: none;
 
     &:active {
       cursor: grabbing !important;
-      transform: translate(-50%, -50%) scale(1.15);
+      transform: translate(-50%, -50%) scale(1.12);
     }
   }
 }
@@ -1535,28 +1493,10 @@
   
   .selectionTabs {
     display: flex;
-    gap: 8px;
+    flex-wrap: wrap;
+    gap: 0.35rem;
     margin-bottom: 12px;
-    
-    button {
-      padding: 8px 16px;
-      border: none;
-      border-radius: 6px;
-      background: rgba(255, 255, 255, 0.1);
-      color: #ffffff;
-      cursor: pointer !important;
-      transition: all 0.2s ease;
-      font-size: 0.9rem;
-      
-      &.active {
-        background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
-        box-shadow: 0 2px 6px rgba(0, 212, 255, 0.3);
-      }
-      
-      &:hover:not(.active) {
-        background: rgba(255, 255, 255, 0.2);
-      }
-    }
+    width: 100%;
   }
   
   .fixtureList {
@@ -1784,10 +1724,13 @@
 
 // Channel and Fixture Monitoring Section
 .monitoringSection {
+  --channel-dock-width: clamp(12rem, 22vw, 20rem);
+  position: relative;
   background: rgba(0, 212, 255, 0.05);
   border: 1px solid rgba(0, 212, 255, 0.2);
   border-radius: 10px;
   padding: 16px;
+  padding-right: calc(var(--channel-dock-width) + 12px);
   margin-bottom: 20px;
   
   .sectionHeader {
@@ -1823,13 +1766,50 @@
     }
   }
   
-  .channelMonitor {
+  .channelMonitorDock {
+    /* sizing/position handled by ChannelMonitorDock component */
+  }
+
+  .dockResizeGripLegacy {
+    flex: 0 0 auto;
+    height: 6px;
+    cursor: ns-resize;
+    background: linear-gradient(
+      180deg,
+      rgba(0, 212, 255, 0.15) 0%,
+      rgba(0, 212, 255, 0.45) 50%,
+      rgba(0, 212, 255, 0.15) 100%
+    );
+  }
+
+  .channelMonitorScroll {
+    flex: 1 1 auto;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     gap: 12px;
-    margin-bottom: 16px;
+    padding: 10px 8px 12px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 212, 255, 0.45) rgba(255, 255, 255, 0.06);
+
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 999px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: rgba(0, 212, 255, 0.45);
+      border-radius: 999px;
+    }
   }
-  
+
   .fixtureMonitor {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -1866,67 +1846,15 @@
       }
     }
     
-    .channelGrid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 8px;
-    }
-    
-    .channelItem {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 6px;
-      padding: 8px;
-      transition: all 0.2s ease;
-      
-      &.controlled {
-        border-color: rgba(0, 212, 255, 0.5);
-        background: rgba(0, 212, 255, 0.1);
-        box-shadow: 0 0 8px rgba(0, 212, 255, 0.3);
-      }
-      
-      .channelInfo {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 6px;
-        
-        .channelType {
-          font-size: 0.75rem;
-          font-weight: 600;
-          color: #00d4ff;
-          text-transform: uppercase;
-        }
-        
-        .channelAddress {
-          font-size: 0.7rem;
-          color: #999;
-          font-family: monospace;
-        }
-      }
-      
-      .channelValue {
-        position: relative;
-        
-        .dmxValue {
-          font-size: 0.9rem;
-          font-weight: bold;
-          color: #ffffff;
-          font-family: monospace;
-          position: relative;
-          z-index: 2;
-        }
-        
-        .valueBar {
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          height: 3px;
-          border-radius: 2px;
-          transition: all 0.2s ease;
-          opacity: 0.8;
-        }
-      }
+    .channelStripRow {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: stretch;
+      justify-content: flex-start;
+      gap: 6px;
+      min-height: 9.5rem;
+      overflow: hidden;
     }
   }
   
@@ -2019,20 +1947,40 @@
 // Removed all react-grid-layout and drag/resize styles - using auto-layout instead
 
 .gridItemHeader {
-  background: rgba(0, 0, 0, 0.2);
-  color: #00d4ff;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--wb-surface, #251c44) 0 2px,
+    var(--wb-panel, #2d2350) 2px 4px
+  );
+  color: var(--wb-copper, #ffa044);
   padding: 8px 12px;
+  font-family: var(--wb-mono, 'Share Tech Mono', monospace);
+  font-size: 10px;
   font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   cursor: default;
   display: flex;
   align-items: center;
   gap: 8px;
-  border-bottom: 1px solid rgba(0, 212, 255, 0.3);
+  border-bottom: 2px solid var(--wb-bevel-dark, #110a25);
+  border-top: 1px solid var(--wb-bevel-light, #5a48a0);
   user-select: none;
 
   svg {
     width: 16px;
     height: 16px;
+  }
+}
+
+.gridItemHeaderToggle {
+  width: 100%;
+  border: none;
+  cursor: pointer;
+  justify-content: space-between;
+
+  &:hover {
+    filter: brightness(1.08);
   }
 }
 
@@ -2221,52 +2169,46 @@
 }
 
 .gridItem {
-  background: var(--color-surface);
-  border-radius: var(--radius-md);
-  border: 2px solid var(--color-border);
   padding: 0;
   min-height: 200px;
   display: flex;
   flex-direction: column;
-  transition: all var(--transition-normal);
-  
-  // Explicitly disable drag/resize
+  border-radius: 3px;
+  border: 1px solid var(--wb-bevel-dark, #110a25);
+  background: var(--wb-panel, #2d2350);
+  box-shadow:
+    inset 0 0 0 1px var(--wb-bevel-light, #5a48a0),
+    inset 0 -8px 24px rgb(0 0 0 / 0.35),
+    0 4px 16px rgb(0 0 0 / 0.45);
+  transition: box-shadow var(--transition-normal), border-color var(--transition-normal);
   user-select: none;
   pointer-events: auto;
   position: relative;
-  
-  // Hide any react-grid-layout handles that might appear
+
   .react-resizable-handle,
   .react-draggable-handle {
     display: none !important;
   }
-  
+
   &:hover {
-    border-color: var(--color-interactive);
-    box-shadow: var(--shadow-md);
-    transform: translateY(-2px);
+    border-color: rgba(0, 212, 255, 0.35);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.14),
+      inset 0 -10px 24px rgb(0 0 0 / 0.3),
+      0 14px 32px -8px rgb(0 0 0 / 0.6);
   }
 }
 
-.gridItemHeader {
-  padding: 12px 16px;
-  background: linear-gradient(135deg, rgba(78, 205, 196, 0.1) 0%, rgba(78, 205, 196, 0.05) 100%);
-  border-bottom: 2px solid var(--color-border);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: var(--font-semibold);
-  color: var(--color-interactive);
-  font-size: var(--text-base);
-  cursor: default;
-  user-select: none;
-}
 
 .gridItemContent {
   padding: 16px;
-  flex: 1;
-  overflow-y: auto;
+  flex: 1 1 auto;
   min-height: 150px;
+  max-height: min(70vh, 720px);
+  overflow: auto;
+  resize: vertical;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-primary, #d68706) 45%, transparent) transparent;
 }
 
 .envelopePanelStack {

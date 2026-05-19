@@ -10,7 +10,7 @@ import {
   DMX_EDIT_CHANNEL_NAME,
   useAppContextMenu,
 } from '../../context/ContextMenuContext';
-import { EnvelopeAutomation } from '../automation/EnvelopeAutomation';
+import { AutomationWorkbench } from '../automation/AutomationWorkbench';
 import { GlobalChannelNames } from '../channels/GlobalChannelNames';
 import { DmxControlsPanel } from '../dmx/DmxControlsPanel';
 import { DmxFixtureSelector } from '../dmx/DmxFixtureSelector';
@@ -47,7 +47,7 @@ export const DmxChannelControlPage: React.FC = () => {
   const [channelsPerPage, setChannelsPerPage] = useState(compactByDefault ? 32 : 64);
   const [currentPage, setCurrentPage] = useState(0);
   const [showSceneControls, setShowSceneControls] = useState(!compactByDefault);
-  const [showMidiControls, setShowMidiControls] = useState(!compactByDefault);
+  const [showMidiControls, setShowMidiControls] = useState(false);
   const [showOscControls, setShowOscControls] = useState(!compactByDefault);
   const [showEnvelopeAutomation, setShowEnvelopeAutomation] = useState(!compactByDefault);
   const [showGlobalChannelNames, setShowGlobalChannelNames] = useState(false);
@@ -130,9 +130,6 @@ export const DmxChannelControlPage: React.FC = () => {
     loadScene,
     addNotification,
 
-    // Envelope Automation
-    envelopeAutomation,
-    toggleEnvelope,
     channelJumpTarget,
     dmxFaderOrientation: faderOrientation,
     setDmxFaderOrientation: handleFaderOrientationChange,
@@ -140,6 +137,8 @@ export const DmxChannelControlPage: React.FC = () => {
     setDmxChannelsPerRow,
     getChannelTicksOnly,
     setChannelTicksOnly,
+    getChannelAuxFullFader,
+    toggleChannelAuxFullFader,
   } = useStore();
 
   useEffect(() => {
@@ -492,7 +491,7 @@ export const DmxChannelControlPage: React.FC = () => {
           {/* Envelope Automation */}
           {showEnvelopeAutomation && (
             <div className={styles.envelopeAutomationSection}>
-              <EnvelopeAutomation />
+              <AutomationWorkbench />
             </div>
           )}
 
@@ -543,6 +542,8 @@ export const DmxChannelControlPage: React.FC = () => {
             verticalFaders={faderOrientation === 'vertical'}
             getChannelTicksOnly={getChannelTicksOnly}
             setChannelTicksOnly={setChannelTicksOnly}
+            getChannelAuxFullFader={getChannelAuxFullFader}
+            toggleChannelAuxFullFader={toggleChannelAuxFullFader}
           />
 
           {/* Active DMX Channels Summary - Always Visible */}
@@ -569,7 +570,6 @@ export const DmxChannelControlPage: React.FC = () => {
             oscAssignments={oscAssignments}
             isLearning={isLearning}
             currentLearningChannel={currentLearningChannel}
-            envelopeAutomation={envelopeAutomation}
             showMidiControls={showMidiControls}
             showOscControls={showOscControls}
             editingChannelName={editingChannelName}
@@ -578,7 +578,6 @@ export const DmxChannelControlPage: React.FC = () => {
             getChannelRange={getChannelRange}
             setChannelRange={setChannelRange}
             setDmxChannel={setDmxChannel}
-            toggleEnvelope={toggleEnvelope}
             handleSaveChannelName={handleSaveChannelName}
             handleCancelEditName={handleCancelEditName}
             handleStartEditName={handleStartEditName}
@@ -595,6 +594,8 @@ export const DmxChannelControlPage: React.FC = () => {
             channelsPerRow={dmxChannelsPerRow}
             getChannelTicksOnly={getChannelTicksOnly}
             setChannelTicksOnly={setChannelTicksOnly}
+            getChannelAuxFullFader={getChannelAuxFullFader}
+            toggleChannelAuxFullFader={toggleChannelAuxFullFader}
             onChannelContextMenu={openChannelMenu}
           />
 

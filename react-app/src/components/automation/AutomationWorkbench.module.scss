@@ -2,6 +2,15 @@
   width: 100%;
 }
 
+.shell {
+  resize: vertical;
+  overflow: auto;
+  min-height: 12rem;
+  max-height: min(85vh, 900px);
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-primary, #d68706) 45%, transparent) transparent;
+}
+
 .shell :global(.ab-rack-module__body) {
   padding: 0.35rem;
 }

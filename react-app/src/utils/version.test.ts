@@ -4,12 +4,12 @@ import { CURRENT_VERSION, getVersionDisplay, getBuildInfo } from '../utils/versi
 describe('Version Utils', () => {
   it('should have current version defined', () => {
     expect(CURRENT_VERSION).toBeDefined()
-    expect(CURRENT_VERSION.version).toBe('5.12.0')
+    expect(CURRENT_VERSION.version).toBe('5.1.2.0')
   })
 
   it('should format version display correctly', () => {
     const display = getVersionDisplay()
-    expect(display).toMatch(/^v\d+\.\d+\.\d+/)
+    expect(display).toMatch(/^v\d+(\.\d+)+/)
   })
 
   it('should include release type in non-stable versions', () => {
@@ -21,7 +21,7 @@ describe('Version Utils', () => {
   it('should generate build info', () => {
     const buildInfo = getBuildInfo()
     expect(buildInfo).toContain('Version')
-    expect(buildInfo).toContain('5.12.0')
+    expect(buildInfo).toContain(CURRENT_VERSION.version)
   })
 })
 

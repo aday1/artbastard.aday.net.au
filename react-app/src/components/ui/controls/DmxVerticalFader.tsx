@@ -1,8 +1,9 @@
 import React, { useEffect, useRef } from 'react';
+import { useRangeTouchGuard } from './useRangeTouchGuard';
 import { useVerticalFaderLength } from './useVerticalFaderLength';
 import styles from './DmxVerticalFader.module.scss';
 
-export type DmxFaderSize = 'default' | 'touch';
+export type DmxFaderSize = 'default' | 'touch' | 'channel' | 'pinned';
 
 export interface DmxVerticalFaderProps {
   value: number;
@@ -33,6 +34,7 @@ export const DmxVerticalFader: React.FC<DmxVerticalFaderProps> = ({
 }) => {
   const formRef = useRef<HTMLFormElement>(null);
   const trackHostRef = useVerticalFaderLength<HTMLDivElement>();
+  const touchGuard = useRangeTouchGuard(disabled);
 
   useEffect(() => {
     const el = formRef.current;
@@ -51,7 +53,7 @@ export const DmxVerticalFader: React.FC<DmxVerticalFaderProps> = ({
 
   return (
     <div
-      className={`${styles.wrap} ${size === 'touch' ? styles.sizeTouch : ''} ${className} ${disabled ? styles.disabled : ''}`}
+      className={`${styles.wrap} ${size === 'touch' ? styles.sizeTouch : ''} ${size === 'channel' ? styles.sizeChannel : ''} ${size === 'pinned' ? styles.sizePinned : ''} ${className} ${disabled ? styles.disabled : ''}`}
     >
       <form
         ref={formRef}
@@ -61,6 +63,7 @@ export const DmxVerticalFader: React.FC<DmxVerticalFaderProps> = ({
       >
         <div ref={trackHostRef} className={styles.trackHost}>
           <input
+            ref={touchGuard.inputRef}
             type="range"
             className={`${styles.input} ab-styled-fader`}
             min={min}
@@ -70,6 +73,11 @@ export const DmxVerticalFader: React.FC<DmxVerticalFaderProps> = ({
             disabled={disabled}
             onChange={handle}
             onInput={handle}
+            onPointerDown={touchGuard.onPointerDown}
+            onPointerUp={touchGuard.onPointerUp}
+            onPointerCancel={touchGuard.onPointerUp}
+            onTouchStart={touchGuard.onTouchStart}
+            onTouchEnd={touchGuard.onTouchEnd}
           />
         </div>
       </form>

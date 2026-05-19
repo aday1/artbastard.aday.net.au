@@ -53,7 +53,7 @@ describe('transitionTrackerEngine', () => {
     expect(line.fx.easing).toBe('easeInOut');
   });
 
-  it('normalizes legacy patterns with pages and tracks', () => {
+  it('normalizes legacy patterns with empty channels by default', () => {
     const legacy = {
       ...createDefaultPattern('Legacy'),
       pages: undefined as never,
@@ -61,8 +61,28 @@ describe('transitionTrackerEngine', () => {
     };
     const normalized = normalizePattern(legacy);
     expect(normalized.pages.length).toBeGreaterThan(0);
-    expect(normalized.tracks.length).toBeGreaterThan(0);
+    expect(normalized.pages[0].channelIndices).toEqual([]);
+    expect(normalized.tracks.length).toBe(0);
     expect(normalized.activePageId).toBeTruthy();
+    expect(normalized.followSelection).toBe(false);
+  });
+
+  it('strips factory default CH 1-8 from saved pages', () => {
+    const p = createDefaultPattern();
+    const page = p.pages[0];
+    const withDefaults = {
+      ...p,
+      pages: [{ ...page, channelIndices: [0, 1, 2, 3, 4, 5, 6, 7] }],
+      tracks: [0, 1, 2, 3, 4, 5, 6, 7].map((ch) => ({
+        id: `t-${ch}`,
+        channelIndex: ch,
+        name: undefined,
+        envelopeId: null,
+      })),
+    };
+    const normalized = normalizePattern(withDefaults);
+    expect(normalized.pages[0].channelIndices).toEqual([]);
+    expect(normalized.tracks.length).toBe(0);
   });
 
   it('uses locked page channels when channelsLocked', () => {

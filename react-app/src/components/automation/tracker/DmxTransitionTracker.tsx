@@ -2,13 +2,15 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useStore } from '../../../store';
 import { RackModule, RotaryKnob, RackLed, RackLedStrip, RackToggle } from '../../ui/rack';
 import { SkeuoButton } from '../../ui/SkeuoButton';
+import { ChannelRoleIcon } from '../../ui/ChannelRoleIcon';
 import { LucideIcon } from '../../ui/LucideIcon';
 import {
   formatEasingCode,
   formatHexCell,
+  getActivePage,
+  normalizePattern,
   parseEasingCode,
   parseHexCell,
-  resolveVisibleChannels,
 } from '../../../utils/transitionTrackerEngine';
 import type { TransitionEasing } from '../../../store/types';
 import { getFixtureInfoForChannel } from '../../../utils/fixturePresentation';
@@ -29,16 +31,12 @@ export const DmxTransitionTracker: React.FC<DmxTransitionTrackerProps> = ({
 }) => {
   const gridRef = useRef<HTMLDivElement>(null);
   const [focus, setFocus] = useState<CellFocus>({ line: 0, col: 'scene' });
-  const [includePinned, setIncludePinned] = useState(false);
-
   const {
     transitionPatterns,
     activeTransitionPatternId,
     transitionTrackerPlayback,
     scenes,
     bpm,
-    selectedChannels,
-    pinnedChannels,
     channelNames,
     dmxChannels,
     setActiveTransitionPattern,
@@ -65,8 +63,6 @@ export const DmxTransitionTracker: React.FC<DmxTransitionTrackerProps> = ({
     transitionTrackerPlayback: s.transitionTrackerPlayback,
     scenes: s.scenes,
     bpm: s.bpm,
-    selectedChannels: s.selectedChannels,
-    pinnedChannels: s.pinnedChannels,
     channelNames: s.channelNames,
     dmxChannels: s.dmxChannels,
     setActiveTransitionPattern: s.setActiveTransitionPattern,
@@ -92,15 +88,12 @@ export const DmxTransitionTracker: React.FC<DmxTransitionTrackerProps> = ({
   const patternId = patternIdProp ?? activeTransitionPatternId;
   const pattern = transitionPatterns.find((p) => p.id === patternId) ?? transitionPatterns[0];
 
-  const visibleChannels = useMemo(
-    () =>
-      pattern
-        ? resolveVisibleChannels(pattern, selectedChannels, pinnedChannels, {
-            includePinned,
-          })
-        : [],
-    [pattern, selectedChannels, pinnedChannels, includePinned]
-  );
+  const visibleChannels = useMemo(() => {
+    if (!pattern) return [];
+    const p = normalizePattern(pattern);
+    const page = getActivePage(p);
+    return page?.channelIndices ?? [];
+  }, [pattern]);
 
   const previewChannel =
     typeof focus.col === 'number' ? focus.col : visibleChannels[0] ?? 0;
@@ -185,8 +178,6 @@ export const DmxTransitionTracker: React.FC<DmxTransitionTrackerProps> = ({
         patternId={pattern.id}
         focusedChannel={previewChannel}
         onFocusChannel={(ch) => setFocus((prev) => ({ ...prev, col: ch }))}
-        includePinned={includePinned}
-        onIncludePinnedChange={setIncludePinned}
       />
       <div className={styles.toolbar}>
         <label className={styles.selectWrap}>
@@ -287,9 +278,8 @@ export const DmxTransitionTracker: React.FC<DmxTransitionTrackerProps> = ({
 
       {visibleChannels.length === 0 ? (
         <p className={styles.emptyGrid}>
-          No columns in this page. Add channels above (number + Add, + Selection, or Fixture
-          lanes). Your existing pattern may still list CH 1-8 from an older default; use x or
-          Clear all to trim the list.
+          No columns in this page. Add channels above (+ Selection, + Pinned, number + Add, or
+          Fixture lanes).
         </p>
       ) : (
       <div
@@ -316,7 +306,15 @@ export const DmxTransitionTracker: React.FC<DmxTransitionTrackerProps> = ({
                   }
                   title={col.title}
                 >
-                  <span className={styles.colFixture}>{col.fixtureShort}</span>
+                  <span className={styles.colFixture}>
+                    <ChannelRoleIcon
+                      channelType={col.channelType}
+                      fixtureType={col.fixtureType}
+                      size={11}
+                      showFixtureType
+                    />
+                    {col.fixtureShort}
+                  </span>
                 </th>
               ))}
             </tr>
@@ -330,7 +328,10 @@ export const DmxTransitionTracker: React.FC<DmxTransitionTrackerProps> = ({
                       : undefined
                   }
                 >
-                  <span className={styles.colRole}>{col.roleLabel}</span>
+                  <span className={styles.colRole}>
+                    <ChannelRoleIcon channelType={col.channelType} size={12} />
+                    {col.roleLabel}
+                  </span>
                   <span className={styles.colDmx}>{col.channelIndex + 1}</span>
                 </th>
               ))}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { usePanels } from '../../context/PanelContext';
+import { usePanels, PanelId } from '../../context/PanelContext';
 
 interface TouchPanelManagerProps {
   isVisible: boolean;
@@ -22,10 +22,11 @@ export const TouchPanelManager: React.FC<TouchPanelManagerProps> = ({
   
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [saveLayoutName, setSaveLayoutName] = useState('');
-  const [selectedPanel, setSelectedPanel] = useState<'external' | null>('external');
+  const touchPanelId: PanelId = 'bottom-right';
+  const [selectedPanel] = useState<PanelId>(touchPanelId);
 
   const savedLayouts = getSavedLayouts();
-  const externalComponents = layout.external?.components || [];
+  const externalComponents = layout[touchPanelId]?.components || [];
 
   const handleSaveLayout = () => {
     if (saveLayoutName.trim()) {
@@ -52,7 +53,7 @@ export const TouchPanelManager: React.FC<TouchPanelManagerProps> = ({
   const handleClearAll = () => {
     if (confirm('Remove all components from this panel?')) {
       externalComponents.forEach(comp => {
-        removeComponentFromPanel('external', comp.id);
+        removeComponentFromPanel(touchPanelId, comp.id);
       });
     }
   };

@@ -36,7 +36,8 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
     startMidiLearn,
     cancelMidiLearn,
     midiLearnTarget,
-    bpm
+    bpm,
+    transitionPatterns,
   } = useStore();
 
   const { socket } = useSocket();
@@ -2228,6 +2229,25 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
                     {scenes.map(scene => (
                       <option key={scene.name} value={scene.name}>
                         {scene.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className={styles.propertyGroup}>
+                  <label>Transition pattern (optional)</label>
+                  <select
+                    value={step.patternId ?? ''}
+                    onChange={(e) =>
+                      updateActStep(act.id, step.id, {
+                        patternId: e.target.value || undefined,
+                      })
+                    }
+                  >
+                    <option value="">None (scene only)</option>
+                    {transitionPatterns.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
                       </option>
                     ))}
                   </select>

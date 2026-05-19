@@ -26,6 +26,8 @@ interface DmxPinnedChannelsProps {
   verticalFaders?: boolean;
   getChannelTicksOnly: (channelIndex: number) => boolean;
   setChannelTicksOnly: (channelIndex: number, ticksOnly: boolean) => void;
+  getChannelAuxFullFader: (channelIndex: number) => boolean;
+  toggleChannelAuxFullFader: (channelIndex: number) => void;
 }
 
 export const DmxPinnedChannels: React.FC<DmxPinnedChannelsProps> = ({
@@ -50,6 +52,8 @@ export const DmxPinnedChannels: React.FC<DmxPinnedChannelsProps> = ({
   verticalFaders = false,
   getChannelTicksOnly,
   setChannelTicksOnly,
+  getChannelAuxFullFader,
+  toggleChannelAuxFullFader,
 }) => {
   const { openChannelMenu } = useAppContextMenu();
 
@@ -100,10 +104,15 @@ export const DmxPinnedChannels: React.FC<DmxPinnedChannelsProps> = ({
                       className={`${styles.ticksModeButton} ${styles.ticksModeButtonCompact} ${
                         getChannelTicksOnly(channelIndex) ? styles.ticksModeActive : ''
                       }`}
-                      onClick={() =>
-                        setChannelTicksOnly(channelIndex, !getChannelTicksOnly(channelIndex))
-                      }
-                      title="Toggle ticks mode"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (e.altKey && getChannelTicksOnly(channelIndex)) {
+                          toggleChannelAuxFullFader(channelIndex);
+                          return;
+                        }
+                        setChannelTicksOnly(channelIndex, !getChannelTicksOnly(channelIndex));
+                      }}
+                      title="Toggle ticks mode. Alt+click when ticks on: full 0-255 fader."
                     >
                       <LucideIcon name="ListOrdered" size={14} />
                     </button>
@@ -142,13 +151,15 @@ export const DmxPinnedChannels: React.FC<DmxPinnedChannelsProps> = ({
               >
                 <DmxChannelFader
                   vertical={verticalFaders}
-                  faderSize={verticalFaders ? 'touch' : 'default'}
+                  faderSize={verticalFaders ? 'pinned' : 'default'}
                   min={channelRange.min}
                   max={channelRange.max}
                   value={value}
                   onChange={(v) => setDmxChannel(channelIndex, v)}
                   fixtureRanges={fixtureInfo?.ranges}
                   ticksOnly={getChannelTicksOnly(channelIndex)}
+                  auxFullRange={getChannelAuxFullFader(channelIndex)}
+                  onToggleAuxFullRange={() => toggleChannelAuxFullFader(channelIndex)}
                 />
                 <span className={styles.pinnedValue}>{value}</span>
               </div>

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react'
 import { useTheme } from '../../context/ThemeContext'
-import { RouterProvider } from '../../context/RouterContext'
 import { StatusBar } from './StatusBar'
 import { Navbar } from './Navbar'
 import { PinnedChannels } from './PinnedChannels'
@@ -25,7 +24,8 @@ import { LucideIcon } from '../ui/LucideIcon'
 import { useMobile } from '../../hooks/useMobile'
 import { MobileTopBar } from './MobileTopBar'
 import { DeployLaneBadge } from './DeployLaneBadge'
-import { ContextMenuProvider, useAppContextMenu } from '../../context/ContextMenuContext'
+import { useAppContextMenu } from '../../context/ContextMenuContext'
+import { SiteBrandingLink } from '../ui/SiteBrandingLink'
 
 interface LayoutProps {
   children?: React.ReactNode
@@ -43,6 +43,12 @@ const LayoutBody: React.FC<LayoutProps> = ({ children }) => {
   // Setup auto-save on exit
   useEffect(() => {
     StateManager.setupAutoSaveOnExit();
+  }, []);
+
+  // If a drawer closed without cleanup, body scroll can stay locked.
+  useEffect(() => {
+    document.body.classList.remove('ab-no-scroll');
+    document.documentElement.classList.remove('ab-no-scroll');
   }, []);
 
   // Setup WebSocket localStorage sync
@@ -90,6 +96,7 @@ const LayoutBody: React.FC<LayoutProps> = ({ children }) => {
     <>
       <div
         className={[
+          'ab-rack',
           styles.layout,
           styles[theme],
           darkMode ? styles.dark : styles.light,
@@ -126,11 +133,19 @@ const LayoutBody: React.FC<LayoutProps> = ({ children }) => {
             {!isMobileOrTablet && (
               <>
                 <h1 className={styles.title}>
-                  ArtBastard DMX512FTW:
+                  <SiteBrandingLink brand="artbastard">ArtBastard</SiteBrandingLink>
+                  {' '}
+                  DMX512FTW:
                   {theme === 'artsnob' && <span>The Luminary Palette</span>}
                   {theme === 'standard' && <span>DMX Controller</span>}
                   {theme === 'minimal' && <span>DMX</span>}
                 </h1>
+                <p className={styles.siteCredit}>
+                  Part of the{' '}
+                  <SiteBrandingLink brand="macroverse">Macroverse</SiteBrandingLink>
+                  {' '}suite on{' '}
+                  <SiteBrandingLink brand="artbastard">aday.net.au</SiteBrandingLink>
+                </p>
                 <div className={styles.serverInfo}>{serverAddress}</div>
                 {theme === 'artsnob' && (
                   <FancyQuotes intervalSeconds={30} animate={true} />
@@ -192,10 +207,4 @@ const LayoutBody: React.FC<LayoutProps> = ({ children }) => {
   )
 }
 
-export const Layout: React.FC<LayoutProps> = (props) => (
-  <RouterProvider>
-    <ContextMenuProvider>
-      <LayoutBody {...props} />
-    </ContextMenuProvider>
-  </RouterProvider>
-)
+export const Layout: React.FC<LayoutProps> = (props) => <LayoutBody {...props} />

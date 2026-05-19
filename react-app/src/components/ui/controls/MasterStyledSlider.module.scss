@@ -2,6 +2,8 @@ $form-h: 2.25em;
 $thumb-d: $form-h;
 
 .form {
+  touch-action: none;
+  overscroll-behavior: contain;
   --min: 0;
   --max: 255;
   --val: 0;
@@ -40,7 +42,12 @@ $thumb-d: $form-h;
   pointer-events: none;
 }
 
-.input {
+.input:global(.ab-dmx-range) {
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.input:not(.ab-dmx-range) {
   height: $form-h;
   border-radius: $form-h;
   box-shadow: 0 -1px var(--color-card-border), 0 1px var(--color-card-bg);

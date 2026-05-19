@@ -1,6 +1,10 @@
 // Import font fallbacks for better loading performance
 @use './font-fallbacks.scss';
 @use './design-system.scss';
+@use './workbench-shell.scss';
+@use './reason-rack.scss';
+@use './metallic-range.scss';
+@use './seamless-scroll.scss';
 /* emoji-fixes removed to restore default icon and text rendering */
 
 // Base variables
@@ -56,6 +60,7 @@
 
 // Dark mode colors - Enhanced for professional lighting environments
 [data-theme="dark"] {
+  --font-mono: var(--wb-mono, 'Share Tech Mono', 'Space Mono', Consolas, monospace);
   --color-background: #1a1620; /* Deep theatrical purple-black */
   --color-text: #e8e1d6; /* Warm white for readability */
   --color-primary: #8b5cf6; /* Rich purple primary */
@@ -165,15 +170,32 @@ body {
   line-height: var(--ui-line-height, 1.5);
   letter-spacing: var(--ui-letter-spacing, 0px);
   font-size: calc(1rem * var(--ui-font-size, 1.0));
-  overflow-x: hidden; /* Drawer transitions must not create a scrollbar */
-  overflow-y: auto;   /* Ensure vertical scrolling available in Electron */
+  overflow: hidden;
   min-height: 100vh;
   min-height: 100dvh;
   cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cpath fill='%23f59e0b' stroke='%235a4333' stroke-width='1' d='M2 2 L2 18 L8 12 L11 18 L13 16 L10 10 L18 10 Z'/%3E%3C/svg%3E") 2 2, auto;
 }
 
-body * {
+body *:not(input):not(textarea):not(select):not(button):not(a):not([role='button']):not(
+    label[for]
+  ) {
   cursor: inherit;
+}
+
+input,
+textarea,
+select,
+button,
+a,
+[role='button'],
+label[for] {
+  cursor: auto;
+}
+
+input[type='range'] {
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
 }
 
 html[data-theme="dark"] body {
@@ -416,8 +438,12 @@ input[type="range"]:not(.ab-styled-fader) {
   justify-content: space-between;
 }
 
-// Root container for React app
+// Root container for React app — single scroll lives in main content, not body
 #root {
+  height: 100dvh;
   min-height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 

@@ -1305,7 +1305,7 @@ const ChromaticEnergyManipulatorMini: React.FC<ChromaticEnergyManipulatorMiniPro
   return (
     <DockableComponent
       id="chromatic-energy-manipulator-mini"
-      component="chromatic-energy-manipulator"
+      component="professional-fixture-controller"
       title="Chromatic Energy Manipulator"
       defaultPosition={{ zone: 'floating', offset: { x: 20, y: 300 } }}
       className={styles.chromaticEnergyManipulatorMini}

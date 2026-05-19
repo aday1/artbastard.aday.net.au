@@ -1,6 +1,7 @@
 // DMX Channel Control Page - Dedicated page for DMX control with MIDI Learn/Forget
 .dmxChannelControlPage {
-  min-height: 100vh;
+  min-height: 0;
+  flex: 1 1 auto;
   background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.98) 100%);
   padding: 20px;
   display: flex;
@@ -734,7 +735,13 @@
   gap: 20px;
   position: relative;
   z-index: 1;
-  margin-top: 0; // Ensure no negative margin that could overlap
+  margin-top: 0;
+  resize: vertical;
+  overflow: auto;
+  min-height: 8rem;
+  max-height: min(40vh, 480px);
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-primary, #d68706) 45%, transparent) transparent;
 }
 
 .controlGroup {
@@ -1456,6 +1463,10 @@
   transition: all 0.2s ease;
   min-height: 0;
 
+  &:has(.pinnedSliderVertical) {
+    min-height: 22rem;
+  }
+
   @media (max-width: 1279px) {
     min-height: min(72vh, 720px);
   }
@@ -1512,20 +1523,24 @@
   align-items: stretch;
   justify-content: center;
   gap: 10px;
-  min-height: 0;
+  min-height: 11rem;
   width: 100%;
   pointer-events: auto;
   position: relative;
   z-index: 20;
+  overflow: visible;
+  touch-action: none;
+  overscroll-behavior: contain;
 
   > *:first-child {
     flex: 1 1 auto;
-    min-height: 0;
-    min-width: 0;
+    min-height: 10rem;
+    min-width: 4.75rem;
     height: 100%;
-    width: 100%;
-    max-width: 7.5rem;
+    width: auto;
+    max-width: none;
     margin: 0 auto;
+    pointer-events: auto;
   }
 
   .pinnedValue {
@@ -1542,6 +1557,15 @@
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  touch-action: none;
+  overscroll-behavior: contain;
+
+  &.pinnedSliderVertical {
+    flex: 1 1 auto;
+    flex-shrink: 1;
+    align-items: stretch;
+    min-height: 11rem;
+  }
 }
 
 .pinnedSlider {
@@ -2131,7 +2155,7 @@
   }
 
   &.channelStrip {
-    grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(9.5rem, 12.5rem));
     gap: 10px;
     align-items: stretch;
   }
@@ -2167,6 +2191,14 @@
     gap: 2px;
   }
 
+  .channelNumber {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    pointer-events: auto;
+  }
+
   .channelNameWrapper .channelName {
     font-size: 0.7rem;
     line-height: 1.2;
@@ -2193,6 +2225,8 @@
     pointer-events: auto;
     position: relative;
     z-index: 20;
+    touch-action: none;
+    overscroll-behavior: contain;
 
     > * {
       flex: 1;
@@ -2531,6 +2565,8 @@
   margin-bottom: 12px;
   position: relative;
   z-index: 10;
+  touch-action: none;
+  overscroll-behavior: contain;
 
   /* Horizontal faders only — vertical strip uses .channelSliderVertical */
   &:not(.channelSliderVertical) form {
@@ -2978,12 +3014,22 @@
 
 // Touch device optimizations
 @media (hover: none) and (pointer: coarse) {
+  .pinnedChannel:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
   .channelCell {
     min-height: 24px;
     
     &:active {
       transform: scale(0.95);
     }
+  }
+
+  .channelSlider :global(.ab-dmx-range),
+  .channelSlider :global(.ab-styled-fader) {
+    touch-action: none;
   }
 
   .channelSlider .slider {

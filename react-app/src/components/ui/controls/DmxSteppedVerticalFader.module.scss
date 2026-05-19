@@ -27,6 +27,8 @@ $thumb-d: $form-h;
   min-height: 9rem;
   height: 100%;
   margin: 0 auto;
+  touch-action: none;
+  overscroll-behavior: contain;
 }
 
 .input {

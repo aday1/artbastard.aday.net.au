@@ -30,7 +30,8 @@ jobs:
               if [ -f nginx/auth/aday.htpasswd ] && ! git ls-files --error-unmatch nginx/auth/aday.htpasswd >/dev/null 2>&1; then
                 mv nginx/auth/aday.htpasswd "nginx/auth/aday.htpasswd.bak.$(date +%s)"
               fi
-              git pull --ff-only origin main
+              git fetch origin main
+              git reset --hard origin/main
               if [ -f nginx/auth/aday.htpasswd ]; then
                 sed -i "s/\r$//" nginx/auth/aday.htpasswd
               fi

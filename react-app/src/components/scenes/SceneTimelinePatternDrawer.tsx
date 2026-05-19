@@ -48,7 +48,7 @@ export const SceneTimelinePatternDrawer: React.FC<SceneTimelinePatternDrawerProp
         <DmxTransitionTracker patternId={patternId} compact />
       ) : (
         <p className={styles.hint}>
-          Timeline lanes are above. Switch to Pattern for stepped DMX transition rows (Renoise-style).
+          Timeline lanes are above. Switch to Pattern for stepped DMX transition rows in the DMX Tracker.
         </p>
       )}
     </div>

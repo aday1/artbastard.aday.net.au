@@ -12,6 +12,8 @@ import { useActsPlaybackEngine } from './hooks/useActsPlaybackEngine'
 import { useActsOscProcessor } from './hooks/useActsOscProcessor'
 import { useActsMidiProcessor } from './hooks/useActsMidiProcessor'
 import { useTimelinePlayback } from './hooks/useTimelinePlayback'
+import { useTransitionTrackerPlayback } from './hooks/useTransitionTrackerPlayback'
+import { useAppearanceSync } from './hooks/useAppearanceSync'
 import { useSceneTimelinePlayback } from './hooks/useSceneTimelinePlayback'
 import { useClipLauncher } from './hooks/useClipLauncher'
 import { useGlobalMonitoring } from './hooks/useMonitoring'
@@ -21,6 +23,8 @@ import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import MobilePage from './pages/MobilePage'
 import { FactoryResetBanner } from './components/layout/FactoryResetBanner'
+import { RouterProvider } from './context/RouterContext'
+import { ContextMenuProvider } from './context/ContextMenuContext'
 
 /**
  * Pick a toast container position that does not overlap the new
@@ -81,6 +85,11 @@ function App() {
   
   // Initialize timeline playback engine
   useTimelinePlayback();
+
+  // DMX transition pattern tracker (line-stepped scenes + channels)
+  useTransitionTrackerPlayback();
+
+  useAppearanceSync();
   
   // Initialize scene timeline playback engine
   useSceneTimelinePlayback();
@@ -88,68 +97,48 @@ function App() {
   // Initialize clip launcher playback
   useClipLauncher();
   
-  // If this is the Mobile page, render it standalone
-  if (isMobilePage) {
-    return (
-      <ThemeProvider>
-        <SocketProvider>
-          <DockingProvider>
-            <PinningProvider>
-              <SuperControlPreferencesProvider>
-                <MidiDmxProcessor />
-                <OscDmxProcessor />
-                <MobilePage />
-                  <ToastContainer
-                    position="bottom-center"
-                    autoClose={3000}
-                    hideProgressBar={false}
-                    newestOnTop={false}
-                    closeOnClick
-                    rtl={false}
-                    pauseOnFocusLoss
-                    draggable
-                    pauseOnHover
-                    theme="dark"
-                  />
-              </SuperControlPreferencesProvider>
-            </PinningProvider>
-          </DockingProvider>
-        </SocketProvider>
-      </ThemeProvider>
-    );
-  }
-  
-  // Normal app layout
+  const toast = (
+    <ToastContainer
+      position={isMobilePage ? 'bottom-center' : toastPosition}
+      autoClose={3000}
+      hideProgressBar={false}
+      newestOnTop={false}
+      closeOnClick
+      rtl={false}
+      pauseOnFocusLoss
+      draggable
+      pauseOnHover
+      theme="dark"
+    />
+  )
+
   return (
     <ThemeProvider>
       <SocketProvider>
         <DockingProvider>
-            <PinningProvider>
-              <SuperControlPreferencesProvider>
-                {/* Global MIDI processor - processes MIDI messages into DMX channel updates */}
-                <MidiDmxProcessor />
-                {/* Global OSC processor - processes OSC messages into DMX channel updates */}
-                <OscDmxProcessor />
-                <FactoryResetBanner />
-                <Layout />
-                <ToastContainer
-                  position={toastPosition}
-                  autoClose={3000}
-                  hideProgressBar={false}
-                  newestOnTop={false}
-                  closeOnClick
-                  rtl={false}
-                  pauseOnFocusLoss
-                  draggable
-                  pauseOnHover
-                  theme="dark"
-                />
-              </SuperControlPreferencesProvider>
+          <PinningProvider>
+            <SuperControlPreferencesProvider>
+              <RouterProvider>
+                <ContextMenuProvider>
+                  <MidiDmxProcessor />
+                  <OscDmxProcessor />
+                  {isMobilePage ? (
+                    <MobilePage />
+                  ) : (
+                    <>
+                      <FactoryResetBanner />
+                      <Layout />
+                    </>
+                  )}
+                  {toast}
+                </ContextMenuProvider>
+              </RouterProvider>
+            </SuperControlPreferencesProvider>
           </PinningProvider>
         </DockingProvider>
       </SocketProvider>
     </ThemeProvider>
-  );
+  )
 }
 
 export default App

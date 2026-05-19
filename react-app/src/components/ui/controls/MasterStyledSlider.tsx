@@ -1,4 +1,5 @@
 import React, { useEffect, useId, useRef } from 'react';
+import { useRangeTouchGuard } from './useRangeTouchGuard';
 import styles from './MasterStyledSlider.module.scss';
 
 export interface MasterStyledSliderProps {
@@ -36,6 +37,7 @@ export const MasterStyledSlider: React.FC<MasterStyledSliderProps> = ({
 }) => {
   const formRef = useRef<HTMLFormElement>(null);
   const ticksId = useId();
+  const touchGuard = useRangeTouchGuard(disabled);
 
   useEffect(() => {
     formRef.current?.style.setProperty('--val', String(value));
@@ -50,6 +52,48 @@ export const MasterStyledSlider: React.FC<MasterStyledSliderProps> = ({
     onChange(v);
   };
 
+  const rangeClass = [
+    'ab-dmx-range',
+    vertical ? 'ab-dmx-range--vertical ab-styled-fader' : 'ab-dmx-range--horizontal',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const rangeInput = (
+    <input
+      ref={touchGuard.inputRef}
+      type="range"
+      min={min}
+      max={max}
+      step={step}
+      value={value}
+      disabled={disabled}
+      list={ticksId}
+      className={`${styles.input} ${rangeClass}`}
+      onChange={handle}
+      onInput={handle}
+      onMouseDown={onMouseDown}
+      onMouseUp={onMouseUp}
+      onPointerDown={() => {
+        touchGuard.onPointerDown();
+        onMouseDown?.();
+      }}
+      onPointerUp={() => {
+        touchGuard.onPointerUp();
+        onMouseUp?.();
+      }}
+      onPointerCancel={touchGuard.onPointerUp}
+      onTouchStart={() => {
+        touchGuard.onTouchStart();
+        onTouchStart?.();
+      }}
+      onTouchEnd={() => {
+        touchGuard.onTouchEnd();
+        onTouchEnd?.();
+      }}
+    />
+  );
+
   return (
     <form
       ref={formRef}
@@ -57,22 +101,7 @@ export const MasterStyledSlider: React.FC<MasterStyledSliderProps> = ({
       style={vertical ? { height } : undefined}
       onSubmit={(e) => e.preventDefault()}
     >
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        disabled={disabled}
-        list={ticksId}
-        className={`${styles.input} ab-styled-fader`}
-        onChange={handle}
-        onInput={handle}
-        onMouseDown={onMouseDown}
-        onMouseUp={onMouseUp}
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
-      />
+      {vertical ? <div className="ab-dmx-range-host--vertical">{rangeInput}</div> : rangeInput}
       <datalist id={ticksId} className={styles.datalist}>
         <option label="min" value={min} />
         <option label="max" value={max} />

@@ -33,7 +33,21 @@ export const EASING_FROM_CODE: Record<string, TransitionEasing> = Object.fromEnt
   Object.entries(EASING_CODES).map(([k, v]) => [v, k as TransitionEasing])
 ) as Record<string, TransitionEasing>;
 
-const DEFAULT_PAGE_CHANNELS = [0, 1, 2, 3, 4, 5, 6, 7];
+/** Legacy factory default; stripped on load so the tracker starts empty. */
+const FACTORY_DEFAULT_PAGE_CHANNELS = [0, 1, 2, 3, 4, 5, 6, 7];
+
+function isFactoryDefaultPageChannels(channelIndices: number[]): boolean {
+  const sorted = sortUniqueChannels(channelIndices);
+  if (sorted.length !== FACTORY_DEFAULT_PAGE_CHANNELS.length) return false;
+  return sorted.every((ch, i) => ch === FACTORY_DEFAULT_PAGE_CHANNELS[i]);
+}
+
+/** Remove implicit CH 1-8 from saved patterns; user adds columns explicitly. */
+export function sanitizePageChannelIndices(channelIndices: number[]): number[] {
+  const sorted = sortUniqueChannels(channelIndices);
+  if (isFactoryDefaultPageChannels(sorted)) return [];
+  return sorted;
+}
 
 export function generatePatternId(): string {
   return `tp-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -70,23 +84,31 @@ export function getActivePage(pattern: TransitionPattern): TransitionPatternPage
 export function normalizePattern(raw: TransitionPattern): TransitionPattern {
   if (raw.pages?.length && raw.tracks) {
     const activePageId = raw.activePageId ?? raw.pages[0].id;
-    return {
+    const pages = raw.pages.map((pg) => ({
+      ...pg,
+      channelIndices: sanitizePageChannelIndices(pg.channelIndices ?? []),
+    }));
+    const activePage = pages.find((p) => p.id === activePageId) ?? pages[0];
+    const base = {
       ...raw,
-      channelsLocked: raw.channelsLocked ?? false,
-      activePageId,
-      pages: raw.pages,
+      channelsLocked: raw.channelsLocked ?? true,
+      followSelection: raw.followSelection ?? false,
+      activePageId: activePage.id,
+      pages,
       tracks: raw.tracks,
+    };
+    return {
+      ...base,
+      tracks: syncTracksToPageChannels(base, activePage),
     };
   }
 
   const legacyChannels =
     raw.visibleChannels?.length > 0
-      ? sortUniqueChannels(raw.visibleChannels)
-      : raw.followSelection === false
-        ? []
-        : DEFAULT_PAGE_CHANNELS;
+      ? sanitizePageChannelIndices(raw.visibleChannels)
+      : [];
 
-  const channelIndices = legacyChannels.length > 0 ? legacyChannels : [...DEFAULT_PAGE_CHANNELS];
+  const channelIndices = sanitizePageChannelIndices(legacyChannels);
   const pageId = generatePageId();
   const page: TransitionPatternPage = {
     id: pageId,
@@ -96,12 +118,12 @@ export function normalizePattern(raw: TransitionPattern): TransitionPattern {
 
   return {
     ...raw,
-    channelsLocked: raw.channelsLocked ?? (raw.visibleChannels?.length > 0 && !raw.followSelection),
+    channelsLocked: raw.channelsLocked ?? true,
     pages: [page],
     activePageId: pageId,
     tracks: channelIndices.map((ch) => createTrackForChannel(ch)),
-    visibleChannels: raw.visibleChannels ?? [],
-    followSelection: raw.followSelection ?? true,
+    visibleChannels: [],
+    followSelection: false,
   };
 }
 
