@@ -1,5 +1,6 @@
 import React from 'react';
 import type { EnvelopeLoopDirection, EnvelopeRepeatMode } from '../../store';
+import { SkeuoButton } from '../ui/SkeuoButton';
 import styles from './EnvelopeShared.module.scss';
 
 export interface EnvelopePlaybackControlsProps {
@@ -15,13 +16,14 @@ const SegmentButton: React.FC<{
   onClick: () => void;
   children: React.ReactNode;
 }> = ({ active, onClick, children }) => (
-  <button
-    type="button"
-    className={`${styles.segmentBtn} ${active ? styles.segmentActive : ''}`}
+  <SkeuoButton
+    compact
+    active={active}
+    className={styles.segmentBtn}
     onClick={onClick}
   >
     {children}
-  </button>
+  </SkeuoButton>
 );
 
 export const EnvelopePlaybackControls: React.FC<EnvelopePlaybackControlsProps> = ({

@@ -33,6 +33,8 @@ export const MidiOscSetup: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [connectingInterfaces, setConnectingInterfaces] = useState<Set<string>>(new Set())
   const [applyingTemplateId, setApplyingTemplateId] = useState<MidiControllerTemplateId | null>(null)
+  const [serverMidiExpanded, setServerMidiExpanded] = useState(false)
+  const [browserMidiExpanded, setBrowserMidiExpanded] = useState(false)
 
   const {
     midiMessages,
@@ -307,13 +309,23 @@ export const MidiOscSetup: React.FC = () => {
       <div className={styles.setupGrid}>
         {/* Server MIDI Interface Card */}
         <div className={styles.card}>
-          <div className={styles.cardHeader}>
+          <button
+            type="button"
+            className={styles.cardHeaderToggle}
+            onClick={() => setServerMidiExpanded((v) => !v)}
+            aria-expanded={serverMidiExpanded}
+          >
             <h3 title="MIDI interfaces connected to the server - useful for external controllers and hardware devices">
               {theme === 'artsnob' && 'Server MIDI Interfaces: The Distant Muses'}
               {theme === 'standard' && 'Server MIDI Interfaces'}
               {theme === 'minimal' && 'Server MIDI'}
             </h3>
-          </div>
+            <span className={styles.cardHeaderMeta}>
+              {midiInterfaces.length} found, {activeInterfaces.length} connected
+            </span>
+            <i className={`fas fa-chevron-${serverMidiExpanded ? 'up' : 'down'}`} />
+          </button>
+          {serverMidiExpanded && (
           <div className={styles.cardBody}>
             <p className={styles.cardDescription}>
               Server MIDI interfaces are external MIDI devices connected to the computer running ArtBastard.
@@ -409,17 +421,28 @@ export const MidiOscSetup: React.FC = () => {
               )}
             </div>
           </div>
+          )}
         </div>
 
         {/* Browser MIDI Interface Card */}
         <div className={styles.card}>
-          <div className={styles.cardHeader}>
+          <button
+            type="button"
+            className={styles.cardHeaderToggle}
+            onClick={() => setBrowserMidiExpanded((v) => !v)}
+            aria-expanded={browserMidiExpanded}
+          >
             <h3 title="MIDI devices accessible through your web browser - requires Chrome/Edge and may have limited functionality">
               {theme === 'artsnob' && 'Browser MIDI Interfaces: The Local Orchestrators'}
               {theme === 'standard' && 'Browser MIDI Devices'}
               {theme === 'minimal' && 'Browser MIDI'}
             </h3>
-          </div>
+            <span className={styles.cardHeaderMeta}>
+              {browserInputs.length} found, {activeBrowserInputs.length} connected
+            </span>
+            <i className={`fas fa-chevron-${browserMidiExpanded ? 'up' : 'down'}`} />
+          </button>
+          {browserMidiExpanded && (
           <div className={styles.cardBody}>
             <p className={styles.cardDescription}>
               Browser MIDI uses the Web MIDI API to access devices directly in your browser.
@@ -512,6 +535,7 @@ export const MidiOscSetup: React.FC = () => {
               )}
             </div>
           </div>
+          )}
         </div>
 
         {/* OSC Configuration Card */}

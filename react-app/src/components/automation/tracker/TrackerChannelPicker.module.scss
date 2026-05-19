@@ -63,6 +63,12 @@
   min-width: 0;
 }
 
+.chip button[type='button']:first-of-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
 .chip {
   display: inline-flex;
   align-items: center;

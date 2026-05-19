@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { THEME_PRESETS, applyThemePreset, type ThemeColorsHsl } from '../../utils/themeUtils';
+import { SiteBrandingLink } from '../ui/SiteBrandingLink';
 import styles from './ThemePresetStrip.module.scss';
 
 interface ThemePresetStripProps {
@@ -18,7 +19,10 @@ export const ThemePresetStrip: React.FC<ThemePresetStripProps> = ({
   return (
     <div className={styles.strip}>
       <p className={styles.hint}>
-        Rack presets (Macroverse-style). Click to apply instantly; syncs to the server automatically.
+        Rack presets (
+        <SiteBrandingLink brand="macroverse">Macroverse</SiteBrandingLink>
+        -style). Click to apply instantly; syncs to the server automatically. By{' '}
+        <SiteBrandingLink brand="artbastard">aday.net.au</SiteBrandingLink>.
       </p>
       <div className={styles.chips}>
         {THEME_PRESETS.map((preset) => (

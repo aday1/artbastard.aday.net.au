@@ -4,6 +4,104 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [5.1.2] - 2026-05-19 — Official hosted release (DMX512)
+
+First release under controlled **dev** / **live** lanes on Linode (GHCR images).
+Version **5.1.2** is a deliberate nod to **DMX512**.
+
+### Added
+
+- Resizable dock/floating panels, seamless scroll polish, site branding link component.
+
+### Fixed
+
+- Pinned sidebar channel faders use full 0-255 range with notched/ticks mode.
+- Mobile touch surface opens on **Canvas DMX** instead of Super Control.
+
+### Changed
+
+- Channel role icons, DMX Tracker UX, live theme tuning, fixture-aware tracker lanes,
+  Macroverse-style workbench envelopes, LAN bridge, deploy-meta live/dev sync (relic-era
+  work consolidated from pre-release development).
+
+## Pre-release relics (development archaeology)
+
+The following interim version numbers were never official shipping tags; they describe
+the relic era before 5.1.2.
+
+### Relic era — 5.16.x snapshot (2026-05-19)
+
+## [5.16.0] - 2026-05-19
+
+### Added
+
+- Channel role icons on DMX channel strips, pinned sidebar, and DMX Tracker (pan/tilt,
+  RGB, dimmer, gobo, strobe, etc.) from fixture channel types.
+- **+ Selection** and **+ Pinned** buttons add desk selection / pinned channels to the
+  tracker page; context menu **Add to DMX Tracker** on channels.
+
+### Changed
+
+- Tracker grid shows only page columns; factory CH 1-8 default stripped on load.
+- Tab label **DMX Tracker** (replaces Renoise tracker); improved grid text contrast.
+
+## [5.15.0] - 2026-05-19
+
+### Added
+
+- Live theme tuning in Settings: HSL sliders and rack presets apply to the UI
+  immediately; changes debounce to `POST /api/appearance` (Sync now / Reload UI).
+- Tracker channel picker: **Clear all**, collapsible fixture lanes, optional
+  **+ Pinned** to merge sidebar-pinned channels into the grid.
+
+### Changed
+
+- Tracker grid columns match the active page chip list only (no implicit CH 1-8).
+- New pattern pages start with zero columns until you add channels (number + Add,
+  + Selection, or fixture lanes).
+- Empty tracker page shows guidance for trimming legacy default columns.
+
+### Fixed
+
+- Grid no longer showed CH 1-8 plus extra pinned columns (e.g. 17-18) when the
+  page list was smaller than the old default merge.
+
+## [5.14.0] - 2026-05-19
+
+### Added
+
+- Fixture-aware Renoise tracker: lane buttons for Pan/Tilt, RGB, color wheel, gobo,
+  dimmer, beam, FX, and full moving-head columns with fixture scope (all / selected / movers).
+- Tracker pages (up to 64 columns), live hex preview, preview row, and envelope sync
+  (Env to grid / Grid to env) on tracker and envelope tabs.
+- Per-channel envelope strip under DMX faders: PLAY/EDIT, mode buttons that arm without
+  auto-loop (Shift+click to start), inline waveform editor.
+
+### Changed
+
+- Transition pattern model: pages, tracks, channelsLocked; migration for saved patterns.
+- Grid headers show fixture name and channel role with lane color coding.
+
+## [5.13.0] - 2026-05-19
+
+### Added
+
+- Reason-style rack design system (`reason-rack.scss`, `RackModule`, rotary knobs,
+  LEDs, tab strips) across DMX, Super Control, and settings surfaces.
+- Automation workbench on the DMX page: envelope automation plus a Renoise-inspired
+  DMX transition tracker (pattern grid, BPM/LPB playback, scene/FX columns).
+- Macroverse-style theme mastering: rack chrome presets, HSL palettes,
+  `GET/POST /api/appearance`, multi-client `appearanceUpdated` sync.
+- Vitest coverage for `transitionTrackerEngine` scheduling helpers.
+
+### Changed
+
+- DMX sidebar panel label **Automation** (envelopes + transition tracker).
+- Scene timeline pattern drawer; act steps may reference transition patterns.
+- README, DOCS, and GitHub Pages showcase updated for v5.13.0.
+
+### Earlier unreleased (showcase / docs)
+
 ### Added
 
 - Showcase demo reel: eight WebM clips and JPG posters of every major

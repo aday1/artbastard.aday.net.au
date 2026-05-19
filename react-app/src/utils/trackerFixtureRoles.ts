@@ -179,6 +179,8 @@ export interface TrackerColumnMeta {
   channelIndex: number;
   fixtureShort: string;
   roleLabel: string;
+  channelType?: string;
+  fixtureType?: string;
   laneId: TrackerLaneId | null;
   title: string;
 }
@@ -211,6 +213,8 @@ export function getTrackerColumnMeta(
     channelIndex,
     fixtureShort,
     roleLabel,
+    channelType: info?.channelType,
+    fixtureType: info?.fixtureType,
     laneId,
     title,
   };

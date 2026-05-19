@@ -1,35 +1,29 @@
-.oscMonitor {
-  position: fixed;
-  right: 280px; /* Move left to avoid overlapping with right-side navbar */
-  bottom: 20px; /* Bottom positioning */
-  width: 400px;
-  max-height: 300px; /* This will be the overall max-height including header */
+.monitorInner {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+}
 
-  /* Hide the floating OSC monitor on mobile/tablet (<1280px) to avoid
-   * clashing with the MobileTopBar, bottom-centre toasts and the help
-   * button. Use the embedded copy inside the Help overlay if needed. */
-  @media (max-width: 1279px) {
-    display: none !important;
-  }
+.oscMonitor {
   background-color: #2a2a2a;
   border: 2px solid #555;
   border-radius: 6px;
   color: #eaeaea;
   font-family: monospace;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-  transition: all 0.3s ease;
-  z-index: 1040; /* Slightly lower than MidiMonitor if they overlap */
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  height: 100%;
+  min-height: 0;
 
-  /* Removed pinned class section */
-  
   &.collapsed {
-    width: auto; /* Adjust width to content when collapsed */
-    min-width: 180px; /* Ensure a minimum width */
+    min-width: 180px;
     height: auto;
-    max-height: none; /* Allow header to define height */
+    max-height: none;
   }
   
   &.flash {

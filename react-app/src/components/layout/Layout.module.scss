@@ -6,27 +6,30 @@
 
 .layout {
   --layout-top-clearance: var(--navbar-top-expanded);
-  min-height: 100vh;
-  min-height: 100dvh;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
   display: flex;
   flex-direction: column;
   background: var(--background);
   color: var(--text-primary);
-  position: relative; // Added to contain absolute children like Sparkles
+  position: relative;
+  overflow: hidden;
 
   :global(body.navbar-is-collapsed) & {
     --layout-top-clearance: var(--navbar-top-collapsed);
   }
 
   .contentWrapper {
-    flex: 1;
+    flex: 1 1 auto;
+    min-height: 0;
     display: flex;
     gap: 1rem;
     padding: 1rem;
     padding-right: 1rem;
-    padding-left: calc(var(--pinned-channels-width, 0px) + 1rem); /* Add left padding for pinned channels */
+    padding-left: calc(var(--pinned-channels-width, 0px) + 1rem);
     position: relative;
-    overflow: visible;
+    overflow: hidden;
     transition: padding-top 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
     @media (min-width: 1280px) {
@@ -51,11 +54,13 @@
     }
 
     .mainContent {
-      flex: 1;
-      min-width: 0; // Prevent flex item from overflowing
+      flex: 1 1 auto;
+      min-width: 0;
+      min-height: 0;
       display: flex;
       flex-direction: column;
       gap: 1rem;
+      overflow: hidden;
 
       .title {
         font-size: 2rem;
@@ -84,6 +89,20 @@
         font-family: 'Courier New', monospace;
       }
 
+      .siteCredit {
+        margin: 0 0 0.5rem;
+        font-size: 0.8rem;
+        color: var(--text-secondary, #94a3b8);
+        opacity: 0.9;
+      }
+
+      .siteCredit {
+        margin: -0.25rem 0 0.5rem;
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        opacity: 0.85;
+      }
+
       .titleControls {
         margin: 1rem 0;
         display: flex;
@@ -108,7 +127,15 @@
       }
 
       .contentArea {
-        flex: 1;
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
+        scrollbar-width: thin;
+        scrollbar-color: color-mix(in srgb, var(--color-primary, #d68706) 55%, transparent)
+          transparent;
       }
 
       .bottomControls {

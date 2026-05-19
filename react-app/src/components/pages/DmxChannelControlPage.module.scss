@@ -1,6 +1,7 @@
 // DMX Channel Control Page - Dedicated page for DMX control with MIDI Learn/Forget
 .dmxChannelControlPage {
-  min-height: 100vh;
+  min-height: 0;
+  flex: 1 1 auto;
   background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.98) 100%);
   padding: 20px;
   display: flex;
@@ -734,7 +735,13 @@
   gap: 20px;
   position: relative;
   z-index: 1;
-  margin-top: 0; // Ensure no negative margin that could overlap
+  margin-top: 0;
+  resize: vertical;
+  overflow: auto;
+  min-height: 8rem;
+  max-height: min(40vh, 480px);
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-primary, #d68706) 45%, transparent) transparent;
 }
 
 .controlGroup {
@@ -1521,10 +1528,10 @@
   > *:first-child {
     flex: 1 1 auto;
     min-height: 0;
-    min-width: 0;
+    min-width: 4.75rem;
     height: 100%;
-    width: 100%;
-    max-width: 7.5rem;
+    width: auto;
+    max-width: none;
     margin: 0 auto;
   }
 
@@ -2131,7 +2138,7 @@
   }
 
   &.channelStrip {
-    grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(9.5rem, 12.5rem));
     gap: 10px;
     align-items: stretch;
   }
@@ -2165,6 +2172,14 @@
     align-items: center;
     text-align: center;
     gap: 2px;
+  }
+
+  .channelNumber {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    pointer-events: auto;
   }
 
   .channelNameWrapper .channelName {

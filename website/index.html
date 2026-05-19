@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ArtBastard DMX512 v5.12.0 - Photonic Supremacy Edition</title>
-    <meta name="description" content="ArtBastard DMX512 v5.12.0 - Professional-grade browser-based DMX lighting control. Unified Super Control, modular DMX page, scene timelines, clip launcher, MIDI templates, Art-Net, OSC, external console, mobile surface, and in-app help. Open source.">
+    <title>ArtBastard DMX512 v5.16.0 - Tracker Columns Edition</title>
+    <meta name="description" content="ArtBastard DMX512 v5.16.0 - Fixture-aware transition tracker, live theme tuning, Super Control, scene timelines, MIDI templates, Art-Net, OSC, LAN bridge, mobile surface. Open source.">
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -35,7 +35,7 @@
                 <div class="hero-content">
                     <h1 class="hero-title">
                         <span class="gradient-text">ArtBastard</span>
-                        <span class="hero-subtitle">DMX512 v5.12.0 - Photonic Supremacy</span>
+                        <span class="hero-subtitle">DMX512 v5.16.0 - Tracker Columns Edition</span>
                     </h1>
                     <p class="hero-description">
                         <em>Browser-based DMX512 control for live performance and studio work.</em><br>
@@ -62,8 +62,8 @@
                             <span class="stat-label">Demo Clips</span>
                         </div>
                         <div class="stat">
-                            <span class="stat-number">5.12</span>
-                            <span class="stat-label">Photonic Supremacy</span>
+                            <span class="stat-number">5.16</span>
+                            <span class="stat-label">Rack Doctrine</span>
                         </div>
                         <div class="stat">
                             <span class="stat-number">100%</span>
@@ -138,11 +138,31 @@
 
         <section id="features" class="features">
             <div class="container">
-                <h2 class="section-title">What Ships in v5.12.0</h2>
+                <h2 class="section-title">What Ships in v5.16.0</h2>
                 <p class="section-subtitle">
-                    Rebuild consolidation plus the May 2026 operator UI remaster and production-surface cleanup.
+                    Fixture-aware tracker columns, live theme tuning, envelope sync, plus the May 2026 rack and operator remaster.
                 </p>
                 <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">&#128295;</div>
+                        <h3>Reason-Style Rack UI</h3>
+                        <p>Skeuomorphic rack modules, rotary knobs, LEDs, and tab strips across DMX,
+                            Super Control, and settings.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">&#127925;</div>
+                        <h3>Automation Workbench</h3>
+                        <p>DMX sidebar Automation: per-channel envelopes plus a Renoise-inspired
+                            transition tracker with fixture lanes (pan/tilt, RGB, gobo), pages,
+                            live hex preview, Env/Grid sync, and BPM/LPB playback.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">&#128451;</div>
+                        <h3>Tracker Channel Columns</h3>
+                        <p>Grid columns match the page chip list only (no hidden CH 1-8). Add by
+                            number, DMX selection, or fixture lanes; Clear all or optional + Pinned.
+                            New pages start empty.</p>
+                    </div>
                     <div class="feature-card">
                         <div class="feature-icon">&#10024;</div>
                         <h3>Remastered Operator Controls</h3>
@@ -225,10 +245,10 @@
                     </div>
                     <div class="feature-card">
                         <div class="feature-icon">&#9881;&#65039;</div>
-                        <h3>Real-Time Theme System</h3>
-                        <p>Live HSL theme controls (background brightness, hue rotation,
-                            saturation), typography scale, spacing tokens, animation speed.
-                            Ships with five preset themes and Save/Reset.</p>
+                        <h3>Live Theme Tuning</h3>
+                        <p>HSL sliders and rack presets apply to the UI as you move them (v5.16.0).
+                            Debounced server sync via /api/appearance; Sync now and Reload UI for
+                            multi-client shows. Typography, spacing, and animation speed included.</p>
                     </div>
                     <div class="feature-card">
                         <div class="feature-icon">&#10067;</div>
@@ -263,14 +283,14 @@
                             <code>http://localhost:3030</code>.</p>
                         <div class="download-buttons">
                             <a href="https://github.com/aday1/artbastard.aday.net.au/releases/latest" class="btn btn-primary btn-large">
-                                Download v5.12.0
+                                Download v5.16.0
                             </a>
                             <a href="https://github.com/aday1/artbastard.aday.net.au" target="_blank" rel="noopener" class="btn btn-secondary btn-large">
                                 View Source
                             </a>
                         </div>
                         <div class="version-info">
-                            <p>Latest Version: <span id="latest-version">v5.12.0</span> - Photonic Supremacy Edition</p>
+                            <p>Latest Version: <span id="latest-version">v5.16.0</span> - Photonic Supremacy Edition</p>
                         </div>
                     </div>
                     <div class="install-steps">
@@ -310,7 +330,7 @@
                     </a>
                     <a href="https://github.com/aday1/artbastard.aday.net.au/blob/main/DOCS/FEATURES.md" class="doc-card">
                         <h3>Features Guide</h3>
-                        <p>Full feature inventory by subsystem after the v5.12.0 rebuild.</p>
+                        <p>Full feature inventory by subsystem after the v5.16.0 release.</p>
                     </a>
                     <a href="https://github.com/aday1/artbastard.aday.net.au/blob/main/DOCS/FIXTURES.md" class="doc-card">
                         <h3>Fixture Setup</h3>
@@ -356,7 +376,7 @@
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2026 ArtBastard DMX512 v5.12.0 - Photonic Supremacy Edition. MIT licensed.</p>
+                <p>&copy; 2026 ArtBastard DMX512 v5.16.0 - Tracker Columns Edition Edition. MIT licensed.</p>
             </div>
         </div>
     </footer>

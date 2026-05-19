@@ -1,8 +1,10 @@
+@use '../../styles/seamless-scroll.scss' as scroll;
+
 .pinnedChannelsContainer {
   position: fixed;
   left: 0;
   top: 0;
-  height: 100vh;
+  height: 100dvh;
   width: 280px;
   min-width: 200px;
   max-width: 500px;
@@ -22,13 +24,14 @@
   }
 
   .pinnedContent {
-    flex: 1;
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     padding: var(--space-sm, 12px);
-    overflow-y: auto;
-    overflow-x: hidden;
     position: relative;
+    @include scroll.seamless-scroll;
   }
 
   .headerRow {
@@ -172,8 +175,7 @@
     flex-direction: column;
     gap: 6px;
     max-height: 200px;
-    overflow-y: auto;
-    overflow-x: hidden;
+    @include scroll.seamless-scroll;
   }
 
   .sceneItemWrapper {
@@ -314,41 +316,6 @@
     }
   }
 
-  .scenesList::-webkit-scrollbar {
-    width: 4px;
-  }
-
-  .scenesList::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 2px;
-  }
-
-  .scenesList::-webkit-scrollbar-thumb {
-    background: rgba(71, 85, 105, 0.5);
-    border-radius: 2px;
-
-    &:hover {
-      background: rgba(71, 85, 105, 0.7);
-    }
-  }
-
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 3px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: rgba(71, 85, 105, 0.5);
-    border-radius: 3px;
-
-    &:hover {
-      background: rgba(71, 85, 105, 0.7);
-    }
-  }
 }
 
 .collapseToggle {
@@ -382,29 +349,36 @@
 }
 
 .resizeHandle {
-  width: 6px;
-  background: rgba(71, 85, 105, 0.3);
+  width: 8px;
   cursor: col-resize;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: background 0.2s ease;
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
+  align-self: stretch;
   z-index: 20;
-  margin-right: -3px;
+  background: linear-gradient(
+    270deg,
+    color-mix(in srgb, var(--color-primary, #d68706) 30%, transparent) 0%,
+    transparent 100%
+  );
+  border-left: 1px solid color-mix(in srgb, var(--color-primary, #d68706) 20%, transparent);
+  transition: background 0.15s ease;
 
   &:hover {
-    background: rgba(16, 185, 129, 0.5);
-    width: 8px;
+    background: linear-gradient(
+      270deg,
+      color-mix(in srgb, var(--color-primary, #d68706) 55%, transparent) 0%,
+      transparent 100%
+    );
   }
 
   &:active {
-    background: rgba(16, 185, 129, 0.7);
-    width: 8px;
+    background: linear-gradient(
+      270deg,
+      color-mix(in srgb, var(--color-primary, #d68706) 70%, transparent) 0%,
+      transparent 100%
+    );
   }
 
   svg {
@@ -453,11 +427,81 @@
   padding: 12px;
   transition: all 0.2s ease;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
 
   &:hover {
     border-color: rgba(16, 185, 129, 0.4);
     background: rgba(15, 23, 42, 0.8);
+  }
+}
+
+.pinnedFaderSlot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 11rem;
+  margin-top: 4px;
+  pointer-events: auto;
+  position: relative;
+  z-index: 10;
+  overflow: visible;
+
+  > *:last-child {
+    flex: 1 1 auto;
+    min-height: 9rem;
+    min-width: 4.75rem;
+    width: 100%;
+    max-width: 100%;
+    pointer-events: auto;
+  }
+}
+
+.pinnedFaderValueRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.pinnedFaderValue {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #f8fafc;
+  font-variant-numeric: tabular-nums;
+}
+
+.pinnedFaderPct {
+  font-size: 0.6875rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.ticksModeButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.3rem;
+  min-width: 1.75rem;
+  min-height: 1.75rem;
+  border-radius: 6px;
+  border: 1px solid #475569;
+  background: rgba(15, 23, 42, 0.8);
+  color: #94a3b8;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    border-color: var(--color-primary, #d68706);
+    color: #e2e8f0;
+  }
+
+  &.ticksModeActive {
+    border-color: var(--color-accent, #f8dd36);
+    background: color-mix(in srgb, var(--color-primary, #d68706) 25%, #0f172a);
+    color: var(--color-accent, #f8dd36);
   }
 }
 
@@ -545,6 +589,9 @@
 }
 
 .channelNumber {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   font-size: 10px;
   font-weight: 800;
   color: #10b981;

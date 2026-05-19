@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-// import { motion, useDragControls, PanInfo } from 'framer-motion'; // Removed framer-motion
 import { LucideIcon } from '../ui/LucideIcon';
+import { ResizableFloatingPanel } from '../ui/ResizableFloatingPanel';
 import { useStore } from '../../store';
 import styles from './OscMonitor.module.scss';
 import { useSocket } from '../../context/SocketContext';
@@ -447,26 +447,23 @@ export const OscMonitor: React.FC = () => {
 
   return (
     <>
-      <div // Changed from motion.div to div
-        ref={monitorRef}
+      <ResizableFloatingPanel
+        storageKey="artbastard.oscMonitor.size"
+        defaultWidth={400}
+        defaultHeight={300}
+        minWidth={260}
+        maxWidth={640}
+        minHeight={120}
+        maxHeight={480}
+        anchor="bottom-right"
         className={monitorClasses}
-        style={{ // Removed inline positioning, will be handled by SCSS
-          // position: 'fixed',
-          // top: initialCssTop,
-          // right: initialCssRight,
-          zIndex: 1040, // Keep zIndex
-          // width: '400px', // Will be in SCSS
-          // x: position.x, // Removed
-          // y: position.y, // Removed
-        }}
-        // Removed all drag props
-        // drag
-        // dragControls={dragControls}
-        // dragListener={false}
-        // onDragEnd={handleDragEnd}
-        // dragConstraints={constraints}
-        // whileDrag={{ cursor: 'grabbing' }}
+        style={
+          isCollapsed
+            ? { width: 'auto', height: 'auto', right: 280 }
+            : { right: 280 }
+        }
       >
+        <div ref={monitorRef} className={styles.monitorInner}>
         {renderHeader()}
         {showFilter && !isCollapsed && (
           <div className={styles.filterPanel} onClick={(e) => e.stopPropagation()}>
@@ -505,7 +502,8 @@ export const OscMonitor: React.FC = () => {
           </div>
         )}
         {renderContent()}
-      </div>
+        </div>
+      </ResizableFloatingPanel>
 
       {/* Hover tooltip - position relative to mouse, so should be fine */}
       {hoveredMessage && !isCollapsed && (

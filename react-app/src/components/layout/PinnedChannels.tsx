@@ -2,12 +2,14 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '../../store';
 import { useTheme } from '../../context/ThemeContext';
 import { LucideIcon } from '../ui/LucideIcon';
+import { ChannelRoleIcon } from '../ui/ChannelRoleIcon';
 import { useRouter } from '../../context/RouterContext';
 import { useSocket } from '../../context/SocketContext';
-import { DmxFaderRow, HorizontalFader, RangeWindowControl } from '../ui/controls';
+import { DmxChannelFader, HorizontalFader, RangeWindowControl } from '../ui/controls';
 import styles from './PinnedChannels.module.scss';
 import { debugLog } from '../../utils/debugLog';
 import { useAppContextMenu } from '../../context/ContextMenuContext';
+import { MetronomePanel } from '../audio/MetronomePanel';
 
 
 export interface PinnedChannelsProps {
@@ -90,9 +92,11 @@ export const PinnedChannels: React.FC<PinnedChannelsProps> = ({ variant = 'sideb
     setTapTempoMidiMapping,
     setTapTempoOscAddress,
     dmxFaderOrientation,
+    getChannelTicksOnly,
+    setChannelTicksOnly,
+    getChannelAuxFullFader,
+    toggleChannelAuxFullFader,
   } = useStore();
-
-  const faderLayout = dmxFaderOrientation === 'vertical' ? 'vertical' : 'horizontal';
 
   const { setCurrentView } = useRouter();
   const { socket, connected: socketConnected } = useSocket();
@@ -766,98 +770,14 @@ export const PinnedChannels: React.FC<PinnedChannelsProps> = ({ variant = 'sideb
               marginBottom: '8px',
               backgroundColor: 'rgba(15, 23, 42, 0.4)'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                 <LucideIcon name="Music" size={14} />
                 <span style={{ fontSize: '11px', fontWeight: '600', color: '#94a3b8' }}>Tempo</span>
-                <div style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  justifyContent: 'flex-end'
-                }}>
-                  {/* Clock Indicator */}
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    fontSize: '10px',
-                    color: midiClockIsPlaying ? '#10b981' : '#64748b',
-                    fontWeight: '600',
-                    padding: '2px 6px',
-                    backgroundColor: midiClockIsPlaying ? 'rgba(16, 185, 129, 0.1)' : 'rgba(71, 85, 105, 0.1)',
-                    borderRadius: '4px',
-                    border: `1px solid ${midiClockIsPlaying ? 'rgba(16, 185, 129, 0.3)' : 'rgba(71, 85, 105, 0.3)'}`
-                  }}>
-                    <LucideIcon name="Radio" size={10} />
-                    <span>{midiClockCurrentBar || 1}.{midiClockCurrentBeat || 1}</span>
-                  </div>
-                  {/* BPM Counter */}
-                  <span style={{
-                    fontSize: '14px',
-                    fontWeight: '700',
-                    color: isFlashing ? '#10b981' : '#e2e8f0',
-                    transition: 'color 0.15s ease',
-                    minWidth: '40px',
-                    textAlign: 'right'
-                  }}>
-                    {Math.round(currentBpm || midiClockBpm || 120)}
-                  </span>
-                  <span style={{ fontSize: '10px', color: '#64748b' }}>BPM</span>
-                </div>
               </div>
-              
-              <div style={{ display: 'flex', gap: '4px', marginBottom: '6px', flexDirection: 'column' }}>
-                <div style={{ display: 'flex', gap: '4px' }}>
-                  <button
-                    onClick={handlePlayPause}
-                    style={{
-                      flex: 1,
-                      padding: '6px 8px',
-                      backgroundColor: midiClockIsPlaying ? '#10b981' : '#475569',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      fontSize: '11px',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '4px',
-                      transition: 'all 0.2s ease'
-                    }}
-                    title={midiClockIsPlaying ? 'Stop tempo' : 'Start tempo'}
-                  >
-                    <LucideIcon name={midiClockIsPlaying ? "Pause" : "Play"} size={12} />
-                    {midiClockIsPlaying ? 'Stop' : 'Play'}
-                  </button>
-                
-                <button
-                  onClick={handleTapTempo}
-                  style={{
-                    flex: 1,
-                    padding: '6px 8px',
-                    backgroundColor: tapCount > 0 ? '#8b5cf6' : '#475569',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    fontSize: '11px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '4px',
-                    transition: 'all 0.2s ease'
-                  }}
-                  title="Tap tempo"
-                >
-                    <LucideIcon name="Hand" size={12} />
-                  Tap {tapCount > 0 ? `(${tapCount})` : ''}
-                </button>
-                </div>
 
+              <MetronomePanel compact showBpmInput={false} />
+
+              <div style={{ display: 'flex', gap: '4px', marginBottom: '6px', flexDirection: 'column' }}>
                 {/* MIDI/OSC Learn Controls for Tempo Play/Pause */}
                 <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
                   {/* MIDI Learn Button */}
@@ -1348,7 +1268,15 @@ export const PinnedChannels: React.FC<PinnedChannelsProps> = ({ variant = 'sideb
                     <div className={styles.channelHeader}>
                       <div className={styles.channelInfo}>
                         <div className={styles.topRow}>
-                          <span className={styles.channelNumber}>CH {channelIndex + 1}</span>
+                          <span className={styles.channelNumber}>
+                            <ChannelRoleIcon
+                              channelType={channelInfo?.channelType}
+                              fixtureType={channelInfo?.fixtureType}
+                              size={13}
+                              showFixtureType
+                            />
+                            CH {channelIndex + 1}
+                          </span>
                           {channelInfo && (
                             <span className={styles.fixtureName} title={channelInfo.fixtureName}>
                               {channelInfo.fixtureName}
@@ -1411,6 +1339,28 @@ export const PinnedChannels: React.FC<PinnedChannelsProps> = ({ variant = 'sideb
                         </div>
                       </div>
                       <div className={styles.channelActions}>
+                        {channelInfo?.ranges && channelInfo.ranges.length > 0 && (
+                          <button
+                            type="button"
+                            className={`${styles.ticksModeButton} ${
+                              getChannelTicksOnly(channelIndex) ? styles.ticksModeActive : ''
+                            }`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (e.altKey && getChannelTicksOnly(channelIndex)) {
+                                toggleChannelAuxFullFader(channelIndex);
+                                return;
+                              }
+                              setChannelTicksOnly(
+                                channelIndex,
+                                !getChannelTicksOnly(channelIndex)
+                              );
+                            }}
+                            title="Notched / ticks fader. Alt+click when on: show full 0-255 column too."
+                          >
+                            <LucideIcon name="ListOrdered" size={14} />
+                          </button>
+                        )}
                         <button
                           className={styles.jumpButton}
                           onClick={() => handleJumpToChannel(channelIndex)}
@@ -1438,37 +1388,26 @@ export const PinnedChannels: React.FC<PinnedChannelsProps> = ({ variant = 'sideb
                       </div>
                     </div>
 
-                    <DmxFaderRow
-                      compact
-                      layout={faderLayout}
-                      label={`CH ${channelIndex + 1}`}
-                      subtitle={channelInfo?.fixtureName}
-                      meta={
-                        hasCustomName
-                          ? `${channelName} · ${Math.round((value / 255) * 100)}%`
-                          : `${channelInfo?.channelName || channelName} · ${Math.round((value / 255) * 100)}%`
-                      }
-                      controlName={`pinned-ch-${channelIndex}`}
-                      min={range.min}
-                      max={range.max}
-                      value={value}
-                      oscAddress={oscAssignments[channelIndex] || `/dmx/channel/${channelIndex + 1}`}
-                      onOscAddressChange={(addr) => setOscAssignment(channelIndex, addr)}
-                      isMidiLearning={
-                        midiLearnTarget?.type === 'dmxChannel' && midiLearnTarget.channelIndex === channelIndex
-                      }
-                      isMidiMapped={!!midiMappings[channelIndex]}
-                      midiMappingLabel={
-                        midiMappings[channelIndex]?.controller !== undefined
-                          ? `CC ${midiMappings[channelIndex].controller}`
-                          : midiMappings[channelIndex]?.note !== undefined
-                            ? `Note ${midiMappings[channelIndex].note}`
-                            : undefined
-                      }
-                      onMidiLearn={() => startMidiLearn({ type: 'dmxChannel', channelIndex })}
-                      onMidiForget={() => removeMidiMapping(channelIndex)}
-                      onChange={(v) => setDmxChannel(channelIndex, v)}
-                    />
+                    <div className={styles.pinnedFaderSlot}>
+                      <div className={styles.pinnedFaderValueRow}>
+                        <span className={styles.pinnedFaderValue}>{value}</span>
+                        <span className={styles.pinnedFaderPct}>
+                          {Math.round((value / 255) * 100)}%
+                        </span>
+                      </div>
+                      <DmxChannelFader
+                        vertical
+                        faderSize="touch"
+                        min={0}
+                        max={255}
+                        value={Math.max(0, Math.min(255, value))}
+                        onChange={(v) => setDmxChannel(channelIndex, v)}
+                        fixtureRanges={channelInfo?.ranges}
+                        ticksOnly={getChannelTicksOnly(channelIndex)}
+                        auxFullRange={getChannelAuxFullFader(channelIndex)}
+                        onToggleAuxFullRange={() => toggleChannelAuxFullFader(channelIndex)}
+                      />
+                    </div>
                     <div className={styles.pinnedChannelRange}>
                       <RangeWindowControl
                         label="Channel window"

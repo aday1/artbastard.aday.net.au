@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { LucideIcon } from '../LucideIcon';
 import { HorizontalFader } from './HorizontalFader';
 import { VerticalFader } from './VerticalFader';
+import { ColorRangeSlider, ColorRangeVariant } from './ColorRangeSlider';
 import styles from './DmxFaderRow.module.scss';
 
 const DEFAULT_PRESETS = [0, 64, 128, 255];
@@ -29,6 +30,8 @@ export interface DmxFaderRowProps {
   fullWidth?: boolean;
   /** Channel-strip style vertical fader instead of horizontal row */
   layout?: 'horizontal' | 'vertical';
+  /** Metallic gradient range slider (thebabydino #54) for RGB channels */
+  colorChannel?: ColorRangeVariant;
   presetValues?: number[];
   valueDecimals?: number;
   onOscAddressChange?: (address: string) => void;
@@ -63,6 +66,7 @@ export const DmxFaderRow: React.FC<DmxFaderRowProps> = ({
   compact = false,
   fullWidth = false,
   layout = 'horizontal',
+  colorChannel,
   presetValues = DEFAULT_PRESETS,
   valueDecimals,
   onOscAddressChange,
@@ -227,15 +231,29 @@ export const DmxFaderRow: React.FC<DmxFaderRowProps> = ({
       </div>
 
       <div className={styles.faderWrap}>
-        <HorizontalFader
-          min={min}
-          max={max}
-          step={step}
-          value={value}
-          disabled={disabled}
-          className={styles.fader}
-          onChange={onChange}
-        />
+        {colorChannel ? (
+          <ColorRangeSlider
+            variant={colorChannel}
+            min={min}
+            max={max}
+            step={step}
+            value={value}
+            disabled={disabled}
+            className={styles.colorRangeFader}
+            aria-label={label}
+            onChange={onChange}
+          />
+        ) : (
+          <HorizontalFader
+            min={min}
+            max={max}
+            step={step}
+            value={value}
+            disabled={disabled}
+            className={styles.fader}
+            onChange={onChange}
+          />
+        )}
         {showScale ? (
           <div className={styles.scale} aria-hidden="true">
             <span>{min}</span>

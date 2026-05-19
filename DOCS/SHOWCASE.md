@@ -3,10 +3,9 @@
 How the public showcase page is built, recorded, and deployed. Useful if you
 want to rebuild it locally, change the demo reel, or audit the deploy path.
 
-Last content refresh: 2026-05-17 (six-clip Photonic Tour; experimental and
-TouchOSC surfaces removed from app and showcase; repo links unified to
-artbastard.aday.net.au). Website feature grid mentions LAN / Pi bridge for
-cloud-hosted Art-Net on home LANs.
+Last content refresh: 2026-05-19 (v5.15.0 feature grid: fixture-aware tracker,
+tracker channel columns, live theme tuning; six-clip Photonic Tour). Website
+feature grid mentions LAN / Pi bridge for cloud-hosted Art-Net on home LANs.
 
 Act timeline docs (transport vs BPM vs Link, gaps, editing): DOCS/ACT_TIMELINE.md
 and in-app Help → Act Timeline tab (mirrored in DOCS/HELP.md §8b).

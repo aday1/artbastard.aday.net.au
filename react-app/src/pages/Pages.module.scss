@@ -5,7 +5,7 @@
   flex-direction: column;
   padding: 1rem;
   gap: 1rem;
-  overflow: auto; /* Allow scrolling on long pages (Electron) */
+  overflow: hidden;
 }
 
 
@@ -117,12 +117,12 @@
 }
 
 .pageContent {
-  flex: 1;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  overflow: auto; /* Enable vertical scroll when content exceeds viewport */
-  min-height: 0; /* Allow shrinking below content size */
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* Control Setup Page */

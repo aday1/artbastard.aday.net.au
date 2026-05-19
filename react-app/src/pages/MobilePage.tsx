@@ -3,13 +3,15 @@ import { DmxChannelControlPage } from '../components/pages/DmxChannelControlPage
 import SuperControl from '../components/dmx/SuperControl';
 import { useTheme } from '../context/ThemeContext';
 import { LucideIcon } from '../components/ui/LucideIcon';
+import { SkeuoButton } from '../components/ui/SkeuoButton';
+import { SiteBrandingLink } from '../components/ui/SiteBrandingLink';
 import styles from './MobilePage.module.scss';
 
 type MobileTab = 'supercontrol' | 'dmx';
 
 const MobilePage: React.FC = () => {
   const { theme } = useTheme();
-  const [activeTab, setActiveTab] = React.useState<MobileTab>('supercontrol');
+  const [activeTab, setActiveTab] = React.useState<MobileTab>('dmx');
 
   React.useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -29,29 +31,32 @@ const MobilePage: React.FC = () => {
     label: { artsnob: string; standard: string };
   }> = [
     {
+      id: 'dmx',
+      icon: 'Zap',
+      label: { artsnob: 'Canvas DMX', standard: 'Canvas DMX' },
+    },
+    {
       id: 'supercontrol',
       icon: 'Lightbulb',
       label: { artsnob: 'Super Contrôle', standard: 'Super Control' },
-    },
-    {
-      id: 'dmx',
-      icon: 'Zap',
-      label: { artsnob: 'Canaux DMX', standard: 'DMX Channels' },
     },
   ];
 
   return (
     <div className={styles.mobilePage}>
       <div className={styles.mobileHeader}>
-        <h1 className={styles.mobileTitle}>ArtBastard</h1>
-        <div className={styles.tabNavigation} role="tablist" aria-label="Mobile control tabs">
+        <h1 className={styles.mobileTitle}>
+          <SiteBrandingLink brand="artbastard">ArtBastard</SiteBrandingLink>
+        </h1>
+        <div className={`${styles.tabNavigation} ab-view-tabs`} role="tablist" aria-label="Mobile control tabs">
           {tabs.map((tab) => (
-            <button
+            <SkeuoButton
               key={tab.id}
-              type="button"
               role="tab"
               aria-selected={activeTab === tab.id}
-              className={`${styles.tab} ${activeTab === tab.id ? styles.active : ''}`}
+              active={activeTab === tab.id}
+              variant="pill"
+              className={styles.tab}
               onClick={() => setActiveTab(tab.id)}
             >
               <span className={styles.tabIcon} aria-hidden="true">
@@ -60,7 +65,7 @@ const MobilePage: React.FC = () => {
               <span className={styles.tabLabel}>
                 {theme === 'artsnob' ? tab.label.artsnob : tab.label.standard}
               </span>
-            </button>
+            </SkeuoButton>
           ))}
         </div>
       </div>

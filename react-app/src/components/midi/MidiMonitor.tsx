@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { LucideIcon } from '../ui/LucideIcon';
+import { ResizableFloatingPanel } from '../ui/ResizableFloatingPanel';
 import { useStore } from '../../store';
 import styles from './MidiMonitor.module.scss';
 
@@ -446,13 +447,19 @@ export const MidiMonitor: React.FC = () => {
 
   return (
     <>
-      <div
-        ref={monitorRef}
+      <ResizableFloatingPanel
+        storageKey="artbastard.midiMonitor.size"
+        defaultWidth={500}
+        defaultHeight={340}
+        minWidth={280}
+        maxWidth={720}
+        minHeight={140}
+        maxHeight={560}
+        anchor="bottom-left"
         className={monitorClasses}
-        style={{
-          zIndex: 1050,
-        }}
+        style={isCollapsed ? { width: 'auto', height: 'auto' } : undefined}
       >
+        <div ref={monitorRef} className={styles.monitorInner}>
         {renderHeader()}
         {showFilter && !isCollapsed && (
           <div className={styles.filterPanel} onClick={(e) => e.stopPropagation()}>
@@ -491,7 +498,8 @@ export const MidiMonitor: React.FC = () => {
           </div>
         )}
         {renderContent()}
-      </div>
+        </div>
+      </ResizableFloatingPanel>
 
       {/* Hover tooltip - position relative to mouse */}
       {hoveredMessage && !isCollapsed && (

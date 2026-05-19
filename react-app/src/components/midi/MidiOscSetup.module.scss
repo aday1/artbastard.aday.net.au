@@ -60,6 +60,38 @@
   }
 }
 
+.cardHeaderToggle {
+  width: 100%;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border: none;
+  border-bottom: 1px solid var(--color-card-border);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+
+  h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    flex: 1 1 auto;
+  }
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.06);
+  }
+}
+
+.cardHeaderMeta {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #94a3b8);
+  white-space: nowrap;
+}
+
 .cardBody {
   padding: 1rem;
 }
@@ -68,6 +100,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  max-height: min(240px, 42vh);
+  overflow-y: auto;
 }
 
 .interfaceHeader {

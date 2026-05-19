@@ -1,36 +1,29 @@
-.midiMonitor {
-  position: fixed;
-  left: 20px; /* Changed from right to left */
-  bottom: 20px;
-  width: 500px; /* Increased width to accommodate DMX info */
-  max-height: 500px; /* Increased to show more messages with scrolling */
+.monitorInner {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+}
 
-  /* The floating monitors do not fit on a phone or iPad screen and
-   * collide with the new MobileTopBar and bottom-centre toasts. Hide
-   * the floating instances below the desktop breakpoint (1280px) -
-   * the embedded copies inside the Help overlay remain reachable. */
-  @media (max-width: 1279px) {
-    display: none !important;
-  }
+.midiMonitor {
   background-color: #2a2a2a;
   border: 2px solid #555;
   border-radius: 6px;
   color: #eaeaea;
   font-family: monospace;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-  transition: all 0.3s ease;
-  z-index: 1050;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  height: 100%;
+  min-height: 0;
 
-  /* Removed pinned class section */
-  
   &.collapsed {
-    width: auto; /* Adjust width to content when collapsed */
-    min-width: 180px; /* Ensure a minimum width */
+    min-width: 180px;
     height: auto;
-    max-height: none; /* Allow header to define height */
+    max-height: none;
   }
   
   &.flash {
