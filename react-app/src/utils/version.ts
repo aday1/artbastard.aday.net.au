@@ -40,3 +40,28 @@ export const VERSION_HISTORY: VersionInfo[] = [
     changelog: CURRENT_VERSION.changelog
   }
 ];
+
+export function getVersionDisplay(versionInfo: VersionInfo = CURRENT_VERSION): string {
+  const { version, releaseType } = versionInfo;
+  if (releaseType === 'stable') {
+    return `v${version}`;
+  }
+  return `v${version}-${releaseType}`;
+}
+
+export function getBuildInfo(versionInfo: VersionInfo = CURRENT_VERSION): string {
+  const { version, buildDate, gitCommit } = versionInfo;
+  let buildInfo = `Version ${version} (${buildDate})`;
+  if (gitCommit) {
+    buildInfo += ` - ${gitCommit.substring(0, 8)}`;
+  }
+  return buildInfo;
+}
+
+export function isDevelopmentBuild(): boolean {
+  return CURRENT_VERSION.releaseType === 'dev' || process.env.NODE_ENV === 'development';
+}
+
+export function getReleaseNotes(version: string): VersionInfo | undefined {
+  return VERSION_HISTORY.find((v) => v.version === version);
+}
