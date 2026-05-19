@@ -89,6 +89,7 @@ const LayoutBody: React.FC<LayoutProps> = ({ children }) => {
     <>
       <div
         className={[
+          'ab-rack',
           styles.layout,
           styles[theme],
           darkMode ? styles.dark : styles.light,

@@ -8,8 +8,6 @@ import {
   type TrackerLaneId,
 } from '../../../utils/trackerFixtureRoles';
 import { SkeuoButton } from '../../ui/SkeuoButton';
-import { LucideIcon } from '../../ui/LucideIcon';
-import { getTrackerLaneIconName } from '../../../utils/channelRoleIcons';
 import styles from './TrackerFixtureLanes.module.scss';
 
 export interface TrackerFixtureLanesProps {
@@ -80,10 +78,7 @@ export const TrackerFixtureLanes: React.FC<TrackerFixtureLanesProps> = ({ patter
               title={lane.description}
             >
               <div className={styles.laneHead}>
-                <span className={styles.laneTitle}>
-                  <LucideIcon name={getTrackerLaneIconName(lane.id)} size={14} />
-                  {lane.label}
-                </span>
+                <span className={styles.laneTitle}>{lane.label}</span>
                 <span className={styles.laneCount}>{n} ch</span>
               </div>
               <p className={styles.laneDesc}>{lane.description}</p>

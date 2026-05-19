@@ -50,7 +50,12 @@ export const MasterStyledSlider: React.FC<MasterStyledSliderProps> = ({
     onChange(v);
   };
 
-  const rangeClass = `ab-dmx-range ${vertical ? 'ab-dmx-range--vertical' : ''} ${vertical ? '' : 'ab-dmx-range--compact'}`;
+  const rangeClass = [
+    'ab-dmx-range',
+    vertical ? 'ab-dmx-range--vertical ab-styled-fader' : 'ab-dmx-range--horizontal',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   const rangeInput = (
     <input

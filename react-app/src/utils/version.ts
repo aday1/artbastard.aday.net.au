@@ -13,10 +13,18 @@ export interface VersionInfo {
 
 // Current version info - update this for each release
 export const CURRENT_VERSION: VersionInfo = {
-  version: '5.12.0',
-  buildDate: '2024-01-XX',
+  version: '5.15.0',
+  buildDate: '2026-05-19',
   releaseType: 'stable',
   features: [
+    'Live theme tuning in Settings (instant UI apply, debounced server save)',
+    'Tracker grid columns match page chips only; optional pinned merge',
+    'Tracker channel picker: Clear all, collapsible fixture lanes, empty-page defaults',
+    'Fixture-aware Renoise tracker with pan/tilt, RGB, gobo, and color-wheel lanes',
+    'Tracker pages, live hex preview, and envelope grid sync (Env to grid / Grid to env)',
+    'Per-channel envelope controls (mode buttons without auto-loop; EDIT strip under faders)',
+    'Reason-style rack UI and automation workbench with DMX transition tracker',
+    'Macroverse-style theme presets with server-synced appearance API',
     'Complete Theme System Overhaul - Background brightness, hue rotation, preset themes',
     'Enhanced Theme Customization - Full typography and spacing controls with real-time preview',
     'Individual Fixture Files - Each fixture in its own JSON file for better version control',
@@ -29,6 +37,8 @@ export const CURRENT_VERSION: VersionInfo = {
     'Improved Defaults - Brighter default background (25% instead of 15%)'
   ],
   changelog: [
+    'v5.15.0: Live theme apply without Save; tracker column list matches grid',
+    'v5.15.0: New pages start empty; Clear all and + Pinned for channel columns',
     'Photonic Supremacy Edition - Complete Theme & Infrastructure Overhaul',
     'Theme System: Added background brightness control (fixes "too dark" issue)',
     'Theme System: Added hue rotation feature for instant color scheme variety',
@@ -53,6 +63,21 @@ export const CURRENT_VERSION: VersionInfo = {
  * Version history for tracking releases
  */
 export const VERSION_HISTORY: VersionInfo[] = [
+  {
+    version: '5.14.0',
+    buildDate: '2026-05-19',
+    releaseType: 'stable',
+    features: [
+      'Fixture-aware tracker lanes and envelope grid sync',
+      'Tracker pages with live hex preview',
+      'Per-channel envelope strip under DMX faders'
+    ],
+    changelog: [
+      'Fixture-aware Renoise tracker columns',
+      'Env to grid / Grid to env sync',
+      'Envelope mode buttons arm without auto-loop'
+    ]
+  },
   {
     version: '5.12.0',
     buildDate: '1425-08-16',

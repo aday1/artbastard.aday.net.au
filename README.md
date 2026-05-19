@@ -3,7 +3,7 @@
 ArtBastard is a TypeScript-based DMX lighting controller with a React
 frontend and Node / Socket.IO backend.
 
-Current package version: 5.12.0
+Current package version: 5.15.0
 
 ## Showcase
 
@@ -23,6 +23,22 @@ straight off the running app via `npm run demo:capture-videos`. See
 DOCS/SHOWCASE.md for details.
 
 ## Current status (2026-05)
+
+### Tracker columns and live theme (v5.15.0)
+
+- Transition tracker grid columns match the active page chip list only (no implicit
+  CH 1-8). **Clear all**, collapsible fixture lanes, optional **+ Pinned**.
+- Settings theme (HSL + rack presets) applies live; debounced `POST /api/appearance`.
+
+### Rack UI, automation workbench, and theme mastering (May 2026, v5.13.0+)
+
+- Reason-style skeuomorphic rack modules (`reason-rack.scss`, `RackModule`,
+  rotary knobs, LEDs, tab strips) across DMX, Super Control, and settings.
+- **Automation** workbench: envelope automation plus a Renoise-inspired
+  **DMX transition tracker** (pattern lines, scene/FX columns, BPM/LPB playback).
+- **Theme presets** (Macroverse-style): rack chrome + HSL palettes, server
+  persistence at `GET/POST /api/appearance`, multi-client sync via
+  `appearanceUpdated` socket events. Settings > Theme > Rack presets.
 
 ### Operator UI remaster (May 2026)
 
@@ -99,7 +115,7 @@ Ordered walkthrough labels:
 5. Settings and In-App Help
 
 Release page:
-https://github.com/aday1/artbastard.aday.net.au/releases/tag/v5.12.0
+https://github.com/aday1/artbastard.aday.net.au/releases/tag/v5.15.0
 
 ## Quick start
 

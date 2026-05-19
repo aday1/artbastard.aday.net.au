@@ -303,6 +303,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
 
   // Custom path editor state
   const [showPanTiltPathEditor, setShowPanTiltPathEditor] = useState(false);
+  const [midiOscNavExpanded, setMidiOscNavExpanded] = useState(false);
 
   // Color wheel state
   const [colorHue, setColorHue] = useState(0);
@@ -1304,7 +1305,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
 
   return (
     <div
-      className={[styles.superControl, touchLayout ? styles.touchLayout : ''].filter(Boolean).join(' ')}
+      className={['ab-rack-module', styles.superControl, touchLayout ? styles.touchLayout : ''].filter(Boolean).join(' ')}
     >
       <div className={styles.header}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', flexWrap: 'wrap', gap: '12px' }}>
@@ -1607,9 +1608,16 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         </div>
 
         <div className={styles.gridItem}>
-          <div className={styles.gridItemHeader}>
-            <LucideIcon name="Music" /> MIDI/OSC & Navigation
-          </div>
+          <button
+            type="button"
+            className={`${styles.gridItemHeader} ${styles.gridItemHeaderToggle}`}
+            onClick={() => setMidiOscNavExpanded((v) => !v)}
+            aria-expanded={midiOscNavExpanded}
+          >
+            <span><LucideIcon name="Music" /> MIDI/OSC & Navigation</span>
+            <LucideIcon name={midiOscNavExpanded ? 'ChevronUp' : 'ChevronDown'} />
+          </button>
+          {midiOscNavExpanded && (
           <div className={styles.gridItemContent}>
             {/* MIDI/OSC Learning and Navigation Controls */}
             <div className={styles.midiOscSection}>
@@ -1758,6 +1766,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
               </div>
             </div>
           </div>
+          )}
         </div>
 
         <div className={styles.gridItem}>

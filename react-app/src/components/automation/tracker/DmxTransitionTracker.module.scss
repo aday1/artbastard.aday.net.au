@@ -99,34 +99,27 @@
 }
 
 .colFixture {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
+  display: block;
   font-size: 8px;
   font-weight: 600;
   color: var(--rk-label, var(--text-primary));
-  max-width: 5.5rem;
+  max-width: 4.5rem;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .colRole {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
+  display: block;
   font-family: var(--rk-mono, monospace);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   color: var(--rk-accent, var(--color-accent));
 }
 
 .colDmx {
   display: block;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--rk-label, var(--text-primary, #e2e8f0));
+  font-size: 8px;
+  color: var(--rk-label-dim, var(--text-secondary));
 }
 
 @mixin laneCol($color, $bg) {

@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useStore } from '../../../store';
-import { normalizePattern, getActivePage } from '../../../utils/transitionTrackerEngine';
+import {
+  normalizePattern,
+  getActivePage,
+  resolveVisibleChannels,
+} from '../../../utils/transitionTrackerEngine';
 import { getFixtureInfoForChannel } from '../../../utils/fixturePresentation';
 import { SkeuoButton } from '../../ui/SkeuoButton';
-import { ChannelRoleIcon } from '../../ui/ChannelRoleIcon';
 import { RackToggle } from '../../ui/rack';
 import { TrackerFixtureLanes } from './TrackerFixtureLanes';
 import styles from './TrackerChannelPicker.module.scss';
@@ -12,12 +15,16 @@ export interface TrackerChannelPickerProps {
   patternId: string;
   focusedChannel: number;
   onFocusChannel: (ch: number) => void;
+  includePinned: boolean;
+  onIncludePinnedChange: (value: boolean) => void;
 }
 
 export const TrackerChannelPicker: React.FC<TrackerChannelPickerProps> = ({
   patternId,
   focusedChannel,
   onFocusChannel,
+  includePinned,
+  onIncludePinnedChange,
 }) => {
   const [channelInput, setChannelInput] = useState('1');
   const [lanesOpen, setLanesOpen] = useState(false);
@@ -30,10 +37,10 @@ export const TrackerChannelPicker: React.FC<TrackerChannelPickerProps> = ({
     fixtures,
     envelopeAutomation,
     setPatternChannelsLocked,
+    updateTransitionPattern,
     addPatternChannel,
     removePatternChannel,
     mergeSelectionIntoPattern,
-    mergePinnedIntoPattern,
     clearPatternPageChannels,
     addPatternPage,
     setActivePatternPage,
@@ -49,10 +56,10 @@ export const TrackerChannelPicker: React.FC<TrackerChannelPickerProps> = ({
     fixtures: s.fixtures,
     envelopeAutomation: s.envelopeAutomation,
     setPatternChannelsLocked: s.setPatternChannelsLocked,
+    updateTransitionPattern: s.updateTransitionPattern,
     addPatternChannel: s.addPatternChannel,
     removePatternChannel: s.removePatternChannel,
     mergeSelectionIntoPattern: s.mergeSelectionIntoPattern,
-    mergePinnedIntoPattern: s.mergePinnedIntoPattern,
     clearPatternPageChannels: s.clearPatternPageChannels,
     addPatternPage: s.addPatternPage,
     setActivePatternPage: s.setActivePatternPage,
@@ -68,6 +75,14 @@ export const TrackerChannelPicker: React.FC<TrackerChannelPickerProps> = ({
   const page = getActivePage(pattern);
   const pageChannels = page?.channelIndices ?? [];
 
+  const gridColumns = useMemo(
+    () =>
+      resolveVisibleChannels(pattern, selectedChannels, pinnedChannels, {
+        includePinned,
+      }),
+    [pattern, selectedChannels, pinnedChannels, includePinned]
+  );
+
   const addChannel = () => {
     const n = parseInt(channelInput, 10);
     if (Number.isNaN(n) || n < 1) return;
@@ -79,11 +94,17 @@ export const TrackerChannelPicker: React.FC<TrackerChannelPickerProps> = ({
 
   const trackForChannel = (ch: number) => pattern.tracks.find((t) => t.channelIndex === ch);
 
+  const extraFromSelection =
+    pattern.followSelection && !pattern.channelsLocked
+      ? gridColumns.filter((c) => !pageChannels.includes(c)).length
+      : 0;
+
   return (
     <div className={styles.picker}>
       <p className={styles.tip}>
-        Grid columns match the chips below. Add channels with + Selection (desk strip) or + Pinned
-        (left sidebar), by number, or via Fixture lanes.
+        Grid columns = channels listed below (not the whole desk). Add only what you need;
+        click x on a chip to remove. Pinned sidebar channels no longer appear unless you enable
+        Include pinned.
       </p>
 
       <div className={styles.row}>
@@ -98,11 +119,28 @@ export const TrackerChannelPicker: React.FC<TrackerChannelPickerProps> = ({
       {lanesOpen && <TrackerFixtureLanes patternId={patternId} />}
 
       <div className={styles.row}>
-        <span className={styles.label}>Columns ({pageChannels.length})</span>
+        <span className={styles.label}>
+          Columns ({gridColumns.length}
+          {extraFromSelection > 0 ? `, +${extraFromSelection} from selection` : ''})
+        </span>
         <RackToggle
           pressed={pattern.channelsLocked}
           onToggle={() => setPatternChannelsLocked(patternId, !pattern.channelsLocked)}
           label="Lock cols"
+        />
+        <RackToggle
+          pressed={pattern.followSelection}
+          onToggle={() =>
+            updateTransitionPattern(patternId, {
+              followSelection: !pattern.followSelection,
+            })
+          }
+          label="Follow sel"
+        />
+        <RackToggle
+          pressed={includePinned}
+          onToggle={() => onIncludePinnedChange(!includePinned)}
+          label="+ Pinned"
         />
       </div>
 
@@ -111,17 +149,9 @@ export const TrackerChannelPicker: React.FC<TrackerChannelPickerProps> = ({
           compact
           disabled={selectedChannels.length === 0}
           onClick={() => mergeSelectionIntoPattern(patternId, selectedChannels)}
-          title="Add channels selected on the DMX channel strip (click rows to select)"
+          title="Add channels selected on the DMX page"
         >
           + Selection
-        </SkeuoButton>
-        <SkeuoButton
-          compact
-          disabled={!pinnedChannels || pinnedChannels.length === 0}
-          onClick={() => mergePinnedIntoPattern(patternId)}
-          title="Add channels from the pinned sidebar strip"
-        >
-          + Pinned
         </SkeuoButton>
         <form
           className={styles.addForm}
@@ -192,11 +222,6 @@ export const TrackerChannelPicker: React.FC<TrackerChannelPickerProps> = ({
               title={info ? `${info.fixtureName} - ${info.channelFunction}` : undefined}
             >
               <button type="button" onClick={() => onFocusChannel(ch)}>
-                <ChannelRoleIcon
-                  channelType={info?.channelType}
-                  fixtureType={info?.fixtureType}
-                  size={12}
-                />
                 {String(ch + 1).padStart(3, '0')}
                 {info?.shortFunction ? ` ${info.shortFunction}` : ''}
               </button>
@@ -213,7 +238,7 @@ export const TrackerChannelPicker: React.FC<TrackerChannelPickerProps> = ({
         })}
         {pageChannels.length === 0 && (
           <span className={styles.label}>
-            No columns yet. Use + Selection, + Pinned, Add by number, or Fixture lanes.
+            No columns yet. Add a channel number, use + Selection, or open Fixture lanes.
           </span>
         )}
       </div>

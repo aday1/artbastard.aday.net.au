@@ -12,6 +12,8 @@ import { useActsPlaybackEngine } from './hooks/useActsPlaybackEngine'
 import { useActsOscProcessor } from './hooks/useActsOscProcessor'
 import { useActsMidiProcessor } from './hooks/useActsMidiProcessor'
 import { useTimelinePlayback } from './hooks/useTimelinePlayback'
+import { useTransitionTrackerPlayback } from './hooks/useTransitionTrackerPlayback'
+import { useAppearanceSync } from './hooks/useAppearanceSync'
 import { useSceneTimelinePlayback } from './hooks/useSceneTimelinePlayback'
 import { useClipLauncher } from './hooks/useClipLauncher'
 import { useGlobalMonitoring } from './hooks/useMonitoring'
@@ -83,6 +85,11 @@ function App() {
   
   // Initialize timeline playback engine
   useTimelinePlayback();
+
+  // DMX transition pattern tracker (line-stepped scenes + channels)
+  useTransitionTrackerPlayback();
+
+  useAppearanceSync();
   
   // Initialize scene timeline playback engine
   useSceneTimelinePlayback();

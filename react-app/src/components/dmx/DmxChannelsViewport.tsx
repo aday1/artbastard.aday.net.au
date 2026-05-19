@@ -16,7 +16,6 @@ interface DmxChannelsViewportProps {
   oscAssignments: string[];
   isLearning: boolean;
   currentLearningChannel: number | null;
-  envelopeAutomation: any;
   showMidiControls: boolean;
   showOscControls: boolean;
   editingChannelName: number | null;
@@ -25,7 +24,6 @@ interface DmxChannelsViewportProps {
   getChannelRange: (channelIndex: number) => { min: number; max: number };
   setChannelRange: (channelIndex: number, min: number, max: number) => void;
   setDmxChannel: (channelIndex: number, value: number) => void;
-  toggleEnvelope: (envelopeId: string) => void;
   handleSaveChannelName: (channelIndex: number) => void;
   handleCancelEditName: () => void;
   handleStartEditName: (channelIndex: number, event: React.MouseEvent) => void;
@@ -42,6 +40,8 @@ interface DmxChannelsViewportProps {
   channelsPerRow?: number;
   getChannelTicksOnly: (channelIndex: number) => boolean;
   setChannelTicksOnly: (channelIndex: number, ticksOnly: boolean) => void;
+  getChannelAuxFullFader: (channelIndex: number) => boolean;
+  toggleChannelAuxFullFader: (channelIndex: number) => void;
   onChannelContextMenu?: (event: React.MouseEvent, channelIndex: number) => void;
 }
 
@@ -59,7 +59,6 @@ export const DmxChannelsViewport: React.FC<DmxChannelsViewportProps> = ({
   oscAssignments,
   isLearning,
   currentLearningChannel,
-  envelopeAutomation,
   showMidiControls,
   showOscControls,
   editingChannelName,
@@ -68,7 +67,6 @@ export const DmxChannelsViewport: React.FC<DmxChannelsViewportProps> = ({
   getChannelRange,
   setChannelRange,
   setDmxChannel,
-  toggleEnvelope,
   handleSaveChannelName,
   handleCancelEditName,
   handleStartEditName,
@@ -85,6 +83,8 @@ export const DmxChannelsViewport: React.FC<DmxChannelsViewportProps> = ({
   channelsPerRow = 0,
   getChannelTicksOnly,
   setChannelTicksOnly,
+  getChannelAuxFullFader,
+  toggleChannelAuxFullFader,
   onChannelContextMenu,
 }) => {
   const gridColumnStyle = (() => {
@@ -93,7 +93,7 @@ export const DmxChannelsViewport: React.FC<DmxChannelsViewportProps> = ({
     }
     let minCol = '320px';
     if (faderOrientation === 'vertical') {
-      minCol = '5.5rem';
+      minCol = '9.5rem';
     } else if (viewMode === 'compact') {
       minCol = '280px';
     }
@@ -143,7 +143,6 @@ export const DmxChannelsViewport: React.FC<DmxChannelsViewportProps> = ({
             isEditingName={isEditingName}
             hasCustomName={hasCustomName}
             channelColor={channelColors[channelIndex]}
-            envelopeAutomation={envelopeAutomation}
             showMidiControls={showMidiControls}
             showOscControls={showOscControls}
             editingChannelNameValue={editingChannelNameValue}
@@ -151,7 +150,6 @@ export const DmxChannelsViewport: React.FC<DmxChannelsViewportProps> = ({
             getChannelRange={getChannelRange}
             setChannelRange={setChannelRange}
             setDmxChannel={setDmxChannel}
-            toggleEnvelope={toggleEnvelope}
             handleSaveChannelName={handleSaveChannelName}
             handleCancelEditName={handleCancelEditName}
             handleStartEditName={handleStartEditName}
@@ -166,6 +164,8 @@ export const DmxChannelsViewport: React.FC<DmxChannelsViewportProps> = ({
             oscAddress={oscAssignments[channelIndex]}
             verticalFader={faderOrientation === 'vertical'}
             ticksOnly={getChannelTicksOnly(channelIndex)}
+            auxFullRange={getChannelAuxFullFader(channelIndex)}
+            onToggleAuxFullRange={() => toggleChannelAuxFullFader(channelIndex)}
             canUseTicksMode={Boolean(fixtureInfo?.ranges && fixtureInfo.ranges.length > 0)}
             onToggleTicksOnly={() =>
               setChannelTicksOnly(channelIndex, !getChannelTicksOnly(channelIndex))

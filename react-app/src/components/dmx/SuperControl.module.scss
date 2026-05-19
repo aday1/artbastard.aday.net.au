@@ -1973,6 +1973,17 @@ $color-wheel-checker: repeating-conic-gradient(
   }
 }
 
+.gridItemHeaderToggle {
+  width: 100%;
+  border: none;
+  cursor: pointer;
+  justify-content: space-between;
+
+  &:hover {
+    filter: brightness(1.08);
+  }
+}
+
 .gridItemContent {
   padding: 12px;
   flex-grow: 1;
