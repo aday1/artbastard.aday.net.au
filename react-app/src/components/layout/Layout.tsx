@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useTheme } from '../../context/ThemeContext'
+import { RouterProvider } from '../../context/RouterContext'
 import { StatusBar } from './StatusBar'
 import { Navbar } from './Navbar'
 import { PinnedChannels } from './PinnedChannels'
@@ -24,7 +25,7 @@ import { LucideIcon } from '../ui/LucideIcon'
 import { useMobile } from '../../hooks/useMobile'
 import { MobileTopBar } from './MobileTopBar'
 import { DeployLaneBadge } from './DeployLaneBadge'
-import { useAppContextMenu } from '../../context/ContextMenuContext'
+import { ContextMenuProvider, useAppContextMenu } from '../../context/ContextMenuContext'
 
 interface LayoutProps {
   children?: React.ReactNode
@@ -89,7 +90,6 @@ const LayoutBody: React.FC<LayoutProps> = ({ children }) => {
     <>
       <div
         className={[
-          'ab-rack',
           styles.layout,
           styles[theme],
           darkMode ? styles.dark : styles.light,
@@ -192,4 +192,10 @@ const LayoutBody: React.FC<LayoutProps> = ({ children }) => {
   )
 }
 
-export const Layout: React.FC<LayoutProps> = (props) => <LayoutBody {...props} />
+export const Layout: React.FC<LayoutProps> = (props) => (
+  <RouterProvider>
+    <ContextMenuProvider>
+      <LayoutBody {...props} />
+    </ContextMenuProvider>
+  </RouterProvider>
+)

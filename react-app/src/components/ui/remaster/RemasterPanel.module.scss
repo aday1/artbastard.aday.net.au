@@ -1,12 +1,48 @@
-.rackWrap {
-  width: 100%;
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem 1.35rem;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-card-bg, #141820) 92%, transparent);
+  border: 1px solid var(--color-card-border, #2a3344);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
 }
 
-.accent :global(.ab-rack-module__head) {
-  color: var(--rk-accent, var(--color-accent));
+.accent {
+  border-color: color-mix(in srgb, var(--color-primary, #d68706) 35%, var(--color-card-border, #2a3344));
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--color-primary, #d68706) 6%, transparent), transparent 55%),
+    color-mix(in srgb, var(--color-card-bg, #141820) 94%, transparent);
 }
 
-.bodyInner {
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-card-border, #2a3344) 80%, transparent);
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.15rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  color: var(--text-primary, #f1f5f9);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.body {
   display: flex;
   flex-direction: column;
   gap: 1rem;

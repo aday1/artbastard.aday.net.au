@@ -5,16 +5,6 @@
   padding: 0.5rem 0;
 }
 
-.embedded {
-  padding: 0;
-}
-
-.embeddedBar {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 0.5rem;
-}
-
 .remasterRoot {
   min-height: 0;
 }
@@ -691,13 +681,5 @@
   &:hover {
     background: var(--accent-hover, #3a8eef);
   }
-}
-
-.trackerSyncRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  padding: 0.35rem 0.5rem;
-  border-top: 1px solid var(--border-color, #334155);
 }
 

@@ -19,7 +19,6 @@ import {
 } from '../../utils/timelineEnvelope';
 import { DmxFaderRow, HorizontalFader } from '../ui/controls';
 import styles from './SceneTimelineEditor.module.scss';
-import { SceneTimelinePatternDrawer } from './SceneTimelinePatternDrawer';
 
 interface SceneTimelineEditorProps {
   scene: Scene;
@@ -3342,8 +3341,6 @@ export const SceneTimelineEditor: React.FC<SceneTimelineEditorProps> = ({ scene,
           </div>
         </div>
       </div>
-
-      <SceneTimelinePatternDrawer sceneName={sceneName} />
 
       {/* Keyframe Properties Panel */}
       {selectedKeyframe && (

@@ -1,5 +1,4 @@
 import React from 'react';
-import { RackModule } from '../rack/RackModule';
 import styles from './RemasterPanel.module.scss';
 
 export interface RemasterPanelProps {
@@ -17,12 +16,11 @@ export const RemasterPanel: React.FC<RemasterPanelProps> = ({
   className = '',
   accent = true,
 }) => (
-  <RackModule
-    title={title}
-    actions={actions}
-    className={`${styles.rackWrap} ${accent ? styles.accent : ''} ${className}`.trim()}
-    bodyClassName={styles.bodyInner}
-  >
-    {children}
-  </RackModule>
+  <section className={`${styles.panel} ${accent ? styles.accent : ''} ${className}`}>
+    <header className={styles.header}>
+      <div className={styles.title}>{title}</div>
+      {actions ? <div className={styles.actions}>{actions}</div> : null}
+    </header>
+    <div className={styles.body}>{children}</div>
+  </section>
 );

@@ -90,55 +90,6 @@ $amber: #fbbf24;
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.2) 0%, transparent 100%);
 }
 
-.rackHeaderButton {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  width: 100%;
-  padding: 12px 18px 10px;
-  border: none;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.45);
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.2) 0%, transparent 100%);
-  cursor: pointer;
-  text-align: left;
-  color: inherit;
-
-  &:hover {
-    background: linear-gradient(180deg, rgba(0, 0, 0, 0.28) 0%, rgba(0, 0, 0, 0.08) 100%);
-  }
-
-  &:focus-visible {
-    outline: 2px solid rgba(46, 204, 113, 0.65);
-    outline-offset: -2px;
-  }
-}
-
-.headerRight {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-shrink: 0;
-  margin-left: auto;
-}
-
-.collapsedSummary {
-  font-size: 0.62rem;
-  letter-spacing: 0.06em;
-  color: rgba(148, 163, 184, 0.95);
-  white-space: nowrap;
-}
-
-.rackBodyCollapsed {
-  padding: 8px 18px 12px;
-}
-
-.expandHint {
-  font-size: 0.65rem;
-  color: rgba(148, 163, 184, 0.75);
-  letter-spacing: 0.04em;
-}
-
 .rackTitle {
   margin: 0;
   display: flex;
@@ -288,9 +239,6 @@ $amber: #fbbf24;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-height: min(220px, 40vh);
-  overflow-y: auto;
-  padding-right: 4px;
 }
 
 .channelStrip {

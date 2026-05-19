@@ -1,11 +1,9 @@
-import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import styles from './SteppedGoboSlider.module.scss';
 
 export interface GoboStep {
   value: number;
   label: string;
-  min?: number;
-  max?: number;
   image?: string;
 }
 
@@ -15,22 +13,6 @@ export interface SteppedGoboSliderProps {
   disabled?: boolean;
   onChange: (value: number) => void;
   className?: string;
-}
-
-const DMX_MAX = 255;
-
-function snapToNearestTick(tickmarks: number[], raw: number): number {
-  if (!tickmarks.length) return Math.round(raw);
-  let best = tickmarks[0];
-  let bestDist = Infinity;
-  for (const tick of tickmarks) {
-    const d = Math.abs(tick - raw);
-    if (d < bestDist) {
-      bestDist = d;
-      best = tick;
-    }
-  }
-  return best;
 }
 
 function nearestStepIndex(steps: GoboStep[], value: number): number {
@@ -53,134 +35,57 @@ export const SteppedGoboSlider: React.FC<SteppedGoboSliderProps> = ({
   onChange,
   className = '',
 }) => {
-  const listId = useId().replace(/:/g, '');
-  const wrapRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [fine, setFine] = useState(false);
-  const tickmarks = useMemo(() => steps.map((s) => s.value), [steps]);
   const activeIndex = nearestStepIndex(steps, value);
-  const activeStep = steps[activeIndex];
-  const snapped = snapToNearestTick(tickmarks, value);
-  const progressPct = (snapped / DMX_MAX) * 100;
-
-  const syncVars = useCallback(
-    (dmxVal: number) => {
-      const wrap = wrapRef.current;
-      if (!wrap) return;
-      wrap.style.setProperty('--value', String(dmxVal));
-      wrap.style.setProperty('--pos', `${(dmxVal / DMX_MAX) * 100}%`);
-      wrap.style.setProperty('--step-index', String(nearestStepIndex(steps, dmxVal)));
-      wrap.style.setProperty('--step-count', String(Math.max(1, steps.length)));
-    },
-    [steps]
-  );
+  const min = 1;
+  const max = Math.max(1, steps.length);
 
   useEffect(() => {
-    const v = snapToNearestTick(tickmarks, value);
-    if (inputRef.current) inputRef.current.value = String(v);
-    syncVars(v);
-  }, [value, tickmarks, syncVars]);
+    const el = inputRef.current;
+    if (el) el.setAttribute('value', String(activeIndex + 1));
+  }, [activeIndex]);
 
-  const applyValue = (raw: number) => {
-    const next = snapToNearestTick(tickmarks, raw);
-    if (inputRef.current) inputRef.current.value = String(next);
-    syncVars(next);
-    onChange(next);
-  };
-
-  const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    applyValue(parseFloat(e.target.value));
-  };
-
-  const nudge = (dir: -1 | 1) => {
-    const idx = nearestStepIndex(steps, snapped);
-    const nextIdx = Math.min(steps.length - 1, Math.max(0, idx + dir));
-    applyValue(steps[nextIdx]?.value ?? snapped);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
-      e.preventDefault();
-      nudge(-1);
-    } else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
-      e.preventDefault();
-      nudge(1);
-    }
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const idx = parseInt(e.target.value, 10) - 1;
+    const step = steps[Math.max(0, Math.min(steps.length - 1, idx))];
+    if (step) onChange(step.value);
   };
 
   return (
-    <div
-      className={`${styles.root} ${className} ${disabled ? styles.disabled : ''} ${fine ? styles.fine : ''}`}
-      ref={wrapRef}
-      style={
-        {
-          '--value': snapped,
-          '--pos': `${progressPct}%`,
-          '--step-index': activeIndex,
-          '--step-count': Math.max(1, steps.length),
-        } as React.CSSProperties
-      }
-    >
-      <div className={styles.toolbar}>
-        <button type="button" className={styles.nudge} disabled={disabled || activeIndex <= 0} onClick={() => nudge(-1)}>
-          Prev
-        </button>
-        <label className={styles.fineToggle}>
-          <input type="checkbox" checked={fine} onChange={(e) => setFine(e.target.checked)} disabled={disabled} />
-          Fine
-        </label>
-        <button
-          type="button"
-          className={styles.nudge}
-          disabled={disabled || activeIndex >= steps.length - 1}
-          onClick={() => nudge(1)}
-        >
-          Next
-        </button>
+    <div className={`${styles.root} ${className} ${disabled ? styles.disabled : ''}`}>
+      <input
+        ref={inputRef}
+        type="range"
+        className={styles.input}
+        min={min}
+        max={max}
+        step={1}
+        value={activeIndex + 1}
+        disabled={disabled || steps.length === 0}
+        onChange={handleChange}
+        onInput={handleChange}
+      />
+      <div className={styles.stepLabels}>
+        {steps.map((s, i) => (
+          <button
+            key={`${s.value}-${i}`}
+            type="button"
+            className={`${styles.stepBtn} ${i === activeIndex ? styles.active : ''}`}
+            disabled={disabled}
+            title={`${s.label} (${s.value})`}
+            onClick={() => onChange(s.value)}
+          >
+            {s.image ? (
+              <img src={s.image} alt="" className={styles.stepImg} />
+            ) : (
+              <span className={styles.stepNum}>{i + 1}</span>
+            )}
+            <span className={styles.stepName}>{s.label}</span>
+          </button>
+        ))}
       </div>
-
-      <div className={styles.rangeSlider}>
-        <div className={styles.cubeTrack} aria-hidden>
-          {steps.map((s, i) => (
-            <span
-              key={`${s.value}-${i}`}
-              className={[styles.cube, i <= activeIndex ? styles.cubeLit : ''].filter(Boolean).join(' ')}
-              style={{ left: `${(s.value / DMX_MAX) * 100}%` }}
-              title={s.label}
-            />
-          ))}
-        </div>
-        <input
-          ref={inputRef}
-          type="range"
-          className={styles.input}
-          list={listId}
-          min={0}
-          max={DMX_MAX}
-          step={fine ? 1 : 1}
-          defaultValue={snapped}
-          disabled={disabled || steps.length === 0}
-          onInput={handleInput}
-          onChange={handleInput}
-          onKeyDown={handleKeyDown}
-          aria-label="Gobo wheel"
-          aria-valuenow={snapped}
-          aria-valuetext={activeStep?.label ?? String(snapped)}
-        />
-        <datalist id={listId}>
-          {steps.map((s, i) => (
-            <option key={`${s.value}-${i}`} value={s.value} label={s.label} />
-          ))}
-        </datalist>
-        <div className={styles.progress} aria-hidden />
-        <output className={styles.output}>{activeStep?.label ?? snapped}</output>
-      </div>
-
       <div className={styles.valueReadout}>
-        {activeStep?.label ?? '-'}
-        <span className={styles.dmxValue}>
-          DMX {activeStep?.min ?? '-'} - {activeStep?.max ?? '-'} ({snapped})
-        </span>
+        {steps[activeIndex]?.label ?? '—'} ({value})
       </div>
     </div>
   );

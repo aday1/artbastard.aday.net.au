@@ -1,6 +1,6 @@
 # ArtBastard Documentation Index
 
-Reference set for v5.15.0 - Tracker Columns Edition. Reflects the
+Reference set for v5.12.0 - Photonic Supremacy Edition. Reflects the
 state of the system after the rebuild consolidation (2026-02-27 onward)
 and the operator UI remaster (2026-05-16).
 
@@ -33,7 +33,7 @@ and the operator UI remaster (2026-05-16).
 ## Release walkthrough
 
 The ordered demo reel is also embedded on the public showcase site and
-hosted with the v5.15.0 release. Tour order:
+hosted with the v5.12.0 release. Tour order:
 
 1. DMX Control Home
 2. Fixture Setup and Super Control
@@ -42,7 +42,7 @@ hosted with the v5.15.0 release. Tour order:
 5. Settings and In-App Help
 
 Release page:
-https://github.com/aday1/artbastard.aday.net.au/releases/tag/v5.15.0
+https://github.com/aday1/artbastard.aday.net.au/releases/tag/v5.12.0
 
 Public showcase:
 - Quick-jump hub: https://aday1.github.io/artbastard.aday.net.au/

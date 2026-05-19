@@ -8,19 +8,13 @@ import {
 } from '../../store';
 import { useTheme } from '../../context/ThemeContext';
 import { LucideIcon } from '../ui/LucideIcon';
-import { SkeuoButton } from '../ui/SkeuoButton';
 import { MasterStyledSlider, RangeWindowControl } from '../ui/controls';
 import { RemasterPanel } from '../ui/remaster/RemasterPanel';
 import { EnvelopeDrawCanvas } from './EnvelopeDrawCanvas';
 import { defaultEnvelopeDraft, bakeWaveformToPoints } from '../../utils/envelopeDefaults';
 import styles from './EnvelopeAutomation.module.scss';
 
-export interface EnvelopeAutomationProps {
-  /** When true, omit outer panel (used inside AutomationWorkbench). */
-  embedded?: boolean;
-}
-
-export const EnvelopeAutomation: React.FC<EnvelopeAutomationProps> = ({ embedded = false }) => {
+export const EnvelopeAutomation: React.FC = () => {
   const { theme } = useTheme();
   const {
     envelopeAutomation,
@@ -104,18 +98,31 @@ export const EnvelopeAutomation: React.FC<EnvelopeAutomationProps> = ({ embedded
     setNewEnvelope(defaultEnvelopeDraft(defaultChannel));
   };
 
-  const startStopAction = (
-    <button
-      type="button"
-      className={`${styles.toggleButton} ${envelopeAutomation.globalEnabled ? styles.active : ''}`}
-      onClick={toggleGlobalEnvelope}
-    >
-      <LucideIcon name={envelopeAutomation.globalEnabled ? 'Square' : 'Play'} />
-      {envelopeAutomation.globalEnabled ? 'Stop' : 'Start'}
-    </button>
-  );
+  return (
+    <div className={styles.envelopeAutomation}>
+      <RemasterPanel
+        className={styles.remasterRoot}
+        title={
+          <>
+            <LucideIcon name="Activity" />
+            {theme === 'artsnob' && 'Envelope Automation: The Rhythm of Light'}
+            {theme === 'standard' && 'Envelope Automation'}
+            {theme === 'minimal' && 'Envelopes'}
+            <span className={styles.easeBadge}>outExpo</span>
+          </>
+        }
+        actions={
+          <button
+            type="button"
+            className={`${styles.toggleButton} ${envelopeAutomation.globalEnabled ? styles.active : ''}`}
+            onClick={toggleGlobalEnvelope}
+          >
+            <LucideIcon name={envelopeAutomation.globalEnabled ? 'Square' : 'Play'} />
+            {envelopeAutomation.globalEnabled ? 'Stop' : 'Start'}
+          </button>
+        }
+      >
 
-  const body = (
       <div className={styles.content}>
         {/* Speed/Timer Control */}
         <div className={styles.speedControl}>
@@ -225,33 +232,6 @@ export const EnvelopeAutomation: React.FC<EnvelopeAutomationProps> = ({ embedded
           />
         )}
       </div>
-  );
-
-  if (embedded) {
-    return (
-      <div className={`${styles.envelopeAutomation} ${styles.embedded}`}>
-        <div className={styles.embeddedBar}>{startStopAction}</div>
-        {body}
-      </div>
-    );
-  }
-
-  return (
-    <div className={styles.envelopeAutomation}>
-      <RemasterPanel
-        className={styles.remasterRoot}
-        title={
-          <>
-            <LucideIcon name="Activity" />
-            {theme === 'artsnob' && 'Envelope Automation: The Rhythm of Light'}
-            {theme === 'standard' && 'Envelope Automation'}
-            {theme === 'minimal' && 'Envelopes'}
-            <span className={styles.easeBadge}>outExpo</span>
-          </>
-        }
-        actions={startStopAction}
-      >
-        {body}
       </RemasterPanel>
     </div>
   );
@@ -281,9 +261,6 @@ const EnvelopeCard: React.FC<EnvelopeCardProps> = ({
   globalSpeed,
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const activeTransitionPatternId = useStore((s) => s.activeTransitionPatternId);
-  const bakeEnvelopeToPatternTrack = useStore((s) => s.bakeEnvelopeToPatternTrack);
-  const importPatternTrackToEnvelope = useStore((s) => s.importPatternTrackToEnvelope);
   
   const waveformIcons: Record<WaveformType, 'Activity' | 'TrendingUp' | 'Square' | 'Triangle' | 'Edit'> = {
     sine: 'Activity',
@@ -392,37 +369,6 @@ const EnvelopeCard: React.FC<EnvelopeCardProps> = ({
         </div>
       )}
 
-      {activeTransitionPatternId && (
-        <div className={styles.trackerSyncRow}>
-          <SkeuoButton
-            compact
-            onClick={() =>
-              bakeEnvelopeToPatternTrack(
-                activeTransitionPatternId,
-                envelope.channel,
-                envelope.id
-              )
-            }
-            title="Write this envelope into the active tracker pattern lines"
-          >
-            To tracker grid
-          </SkeuoButton>
-          <SkeuoButton
-            compact
-            onClick={() =>
-              importPatternTrackToEnvelope(
-                activeTransitionPatternId,
-                envelope.channel,
-                envelope.id
-              )
-            }
-            title="Import tracker hex column into this envelope curve"
-          >
-            From tracker grid
-          </SkeuoButton>
-        </div>
-      )}
-
       <div className={styles.cardActions}>
         <button className={styles.editButton} onClick={onEdit}>
           <LucideIcon name="Edit" />
@@ -452,9 +398,13 @@ const SegmentButton: React.FC<{
   onClick: () => void;
   children: React.ReactNode;
 }> = ({ active, onClick, children }) => (
-  <SkeuoButton compact active={active} className={styles.segmentBtn} onClick={onClick}>
+  <button
+    type="button"
+    className={`${styles.segmentBtn} ${active ? styles.segmentActive : ''}`}
+    onClick={onClick}
+  >
     {children}
-  </SkeuoButton>
+  </button>
 );
 
 const EnvelopeEditor: React.FC<EnvelopeEditorProps> = ({

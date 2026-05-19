@@ -1,9 +1,6 @@
 // Import font fallbacks for better loading performance
 @use './font-fallbacks.scss';
 @use './design-system.scss';
-@use './workbench-shell.scss';
-@use './reason-rack.scss';
-@use './metallic-range.scss';
 /* emoji-fixes removed to restore default icon and text rendering */
 
 // Base variables
@@ -59,7 +56,6 @@
 
 // Dark mode colors - Enhanced for professional lighting environments
 [data-theme="dark"] {
-  --font-mono: var(--wb-mono, 'Share Tech Mono', 'Space Mono', Consolas, monospace);
   --color-background: #1a1620; /* Deep theatrical purple-black */
   --color-text: #e8e1d6; /* Warm white for readability */
   --color-primary: #8b5cf6; /* Rich purple primary */

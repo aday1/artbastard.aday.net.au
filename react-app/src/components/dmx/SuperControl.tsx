@@ -14,15 +14,9 @@ import {
   HorizontalFader,
   RangeWindowControl,
   SteppedGoboSlider,
-  DmxLedChannelMeter,
-  SkeuoKnobSlider,
 } from '../ui/controls';
-import { SkeuoButton } from '../ui/SkeuoButton';
-import { ChannelMonitorDock } from '../ui/ChannelMonitorDock';
 import { SelectedChannelsFaderStrip } from './SelectedChannelsFaderStrip';
 import { debugLog } from '../../utils/debugLog';
-import { rangesToTickSteps } from '../../utils/fixtureChannelTicks';
-import type { FixtureChannelRange } from '../../store/types';
 import styles from './SuperControl.module.scss';
 // Removed react-grid-layout - using CSS auto-layout instead
 
@@ -160,38 +154,30 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
 
   const defaultGoboSteps = useMemo(
     () => [
-      { value: 0, min: 0, max: 15, label: 'Open', image: '/gobos/open.svg' },
-      { value: 32, min: 16, max: 47, label: 'Gobo 1', image: '/gobos/gobo1.svg' },
-      { value: 64, min: 48, max: 79, label: 'Gobo 2', image: '/gobos/gobo2.svg' },
-      { value: 96, min: 80, max: 111, label: 'Gobo 3', image: '/gobos/gobo3.svg' },
-      { value: 128, min: 112, max: 143, label: 'Gobo 4', image: '/gobos/gobo4.svg' },
-      { value: 160, min: 144, max: 175, label: 'Gobo 5', image: '/gobos/gobo5.svg' },
-      { value: 192, min: 176, max: 207, label: 'Gobo 6', image: '/gobos/gobo6.svg' },
-      { value: 224, min: 208, max: 255, label: 'Gobo 7', image: '/gobos/gobo7.svg' },
+      { value: 0, label: 'Open', image: '/gobos/open.svg' },
+      { value: 32, label: 'Gobo 1', image: '/gobos/gobo1.svg' },
+      { value: 64, label: 'Gobo 2', image: '/gobos/gobo2.svg' },
+      { value: 96, label: 'Gobo 3', image: '/gobos/gobo3.svg' },
+      { value: 128, label: 'Gobo 4', image: '/gobos/gobo4.svg' },
+      { value: 160, label: 'Gobo 5', image: '/gobos/gobo5.svg' },
+      { value: 192, label: 'Gobo 6', image: '/gobos/gobo6.svg' },
+      { value: 224, label: 'Gobo 7', image: '/gobos/gobo7.svg' },
     ],
     []
   );
 
   const goboSteps = useMemo(() => {
-    let bestRanges: FixtureChannelRange[] | null = null;
     for (const fixId of selectedFixtures) {
       const fix = fixtures.find((f) => f.id === fixId);
       if (!fix) continue;
       for (const ch of fix.channels) {
         if (ch.type === 'gobo_wheel' && ch.ranges && ch.ranges.length > 0) {
-          if (!bestRanges || ch.ranges.length > bestRanges.length) {
-            bestRanges = ch.ranges;
-          }
+          return ch.ranges.map((r) => ({
+            value: Math.round((r.min + r.max) / 2),
+            label: r.description || ch.name || `Gobo ${r.min}-${r.max}`,
+          }));
         }
       }
-    }
-    if (bestRanges) {
-      return rangesToTickSteps(bestRanges).map((s) => ({
-        value: s.value,
-        min: s.min,
-        max: s.max,
-        label: s.label,
-      }));
     }
     return defaultGoboSteps;
   }, [selectedFixtures, fixtures, defaultGoboSteps]);
@@ -303,7 +289,6 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
 
   // Custom path editor state
   const [showPanTiltPathEditor, setShowPanTiltPathEditor] = useState(false);
-  const [midiOscNavExpanded, setMidiOscNavExpanded] = useState(false);
 
   // Color wheel state
   const [colorHue, setColorHue] = useState(0);
@@ -1305,7 +1290,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
 
   return (
     <div
-      className={['ab-rack-module', styles.superControl, touchLayout ? styles.touchLayout : ''].filter(Boolean).join(' ')}
+      className={[styles.superControl, touchLayout ? styles.touchLayout : ''].filter(Boolean).join(' ')}
     >
       <div className={styles.header}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', flexWrap: 'wrap', gap: '12px' }}>
@@ -1336,39 +1321,35 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
           <div className={styles.gridItemContent}>
             {/* Selection Mode */}
             <div className={styles.fixtureSelection}>
-              <div className={`${styles.selectionTabs} ab-view-tabs`}>
-                <SkeuoButton
-                  compact
-                  active={selectionMode === 'channels'}
+              <div className={styles.selectionTabs}>
+                <button
+                  className={selectionMode === 'channels' ? styles.active : ''}
                   onClick={() => setSelectionMode('channels')}
                 >
                   <LucideIcon name="Radio" />
                   Channels
-                </SkeuoButton>
-                <SkeuoButton
-                  compact
-                  active={selectionMode === 'fixtures'}
+                </button>
+                <button
+                  className={selectionMode === 'fixtures' ? styles.active : ''}
                   onClick={() => setSelectionMode('fixtures')}
                 >
                   <LucideIcon name="Lightbulb" />
                   Fixtures
-                </SkeuoButton>
-                <SkeuoButton
-                  compact
-                  active={selectionMode === 'groups'}
+                </button>
+                <button
+                  className={selectionMode === 'groups' ? styles.active : ''}
                   onClick={() => setSelectionMode('groups')}
                 >
                   <LucideIcon name="Users" />
                   Groups
-                </SkeuoButton>
-                <SkeuoButton
-                  compact
-                  active={selectionMode === 'capabilities'}
+                </button>
+                <button
+                  className={selectionMode === 'capabilities' ? styles.active : ''}
                   onClick={() => setSelectionMode('capabilities')}
                 >
                   <LucideIcon name="Zap" />
                   Capabilities
-                </SkeuoButton>
+                </button>
               </div>
 
               {selectionMode === 'fixtures' && fixtures.length > 0 && (
@@ -1501,7 +1482,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                   </span>
                 </div>
 
-                <ChannelMonitorDock className={styles.channelMonitorDock}>
+                <div className={styles.channelMonitor}>
                   {getAffectedFixtures().map(({ fixture, channels }, index) => (
                     <div key={`${fixture.id}-${index}`} className={styles.fixtureMonitor}>
                       <div className={styles.fixtureHeader}>
@@ -1512,7 +1493,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                         </span>
                       </div>
 
-                      <div className={styles.channelStripRow}>
+                      <div className={styles.channelGrid}>
                         {Object.entries(channels).map(([channelType, dmxAddress]) => {
                           const currentValue = getDmxChannelValue(dmxAddress);
                           const isControlled = (() => {
@@ -1539,8 +1520,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                               case 'gobo_wheel':
                                 return currentValue === gobo;
                               case 'shutter':
-                                return currentValue === shutter;
-                              case 'strobe':
+                                return currentValue === shutter; case 'strobe':
                                 return currentValue === strobe;
                               case 'lamp':
                               case 'lamp_on':
@@ -1556,19 +1536,31 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                           })();
 
                           return (
-                            <DmxLedChannelMeter
+                            <div
                               key={`${dmxAddress}-${channelType}`}
-                              value={currentValue}
-                              label={channelType}
-                              sublabel={`CH ${dmxAddress}`}
-                              active={isControlled}
-                            />
+                              className={`${styles.channelItem} ${isControlled ? styles.controlled : ''}`}
+                            >
+                              <div className={styles.channelInfo}>
+                                <span className={styles.channelType}>{channelType.toUpperCase()}</span>
+                                <span className={styles.channelAddress}>CH {dmxAddress}</span>
+                              </div>
+                              <div className={styles.channelValue}>
+                                <span className={styles.dmxValue}>{currentValue}</span>
+                                <div
+                                  className={styles.valueBar}
+                                  style={{
+                                    width: `${(currentValue / 255) * 100}%`,
+                                    backgroundColor: isControlled ? '#00d4ff' : '#666'
+                                  }}
+                                />
+                              </div>
+                            </div>
                           );
                         })}
                       </div>
                     </div>
                   ))}
-                </ChannelMonitorDock>
+                </div>
 
                 {/* Real-time control indicators */}
                 <div className={styles.controlIndicators}>
@@ -1608,16 +1600,9 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         </div>
 
         <div className={styles.gridItem}>
-          <button
-            type="button"
-            className={`${styles.gridItemHeader} ${styles.gridItemHeaderToggle}`}
-            onClick={() => setMidiOscNavExpanded((v) => !v)}
-            aria-expanded={midiOscNavExpanded}
-          >
-            <span><LucideIcon name="Music" /> MIDI/OSC & Navigation</span>
-            <LucideIcon name={midiOscNavExpanded ? 'ChevronUp' : 'ChevronDown'} />
-          </button>
-          {midiOscNavExpanded && (
+          <div className={styles.gridItemHeader}>
+            <LucideIcon name="Music" /> MIDI/OSC & Navigation
+          </div>
           <div className={styles.gridItemContent}>
             {/* MIDI/OSC Learning and Navigation Controls */}
             <div className={styles.midiOscSection}>
@@ -1626,28 +1611,26 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                 <div className={styles.navigationGroup}>
                   <h5>Fixture Navigation</h5>
                   <div className={styles.navigationControls}>
-                    <SkeuoButton
-                      compact
+                    <button
                       className={styles.navBtn}
                       onClick={selectPreviousFixture}
                       disabled={fixtures.length === 0}
                     >
                       <LucideIcon name="ChevronLeft" />
                       Prev
-                    </SkeuoButton>
+                    </button>
                     <div className={styles.currentSelection}>
                       {fixtures.length > 0 ? fixtures[currentFixtureIndex]?.name || 'Unknown' : 'No fixtures'}
                       <span className={styles.indexInfo}>({currentFixtureIndex + 1}/{fixtures.length})</span>
                     </div>
-                    <SkeuoButton
-                      compact
+                    <button
                       className={styles.navBtn}
                       onClick={selectNextFixture}
                       disabled={fixtures.length === 0}
                     >
                       Next
                       <LucideIcon name="ChevronRight" />
-                    </SkeuoButton>
+                    </button>
                   </div>
                   <div className={styles.midiLearnRow}>
                     <button
@@ -1697,28 +1680,26 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                 <div className={styles.navigationGroup}>
                   <h5>Group Navigation</h5>
                   <div className={styles.navigationControls}>
-                    <SkeuoButton
-                      compact
+                    <button
                       className={styles.navBtn}
                       onClick={selectPreviousGroup}
                       disabled={groups.length === 0}
                     >
                       <LucideIcon name="ChevronLeft" />
                       Prev
-                    </SkeuoButton>
+                    </button>
                     <div className={styles.currentSelection}>
                       {groups.length > 0 ? groups[currentGroupIndex]?.name || 'Unknown' : 'No groups'}
                       <span className={styles.indexInfo}>({currentGroupIndex + 1}/{groups.length})</span>
                     </div>
-                    <SkeuoButton
-                      compact
+                    <button
                       className={styles.navBtn}
                       onClick={selectNextGroup}
                       disabled={groups.length === 0}
                     >
                       Next
                       <LucideIcon name="ChevronRight" />
-                    </SkeuoButton>
+                    </button>
                   </div>
                   <div className={styles.midiLearnRow}>
                     <button
@@ -1766,7 +1747,6 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
               </div>
             </div>
           </div>
-          )}
         </div>
 
         <div className={styles.gridItem}>
@@ -1779,35 +1759,29 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
               <h5>Scene Controls</h5>
               <div className={styles.sceneControls}>
                 <div className={styles.sceneButtonRow}>
-                  <SkeuoButton
-                    compact
-                    accent="purple"
+                  <button
                     className={styles.sceneBtn}
                     onClick={() => captureCurrentScene()}
                   >
                     <LucideIcon name="Camera" />
                     Save Scene
-                  </SkeuoButton>
-                  <SkeuoButton
-                    compact
-                    accent="purple"
+                  </button>
+                  <button
                     className={styles.sceneBtn}
                     onClick={selectPreviousScene}
                     disabled={scenes.length === 0}
                   >
                     <LucideIcon name="ChevronLeft" />
                     Previous
-                  </SkeuoButton>
-                  <SkeuoButton
-                    compact
-                    accent="purple"
+                  </button>
+                  <button
                     className={styles.sceneBtn}
                     onClick={selectNextScene}
                     disabled={scenes.length === 0}
                   >
                     Next
                     <LucideIcon name="ChevronRight" />
-                  </SkeuoButton>
+                  </button>
                 </div>
                 <div className={styles.sceneInfo}>
                   <span className={styles.currentScene}>
@@ -1924,16 +1898,13 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                         </div>
                       </div>
 
-                      <SkeuoButton
-                        variant="wide"
-                        accent="green"
-                        compact
+                      <button
                         className={styles.loadSceneBtn}
                         onClick={() => storeLoadScene(scene.name)}
                       >
                         <LucideIcon name="Play" />
                         Load Scene
-                      </SkeuoButton>
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -2072,14 +2043,13 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
             <div className={styles.colorSection}>
               <div className={styles.colorWheelWrap}>
               <div
-                className={`${styles.colorWheelHousing} ${!hasSelection ? styles.colorWheelDisabled : ''}`}
+                className={`${styles.colorWheel} ${!hasSelection ? styles.colorWheelDisabled : ''}`}
                 ref={colorWheelRef}
                 onPointerDown={handleColorWheelPointerDown}
                 onPointerMove={handleColorWheelPointerMove}
                 onPointerUp={endColorWheelDrag}
                 onPointerCancel={endColorWheelDrag}
               >
-                <div className={styles.colorWheel}>
                 <div className={styles.colorSaturation}>
                   <div
                     className={styles.colorHandle}
@@ -2089,7 +2059,6 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                     }}
                   />
                 </div>
-              </div>
               </div>
               </div>
               <div className={styles.colorReadout}>
@@ -2113,7 +2082,6 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                 <DmxFaderRow
                   label="Red"
                   fullWidth
-                  colorChannel="red"
                   value={red}
                   disabled={!hasSelection}
                   oscAddress="/red"
@@ -2128,7 +2096,6 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                 <DmxFaderRow
                   label="Green"
                   fullWidth
-                  colorChannel="green"
                   value={green}
                   disabled={!hasSelection}
                   oscAddress="/green"
@@ -2143,7 +2110,6 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                 <DmxFaderRow
                   label="Blue"
                   fullWidth
-                  colorChannel="blue"
                   value={blue}
                   disabled={!hasSelection}
                   oscAddress="/blue"
@@ -2242,17 +2208,16 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                   />
                 )}
                 {hasControlType('strobe') && (
-                  <SkeuoKnobSlider
+                  <DmxFaderRow
                     label="Strobe Speed"
                     value={strobe}
-                    min={0}
-                    max={255}
-                    step={1}
                     disabled={!hasSelection}
+                    oscAddress="/strobe"
                     onChange={(val) => {
                       setStrobe(val);
                       applyControl('strobe', val);
                     }}
+                    {...midiPropsFor('strobe')}
                   />
                 )}
                 {hasControlType('lamp') && (
@@ -2375,15 +2340,26 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
           </div>
           <div className={styles.gridItemContent}>
             <div style={{ marginBottom: '12px' }}>
-              <SkeuoButton
-                variant="wide"
-                active={colorSliderAutopilot.enabled}
-                accent="green"
+              <button
                 onClick={toggleColorSliderAutopilot}
+                style={{
+                  background: colorSliderAutopilot.enabled ? '#10b981' : '#6b7280',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '10px 16px',
+                  color: 'white',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  width: '100%',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s ease'
+                }}
               >
-                <LucideIcon name={colorSliderAutopilot.enabled ? 'Palette' : 'PaintBucket'} />
+                <LucideIcon name={colorSliderAutopilot.enabled ? "Palette" : "PaintBucket"} />
                 {colorSliderAutopilot.enabled ? 'Disable Color Auto' : 'Enable Color Auto'}
-              </SkeuoButton>
+              </button>
             </div>
 
             <div style={{ marginBottom: '12px' }}>
@@ -2416,13 +2392,18 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
             </div>
 
             <div style={{ marginBottom: '12px' }}>
-              <SkeuoKnobSlider
+              <DmxFaderRow
                 label="Color autopilot speed"
+                controlName="color-autopilot-speed"
                 min={0.1}
                 max={1}
                 step={0.1}
                 value={colorSliderAutopilot.speed}
                 disabled={!colorSliderAutopilot.enabled}
+                showOsc={false}
+                showMidi={false}
+                presetValues={[0.1, 0.25, 0.5, 1]}
+                valueDecimals={1}
                 onChange={(v) => setColorSliderAutopilot({ speed: v })}
               />
             </div>

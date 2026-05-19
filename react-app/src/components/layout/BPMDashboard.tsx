@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useStore } from '../../store';
 import { HorizontalFader } from '../ui/controls';
-import { MetronomePanel } from '../audio/MetronomePanel';
 import styles from './BPMDashboard.module.scss';
 import { debugLog } from '../../utils/debugLog';
 
@@ -22,6 +21,7 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
   });
   const [tapCount, setTapCount] = useState(0);
   const [lastTapTime, setLastTapTime] = useState(0);
+  const [isFlashing, setIsFlashing] = useState(false);
   const tapTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const {
@@ -137,6 +137,38 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
     }
   };
 
+  // Visual beat indicator
+  useEffect(() => {
+    debugLog.log('BPM Dashboard: Beat indicator effect', { 
+      isPlaying: midiClockIsPlaying, 
+      bpm: midiClockBpm,
+      currentBpm 
+    });
+    
+    if (midiClockIsPlaying && currentBpm > 0) {
+      const beatInterval = (60 / currentBpm) * 1000; // Use currentBpm instead of midiClockBpm
+      debugLog.log('BPM Dashboard: Starting beat indicator', { beatInterval, bpm: currentBpm });
+      
+      const flashBeat = () => {
+        setIsFlashing(true);
+        setTimeout(() => setIsFlashing(false), 150); // Slightly longer flash for visibility
+      };
+      
+      // Immediate first flash
+      flashBeat();
+      
+      const intervalId = setInterval(flashBeat, beatInterval);
+      
+      return () => {
+        debugLog.log('BPM Dashboard: Stopping beat indicator');
+        clearInterval(intervalId);
+      };
+    } else {
+      debugLog.log('BPM Dashboard: Beat indicator stopped - not playing or BPM is 0');
+      setIsFlashing(false);
+    }
+  }, [midiClockBpm, midiClockIsPlaying, currentBpm]);
+
   // Handle tap tempo
   const handleTap = () => {
     debugLog.log('BPM Dashboard: TAP button pressed');
@@ -199,6 +231,9 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
     <div className={`${styles.bpmDashboard} ${className || ''} ${isExpanded ? styles.expanded : styles.collapsed}`}>
       <div className={styles.header} onClick={handleHeaderClick}>
         <div className={styles.titleSection}>
+          <div className={`${styles.beatIndicator} ${isFlashing && isPlaying ? styles.flash : ''}`}>
+            <div className={styles.beatDot}></div>
+          </div>
           <h3 className={styles.title}>BPM Control</h3>
           <div style={{marginLeft:'0.5rem'}} onClick={e=>e.stopPropagation()}>
             <select value={autoSceneTempoSource} onChange={(e)=>{
@@ -209,8 +244,10 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
             </select>
           </div>
           <div className={`${styles.quickStatus} ${isPlaying ? styles.playing : ''}`}>
-            <span className={styles.bpmValue}>{Math.round(currentBpm)}</span>
-            <span className={styles.playStatus}>{isPlaying ? 'On' : 'Off'}</span>
+            <span className={`${styles.playStatus} ${isPlaying ? styles.playing : styles.stopped}`}>
+              {isPlaying ? '▶️' : '⏸️'}
+            </span>
+            <span className={styles.bpmValue}>{currentBpm}</span>
           </div>
         </div>
         <button className={styles.expandButton} onClick={toggleExpanded}>
@@ -256,7 +293,6 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
             )}
           </div>
 
-          <MetronomePanel showBpmInput={false} />
 
           <div className={styles.bpmSection}>
             <label className={styles.sectionLabel}>BPM Setting</label>
@@ -281,6 +317,18 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
                 />
               </div>
             </div>
+          </div>
+
+          <div className={styles.tapSection}>
+            <label className={styles.sectionLabel}>
+              Tap Tempo {tapCount > 0 && <span className={styles.tapCount}>({tapCount + 1} taps)</span>}
+            </label>
+            <button
+              className={`${styles.tapButton} ${tapCount > 0 ? styles.active : ''}`}
+              onClick={handleTap}
+            >
+              TAP
+            </button>
           </div>
 
           <div className={styles.autopilotSection}>

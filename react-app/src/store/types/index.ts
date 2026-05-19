@@ -367,8 +367,6 @@ export interface ChannelEnvelope {
   min: number;
   max: number;
   speed: number;
-  /** Optional link to a tracker track for sync actions */
-  trackerSync?: { patternId: string; trackId: string } | null;
 }
 
 export interface EnvelopeAutomationState {
@@ -376,77 +374,5 @@ export interface EnvelopeAutomationState {
   globalEnabled: boolean;
   animationId: number | null;
   speed: number;
-}
-
-export type TransitionEasing =
-  | 'linear'
-  | 'easeInOut'
-  | 'easeIn'
-  | 'easeOut'
-  | 'easeInOutCubic'
-  | 'easeInOutQuart'
-  | 'easeInOutSine';
-
-export interface TransitionPatternFx {
-  transitionMs: number;
-  easing: TransitionEasing;
-  snap?: boolean;
-}
-
-export interface TransitionPatternLine {
-  index: number;
-  channelValues: Record<number, number | null>;
-  sceneName?: string;
-  fx: TransitionPatternFx;
-}
-
-/** Column page: which DMX channels appear in the grid (Renoise-style pages). */
-export interface TransitionPatternPage {
-  id: string;
-  name: string;
-  channelIndices: number[];
-}
-
-/** One instrument track = one DMX channel column, optional linked envelope. */
-export interface TransitionPatternTrack {
-  id: string;
-  channelIndex: number;
-  name?: string;
-  envelopeId?: string | null;
-}
-
-export interface TransitionPattern {
-  id: string;
-  name: string;
-  length: number;
-  linesPerBeat: number;
-  lines: TransitionPatternLine[];
-  /** @deprecated Use pages + tracks; kept for import compatibility */
-  visibleChannels: number[];
-  followSelection: boolean;
-  /** When true, grid columns come from active page tracks, not DMX selection */
-  channelsLocked: boolean;
-  pages: TransitionPatternPage[];
-  activePageId: string | null;
-  tracks: TransitionPatternTrack[];
-  createdAt: number;
-  modifiedAt: number;
-}
-
-export interface TransitionTrackerPlaybackState {
-  active: boolean;
-  patternId: string | null;
-  currentLine: number;
-  lineStartTime: number | null;
-  loop: boolean;
-  speed: number;
-  syncToBpm: boolean;
-  /** Push hex edits to live DMX while editing */
-  livePreview: boolean;
-}
-
-export interface PendingSceneTransitionOverride {
-  transitionMs: number;
-  easing: TransitionEasing;
 }
 

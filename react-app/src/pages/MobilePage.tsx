@@ -3,7 +3,6 @@ import { DmxChannelControlPage } from '../components/pages/DmxChannelControlPage
 import SuperControl from '../components/dmx/SuperControl';
 import { useTheme } from '../context/ThemeContext';
 import { LucideIcon } from '../components/ui/LucideIcon';
-import { SkeuoButton } from '../components/ui/SkeuoButton';
 import styles from './MobilePage.module.scss';
 
 type MobileTab = 'supercontrol' | 'dmx';
@@ -45,15 +44,14 @@ const MobilePage: React.FC = () => {
     <div className={styles.mobilePage}>
       <div className={styles.mobileHeader}>
         <h1 className={styles.mobileTitle}>ArtBastard</h1>
-        <div className={`${styles.tabNavigation} ab-view-tabs`} role="tablist" aria-label="Mobile control tabs">
+        <div className={styles.tabNavigation} role="tablist" aria-label="Mobile control tabs">
           {tabs.map((tab) => (
-            <SkeuoButton
+            <button
               key={tab.id}
+              type="button"
               role="tab"
               aria-selected={activeTab === tab.id}
-              active={activeTab === tab.id}
-              variant="pill"
-              className={styles.tab}
+              className={`${styles.tab} ${activeTab === tab.id ? styles.active : ''}`}
               onClick={() => setActiveTab(tab.id)}
             >
               <span className={styles.tabIcon} aria-hidden="true">
@@ -62,7 +60,7 @@ const MobilePage: React.FC = () => {
               <span className={styles.tabLabel}>
                 {theme === 'artsnob' ? tab.label.artsnob : tab.label.standard}
               </span>
-            </SkeuoButton>
+            </button>
           ))}
         </div>
       </div>

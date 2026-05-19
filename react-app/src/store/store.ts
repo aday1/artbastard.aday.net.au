@@ -14,17 +14,7 @@ import {
   smoothEnvelopeDmxValue,
 } from '../utils/envelopeEngine'
 import { normalizeChannelEnvelope } from '../utils/envelopeDefaults'
-import {
-  applyThemeColorsToDocument,
-  applyRackChrome,
-  getPresetById,
-  DEFAULT_THEME_COLORS,
-} from '../utils/themeUtils'
 import type { ChannelEnvelope } from './types'
-import {
-  createTransitionTrackerSlice,
-  type TransitionTrackerSlice,
-} from './transitionTrackerSlice'
 import { sceneNameToOscPath } from '../utils/sceneCapture'
 import { debugLog } from '../utils/debugLog'
 
@@ -194,14 +184,6 @@ export type {
 } from './types';
 
 export type { EnvelopeAutomationState } from './types';
-export type {
-  TransitionEasing,
-  TransitionPattern,
-  TransitionPatternLine,
-  TransitionPatternFx,
-  TransitionTrackerPlaybackState,
-  PendingSceneTransitionOverride,
-} from './types';
 
 export interface SceneTimelineKeyframe {
   id: string;
@@ -381,8 +363,6 @@ export interface ActStep {
     }>;
   };
   notes?: string;
-  /** Optional transition pattern instead of scene-only step */
-  patternId?: string;
 }
 
 export interface ActTrigger {
@@ -516,7 +496,7 @@ export interface ChannelRange {
 
 // Main application state - now reusing the automation slice's AutomationState
 // so that all autopilot/modular/envelope state + actions are defined in one place.
-interface State extends AutomationState, TransitionTrackerSlice {
+interface State extends AutomationState {
   // DMX State
   dmxChannels: number[]
   oscAssignments: string[]
@@ -712,11 +692,6 @@ interface State extends AutomationState, TransitionTrackerSlice {
   channelTicksOnlyOverrides: Record<number, boolean>;
   setChannelTicksOnly: (dmxAddress: number, ticksOnly: boolean) => void;
   getChannelTicksOnly: (dmxAddress: number) => boolean;
-  /** When ticks mode is on: show a third vertical fader for full 0-255 (alt+click TICKS). */
-  channelAuxFullFaderOverrides: Record<number, boolean>;
-  getChannelAuxFullFader: (dmxAddress: number) => boolean;
-  setChannelAuxFullFader: (dmxAddress: number, enabled: boolean) => void;
-  toggleChannelAuxFullFader: (dmxAddress: number) => void;
   activeSessionId: string;
   sessionsList: Array<{
     id: string;
@@ -959,13 +934,6 @@ interface State extends AutomationState, TransitionTrackerSlice {
     cardBrightness: number; cardSaturation: number;
     statusConnectedHue: number; statusDisconnectedHue: number; statusActiveHue: number; statusInactiveBrightness: number;
   }>) => void;
-  saveAppearanceToServer: (appearance: {
-    theme?: 'artsnob' | 'standard' | 'minimal';
-    darkMode?: boolean;
-    themePresetId?: string;
-    themeColors?: Record<string, number>;
-  }) => Promise<void>;
-  loadAppearanceFromServer: () => Promise<void>;
 
   // showStatusMessage: (text: string, type: 'success' | 'error' | 'info' | 'warning') => void; // Deprecated
   // clearStatusMessage: () => void; // Deprecated
@@ -2205,52 +2173,96 @@ export const useStore = create<State>()(
           const newColors = { ...state.themeColors, ...colors };
           try {
             localStorage.setItem('themeColors', JSON.stringify(newColors));
-            applyThemeColorsToDocument(newColors);
-            const presetId = localStorage.getItem('themePresetId');
-            const preset = presetId ? getPresetById(presetId) : undefined;
-            if (preset) applyRackChrome(preset.rack);
+            // Apply CSS custom properties for theme colors
+            const root = document.documentElement;
+            
+            // Calculate rotated hues if hue rotation is set
+            const rotation = newColors.hueRotation || 0;
+            const applyRotation = (hue: number) => ((hue + rotation + 360) % 360);
+            
+            root.style.setProperty('--theme-primary-hue', `${applyRotation(newColors.primaryHue)}`);
+            root.style.setProperty('--theme-primary-saturation', `${newColors.primarySaturation}%`);
+            root.style.setProperty('--theme-primary-brightness', `${newColors.primaryBrightness}%`);
+            root.style.setProperty('--theme-secondary-hue', `${applyRotation(newColors.secondaryHue)}`);
+            root.style.setProperty('--theme-secondary-saturation', `${newColors.secondarySaturation}%`);
+            root.style.setProperty('--theme-secondary-brightness', `${newColors.secondaryBrightness}%`);
+            root.style.setProperty('--theme-accent-hue', `${applyRotation(newColors.accentHue)}`);
+            root.style.setProperty('--theme-accent-saturation', `${newColors.accentSaturation}%`);
+            root.style.setProperty('--theme-accent-brightness', `${newColors.accentBrightness}%`);
+            
+            // Background controls
+            const bgHue = newColors.backgroundHue ?? 220;
+            const bgSaturation = newColors.backgroundSaturation ?? 20;
+            const bgBrightness = newColors.backgroundBrightness ?? 25;
+            root.style.setProperty('--theme-background-hue', `${bgHue}`);
+            root.style.setProperty('--theme-background-saturation', `${bgSaturation}%`);
+            root.style.setProperty('--theme-background-brightness', `${bgBrightness}%`);
+            
+            // Apply background color
+            const bgColor = `hsl(${bgHue}, ${bgSaturation}%, ${bgBrightness}%)`;
+            root.style.setProperty('--color-background', bgColor);
+            root.style.setProperty('--bg-primary', bgColor);
+            
+            // Semantic colors
+            root.style.setProperty('--theme-success-hue', `${applyRotation(newColors.successHue ?? 142)}`);
+            root.style.setProperty('--theme-success-saturation', `${newColors.successSaturation ?? 71}%`);
+            root.style.setProperty('--theme-success-brightness', `${newColors.successBrightness ?? 47}%`);
+            root.style.setProperty('--theme-warning-hue', `${applyRotation(newColors.warningHue ?? 38)}`);
+            root.style.setProperty('--theme-warning-saturation', `${newColors.warningSaturation ?? 92}%`);
+            root.style.setProperty('--theme-warning-brightness', `${newColors.warningBrightness ?? 51}%`);
+            root.style.setProperty('--theme-error-hue', `${applyRotation(newColors.errorHue ?? 0)}`);
+            root.style.setProperty('--theme-error-saturation', `${newColors.errorSaturation ?? 84}%`);
+            root.style.setProperty('--theme-error-brightness', `${newColors.errorBrightness ?? 60}%`);
+            root.style.setProperty('--theme-info-hue', `${applyRotation(newColors.infoHue ?? 217)}`);
+            root.style.setProperty('--theme-info-saturation', `${newColors.infoSaturation ?? 91}%`);
+            root.style.setProperty('--theme-info-brightness', `${newColors.infoBrightness ?? 59}%`);
+            
+            // Text colors
+            const textHue = bgHue;
+            root.style.setProperty('--theme-text-primary-brightness', `${newColors.textPrimaryBrightness ?? 90}%`);
+            root.style.setProperty('--theme-text-secondary-brightness', `${newColors.textSecondaryBrightness ?? 65}%`);
+            root.style.setProperty('--theme-text-tertiary-brightness', `${newColors.textTertiaryBrightness ?? 50}%`);
+            const textPrimaryColor = `hsl(${textHue}, ${bgSaturation}%, ${newColors.textPrimaryBrightness ?? 90}%)`;
+            const textSecondaryColor = `hsl(${textHue}, ${bgSaturation}%, ${newColors.textSecondaryBrightness ?? 65}%)`;
+            const textTertiaryColor = `hsl(${textHue}, ${bgSaturation}%, ${newColors.textTertiaryBrightness ?? 50}%)`;
+            root.style.setProperty('--color-text', textPrimaryColor);
+            root.style.setProperty('--text-primary', textPrimaryColor);
+            root.style.setProperty('--text-secondary', textSecondaryColor);
+            root.style.setProperty('--text-tertiary', textTertiaryColor);
+            
+            // Border colors
+            const borderBrightness = newColors.borderBrightness ?? 30;
+            const borderSaturation = newColors.borderSaturation ?? 15;
+            const borderColor = `hsl(${bgHue}, ${borderSaturation}%, ${borderBrightness}%)`;
+            root.style.setProperty('--color-border', borderColor);
+            root.style.setProperty('--border-color', borderColor);
+            root.style.setProperty('--color-card-border', borderColor);
+            
+            // Card/Surface colors
+            const cardBrightness = Math.min(100, bgBrightness + (newColors.cardBrightness ?? 8));
+            const cardSaturation = newColors.cardSaturation ?? bgSaturation;
+            const cardColor = `hsl(${bgHue}, ${cardSaturation}%, ${cardBrightness}%)`;
+            root.style.setProperty('--color-card-bg', cardColor);
+            root.style.setProperty('--bg-secondary', cardColor);
+            
+            // Status colors
+            root.style.setProperty('--theme-status-connected-hue', `${newColors.statusConnectedHue ?? 142}`);
+            root.style.setProperty('--theme-status-disconnected-hue', `${newColors.statusDisconnectedHue ?? 0}`);
+            root.style.setProperty('--theme-status-active-hue', `${newColors.statusActiveHue ?? 142}`);
+            root.style.setProperty('--theme-status-inactive-brightness', `${newColors.statusInactiveBrightness ?? 50}%`);
+            const statusConnectedColor = `hsl(${newColors.statusConnectedHue ?? 142}, 71%, 47%)`;
+            const statusDisconnectedColor = `hsl(${newColors.statusDisconnectedHue ?? 0}, 84%, 60%)`;
+            const statusActiveColor = `hsl(${newColors.statusActiveHue ?? 142}, 71%, 47%)`;
+            const statusInactiveColor = `hsl(${bgHue}, ${bgSaturation}%, ${newColors.statusInactiveBrightness ?? 50}%)`;
+            root.style.setProperty('--color-status-connected', statusConnectedColor);
+            root.style.setProperty('--color-status-disconnected', statusDisconnectedColor);
+            root.style.setProperty('--color-status-active', statusActiveColor);
+            root.style.setProperty('--color-status-inactive', statusInactiveColor);
           } catch (error) {
             console.warn('Failed to save themeColors to localStorage:', error);
           }
           return { themeColors: newColors };
         });
-      },
-
-      saveAppearanceToServer: async (appearance: import('../utils/themeUtils').AppearanceSettings) => {
-        try {
-          const { saveAppearance } = await import('../utils/themeApi');
-          await saveAppearance(appearance);
-        } catch (error) {
-          console.warn('Failed to save appearance to server:', error);
-        }
-      },
-
-      loadAppearanceFromServer: async () => {
-        try {
-          const { fetchAppearance } = await import('../utils/themeApi');
-          const appearance = await fetchAppearance();
-          if (!appearance) return;
-          if (appearance.themePresetId) {
-            localStorage.setItem('themePresetId', appearance.themePresetId);
-            const preset = getPresetById(appearance.themePresetId);
-            if (preset) applyRackChrome(preset.rack);
-          }
-          if (appearance.themeColors) {
-            const merged = { ...get().themeColors, ...appearance.themeColors };
-            applyThemeColorsToDocument(merged);
-            localStorage.setItem('themeColors', JSON.stringify(merged));
-            set({ themeColors: merged });
-          }
-          if (appearance.theme) {
-            get().setTheme(appearance.theme as 'artsnob' | 'standard' | 'minimal');
-          }
-          if (typeof appearance.darkMode === 'boolean') {
-            const current = document.documentElement.getAttribute('data-theme') === 'dark';
-            if (appearance.darkMode !== current) get().toggleDarkMode();
-          }
-        } catch (error) {
-          console.warn('Failed to load appearance from server:', error);
-        }
       },
 
       // statusMessage: null, // Deprecated
@@ -2259,10 +2271,91 @@ export const useStore = create<State>()(
       uiSettings: initializeUiSettings(),
       themeColors: (() => {
         const colors = initializeThemeColors();
-        applyThemeColorsToDocument(colors);
-        const presetId = localStorage.getItem('themePresetId') || 'reason-rack';
-        const preset = getPresetById(presetId) ?? getPresetById('reason-rack');
-        if (preset) applyRackChrome(preset.rack);
+        // Apply CSS custom properties on initialization
+        const root = document.documentElement;
+        
+        // Calculate rotated hues if hue rotation is set
+        const rotation = colors.hueRotation || 0;
+        const applyRotation = (hue: number) => ((hue + rotation + 360) % 360);
+        
+        // Primary colors
+        root.style.setProperty('--theme-primary-hue', `${applyRotation(colors.primaryHue)}`);
+        root.style.setProperty('--theme-primary-saturation', `${colors.primarySaturation}%`);
+        root.style.setProperty('--theme-primary-brightness', `${colors.primaryBrightness}%`);
+        root.style.setProperty('--theme-secondary-hue', `${applyRotation(colors.secondaryHue)}`);
+        root.style.setProperty('--theme-secondary-saturation', `${colors.secondarySaturation}%`);
+        root.style.setProperty('--theme-secondary-brightness', `${colors.secondaryBrightness}%`);
+        root.style.setProperty('--theme-accent-hue', `${applyRotation(colors.accentHue)}`);
+        root.style.setProperty('--theme-accent-saturation', `${colors.accentSaturation}%`);
+        root.style.setProperty('--theme-accent-brightness', `${colors.accentBrightness}%`);
+        
+        // Background controls
+        const bgBrightness = colors.backgroundBrightness ?? 25;
+        const bgHue = colors.backgroundHue ?? 220;
+        const bgSaturation = colors.backgroundSaturation ?? 20;
+        root.style.setProperty('--theme-background-hue', `${bgHue}`);
+        root.style.setProperty('--theme-background-saturation', `${bgSaturation}%`);
+        root.style.setProperty('--theme-background-brightness', `${bgBrightness}%`);
+        const bgColor = `hsl(${bgHue}, ${bgSaturation}%, ${bgBrightness}%)`;
+        root.style.setProperty('--color-background', bgColor);
+        root.style.setProperty('--bg-primary', bgColor);
+        
+        // Semantic colors
+        root.style.setProperty('--theme-success-hue', `${applyRotation(colors.successHue ?? 142)}`);
+        root.style.setProperty('--theme-success-saturation', `${colors.successSaturation ?? 71}%`);
+        root.style.setProperty('--theme-success-brightness', `${colors.successBrightness ?? 47}%`);
+        root.style.setProperty('--theme-warning-hue', `${applyRotation(colors.warningHue ?? 38)}`);
+        root.style.setProperty('--theme-warning-saturation', `${colors.warningSaturation ?? 92}%`);
+        root.style.setProperty('--theme-warning-brightness', `${colors.warningBrightness ?? 51}%`);
+        root.style.setProperty('--theme-error-hue', `${applyRotation(colors.errorHue ?? 0)}`);
+        root.style.setProperty('--theme-error-saturation', `${colors.errorSaturation ?? 84}%`);
+        root.style.setProperty('--theme-error-brightness', `${colors.errorBrightness ?? 60}%`);
+        root.style.setProperty('--theme-info-hue', `${applyRotation(colors.infoHue ?? 217)}`);
+        root.style.setProperty('--theme-info-saturation', `${colors.infoSaturation ?? 91}%`);
+        root.style.setProperty('--theme-info-brightness', `${colors.infoBrightness ?? 59}%`);
+        
+        // Text colors
+        const textHue = bgHue;
+        root.style.setProperty('--theme-text-primary-brightness', `${colors.textPrimaryBrightness ?? 90}%`);
+        root.style.setProperty('--theme-text-secondary-brightness', `${colors.textSecondaryBrightness ?? 65}%`);
+        root.style.setProperty('--theme-text-tertiary-brightness', `${colors.textTertiaryBrightness ?? 50}%`);
+        const textPrimaryColor = `hsl(${textHue}, ${bgSaturation}%, ${colors.textPrimaryBrightness ?? 90}%)`;
+        const textSecondaryColor = `hsl(${textHue}, ${bgSaturation}%, ${colors.textSecondaryBrightness ?? 65}%)`;
+        const textTertiaryColor = `hsl(${textHue}, ${bgSaturation}%, ${colors.textTertiaryBrightness ?? 50}%)`;
+        root.style.setProperty('--color-text', textPrimaryColor);
+        root.style.setProperty('--text-primary', textPrimaryColor);
+        root.style.setProperty('--text-secondary', textSecondaryColor);
+        root.style.setProperty('--text-tertiary', textTertiaryColor);
+        
+        // Border colors
+        const borderBrightness = colors.borderBrightness ?? 30;
+        const borderSaturation = colors.borderSaturation ?? 15;
+        const borderColor = `hsl(${bgHue}, ${borderSaturation}%, ${borderBrightness}%)`;
+        root.style.setProperty('--color-border', borderColor);
+        root.style.setProperty('--border-color', borderColor);
+        root.style.setProperty('--color-card-border', borderColor);
+        
+        // Card/Surface colors
+        const cardBrightness = Math.min(100, bgBrightness + (colors.cardBrightness ?? 8));
+        const cardSaturation = colors.cardSaturation ?? bgSaturation;
+        const cardColor = `hsl(${bgHue}, ${cardSaturation}%, ${cardBrightness}%)`;
+        root.style.setProperty('--color-card-bg', cardColor);
+        root.style.setProperty('--bg-secondary', cardColor);
+        
+        // Status colors
+        root.style.setProperty('--theme-status-connected-hue', `${colors.statusConnectedHue ?? 142}`);
+        root.style.setProperty('--theme-status-disconnected-hue', `${colors.statusDisconnectedHue ?? 0}`);
+        root.style.setProperty('--theme-status-active-hue', `${colors.statusActiveHue ?? 142}`);
+        root.style.setProperty('--theme-status-inactive-brightness', `${colors.statusInactiveBrightness ?? 50}%`);
+        const statusConnectedColor = `hsl(${colors.statusConnectedHue ?? 142}, 71%, 47%)`;
+        const statusDisconnectedColor = `hsl(${colors.statusDisconnectedHue ?? 0}, 84%, 60%)`;
+        const statusActiveColor = `hsl(${colors.statusActiveHue ?? 142}, 71%, 47%)`;
+        const statusInactiveColor = `hsl(${bgHue}, ${bgSaturation}%, ${colors.statusInactiveBrightness ?? 50}%)`;
+        root.style.setProperty('--color-status-connected', statusConnectedColor);
+        root.style.setProperty('--color-status-disconnected', statusDisconnectedColor);
+        root.style.setProperty('--color-status-active', statusActiveColor);
+        root.style.setProperty('--color-status-inactive', statusInactiveColor);
+        
         return colors;
       })(),
 
@@ -2320,21 +2413,6 @@ export const useStore = create<State>()(
       channelTicksOnlyOverrides: (() => {
         try {
           const raw = localStorage.getItem('dmxChannelTicksOnlyOverrides');
-          if (!raw) return {};
-          const parsed = JSON.parse(raw) as Record<string, boolean>;
-          const out: Record<number, boolean> = {};
-          Object.entries(parsed).forEach(([k, v]) => {
-            const idx = parseInt(k, 10);
-            if (!Number.isNaN(idx) && idx >= 0 && idx < 512) out[idx] = Boolean(v);
-          });
-          return out;
-        } catch {
-          return {};
-        }
-      })(),
-      channelAuxFullFaderOverrides: (() => {
-        try {
-          const raw = localStorage.getItem('dmxChannelAuxFullFaderOverrides');
           if (!raw) return {};
           const parsed = JSON.parse(raw) as Record<string, boolean>;
           const out: Record<number, boolean> = {};
@@ -2882,7 +2960,7 @@ export const useStore = create<State>()(
             }
 
             debugLog.log('✅ Initial state applied successfully');
-            void get().loadAppearanceFromServer();
+            // No explicit success notification here, to avoid clutter on normal startup
             return
           }
           throw new Error('Invalid response from server')
@@ -4099,14 +4177,6 @@ export const useStore = create<State>()(
         });
       },
       loadScene: (nameOrIndex) => {
-        const override = get().pendingSceneTransitionOverride;
-        if (override) {
-          set({
-            transitionDuration: override.transitionMs,
-            transitionEasing: override.easing,
-            pendingSceneTransitionOverride: null,
-          });
-        }
         const { scenes, isTransitioning, currentTransitionFrame, dmxChannels: currentDmxState, transitionDuration, groups, fixtures } = get();
         let scene;
 
@@ -4650,7 +4720,12 @@ export const useStore = create<State>()(
 
         // Load the first scene and apply autopilot settings
         const firstStep = act.steps[0];
-        get().applyActStepPlayback(firstStep);
+        get().loadScene(firstStep.sceneName);
+
+        // Apply autopilot settings for the first step
+        if (firstStep.autopilotSettings?.enabled) {
+          get().applyActStepAutopilot(firstStep);
+        }
 
         get().addNotification({
           message: `Playing act '${act.name}'`,
@@ -4703,7 +4778,10 @@ export const useStore = create<State>()(
               }
             }));
             const firstStep = act.steps[0];
-            get().applyActStepPlayback(firstStep);
+            get().loadScene(firstStep.sceneName);
+            if (firstStep.autopilotSettings?.enabled) {
+              get().applyActStepAutopilot(firstStep);
+            }
           } else {
             get().stopAct();
           }
@@ -4717,7 +4795,10 @@ export const useStore = create<State>()(
             }
           }));
           const nextStep = act.steps[nextIndex];
-          get().applyActStepPlayback(nextStep);
+          get().loadScene(nextStep.sceneName);
+          if (nextStep.autopilotSettings?.enabled) {
+            get().applyActStepAutopilot(nextStep);
+          }
         }
       },
 
@@ -4740,7 +4821,10 @@ export const useStore = create<State>()(
             }
           }));
           const prevStep = act.steps[prevIndex];
-          get().applyActStepPlayback(prevStep);
+          get().loadScene(prevStep.sceneName);
+          if (prevStep.autopilotSettings?.enabled) {
+            get().applyActStepAutopilot(prevStep);
+          }
         }
       },
 
@@ -5754,10 +5838,6 @@ export const useStore = create<State>()(
       startEnvelopeAnimation: () => {
         const { envelopeAutomation } = get();
 
-        if (get().transitionTrackerPlayback?.active) {
-          get().stopTransitionTrackerPlayback();
-        }
-
         // Stop existing animation
         if (envelopeAutomation.animationId) {
           cancelAnimationFrame(envelopeAutomation.animationId);
@@ -6103,32 +6183,7 @@ export const useStore = create<State>()(
           }
         }
 
-        const auxOverrides = { ...state.channelAuxFullFaderOverrides };
-        if (!ticksOnly) {
-          delete auxOverrides[dmxAddress];
-          try {
-            localStorage.setItem('dmxChannelAuxFullFaderOverrides', JSON.stringify(auxOverrides));
-          } catch {
-            /* ignore */
-          }
-        }
-        set({ channelTicksOnlyOverrides: overrides, channelAuxFullFaderOverrides: auxOverrides, fixtures });
-      },
-      getChannelAuxFullFader: (dmxAddress: number) => {
-        return Boolean(get().channelAuxFullFaderOverrides[dmxAddress]);
-      },
-      setChannelAuxFullFader: (dmxAddress: number, enabled: boolean) => {
-        const overrides = { ...get().channelAuxFullFaderOverrides, [dmxAddress]: enabled };
-        try {
-          localStorage.setItem('dmxChannelAuxFullFaderOverrides', JSON.stringify(overrides));
-        } catch {
-          /* ignore */
-        }
-        set({ channelAuxFullFaderOverrides: overrides });
-      },
-      toggleChannelAuxFullFader: (dmxAddress: number) => {
-        const state = get();
-        state.setChannelAuxFullFader(dmxAddress, !state.getChannelAuxFullFader(dmxAddress));
+        set({ channelTicksOnlyOverrides: overrides, fixtures });
       },
       setActiveSessionId: (sessionId) => {
         const sid = sessionId.trim().slice(0, 64) || 'default';
@@ -6753,8 +6808,6 @@ export const useStore = create<State>()(
         const state = get();
         return state.getChannelInfo(dmxAddress) !== null;
       },
-
-      ...createTransitionTrackerSlice(set, get),
     })) as unknown as StateCreator<State>
   )
 );

@@ -41,8 +41,38 @@
 
 .tab {
   flex: 1 0 auto;
-  min-width: 7.5rem;
+  min-width: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: rgba(71, 85, 105, 0.2);
+  border: 1px solid rgba(71, 85, 105, 0.3);
+  border-radius: 8px;
+  color: var(--color-text-secondary, #94a3b8);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
   min-height: 44px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+
+  &:hover {
+    background: rgba(71, 85, 105, 0.3);
+    border-color: rgba(16, 185, 129, 0.4);
+  }
+
+  &.active {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: #10b981;
+    color: #10b981;
+    
+    &:hover {
+      background: rgba(16, 185, 129, 0.3);
+    }
+  }
 }
 
 .tabIcon {

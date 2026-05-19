@@ -1439,43 +1439,4 @@ apiRouter.post('/bridge/token/revoke', (req, res) => {
   res.json({ success: true });
 });
 
-const APPEARANCE_FILE = path.join(DATA_DIR, 'appearance.json');
-
-const loadAppearance = (): Record<string, unknown> => {
-  try {
-    if (fs.existsSync(APPEARANCE_FILE)) {
-      return JSON.parse(fs.readFileSync(APPEARANCE_FILE, 'utf-8'));
-    }
-  } catch (error) {
-    log('Failed to load appearance.json', 'WARN', { error });
-  }
-  return {};
-};
-
-const saveAppearance = (data: Record<string, unknown>): boolean => {
-  try {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-    fs.writeFileSync(APPEARANCE_FILE, JSON.stringify(data, null, 2));
-    return true;
-  } catch (error) {
-    log('Failed to save appearance.json', 'ERROR', { error });
-    return false;
-  }
-};
-
-apiRouter.get('/appearance', (_req, res) => {
-  res.json(loadAppearance());
-});
-
-apiRouter.post('/appearance', (req, res) => {
-  const body = req.body && typeof req.body === 'object' ? req.body : {};
-  const merged = { ...loadAppearance(), ...body, updatedAt: Date.now() };
-  if (!saveAppearance(merged)) {
-    res.status(500).json({ error: 'Failed to save appearance' });
-    return;
-  }
-  global.io?.emit('appearanceUpdated', merged);
-  res.json({ success: true, appearance: merged });
-});
-
 export { apiRouter, registerApiSocketHandlers, loadFixturesData };

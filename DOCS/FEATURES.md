@@ -1,4 +1,4 @@
-# ArtBastard Features (v5.15.0)
+# ArtBastard Features (v5.12.0)
 
 Feature inventory after the rebuild consolidation. Subsystem first, then
 notable shipped features.
@@ -17,35 +17,6 @@ notable shipped features.
   per show today; separate isolated sessions per tenant are future work.
 - Consolidated backend lifecycle and unified fixture persistence service.
 - Network interface auto-detection with ICMP ping verification.
-
-## Rack UI and automation (v5.14.0+)
-
-- Reason-style rack modules (`reason-rack.scss`, `components/ui/rack/`).
-- DMX page **Automation** workbench: envelopes + **transition tracker**
-  (pattern lines, scene/FX/easing columns, hex channel values, BPM/LPB play).
-- Fixture-aware tracker lanes (pan/tilt, RGB, color wheel, gobo, dimmer, beam,
-  FX, full mover) with scope All / Selected / Moving heads.
-- Tracker **pages** (up to 64 channel columns), live hex preview row, envelope
-  sync (**Env to grid** / **Grid to env**).
-- Per-channel envelope strip under faders: PLAY/EDIT, mode buttons that arm
-  without auto-loop (Shift+click to start).
-
-### Tracker channel columns (v5.15.0)
-
-- Grid columns match the active page chip list only (no implicit CH 1-8).
-- Add channels: number + Add, **+ Selection**, or collapsible fixture lanes.
-- Remove: **x** on a chip or **Clear all**; optional **+ Pinned** merges
-  sidebar-pinned channels into the grid.
-- New pages start empty; saved patterns from older builds may still list CH 1-8
-  until you trim them.
-
-## Theme mastering (Macroverse-style)
-
-- Rack chrome presets (Reason Rack, Wired Atelier, Synthwave, Ocean, etc.).
-- HSL palette + rack tokens apply **live** as you adjust sliders (v5.15.0);
-  debounced `POST /api/appearance` (`data/appearance.json` on the server).
-- **Sync now** pushes appearance immediately; **Reload UI** reapplies server state.
-- Other clients receive `appearanceUpdated` and reload shared appearance.
 
 ## Operator UI (remaster, May 2026)
 
@@ -75,8 +46,8 @@ ranges where low traffic warrants it.
   - Footer / status row
 - Channel and fixture filtering utilities with regression tests.
 - Pinned channel summaries and active channel visibility helpers.
-- Theme system with HSL controls, typography scale, spacing tokens, rack
-  presets, and server-synced appearance (`/api/appearance`).
+- Theme system with HSL controls, typography scale, spacing tokens, and
+  five preset themes.
 
 ## Scenes, acts, and timelines
 
