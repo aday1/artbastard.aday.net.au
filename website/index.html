@@ -8,10 +8,10 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,600;0,700;1,500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,600;0,700;1,500&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="particles" id="particles"></div>
+    <div class="particles dmx-wash" id="particles" aria-hidden="true"></div>
 
     <nav class="navbar">
         <div class="container">
@@ -20,6 +20,7 @@
                 <span class="brand-text">ArtBastard</span>
             </div>
             <div class="nav-links">
+                <a href="#luminary">Luminary</a>
                 <a href="#tour">Tour</a>
                 <a href="#features">Features</a>
                 <a href="#download">Download</a>
@@ -38,10 +39,20 @@
                         <span class="gradient-text">ArtBastard</span>
                         <span class="hero-subtitle">DMX512 v5.16.0 - Tracker Columns Edition</span>
                     </h1>
+                    <p class="tagline">Breath of Light Manuscripts // Photonic Supremacy</p>
+                    <blockquote class="canon-quote canon-quote-hero">
+                        "Light belongs to no one; it is our honor merely to dance with it for a time."
+                        &mdash; Grand Master Feng Zhi, Illuminating Wind Dancing Masters
+                    </blockquote>
                     <p class="canon-quote">
                         From the Illuminating Wind Dancing Masters to modern photonic mastery:
                         conduct photons with the finesse of a Parisian maitre d'eclairage.
                     </p>
+                    <div class="hero-ticker" id="hero-ticker" aria-live="polite">
+                        <span class="hero-ticker-label">Luminary dispatch</span>
+                        <q id="hero-ticker-text">Loading aristocratic wisdom...</q>
+                        <cite id="hero-ticker-author"></cite>
+                    </div>
                     <p class="hero-description">
                         <em>Elite illumination control for the discerning luminaire artist.</em><br>
                         512 channels per universe, Art-Net output, MIDI Learn with controller templates,
@@ -76,7 +87,7 @@
                             <span class="stat-label">DMX Channels</span>
                         </div>
                         <div class="stat">
-                            <span class="stat-number">5</span>
+                            <span class="stat-number">8</span>
                             <span class="stat-label">Demo Clips</span>
                         </div>
                         <div class="stat">
@@ -89,6 +100,101 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </section>
+
+        <section id="luminary" class="luminary">
+            <div class="container">
+                <p class="luminary-chip">Exhibits B Through Infinity</p>
+                <h2 class="section-title luminary-title">The Luminary Aristocracy</h2>
+                <p class="section-subtitle">
+                    Pretentious lighting nonsense for the discerning cognoscenti.
+                    Same quote deck as the in-app ArtSnob theme &mdash; now unleashed upon the public web.
+                </p>
+
+                <div id="luminary-stage" class="luminary-stage" role="status" aria-live="polite">
+                    <span class="quote-deco" aria-hidden="true">&ldquo;</span>
+                    <q id="luminary-quote-text">Loading the photonic manifesto...</q>
+                    <div id="luminary-quote-author" class="luminary-quote-author"></div>
+                    <div class="luminary-toolbar">
+                        <button type="button" id="btn-luminary-next">Another quote</button>
+                        <button type="button" id="btn-luminary-random">Random aristocrat</button>
+                        <button type="button" id="btn-luminary-pause">Pause rotation</button>
+                        <span class="luminary-meta" id="luminary-meta"></span>
+                    </div>
+                </div>
+
+                <div class="breath-panel">
+                    <h3 class="breath-title">Breath of Light Manuscripts</h3>
+                    <p>
+                        ArtBastard is not merely software &mdash; it is the digital descendant of an ancient and noble tradition.
+                        The Wind Dancing Masters shared illumination freely; Le Cr&eacute;ateur des Lumi&egrave;res forged this
+                        bastard child of art and DMX in a Parisian warehouse sustained by espresso and questionable Camembert.
+                        Light is emotion made visible. Occasionally it helps you find your keys.
+                    </p>
+                    <p class="breath-link">
+                        <a href="https://github.com/aday1/artbastard.aday.net.au/blob/main/DOCS/HISTORY.md">Read the full chronicles</a>
+                    </p>
+                </div>
+
+                <div class="rack-doctrine-panel">
+                    <div class="rack-module-mock">
+                        <div class="rack-module-header">
+                            <span class="rack-screw rack-screw-tl" aria-hidden="true"></span>
+                            <span class="rack-screw rack-screw-tr" aria-hidden="true"></span>
+                            <span class="rack-module-title">RACK DOCTRINE v5.16</span>
+                        </div>
+                        <div class="rack-module-body">
+                            <p>
+                                Reason-style rack modules. Corner screws. Striped headers. Rotary knobs.
+                                Gold metallic faders. This is not decoration &mdash; it is how operators
+                                recognize ArtBastard in the dark.
+                            </p>
+                            <a href="#features" class="btn btn-secondary rack-doctrine-link">See rack features</a>
+                        </div>
+                        <span class="rack-screw rack-screw-bl" aria-hidden="true"></span>
+                        <span class="rack-screw rack-screw-br" aria-hidden="true"></span>
+                    </div>
+                </div>
+
+                <h3 class="reviews-heading">Academy des Illuminations Pr&eacute;tentieuses &mdash; Selected Reviews</h3>
+                <div class="reviews-grid">
+                    <article class="review-card review-five">
+                        <div class="review-stars" aria-label="Five stars">*****</div>
+                        <h4>A Photonic Revelation</h4>
+                        <p class="review-author">Marquis de Luminaire-Supr&ecirc;me, Th&eacute;&acirc;tre de l'Op&eacute;ra de Paris</p>
+                        <p>ArtBastard has transformed my approach to lighting design. The face tracking feature alone is worth the price of admission. Five stars, sans h&eacute;sitation.</p>
+                    </article>
+                    <article class="review-card review-five">
+                        <div class="review-stars" aria-label="Five stars">*****</div>
+                        <h4>Conducting Photons</h4>
+                        <p class="review-author">Comtesse des Ombres &Eacute;l&eacute;gantes</p>
+                        <p>The OSC integration is flawless, the gesture recognition is revolutionary, and the elitist aesthetic reminds me that I am not merely operating lights. Five stars, naturally.</p>
+                    </article>
+                    <article class="review-card review-four">
+                        <div class="review-stars" aria-label="Four stars">****</div>
+                        <h4>Excellent, With Minor Reservations</h4>
+                        <p class="review-author">Henri Photon-Narcisse, Acad&eacute;mie des Illuminations Pr&eacute;tentieuses</p>
+                        <p>Remarkable achievement. The documentation still lacks the philosophical depth I would prefer. Four stars, with hope for more existential musings on light itself.</p>
+                    </article>
+                    <article class="review-card review-three">
+                        <div class="review-stars" aria-label="Three stars">***</div>
+                        <h4>Competent, Yet Restrained</h4>
+                        <p class="review-author">Baron von Beleuchtungskunst</p>
+                        <p>Face tracking is interesting, though I find the interface somewhat lacking in the artistic pretension I would prefer. Three stars.</p>
+                    </article>
+                    <article class="review-card review-one">
+                        <div class="review-stars" aria-label="One star">*</div>
+                        <h4>Unnecessary</h4>
+                        <p class="review-author">Sol Invictus</p>
+                        <p>I have been using the sun for my lighting shows for billions of years. It has never required configuration, updates, or face tracking. One star, and that is generous.</p>
+                        <p class="review-editor">Editor's note: The sun cannot be controlled via MIDI, OSC, or face tracking.</p>
+                    </article>
+                </div>
+
+                <h3 class="quote-wall-heading">The Complete Luminary Quote Wall</h3>
+                <p class="quote-wall-lede">All <span id="quote-wall-count">62</span> aristocrats. Each card tinted to their personal photonic wavelength.</p>
+                <div id="quote-wall" class="quote-wall"></div>
             </div>
         </section>
 
@@ -145,6 +251,33 @@
                             <span>Theme system, network detection, help overlay (also Ctrl+H).</span>
                         </figcaption>
                     </figure>
+                    <figure class="video-tile" data-video="videos/touchosc.webm">
+                        <video controls preload="none" playsinline muted
+                               poster="videos/touchosc.jpg" data-src="videos/touchosc.webm">
+                        </video>
+                        <figcaption>
+                            <strong>TouchOSC Workflow</strong>
+                            <span>Export, map, and drive Super Control from a tablet OSC surface.</span>
+                        </figcaption>
+                    </figure>
+                    <figure class="video-tile" data-video="videos/external-console.webm">
+                        <video controls preload="none" playsinline muted
+                               poster="videos/external-console.jpg" data-src="videos/external-console.webm">
+                        </video>
+                        <figcaption>
+                            <strong>External Console</strong>
+                            <span>Second-screen operator layout for dedicated control stations.</span>
+                        </figcaption>
+                    </figure>
+                    <figure class="video-tile" data-video="videos/experimental.webm">
+                        <video controls preload="none" playsinline muted
+                               poster="videos/experimental.jpg" data-src="videos/experimental.webm">
+                        </video>
+                        <figcaption>
+                            <strong>Experimental Surfaces</strong>
+                            <span>Prototype routes and experimental UI panels under active development.</span>
+                        </figcaption>
+                    </figure>
                 </div>
                 <p class="tour-note">
                     Want to record your own? See
@@ -156,13 +289,13 @@
 
         <section id="features" class="features">
             <div class="container">
-                <h2 class="section-title">What Ships in v5.16.0</h2>
+                <h2 class="section-title">Instruments of Photonic Supremacy</h2>
                 <p class="section-subtitle">
                     "Mes amis, you hold before you not mere software, but symphonic mastery
                     over the electromagnetic spectrum itself."
                 </p>
                 <div class="features-grid">
-                    <div class="feature-card">
+                    <div class="feature-card feature-card-rack">
                         <div class="feature-icon">RACK</div>
                         <h3>Reason-Style Rack UI</h3>
                         <p>Skeuomorphic rack modules, rotary knobs, LEDs, and tab strips across DMX,
@@ -395,11 +528,18 @@
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2026 ArtBastard DMX512 v5.16.0 - Tracker Columns Edition Edition. MIT licensed.</p>
+                <p class="footer-canon">
+                    "Light is not merely illumination &mdash; it is emotion made visible, dreams given form."
+                </p>
+                <p>
+                    &copy; 2026 ArtBastard DMX512 v5.16.0 - Tracker Columns Edition. MIT licensed.
+                    <a href="https://github.com/aday1/artbastard.aday.net.au/blob/main/DOCS/HISTORY.md">Chronicles</a>
+                </p>
             </div>
         </div>
     </footer>
 
+    <script src="../DOCS/showcase-quotes-data.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

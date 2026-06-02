@@ -28,6 +28,8 @@ body::before {
     pointer-events: none;
     z-index: -1;
     background:
+        radial-gradient(ellipse 45% 35% at 75% 15%, rgba(255, 0, 255, 0.06) 0%, transparent 50%),
+        radial-gradient(ellipse 40% 30% at 10% 70%, rgba(132, 255, 0, 0.05) 0%, transparent 48%),
         radial-gradient(ellipse 70% 50% at 50% -10%, rgba(238, 136, 51, 0.14) 0%, transparent 60%),
         radial-gradient(ellipse 40% 30% at 20% 80%, rgba(200, 146, 42, 0.08) 0%, transparent 55%),
         var(--void);
@@ -179,6 +181,50 @@ code {
     padding: 0.1rem 0.35rem;
     border-radius: 3px;
     font-size: 0.9em;
+}
+
+.hub-quote-panel {
+    border-left: 3px solid var(--gold);
+}
+
+.hub-quote-stage {
+    margin-top: 0.5rem;
+    padding: 0.75rem 0.5rem 0.5rem;
+    transition: opacity 0.4s ease;
+}
+
+.hub-quote-stage.dim {
+    opacity: 0;
+}
+
+.hub-quote-stage q {
+    display: block;
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-style: italic;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: var(--parchment);
+    quotes: none;
+}
+
+.hub-quote-stage q::before,
+.hub-quote-stage q::after {
+    content: none;
+}
+
+.hub-quote-stage cite {
+    display: block;
+    margin-top: 0.5rem;
+    font-style: normal;
+    font-size: 0.75rem;
+    text-align: right;
+    color: var(--flame);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body::before {
+        animation: none;
+    }
 }
 
 @media (max-width: 600px) {

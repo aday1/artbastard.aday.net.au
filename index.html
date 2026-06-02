@@ -7,7 +7,7 @@
   <meta name="description" content="ArtBastard GitHub showcase - Wind Dancing Masters lineage, browser DMX512 control, demo reel, and links to the live app.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,600;0,700;1,500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,600;0,700;1,500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="website/hub.css">
 </head>
 <body>
@@ -27,9 +27,18 @@
 
     <div class="hero-actions">
       <a class="btn btn-live" href="https://artbastard.aday.net.au/">Try it live</a>
+      <a class="btn btn-secondary" href="website/#luminary">Luminary aristocracy</a>
       <a class="btn btn-secondary" href="website/">Full showcase tour</a>
       <a class="btn btn-secondary" href="https://github.com/aday1/artbastard.aday.net.au/releases">Download</a>
       <a class="btn btn-secondary" href="https://github.com/aday1/artbastard.aday.net.au">Source on GitHub</a>
+    </div>
+
+    <div class="panel hub-quote-panel">
+      <strong>Luminary dispatch</strong>
+      <div id="hub-quote-stage" class="hub-quote-stage" role="status" aria-live="polite">
+        <q id="hub-quote-text">Loading aristocratic wisdom...</q>
+        <cite id="hub-quote-author"></cite>
+      </div>
     </div>
 
     <div class="panel">
@@ -56,6 +65,7 @@
     <div class="panel">
       <strong>Where to go</strong>
       <ul>
+        <li>Luminary aristocracy (62 quotes): <a href="website/#luminary">/website/#luminary</a></li>
         <li>Full showcase (videos + features + docs): <a href="website/">/website/</a></li>
         <li>Live app: <a href="https://artbastard.aday.net.au">artbastard.aday.net.au</a></li>
         <li>Dev / pre-prod: <a href="https://artbastard-dev.aday.net.au">artbastard-dev.aday.net.au</a></li>
@@ -66,7 +76,7 @@
     <div class="panel">
       <strong>Demo reel</strong>
       <p class="small" style="margin-top:0;margin-bottom:0.6rem;">
-        Five short WebM clips recorded straight off the running app.
+        Eight short WebM clips recorded straight off the running app.
       </p>
       <ul>
         <li><a href="website/videos/dmx-control.webm">DMX Control Home</a></li>
@@ -74,10 +84,15 @@
         <li><a href="website/videos/scenes-acts.webm">Scenes &amp; Acts</a></li>
         <li><a href="website/videos/mobile.webm">Mobile Control Surface</a></li>
         <li><a href="website/videos/settings-help.webm">Settings &amp; In-App Help</a></li>
+        <li><a href="website/videos/touchosc.webm">TouchOSC Workflow</a></li>
+        <li><a href="website/videos/external-console.webm">External Console</a></li>
+        <li><a href="website/videos/experimental.webm">Experimental Surfaces</a></li>
       </ul>
     </div>
 
     <p class="small">This page is a quick-jump hub, not the primary app runtime.</p>
   </div>
+  <script src="DOCS/showcase-quotes-data.js"></script>
+  <script src="website/hub-quotes.js"></script>
 </body>
 </html>
