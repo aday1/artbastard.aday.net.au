@@ -8,91 +8,140 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,600;0,700;1,500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="website/theatrical.css">
   <link rel="stylesheet" href="website/hub.css">
 </head>
-<body>
-  <div class="wrap">
-    <p class="showcase-banner">GitHub Showcase Page // not the primary live app</p>
-    <p class="tagline">Breath of Light Manuscripts // Photonic Supremacy</p>
-    <h1>ArtBastard // Browser DMX Control</h1>
-    <p class="canon-quote">
-      "Light belongs to no one; it is our honor merely to dance with it for a time."
-      &mdash; Grand Master Feng Zhi, Illuminating Wind Dancing Masters
-    </p>
-    <p class="small">
-      Showcase landing for the ArtBastard project: deployment targets, demo reel, and
-      the digital descendant of candle choreography. May 2026 operator remaster is live on
-      <a href="https://artbastard.aday.net.au">artbastard.aday.net.au</a>.
-    </p>
-
-    <div class="hero-actions">
-      <a class="btn btn-live" href="https://artbastard.aday.net.au/">Try it live</a>
-      <a class="btn btn-secondary" href="website/#luminary">Luminary aristocracy</a>
-      <a class="btn btn-secondary" href="website/">Full showcase tour</a>
-      <a class="btn btn-secondary" href="https://github.com/aday1/artbastard.aday.net.au/releases">Download</a>
-      <a class="btn btn-secondary" href="https://github.com/aday1/artbastard.aday.net.au">Source on GitHub</a>
-    </div>
-
-    <div class="panel hub-quote-panel">
-      <strong>Luminary dispatch</strong>
-      <div id="hub-quote-stage" class="hub-quote-stage" role="status" aria-live="polite">
-        <q id="hub-quote-text">Loading aristocratic wisdom...</q>
-        <cite id="hub-quote-author"></cite>
+<body class="theatre-body">
+  <div class="theatre" id="theatre">
+    <div class="theatre-decor" aria-hidden="true">
+      <div class="curtain-l"></div>
+      <div class="curtain-r"></div>
+      <span class="curtain-label curtain-label-l">Coulisse // Exhibits B Through Infinity</span>
+      <span class="curtain-label curtain-label-r">Coulisse // Exhibits B Through Infinity</span>
+      <div class="rig-bar">
+        <span class="rig-label">Instruments of Photonic Supremacy</span>
+        <div class="rig-can"></div>
+        <div class="rig-can"></div>
+        <div class="rig-can"></div>
+        <div class="rig-can"></div>
+        <div class="rig-can"></div>
+        <div class="rig-can"></div>
+        <div class="rig-can"></div>
+      </div>
+      <div class="spotlight-wash"></div>
+      <div class="stage-floor"></div>
+      <div class="footlights">
+        <span class="footlights-label">Ligne de fosse // pour les connaisseurs seulement</span>
+        <div class="footlight"></div>
+        <div class="footlight"></div>
+        <div class="footlight"></div>
+        <div class="footlight"></div>
+        <div class="footlight"></div>
+        <div class="footlight"></div>
+        <div class="footlight"></div>
+        <div class="footlight"></div>
+        <div class="footlight"></div>
       </div>
     </div>
 
-    <div class="panel">
-      <strong>Deployment targets</strong>
-      <div class="dep-row">
-        <span class="dep-key">Live app</span>
-        <span class="dep-val"><a href="https://artbastard.aday.net.au">artbastard.aday.net.au</a> &mdash; cloud DMX control plane</span>
-      </div>
-      <div class="dep-row">
-        <span class="dep-key">Dev lane</span>
-        <span class="dep-val"><a href="https://artbastard-dev.aday.net.au">artbastard-dev.aday.net.au</a> (image <code>:dev</code>)</span>
-      </div>
-      <div class="dep-row">
-        <span class="dep-key">Showcase</span>
-        <span class="dep-val"><a href="https://aday1.github.io/artbastard.aday.net.au/">aday1.github.io/artbastard.aday.net.au</a></span>
-      </div>
-      <div class="dep-row">
-        <span class="dep-key">Source</span>
-        <span class="dep-val"><a href="https://github.com/aday1/artbastard.aday.net.au">github.com/aday1/artbastard.aday.net.au</a></span>
-      </div>
-      <p class="dep-note">// this is the GitHub showcase page &mdash; the live runtime above serves the actual app</p>
-    </div>
+    <div class="theatre-content proscenium">
+      <p id="theatre-whisper" class="theatre-whisper" aria-live="polite"></p>
+      <div class="wrap">
+        <p class="showcase-banner">GitHub Showcase Page // not the primary live app</p>
+        <span class="showcase-banner-sub">Academie des Illuminations Pretentieuses</span>
+        <p class="tagline">Breath of Light Manuscripts // Photonic Supremacy</p>
+        <span class="tagline-secondary">Theatre des Photons // ruelle parisienne</span>
+        <h1>ArtBastard // Browser DMX Control</h1>
+        <p class="canon-quote">
+          "Light belongs to no one; it is our honor merely to dance with it for a time."
+          &mdash; Grand Master Feng Zhi, Illuminating Wind Dancing Masters
+        </p>
+        <p class="small">
+          Showcase landing for the ArtBastard project: deployment targets, demo reel, and
+          the digital descendant of candle choreography. May 2026 operator remaster is live on
+          <a href="https://artbastard.aday.net.au">artbastard.aday.net.au</a>.
+        </p>
 
-    <div class="panel">
-      <strong>Where to go</strong>
-      <ul>
-        <li>Luminary aristocracy (62 quotes): <a href="website/#luminary">/website/#luminary</a></li>
-        <li>Full showcase (videos + features + docs): <a href="website/">/website/</a></li>
-        <li>Live app: <a href="https://artbastard.aday.net.au">artbastard.aday.net.au</a></li>
-        <li>Dev / pre-prod: <a href="https://artbastard-dev.aday.net.au">artbastard-dev.aday.net.au</a></li>
-        <li>Documentation: <a href="DOCS/">/DOCS/</a></li>
-      </ul>
-    </div>
+        <ul class="nav-chips" aria-label="ArtSnob navigation">
+          <li><a class="nav-chip" href="website/#features">Controle DMX Ultime</a></li>
+          <li><a class="nav-chip" href="website/#features">Fixture Extraordinaire</a></li>
+          <li><a class="nav-chip" href="website/#tour">Scenes Dramatiques</a></li>
+          <li><a class="nav-chip" href="website/#tour">Surface Tactile</a></li>
+          <li><a class="nav-chip" href="website/#download">Parametres Cognoscenti</a></li>
+        </ul>
 
-    <div class="panel">
-      <strong>Demo reel</strong>
-      <p class="small" style="margin-top:0;margin-bottom:0.6rem;">
-        Eight short WebM clips recorded straight off the running app.
-      </p>
-      <ul>
-        <li><a href="website/videos/dmx-control.webm">DMX Control Home</a></li>
-        <li><a href="website/videos/fixture-page.webm">Fixture Setup &amp; Super Control</a></li>
-        <li><a href="website/videos/scenes-acts.webm">Scenes &amp; Acts</a></li>
-        <li><a href="website/videos/mobile.webm">Mobile Control Surface</a></li>
-        <li><a href="website/videos/settings-help.webm">Settings &amp; In-App Help</a></li>
-        <li><a href="website/videos/touchosc.webm">TouchOSC Workflow</a></li>
-        <li><a href="website/videos/external-console.webm">External Console</a></li>
-        <li><a href="website/videos/experimental.webm">Experimental Surfaces</a></li>
-      </ul>
-    </div>
+        <div class="hero-actions">
+          <a class="btn btn-live" href="https://artbastard.aday.net.au/">Try it live</a>
+          <a class="btn btn-secondary" href="website/#luminary">Luminary aristocracy</a>
+          <a class="btn btn-secondary" href="website/">Full showcase tour</a>
+          <a class="btn btn-secondary" href="https://github.com/aday1/artbastard.aday.net.au/releases">Download</a>
+          <a class="btn btn-secondary" href="https://github.com/aday1/artbastard.aday.net.au">Source on GitHub</a>
+        </div>
 
-    <p class="small">This page is a quick-jump hub, not the primary app runtime.</p>
+        <div class="panel hub-quote-panel coulisse-panel">
+          <strong>Luminary dispatch</strong>
+          <div id="hub-quote-stage" class="hub-quote-stage" role="status" aria-live="polite">
+            <q id="hub-quote-text">Loading aristocratic wisdom...</q>
+            <cite id="hub-quote-author"></cite>
+          </div>
+        </div>
+
+        <div class="panel">
+          <strong>Deployment targets</strong>
+          <div class="dep-row">
+            <span class="dep-key">Live app</span>
+            <span class="dep-val"><a href="https://artbastard.aday.net.au">artbastard.aday.net.au</a> &mdash; cloud DMX control plane</span>
+          </div>
+          <div class="dep-row">
+            <span class="dep-key">Dev lane</span>
+            <span class="dep-val"><a href="https://artbastard-dev.aday.net.au">artbastard-dev.aday.net.au</a> (image <code>:dev</code>)</span>
+          </div>
+          <div class="dep-row">
+            <span class="dep-key">Showcase</span>
+            <span class="dep-val"><a href="https://aday1.github.io/artbastard.aday.net.au/">aday1.github.io/artbastard.aday.net.au</a></span>
+          </div>
+          <div class="dep-row">
+            <span class="dep-key">Source</span>
+            <span class="dep-val"><a href="https://github.com/aday1/artbastard.aday.net.au">github.com/aday1/artbastard.aday.net.au</a></span>
+          </div>
+          <p class="dep-note">// this is the GitHub showcase page &mdash; the live runtime above serves the actual app</p>
+        </div>
+
+        <div class="panel">
+          <strong>Where to go</strong>
+          <ul>
+            <li>Luminary aristocracy (62 quotes): <a href="website/#luminary">/website/#luminary</a></li>
+            <li>Full showcase (videos + features + docs): <a href="website/">/website/</a></li>
+            <li>Live app: <a href="https://artbastard.aday.net.au">artbastard.aday.net.au</a></li>
+            <li>Dev / pre-prod: <a href="https://artbastard-dev.aday.net.au">artbastard-dev.aday.net.au</a></li>
+            <li>Documentation: <a href="DOCS/">/DOCS/</a></li>
+          </ul>
+        </div>
+
+        <div class="panel">
+          <strong>Demo reel</strong>
+          <p class="section-voice">Reel de demonstration // enregistre sans philistines</p>
+          <p class="small" style="margin-top:0;margin-bottom:0.6rem;">
+            Eight short WebM clips recorded straight off the running app.
+          </p>
+          <ul>
+            <li><a href="website/videos/dmx-control.webm">DMX Control Home</a></li>
+            <li><a href="website/videos/fixture-page.webm">Fixture Setup &amp; Super Control</a></li>
+            <li><a href="website/videos/scenes-acts.webm">Scenes &amp; Acts</a></li>
+            <li><a href="website/videos/mobile.webm">Mobile Control Surface</a></li>
+            <li><a href="website/videos/settings-help.webm">Settings &amp; In-App Help</a></li>
+            <li><a href="website/videos/touchosc.webm">TouchOSC Workflow</a></li>
+            <li><a href="website/videos/external-console.webm">External Console</a></li>
+            <li><a href="website/videos/experimental.webm">Experimental Surfaces</a></li>
+          </ul>
+        </div>
+
+        <p class="small">This page is a quick-jump hub, not the primary app runtime.</p>
+      </div>
+    </div>
   </div>
   <script src="DOCS/showcase-quotes-data.js"></script>
+  <script src="website/theatrical.js"></script>
   <script src="website/hub-quotes.js"></script>
 </body>
 </html>

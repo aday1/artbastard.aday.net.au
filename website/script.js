@@ -73,9 +73,9 @@ function setupNavbarScroll() {
     }
     const onScroll = () => {
         if (window.pageYOffset > 100) {
-            navbar.style.background = 'rgba(10, 10, 15, 0.95)';
+            navbar.style.background = 'rgba(42, 8, 12, 0.96)';
         } else {
-            navbar.style.background = 'rgba(10, 10, 15, 0.8)';
+            navbar.style.background = 'rgba(42, 8, 12, 0.88)';
         }
     };
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -144,6 +144,9 @@ function setupHeroTicker(quotes) {
             elAuthor.style.color = q.color || '#ee8833';
             elBox.style.borderColor = q.color || '#ee8833';
             elBox.style.boxShadow = `0 0 24px rgba(${rgb}, 0.15)`;
+            if (window.ArtBastardTheatrical && window.ArtBastardTheatrical.setSpotColor) {
+                window.ArtBastardTheatrical.setSpotColor(q.color || '#ee8833');
+            }
         }
         if (fade && !reduceMotion) {
             elBox.classList.add('dim');
@@ -212,6 +215,9 @@ function setupLuminaryQuotes(quotes) {
             }
             if (elMeta) {
                 elMeta.textContent = 'quote ' + (i + 1) + ' / ' + quotes.length;
+            }
+            if (window.ArtBastardTheatrical && window.ArtBastardTheatrical.setSpotColor) {
+                window.ArtBastardTheatrical.setSpotColor(q.color || '#0066ff');
             }
         }
         if (fade && !reduceMotion && elBox) {

@@ -5,15 +5,50 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ArtBastard DMX512 v5.16.0 - Tracker Columns Edition</title>
     <meta name="description" content="ArtBastard DMX512 v5.16.0 - Fixture-aware transition tracker, live theme tuning, Super Control, scene timelines, MIDI templates, Art-Net, OSC, LAN bridge, mobile surface. Open source.">
+    <link rel="stylesheet" href="theatrical.css">
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,600;0,700;1,500&display=swap" rel="stylesheet">
 </head>
-<body>
+<body class="theatre-body">
+    <div class="theatre" id="theatre">
+    <div class="theatre-decor" aria-hidden="true">
+        <div class="curtain-l"></div>
+        <div class="curtain-r"></div>
+        <span class="curtain-label curtain-label-l">Coulisse // Exhibits B Through Infinity</span>
+        <span class="curtain-label curtain-label-r">Coulisse // Exhibits B Through Infinity</span>
+        <div class="rig-bar">
+            <span class="rig-label">Instruments of Photonic Supremacy</span>
+            <div class="rig-can"></div>
+            <div class="rig-can"></div>
+            <div class="rig-can"></div>
+            <div class="rig-can"></div>
+            <div class="rig-can"></div>
+            <div class="rig-can"></div>
+            <div class="rig-can"></div>
+        </div>
+        <div class="spotlight-wash"></div>
+        <div class="stage-floor"></div>
+        <div class="footlights">
+            <span class="footlights-label">Ligne de fosse // pour les connaisseurs seulement</span>
+            <div class="footlight"></div>
+            <div class="footlight"></div>
+            <div class="footlight"></div>
+            <div class="footlight"></div>
+            <div class="footlight"></div>
+            <div class="footlight"></div>
+            <div class="footlight"></div>
+            <div class="footlight"></div>
+            <div class="footlight"></div>
+        </div>
+    </div>
+
+    <div class="theatre-content proscenium">
+    <p id="theatre-whisper" class="theatre-whisper" aria-live="polite"></p>
     <div class="particles dmx-wash" id="particles" aria-hidden="true"></div>
 
-    <nav class="navbar">
+    <nav class="navbar theatre-nav">
         <div class="container">
             <div class="nav-brand">
                 <span class="brand-icon">DMX</span>
@@ -21,9 +56,9 @@
             </div>
             <div class="nav-links">
                 <a href="#luminary">Luminary</a>
-                <a href="#tour">Tour</a>
-                <a href="#features">Features</a>
-                <a href="#download">Download</a>
+                <a href="#tour">Scenes Dramatiques</a>
+                <a href="#features">Controle DMX Ultime</a>
+                <a href="#download">Obtenir ArtBastard</a>
                 <a href="#docs">Docs</a>
                 <a href="https://github.com/aday1/artbastard.aday.net.au" target="_blank" rel="noopener">GitHub</a>
             </div>
@@ -35,11 +70,13 @@
             <div class="container">
                 <div class="hero-content">
                     <p class="showcase-banner">GitHub Showcase Page // not the primary live app</p>
-                    <h1 class="hero-title">
+                    <span class="showcase-banner-sub">Academie des Illuminations Pretentieuses</span>
+                    <h1 class="hero-title marquee-title">
                         <span class="gradient-text">ArtBastard</span>
                         <span class="hero-subtitle">DMX512 v5.16.0 - Tracker Columns Edition</span>
                     </h1>
                     <p class="tagline">Breath of Light Manuscripts // Photonic Supremacy</p>
+                    <span class="tagline-secondary">Theatre des Photons // ruelle parisienne</span>
                     <blockquote class="canon-quote canon-quote-hero">
                         "Light belongs to no one; it is our honor merely to dance with it for a time."
                         &mdash; Grand Master Feng Zhi, Illuminating Wind Dancing Masters
@@ -112,7 +149,7 @@
                     Same quote deck as the in-app ArtSnob theme &mdash; now unleashed upon the public web.
                 </p>
 
-                <div id="luminary-stage" class="luminary-stage" role="status" aria-live="polite">
+                <div id="luminary-stage" class="luminary-stage coulisse-panel" role="status" aria-live="polite">
                     <span class="quote-deco" aria-hidden="true">&ldquo;</span>
                     <q id="luminary-quote-text">Loading the photonic manifesto...</q>
                     <div id="luminary-quote-author" class="luminary-quote-author"></div>
@@ -201,12 +238,13 @@
         <section id="tour" class="tour">
             <div class="container">
                 <h2 class="section-title">Photonic Tour - The Demo Reel</h2>
+                <p class="section-voice">Reel de demonstration // enregistre sans philistines</p>
                 <p class="section-subtitle">
                     Short clips of every major surface in ArtBastard, recorded straight off the
                     running app. Click any tile to play. Tiles load on demand, no autoplay.
                 </p>
                 <div class="video-grid">
-                    <figure class="video-tile" data-video="videos/dmx-control.webm">
+                    <figure class="video-tile" data-video="videos/dmx-control.webm" data-exhibit="Exhibit // DMX">
                         <video controls preload="none" playsinline muted
                                poster="videos/dmx-control.jpg" data-src="videos/dmx-control.webm">
                         </video>
@@ -215,7 +253,7 @@
                             <span>512-channel grid with styled vertical faders, filters, master, MIDI/OSC.</span>
                         </figcaption>
                     </figure>
-                    <figure class="video-tile" data-video="videos/fixture-page.webm">
+                    <figure class="video-tile" data-video="videos/fixture-page.webm" data-exhibit="Exhibit // FIXTURE">
                         <video controls preload="none" playsinline muted
                                poster="videos/fixture-page.jpg" data-src="videos/fixture-page.webm">
                         </video>
@@ -224,7 +262,7 @@
                             <span>Fixture canvas, unified Super Control, groups, MIDI learn, scene capture.</span>
                         </figcaption>
                     </figure>
-                    <figure class="video-tile" data-video="videos/scenes-acts.webm">
+                    <figure class="video-tile" data-video="videos/scenes-acts.webm" data-exhibit="Exhibit // SCENE">
                         <video controls preload="none" playsinline muted
                                poster="videos/scenes-acts.jpg" data-src="videos/scenes-acts.webm">
                         </video>
@@ -233,7 +271,7 @@
                             <span>Scene capture, ACT triggers, timeline keyframes with DMX values.</span>
                         </figcaption>
                     </figure>
-                    <figure class="video-tile mobile" data-video="videos/mobile.webm">
+                    <figure class="video-tile mobile" data-video="videos/mobile.webm" data-exhibit="Exhibit // TACTILE">
                         <video controls preload="none" playsinline muted
                                poster="videos/mobile.jpg" data-src="videos/mobile.webm">
                         </video>
@@ -242,7 +280,7 @@
                             <span>Super Control + DMX channels on one touch-first route for phones and tablets.</span>
                         </figcaption>
                     </figure>
-                    <figure class="video-tile" data-video="videos/settings-help.webm">
+                    <figure class="video-tile" data-video="videos/settings-help.webm" data-exhibit="Exhibit // CONFIG">
                         <video controls preload="none" playsinline muted
                                poster="videos/settings-help.jpg" data-src="videos/settings-help.webm">
                         </video>
@@ -251,7 +289,7 @@
                             <span>Theme system, network detection, help overlay (also Ctrl+H).</span>
                         </figcaption>
                     </figure>
-                    <figure class="video-tile" data-video="videos/touchosc.webm">
+                    <figure class="video-tile" data-video="videos/touchosc.webm" data-exhibit="Exhibit // OSC">
                         <video controls preload="none" playsinline muted
                                poster="videos/touchosc.jpg" data-src="videos/touchosc.webm">
                         </video>
@@ -260,7 +298,7 @@
                             <span>Export, map, and drive Super Control from a tablet OSC surface.</span>
                         </figcaption>
                     </figure>
-                    <figure class="video-tile" data-video="videos/external-console.webm">
+                    <figure class="video-tile" data-video="videos/external-console.webm" data-exhibit="Exhibit // CONSOLE">
                         <video controls preload="none" playsinline muted
                                poster="videos/external-console.jpg" data-src="videos/external-console.webm">
                         </video>
@@ -269,7 +307,7 @@
                             <span>Second-screen operator layout for dedicated control stations.</span>
                         </figcaption>
                     </figure>
-                    <figure class="video-tile" data-video="videos/experimental.webm">
+                    <figure class="video-tile" data-video="videos/experimental.webm" data-exhibit="Exhibit // LAB">
                         <video controls preload="none" playsinline muted
                                poster="videos/experimental.jpg" data-src="videos/experimental.webm">
                         </video>
@@ -426,6 +464,7 @@
         <section id="download" class="download">
             <div class="container">
                 <h2 class="section-title">Download &amp; Install</h2>
+                <p class="section-voice">Obtenir ArtBastard // sans compromis</p>
                 <div class="download-content">
                     <div class="download-info">
                         <h3>Get ArtBastard DMX512</h3>
@@ -539,7 +578,11 @@
         </div>
     </footer>
 
+    </div>
+    </div>
+
     <script src="../DOCS/showcase-quotes-data.js"></script>
+    <script src="theatrical.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

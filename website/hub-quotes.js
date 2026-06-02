@@ -27,6 +27,9 @@
                 elStage.style.borderLeft = '2px solid ' + (q.color || '#ee8833');
                 elStage.style.paddingLeft = '0.75rem';
             }
+            if (window.ArtBastardTheatrical && window.ArtBastardTheatrical.setSpotColor) {
+                window.ArtBastardTheatrical.setSpotColor(q.color || '#ee8833');
+            }
         }
         if (fade && !reduceMotion && elStage) {
             elStage.classList.add('dim');
