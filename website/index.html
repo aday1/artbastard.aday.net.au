@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,600;0,700;1,500&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="particles" id="particles"></div>
@@ -16,7 +16,7 @@
     <nav class="navbar">
         <div class="container">
             <div class="nav-brand">
-                <span class="brand-icon">&#9889;</span>
+                <span class="brand-icon">DMX</span>
                 <span class="brand-text">ArtBastard</span>
             </div>
             <div class="nav-links">
@@ -33,24 +33,42 @@
         <section class="hero">
             <div class="container">
                 <div class="hero-content">
+                    <p class="showcase-banner">GitHub Showcase Page // not the primary live app</p>
                     <h1 class="hero-title">
                         <span class="gradient-text">ArtBastard</span>
                         <span class="hero-subtitle">DMX512 v5.16.0 - Tracker Columns Edition</span>
                     </h1>
+                    <p class="canon-quote">
+                        From the Illuminating Wind Dancing Masters to modern photonic mastery:
+                        conduct photons with the finesse of a Parisian maitre d'eclairage.
+                    </p>
                     <p class="hero-description">
-                        <em>Browser-based DMX512 control for live performance and studio work.</em><br>
+                        <em>Elite illumination control for the discerning luminaire artist.</em><br>
                         512 channels per universe, Art-Net output, MIDI Learn with controller templates,
                         two-way OSC, scene timelines, a clip launcher, and one Super Control engine
                         across desktop and mobile. Cloud hosting with an optional Raspberry Pi LAN bridge
-                        for home Art-Net (192.168.1.*) and Ableton Link. Multiple operators can run
-                        the same show concurrently. May 2026 consolidation:
-                        shared DMX faders, unified scene capture and timeline playback, leaner
-                        navigation, and production-focused surfaces only. Open source, MIT.
+                        for home Art-Net and Ableton Link. Open source, MIT.
                     </p>
                     <div class="hero-actions">
+                        <a href="https://artbastard.aday.net.au/" class="btn btn-live">Try it live</a>
                         <a href="#tour" class="btn btn-primary">Watch the Tour</a>
                         <a href="#download" class="btn btn-secondary">Get Started</a>
                         <a href="https://github.com/aday1/artbastard.aday.net.au" target="_blank" rel="noopener" class="btn btn-secondary">View on GitHub</a>
+                    </div>
+                    <div class="deploy-panel">
+                        <div class="deploy-row">
+                            <span class="deploy-key">Live app</span>
+                            <span><a href="https://artbastard.aday.net.au">artbastard.aday.net.au</a> &mdash; cloud DMX control plane</span>
+                        </div>
+                        <div class="deploy-row">
+                            <span class="deploy-key">Dev lane</span>
+                            <span><a href="https://artbastard-dev.aday.net.au">artbastard-dev.aday.net.au</a> (image <code>:dev</code>)</span>
+                        </div>
+                        <div class="deploy-row">
+                            <span class="deploy-key">Showcase</span>
+                            <span><a href="https://aday1.github.io/artbastard.aday.net.au/">aday1.github.io/artbastard.aday.net.au</a></span>
+                        </div>
+                        <p class="deploy-note">// this is the GitHub showcase page &mdash; the live runtime above serves the actual app</p>
                     </div>
                     <div class="hero-stats">
                         <div class="stat">
@@ -140,31 +158,32 @@
             <div class="container">
                 <h2 class="section-title">What Ships in v5.16.0</h2>
                 <p class="section-subtitle">
-                    Fixture-aware tracker columns, live theme tuning, envelope sync, plus the May 2026 rack and operator remaster.
+                    "Mes amis, you hold before you not mere software, but symphonic mastery
+                    over the electromagnetic spectrum itself."
                 </p>
                 <div class="features-grid">
                     <div class="feature-card">
-                        <div class="feature-icon">&#128295;</div>
+                        <div class="feature-icon">RACK</div>
                         <h3>Reason-Style Rack UI</h3>
                         <p>Skeuomorphic rack modules, rotary knobs, LEDs, and tab strips across DMX,
                             Super Control, and settings.</p>
                     </div>
                     <div class="feature-card">
-                        <div class="feature-icon">&#127925;</div>
+                        <div class="feature-icon">AUTO</div>
                         <h3>Automation Workbench</h3>
                         <p>DMX sidebar Automation: per-channel envelopes plus a Renoise-inspired
                             transition tracker with fixture lanes (pan/tilt, RGB, gobo), pages,
                             live hex preview, Env/Grid sync, and BPM/LPB playback.</p>
                     </div>
                     <div class="feature-card">
-                        <div class="feature-icon">&#128451;</div>
+                        <div class="feature-icon">GRID</div>
                         <h3>Tracker Channel Columns</h3>
                         <p>Grid columns match the page chip list only (no hidden CH 1-8). Add by
                             number, DMX selection, or fixture lanes; Clear all or optional + Pinned.
                             New pages start empty.</p>
                     </div>
                     <div class="feature-card">
-                        <div class="feature-icon">&#10024;</div>
+                        <div class="feature-icon">CTRL</div>
                         <h3>Remastered Operator Controls</h3>
                         <p>Shared React control kit: XY pads for pan/tilt, gold vertical and horizontal
                             faders, dual-handle range windows, stepped gobo slider, and envelope automation
@@ -172,7 +191,7 @@
                             fixtures, scenes, mobile, and automation panels.</p>
                     </div>
                     <div class="feature-card">
-                        <div class="feature-icon">&#127912;</div>
+                        <div class="feature-icon">DMX</div>
                         <h3>Modular DMX Control Page</h3>
                         <p>The 512-channel control surface is split into header, filters,
                             fixture selector, channels viewport, scene controls and a footer
@@ -180,28 +199,28 @@
                             logic is unit tested.</p>
                     </div>
                     <div class="feature-card">
-                        <div class="feature-icon">&#127916;</div>
+                        <div class="feature-icon">SCENE</div>
                         <h3>Scenes &amp; Acts</h3>
                         <p>Save and recall scenes; sequence them in the <strong>act timeline</strong>
                             (clips, gaps, scheduled MIDI/OSC). ACT triggers start/stop acts via
                             MIDI or OSC — separate from Ableton Link tempo sync.</p>
                     </div>
                     <div class="feature-card">
-                        <div class="feature-icon">&#127916;</div>
+                        <div class="feature-icon">SCENE</div>
                         <h3>Timeline Editors</h3>
                         <p>Scene timeline: DMX keyframes (0-255), multi-track, snap, undo.
                             Act timeline: scene clips with start times and gaps. See
                             <a href="../DOCS/ACT_TIMELINE.md">ACT_TIMELINE.md</a>.</p>
                     </div>
                     <div class="feature-card">
-                        <div class="feature-icon">&#127929;</div>
+                        <div class="feature-icon">CLIP</div>
                         <h3>Clip Launcher</h3>
                         <p>Session-style grid for live performance. Assign any scene to any
                             cell, see playing/queued/recording states, and stop everything with
                             one button.</p>
                     </div>
                     <div class="feature-card">
-                        <div class="feature-icon">&#127929;</div>
+                        <div class="feature-icon">CLIP</div>
                         <h3>MIDI Controller Templates</h3>
                         <p>One-click templates for Behringer X-Touch (Mackie mode + scribble
                             strip SysEx labels) and Akai APC40 MK1. Pitch-bend mappings, MIDI
@@ -209,49 +228,49 @@
                             <code>POST /api/midi/controller-template</code>.</p>
                     </div>
                     <div class="feature-card">
-                        <div class="feature-icon">&#128225;</div>
+                        <div class="feature-icon">OSC</div>
                         <h3>OSC Integration</h3>
                         <p>Two-way OSC for Super Control, scenes, master faders, and ACT triggers.
                             Use the in-app OSC monitor while mapping. Works with Reaper, QLab,
                             Max/MSP, Pure Data, and any tablet OSC app you configure yourself.</p>
                     </div>
                     <div class="feature-card">
-                        <div class="feature-icon">&#9889;</div>
+                        <div class="feature-icon">SYNC</div>
                         <h3>Unified Operator Surfaces</h3>
                         <p>One Super Control engine on the fixture page and mobile route.
                             Shared DmxFaderRow controls on the DMX page and a touch
                             pinned-channel strip. Experimental stubs and duplicate touch panels removed.</p>
                     </div>
                     <div class="feature-card">
-                        <div class="feature-icon">&#127760;</div>
+                        <div class="feature-icon">NET</div>
                         <h3>Art-Net Output</h3>
                         <p>Professional Art-Net distribution across multiple universes. Network
                             interface auto-detection with ICMP ping verification helps you
                             identify USB Ethernet adapters from the Settings panel.</p>
                     </div>
                     <div class="feature-card">
-                        <div class="feature-icon">&#128268;</div>
+                        <div class="feature-icon">BRIDGE</div>
                         <h3>LAN / Pi Bridge</h3>
                         <p>Hosted at artbastard.aday.net.au? Run <code>artbastard-bridge</code> on a
                             Raspberry Pi on your fixture LAN. The cloud UI drives Art-Net locally;
                             optional Ableton Link on the Pi. Many browsers, one shared show.</p>
                     </div>
                     <div class="feature-card">
-                        <div class="feature-icon">&#128241;</div>
+                        <div class="feature-icon">TOUCH</div>
                         <h3>Touch Surface</h3>
                         <p>The <code>#/mobile</code> route gives you Super Control and DMX
                             channels with a touch-first layout on phones and tablets.
                             Hash-based deep linking everywhere.</p>
                     </div>
                     <div class="feature-card">
-                        <div class="feature-icon">&#9881;&#65039;</div>
+                        <div class="feature-icon">THEME</div>
                         <h3>Live Theme Tuning</h3>
                         <p>HSL sliders and rack presets apply to the UI as you move them (v5.16.0).
                             Debounced server sync via /api/appearance; Sync now and Reload UI for
                             multi-client shows. Typography, spacing, and animation speed included.</p>
                     </div>
                     <div class="feature-card">
-                        <div class="feature-icon">&#10067;</div>
+                        <div class="feature-icon">HELP</div>
                         <h3>In-App Help &amp; Address Sheet</h3>
                         <p>Press <kbd>Ctrl</kbd>+<kbd>H</kbd> anywhere or open Settings &gt;
                             Help. Covers DMX basics, DIP-switch calculator, MIDI/OSC,
@@ -260,7 +279,7 @@
                             address sheet.</p>
                     </div>
                     <div class="feature-card">
-                        <div class="feature-icon">&#129514;</div>
+                        <div class="feature-icon">TEST</div>
                         <h3>Smoke + Demo Tooling</h3>
                         <p>Vitest unit tests for filtering, ACT triggers, clip launcher and
                             scene capture. Backend smoke script
@@ -365,7 +384,7 @@
         <div class="container">
             <div class="footer-content">
                 <div class="footer-brand">
-                    <span class="brand-icon">&#9889;</span>
+                    <span class="brand-icon">DMX</span>
                     <span class="brand-text">ArtBastard</span>
                 </div>
                 <div class="footer-links">

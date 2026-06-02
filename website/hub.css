@@ -1,0 +1,186 @@
+:root {
+    --void: #0a0705;
+    --surface: #14100c;
+    --panel: #1c1610;
+    --amber: #c8922a;
+    --gold: #ee8833;
+    --flame: #ffb347;
+    --parchment: #e8dcc8;
+    --dim: #a89478;
+    --border: #3d2e1a;
+    --glow: rgba(238, 136, 51, 0.35);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: "JetBrains Mono", "Share Tech Mono", monospace;
+    background: var(--void);
+    color: var(--parchment);
+    line-height: 1.6;
+    min-height: 100vh;
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+    background:
+        radial-gradient(ellipse 70% 50% at 50% -10%, rgba(238, 136, 51, 0.14) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 30% at 20% 80%, rgba(200, 146, 42, 0.08) 0%, transparent 55%),
+        var(--void);
+    animation: candle-drift 8s ease-in-out infinite alternate;
+}
+
+@keyframes candle-drift {
+    0% { opacity: 0.92; }
+    100% { opacity: 1; }
+}
+
+.wrap {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 4rem;
+}
+
+h1 {
+    font-family: "Playfair Display", Georgia, serif;
+    font-weight: 700;
+    font-size: clamp(1.8rem, 5vw, 2.6rem);
+    letter-spacing: 0.06em;
+    color: var(--flame);
+    text-shadow: 0 0 24px var(--glow);
+    margin: 0.5rem 0;
+}
+
+.tagline {
+    font-size: 0.82rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 0.75rem;
+}
+
+.showcase-banner {
+    display: inline-block;
+    padding: 0.38rem 0.72rem;
+    border: 1px solid rgba(200, 146, 42, 0.55);
+    color: #ffe8c4;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    background: rgba(28, 18, 8, 0.88);
+    margin-bottom: 0.5rem;
+}
+
+.canon-quote {
+    font-family: "Playfair Display", Georgia, serif;
+    font-style: italic;
+    color: var(--dim);
+    font-size: 0.95rem;
+    margin: 1rem 0 1.5rem;
+    padding-left: 1rem;
+    border-left: 2px solid var(--amber);
+}
+
+a { color: var(--flame); text-decoration: none; }
+a:hover { color: #ffd89a; }
+
+.hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin: 1.5rem 0;
+}
+
+.btn {
+    display: inline-block;
+    padding: 0.65rem 1.2rem;
+    font-family: inherit;
+    font-size: 0.82rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border: 1px solid var(--border);
+    transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.btn-live {
+    background: linear-gradient(135deg, var(--gold), var(--amber));
+    color: #1a1008;
+    border-color: var(--gold);
+    font-weight: 700;
+    box-shadow: 0 0 18px var(--glow);
+}
+
+.btn-live:hover {
+    box-shadow: 0 0 28px rgba(238, 136, 51, 0.55);
+    color: #1a1008;
+}
+
+.btn-secondary {
+    background: rgba(20, 16, 12, 0.9);
+    color: var(--parchment);
+}
+
+.btn-secondary:hover {
+    border-color: var(--amber);
+    background: rgba(40, 28, 16, 0.95);
+}
+
+.panel {
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--border);
+    background: rgba(20, 16, 12, 0.92);
+    margin: 1rem 0;
+}
+
+.panel strong {
+    display: block;
+    font-size: 0.78rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 0.6rem;
+}
+
+ul { padding-left: 1.2rem; margin: 0.4rem 0; }
+li { margin: 0.35rem 0; color: var(--dim); }
+li a { color: var(--flame); }
+
+.dep-row {
+    display: grid;
+    grid-template-columns: 7rem 1fr;
+    gap: 0.5rem 1rem;
+    font-size: 0.88rem;
+    margin: 0.35rem 0;
+}
+
+.dep-key { color: var(--gold); letter-spacing: 0.06em; }
+.dep-val { color: var(--dim); }
+.dep-val a { color: var(--flame); }
+
+.dep-note {
+    margin-top: 0.75rem;
+    font-size: 0.78rem;
+    color: var(--dim);
+    font-style: italic;
+}
+
+.small {
+    color: var(--dim);
+    font-size: 0.85rem;
+    margin-top: 1.5rem;
+}
+
+code {
+    background: rgba(0, 0, 0, 0.35);
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    font-size: 0.9em;
+}
+
+@media (max-width: 600px) {
+    .dep-row { grid-template-columns: 1fr; }
+}

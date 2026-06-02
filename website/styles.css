@@ -1,30 +1,24 @@
 :root {
-    --primary-hue: 220;
-    --primary-sat: 70%;
-    --primary-light: 50%;
-    --secondary-hue: 280;
-    --secondary-sat: 60%;
-    --secondary-light: 45%;
-    --accent-hue: 200;
-    --accent-sat: 80%;
-    --accent-light: 60%;
-    
-    --bg-primary: #0a0a0f;
-    --bg-secondary: #151520;
-    --bg-tertiary: #1a1a2e;
-    --text-primary: #e0e0e8;
-    --text-secondary: #a0a0b0;
-    --border-color: #2a2a3e;
-    
-    --primary: hsl(var(--primary-hue), var(--primary-sat), var(--primary-light));
-    --secondary: hsl(var(--secondary-hue), var(--secondary-sat), var(--secondary-light));
-    --accent: hsl(var(--accent-hue), var(--accent-sat), var(--accent-light));
-    
-    --gradient-1: linear-gradient(135deg, var(--primary), var(--secondary));
-    --gradient-2: linear-gradient(135deg, var(--secondary), var(--accent));
-    
-    --shadow-glow: 0 0 20px rgba(74, 158, 255, 0.3);
-    --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.4);
+    --bg-primary: #0a0705;
+    --bg-secondary: #14100c;
+    --bg-tertiary: #1c1610;
+    --text-primary: #e8dcc8;
+    --text-secondary: #a89478;
+    --border-color: #3d2e1a;
+
+    --amber: #c8922a;
+    --gold: #ee8833;
+    --flame: #ffb347;
+
+    --primary: var(--gold);
+    --secondary: var(--amber);
+    --accent: var(--flame);
+
+    --gradient-1: linear-gradient(135deg, var(--gold), var(--amber));
+    --gradient-2: linear-gradient(135deg, var(--flame), var(--gold));
+
+    --shadow-glow: 0 0 22px rgba(238, 136, 51, 0.35);
+    --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.45);
 }
 
 * {
@@ -34,7 +28,7 @@
 }
 
 body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: 'JetBrains Mono', 'Share Tech Mono', monospace;
     background: var(--bg-primary);
     color: var(--text-primary);
     line-height: 1.6;
@@ -50,14 +44,18 @@ body {
     height: 100%;
     z-index: 0;
     pointer-events: none;
-    background: radial-gradient(circle at 20% 50%, rgba(74, 158, 255, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(138, 43, 226, 0.1) 0%, transparent 50%);
-    animation: particles 20s ease-in-out infinite;
+    background:
+        radial-gradient(ellipse 70% 50% at 50% -10%, rgba(238, 136, 51, 0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 35% at 15% 85%, rgba(200, 146, 42, 0.08) 0%, transparent 55%),
+        radial-gradient(ellipse 35% 30% at 85% 70%, rgba(255, 179, 71, 0.06) 0%, transparent 50%);
+    animation: candle-flicker 7s ease-in-out infinite alternate;
 }
 
-@keyframes particles {
-    0%, 100% { opacity: 0.5; transform: scale(1); }
-    50% { opacity: 0.8; transform: scale(1.1); }
+@keyframes candle-flicker {
+    0% { opacity: 0.88; }
+    45% { opacity: 1; }
+    70% { opacity: 0.94; }
+    100% { opacity: 1; }
 }
 
 .container {
@@ -91,6 +89,7 @@ body {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    font-family: 'Playfair Display', Georgia, serif;
     font-size: 1.5rem;
     font-weight: 700;
     background: var(--gradient-1);
@@ -100,7 +99,11 @@ body {
 }
 
 .brand-icon {
-    font-size: 1.8rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+    letter-spacing: 0.08em;
+    color: var(--flame);
+    -webkit-text-fill-color: var(--flame);
     filter: drop-shadow(var(--shadow-glow));
 }
 
@@ -152,8 +155,9 @@ body {
 }
 
 .hero-title {
-    font-size: clamp(3rem, 8vw, 6rem);
-    font-weight: 800;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(2.5rem, 7vw, 5rem);
+    font-weight: 700;
     margin-bottom: 1rem;
     line-height: 1.1;
 }
@@ -207,7 +211,21 @@ body {
 
 .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 0 30px rgba(74, 158, 255, 0.5);
+    box-shadow: 0 0 30px rgba(238, 136, 51, 0.5);
+}
+
+.btn-live {
+    background: linear-gradient(135deg, var(--gold), var(--amber));
+    color: #1a1008;
+    border-color: var(--gold);
+    font-weight: 700;
+    box-shadow: var(--shadow-glow);
+}
+
+.btn-live:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 28px rgba(238, 136, 51, 0.55);
+    color: #1a1008;
 }
 
 .btn-secondary {
@@ -218,7 +236,7 @@ body {
 
 .btn-secondary:hover {
     border-color: var(--accent);
-    background: rgba(74, 158, 255, 0.1);
+    background: rgba(238, 136, 51, 0.1);
 }
 
 .btn-large {
@@ -262,7 +280,8 @@ body {
 }
 
 .section-title {
-    font-size: clamp(2.5rem, 5vw, 4rem);
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(2rem, 4vw, 3.2rem);
     text-align: center;
     margin-bottom: 4rem;
     background: var(--gradient-1);
@@ -292,8 +311,74 @@ body {
 }
 
 .feature-icon {
-    font-size: 3rem;
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--flame);
+    border: 1px solid var(--border-color);
+    padding: 0.35rem 0.55rem;
     margin-bottom: 1rem;
+    background: rgba(0, 0, 0, 0.25);
+}
+
+.showcase-banner {
+    display: inline-block;
+    padding: 0.38rem 0.72rem;
+    border: 1px solid rgba(200, 146, 42, 0.55);
+    color: #ffe8c4;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    background: rgba(28, 18, 8, 0.88);
+    margin-bottom: 1rem;
+}
+
+.canon-quote {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-style: italic;
+    color: var(--text-secondary);
+    font-size: 1rem;
+    margin: 0 0 1.5rem;
+    padding-left: 1rem;
+    border-left: 2px solid var(--amber);
+}
+
+.deploy-panel {
+    max-width: 760px;
+    margin: 3rem auto 0;
+    padding: 1.25rem 1.5rem;
+    border: 1px solid var(--border-color);
+    background: var(--bg-tertiary);
+    text-align: left;
+    font-size: 0.88rem;
+}
+
+.deploy-row {
+    display: grid;
+    grid-template-columns: 7rem 1fr;
+    gap: 0.35rem 1rem;
+    margin: 0.35rem 0;
+    color: var(--text-secondary);
+}
+
+.deploy-key {
+    color: var(--gold);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+}
+
+.deploy-note {
+    margin-top: 0.75rem;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.deploy-panel a {
+    color: var(--flame);
 }
 
 .feature-card h3 {
