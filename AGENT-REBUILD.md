@@ -4,6 +4,13 @@ Rebuild this project from scratch. Read this file and `DOCS/AGENT-REBUILD-REFERE
 
 This document is a **from-scratch rebuild runbook**, not a high-level summary. Follow the phases below in order.
 
+## Voice and aesthetics
+
+- **Family:** Reason rack + ArtSnob (see YomikosPapers `.cursor/skills/regenerate-artbastard/`)
+- **Visual:** Rack chrome, gold faders, `ab-rack`, theme presets — never flatten to generic UI
+- **Copy:** Franglish nav, aristocrat quotes (`FancyQuotes.tsx`), theatrical LICENSE/HISTORY — accurate DMX specs underneath
+- **Prefs:** No emoji; scratch under `temp_/`; no new root markdown files
+
 ## Rebuild from scratch
 
 ### Prerequisites
