@@ -12,7 +12,7 @@ if (i2 < 0) {
   console.error("sync-docs-quotes: end of array not found");
   process.exit(1);
 }
-const arrLiteral = s.slice(i1, i2 + 1);
+const arrLiteral = s.slice(i1, i2 + 2);
 const out =
   `/* Synced from react-app/src/components/layout/FancyQuotes.tsx (luxuryQuotes). Run: node scripts/sync-docs-quotes.mjs */\n` +
   `window.AB_LUXURY_QUOTES = ${arrLiteral};\n`;

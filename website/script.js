@@ -170,145 +170,31 @@ function setupHeroTicker(quotes) {
 
 // Luminary stage rotator + quote wall.
 function setupLuminaryQuotes(quotes) {
-    const elBox = document.getElementById('luminary-stage');
-    const elText = document.getElementById('luminary-quote-text');
-    const elAuthor = document.getElementById('luminary-quote-author');
-    const elMeta = document.getElementById('luminary-meta');
-    const btnNext = document.getElementById('btn-luminary-next');
-    const btnRandom = document.getElementById('btn-luminary-random');
-    const btnPause = document.getElementById('btn-luminary-pause');
-    const wall = document.getElementById('quote-wall');
-    const wallCount = document.getElementById('quote-wall-count');
-
-    if (!quotes.length) {
-        if (elText) {
-            elText.textContent = 'Quote data failed to load.';
+    if (!window.ArtBastardLuminary) {
+        if (document.getElementById('luminary-quote-text')) {
+            document.getElementById('luminary-quote-text').textContent = 'Quote data failed to load.';
         }
         return;
     }
 
-    if (wallCount) {
-        wallCount.textContent = String(quotes.length);
-    }
-
-    const reduceMotion = prefersReducedMotion();
-    let idx = pickRandomIndex(quotes, -1);
-    let playing = !reduceMotion;
-    let timer = null;
-    const intervalMs = reduceMotion ? 0 : 18000;
-
-    function paint(i, fade) {
-        const q = quotes[i];
-        const rgb = hexToRgb(q.color || '#0066ff');
-        function apply() {
-            if (elText) {
-                elText.textContent = q.text;
-            }
-            if (elAuthor) {
-                elAuthor.textContent = '\u2014 ' + q.author;
-                elAuthor.style.color = q.color || '#0066ff';
-            }
-            if (elBox) {
-                elBox.style.borderLeftColor = q.color || '#0066ff';
-                elBox.style.background = `rgba(${rgb}, 0.1)`;
-                elBox.style.boxShadow = `0 8px 32px rgba(0, 0, 0, 0.45), 0 0 40px rgba(${rgb}, 0.12)`;
-            }
-            if (elMeta) {
-                elMeta.textContent = 'quote ' + (i + 1) + ' / ' + quotes.length;
-            }
-            if (window.ArtBastardTheatrical && window.ArtBastardTheatrical.setSpotColor) {
-                window.ArtBastardTheatrical.setSpotColor(q.color || '#0066ff');
-            }
-        }
-        if (fade && !reduceMotion && elBox) {
-            elBox.classList.add('dim');
-            setTimeout(() => {
-                apply();
-                elBox.classList.remove('dim');
-            }, 420);
-        } else {
-            apply();
-        }
-    }
-
-    function schedule() {
-        clearInterval(timer);
-        if (!playing || intervalMs <= 0) {
-            return;
-        }
-        timer = setInterval(() => {
-            idx = (idx + 1) % quotes.length;
-            paint(idx, true);
-        }, intervalMs);
-    }
-
-    paint(idx, false);
-
-    if (btnNext) {
-        btnNext.addEventListener('click', () => {
-            idx = (idx + 1) % quotes.length;
-            paint(idx, !reduceMotion);
-            if (playing) {
-                schedule();
-            }
-        });
-    }
-    if (btnRandom) {
-        btnRandom.addEventListener('click', () => {
-            idx = pickRandomIndex(quotes, idx);
-            paint(idx, !reduceMotion);
-            if (playing) {
-                schedule();
-            }
-        });
-    }
-    if (btnPause) {
-        btnPause.addEventListener('click', () => {
-            playing = !playing;
-            btnPause.textContent = playing ? 'Pause rotation' : 'Resume rotation';
-            schedule();
-        });
-    }
-
-    schedule();
-
-    if (!wall) {
-        return;
-    }
-
-    const ordered = reduceMotion ? quotes : shuffleArray(quotes);
-    ordered.forEach((q) => {
-        const card = document.createElement('article');
-        card.className = 'quote-card';
-        const color = q.color || '#ee8833';
-        card.style.borderTopColor = color;
-        card.innerHTML =
-            '<p class="quote-card-text"></p>' +
-            '<p class="quote-card-author"></p>';
-        card.querySelector('.quote-card-text').textContent = q.text;
-        const authorEl = card.querySelector('.quote-card-author');
-        authorEl.textContent = q.author;
-        authorEl.style.color = color;
-        wall.appendChild(card);
-    });
-
-    if (reduceMotion || typeof IntersectionObserver === 'undefined') {
-        wall.querySelectorAll('.quote-card').forEach((c) => c.classList.add('visible'));
-        return;
-    }
-
-    const wallObserver = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('visible');
-                wallObserver.unobserve(entry.target);
-            }
-        });
-    }, { rootMargin: '40px 0px', threshold: 0.05 });
-
-    wall.querySelectorAll('.quote-card').forEach((card, i) => {
-        card.style.transitionDelay = Math.min(i * 30, 600) + 'ms';
-        wallObserver.observe(card);
+    window.ArtBastardLuminary.initLuminaryPage({
+        quotes: quotes,
+        countEl: document.getElementById('quote-wall-count'),
+        wallEl: document.getElementById('quote-wall'),
+        rotator: {
+            quotes: quotes,
+            stageEl: document.getElementById('luminary-stage'),
+            textEl: document.getElementById('luminary-quote-text'),
+            authorEl: document.getElementById('luminary-quote-author'),
+            metaEl: document.getElementById('luminary-meta'),
+            btnNext: document.getElementById('btn-luminary-next'),
+            btnRandom: document.getElementById('btn-luminary-random'),
+            btnPause: document.getElementById('btn-luminary-pause'),
+            authorPrefix: '\u2014 ',
+            intervalMs: prefersReducedMotion() ? 0 : 18000,
+            borderLeftWide: true,
+            fadeMs: 420,
+        },
     });
 }
 

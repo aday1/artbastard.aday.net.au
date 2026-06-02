@@ -254,6 +254,53 @@
       color: var(--muted);
       margin-left: auto;
     }
+    .quote-wall-section { margin-top: 2rem; }
+    .quote-wall-heading {
+      font-family: "Cormorant Garamond", Georgia, serif;
+      font-size: 1.35rem;
+      margin: 0 0 0.5rem;
+      color: var(--text);
+    }
+    .quote-wall-lede {
+      color: var(--muted);
+      font-size: 0.88rem;
+      margin-bottom: 1.25rem;
+    }
+    .quote-wall {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 0.85rem;
+    }
+    .quote-card {
+      padding: 1rem 1.05rem;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      border-top: 3px solid var(--accent);
+      background: rgba(16, 22, 36, 0.92);
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.5s ease, transform 0.5s ease, box-shadow 0.3s;
+    }
+    .quote-card.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .quote-card:hover {
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+    }
+    .quote-card-text {
+      font-family: "Cormorant Garamond", Georgia, serif;
+      font-style: italic;
+      font-size: 0.98rem;
+      line-height: 1.5;
+      color: #dfe8f5;
+      margin-bottom: 0.65rem;
+    }
+    .quote-card-author {
+      font-size: 0.75rem;
+      text-align: right;
+      font-style: italic;
+    }
   </style>
 </head>
 <body>
@@ -289,6 +336,12 @@
             <span class="quote-meta" id="quoteMeta"></span>
           </div>
         </div>
+      </section>
+
+      <section class="quote-wall-section" aria-labelledby="docs-wall-h">
+        <h2 id="docs-wall-h" class="quote-wall-heading">The Complete Luminary Quote Wall</h2>
+        <p class="quote-wall-lede">All <span id="docs-quote-wall-count">61</span> aristocrats synced from FancyQuotes.tsx. Same deck as the live app ArtSnob theme.</p>
+        <div id="docs-quote-wall" class="quote-wall"></div>
       </section>
     </div>
 
@@ -327,101 +380,36 @@
   </main>
 
   <script src="showcase-quotes-data.js"></script>
+  <script src="../website/luminary-shared.js"></script>
   <script>
     (function () {
       var quotes = window.AB_LUXURY_QUOTES || [];
-      var reduceMotion = false;
-      try {
-        reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      } catch (e) {}
-
-      var elBox = document.getElementById("quoteBox");
-      var elText = document.getElementById("quoteText");
-      var elAuthor = document.getElementById("quoteAuthor");
-      var elMeta = document.getElementById("quoteMeta");
-      var btnNext = document.getElementById("btnNext");
-      var btnRandom = document.getElementById("btnRandom");
-      var btnPause = document.getElementById("btnPause");
-
-      var idx = 0;
-      var playing = !reduceMotion;
-      var timer = null;
-      var intervalMs = reduceMotion ? 0 : 22000;
-
-      function pickRandomIndex() {
-        if (quotes.length <= 1) return 0;
-        var n = Math.floor(Math.random() * quotes.length);
-        return n === idx ? (n + 1) % quotes.length : n;
-      }
-
-      function paint(i, fade) {
-        if (!quotes.length) {
-          elText.textContent = "Quote data failed to load.";
-          elAuthor.textContent = "";
-          elMeta.textContent = "";
-          return;
-        }
-        var q = quotes[i];
-        var rgb = hexToRgb(q.color || "#4ecdc4");
-        function apply() {
-          elText.textContent = q.text;
-          elAuthor.textContent = "\u2014 " + q.author;
-          elAuthor.style.color = q.color || "#4ecdc4";
-          elBox.style.borderLeftColor = q.color || "#4ecdc4";
-          elBox.style.background = "rgba(" + rgb + ", 0.08)";
-          elMeta.textContent = "quote " + (i + 1) + " / " + quotes.length;
-        }
-        if (fade && !reduceMotion) {
-          elBox.classList.add("dim");
-          setTimeout(function () {
-            apply();
-            elBox.classList.remove("dim");
-          }, 420);
-        } else {
-          apply();
-        }
-      }
-
-      function hexToRgb(hex) {
-        hex = String(hex || "").replace("#", "");
-        if (hex.length === 3) {
-          hex = hex.split("").map(function (c) { return c + c; }).join("");
-        }
-        var r = parseInt(hex.slice(0, 2), 16);
-        var g = parseInt(hex.slice(2, 4), 16);
-        var b = parseInt(hex.slice(4, 6), 16);
-        return r + ", " + g + ", " + b;
-      }
-
-      function schedule() {
-        clearInterval(timer);
-        if (!playing || intervalMs <= 0) return;
-        timer = setInterval(function () {
-          idx = (idx + 1) % quotes.length;
-          paint(idx, true);
-        }, intervalMs);
-      }
-
-      idx = quotes.length ? pickRandomIndex() : 0;
-      paint(idx, false);
-
-      btnNext.addEventListener("click", function () {
-        idx = (idx + 1) % quotes.length;
-        paint(idx, !reduceMotion);
-        if (playing) schedule();
+      if (!window.ArtBastardLuminary) return;
+      window.ArtBastardLuminary.initLuminaryPage({
+        quotes: quotes,
+        countEl: document.getElementById("docs-quote-wall-count"),
+        wallEl: document.getElementById("docs-quote-wall"),
+        rotator: {
+            quotes: quotes,
+            stageEl: document.getElementById("quoteBox"),
+            textEl: document.getElementById("quoteText"),
+            authorEl: document.getElementById("quoteAuthor"),
+            metaEl: document.getElementById("quoteMeta"),
+            btnNext: document.getElementById("btnNext"),
+            btnRandom: document.getElementById("btnRandom"),
+            btnPause: document.getElementById("btnPause"),
+            authorPrefix: "\u2014 ",
+            intervalMs: 22000,
+            fadeMs: 420,
+            onPaint: function (q) {
+                var elBox = document.getElementById("quoteBox");
+                if (!elBox || !window.ArtBastardLuminary) return;
+                var rgb = window.ArtBastardLuminary.hexToRgb(q.color || "#4ecdc4");
+                elBox.style.borderLeftColor = q.color || "#4ecdc4";
+                elBox.style.background = "rgba(" + rgb + ", 0.08)";
+            },
+        },
       });
-      btnRandom.addEventListener("click", function () {
-        idx = pickRandomIndex();
-        paint(idx, !reduceMotion);
-        if (playing) schedule();
-      });
-      btnPause.addEventListener("click", function () {
-        playing = !playing;
-        btnPause.textContent = playing ? "Pause rotation" : "Resume rotation";
-        schedule();
-      });
-
-      schedule();
     })();
   </script>
 </body>

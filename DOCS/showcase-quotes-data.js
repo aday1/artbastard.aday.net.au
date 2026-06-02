@@ -307,4 +307,4 @@ window.AB_LUXURY_QUOTES = [
     author: "Citoyen Révolution-Luminaire, Premier Consul des Républiques Photoniques",
     color: "#44ffaa"
   }
-;
+];

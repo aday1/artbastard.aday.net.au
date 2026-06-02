@@ -1,53 +1,26 @@
 (function () {
     var quotes = window.AB_LUXURY_QUOTES || [];
-    var elStage = document.getElementById('hub-quote-stage');
-    var elText = document.getElementById('hub-quote-text');
-    var elAuthor = document.getElementById('hub-quote-author');
-    if (!elText || !quotes.length) {
-        if (elText) {
-            elText.textContent = 'Quote data failed to load.';
-        }
+    if (!window.ArtBastardLuminary) {
         return;
     }
 
-    var reduceMotion = false;
-    try {
-        reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    } catch (e) {}
+    window.ArtBastardLuminary.setupRotator({
+        quotes: quotes,
+        stageEl: document.getElementById("hub-quote-stage"),
+        textEl: document.getElementById("hub-quote-text"),
+        authorEl: document.getElementById("hub-quote-author"),
+        metaEl: document.getElementById("hub-quote-meta"),
+        intervalMs: 12000,
+        borderLeft: true,
+        fadeMs: 350,
+    });
 
-    var idx = Math.floor(Math.random() * quotes.length);
-
-    function paint(i, fade) {
-        var q = quotes[i];
-        function apply() {
-            elText.textContent = q.text;
-            elAuthor.textContent = q.author;
-            elAuthor.style.color = q.color || '#ffb347';
-            if (elStage) {
-                elStage.style.borderLeft = '2px solid ' + (q.color || '#ee8833');
-                elStage.style.paddingLeft = '0.75rem';
-            }
-            if (window.ArtBastardTheatrical && window.ArtBastardTheatrical.setSpotColor) {
-                window.ArtBastardTheatrical.setSpotColor(q.color || '#ee8833');
-            }
-        }
-        if (fade && !reduceMotion && elStage) {
-            elStage.classList.add('dim');
-            setTimeout(function () {
-                apply();
-                elStage.classList.remove('dim');
-            }, 350);
-        } else {
-            apply();
-        }
+    var wall = document.getElementById("hub-quote-wall");
+    var countEl = document.getElementById("hub-quote-wall-count");
+    if (countEl) {
+        countEl.textContent = String(quotes.length);
     }
-
-    paint(idx, false);
-
-    if (!reduceMotion) {
-        setInterval(function () {
-            idx = (idx + 1) % quotes.length;
-            paint(idx, true);
-        }, 12000);
+    if (wall) {
+        window.ArtBastardLuminary.buildQuoteWall(wall, quotes);
     }
 })();

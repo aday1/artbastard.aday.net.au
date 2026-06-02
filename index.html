@@ -84,6 +84,13 @@
             <q id="hub-quote-text">Loading aristocratic wisdom...</q>
             <cite id="hub-quote-author"></cite>
           </div>
+          <span id="hub-quote-meta" class="hub-quote-meta"></span>
+        </div>
+
+        <div class="panel hub-wall-panel">
+          <strong>The Complete Luminary Quote Wall</strong>
+          <p class="hub-wall-lede">All <span id="hub-quote-wall-count">61</span> aristocrats from the in-app ArtSnob theme. Each card tinted to their personal photonic wavelength.</p>
+          <div id="hub-quote-wall" class="quote-wall"></div>
         </div>
 
         <div class="panel">
@@ -110,7 +117,7 @@
         <div class="panel">
           <strong>Where to go</strong>
           <ul>
-            <li>Luminary aristocracy (62 quotes): <a href="website/#luminary">/website/#luminary</a></li>
+            <li>Luminary aristocracy (<span id="hub-link-quote-count">61</span> quotes): <a href="website/#luminary">/website/#luminary</a></li>
             <li>Full showcase (videos + features + docs): <a href="website/">/website/</a></li>
             <li>Live app: <a href="https://artbastard.aday.net.au">artbastard.aday.net.au</a></li>
             <li>Dev / pre-prod: <a href="https://artbastard-dev.aday.net.au">artbastard-dev.aday.net.au</a></li>
@@ -142,6 +149,14 @@
   </div>
   <script src="DOCS/showcase-quotes-data.js"></script>
   <script src="website/theatrical.js"></script>
+  <script src="website/luminary-shared.js"></script>
   <script src="website/hub-quotes.js"></script>
+  <script>
+    (function () {
+      var n = (window.AB_LUXURY_QUOTES || []).length;
+      var linkCount = document.getElementById("hub-link-quote-count");
+      if (linkCount && n) linkCount.textContent = String(n);
+    })();
+  </script>
 </body>
 </html>
