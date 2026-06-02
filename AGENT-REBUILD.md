@@ -1,6 +1,6 @@
 # AGENT-REBUILD — ArtBastard DMX512
 
-Rebuild this project from scratch. Read this file and `docs/AGENT-REBUILD-REFERENCE.md` before writing code. Preserve all Non-negotiables.
+Rebuild this project from scratch. Read this file and `DOCS/AGENT-REBUILD-REFERENCE.md` before writing code. Preserve all Non-negotiables.
 
 ## Canonical paths
 
@@ -91,7 +91,7 @@ Appearance: `GET/POST /api/appearance` -> `data/appearance.json`, socket `appear
 14. Appearance + themes
 15. Help + DOCS; demo evidence
 
-Full checklist and file map: `docs/AGENT-REBUILD-REFERENCE.md`.
+Full checklist and file map: `DOCS/AGENT-REBUILD-REFERENCE.md`.
 
 ## Personality (ArtSnob)
 
