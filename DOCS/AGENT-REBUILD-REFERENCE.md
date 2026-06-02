@@ -1,5 +1,7 @@
 # ArtBastard rebuild reference
 
+**Start with `AGENT-REBUILD.md` at repo root** for from-scratch phases, MVP, and Done-when checks. This file is the deep appendix (architecture, sockets, file map).
+
 Canonical repo: `C:/aday.repo/ArtBastard-DMX512`
 
 ## Architecture diagram

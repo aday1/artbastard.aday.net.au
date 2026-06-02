@@ -2,6 +2,83 @@
 
 Rebuild this project from scratch. Read this file and `DOCS/AGENT-REBUILD-REFERENCE.md` before writing code. Preserve all Non-negotiables.
 
+This document is a **from-scratch rebuild runbook**, not a high-level summary. Follow the phases below in order.
+
+## Rebuild from scratch
+
+### Prerequisites
+
+- Node.js 20+, npm
+- Optional for full parity: Linux or VM with Xvfb/ffmpeg for demo capture; LAN for Art-Net/MIDI tests
+- Port 3030 free (or set `PORT`)
+
+### Path A (recommended): clone and strip
+
+Use when you need accurate contracts fast:
+
+    git clone https://github.com/aday1/artbastard.aday.net.au.git ArtBastard-DMX512
+    cd ArtBastard-DMX512
+
+Regenerate in place using the **Phased rebuild** below. Do not delete `DOCS/`, `LICENSE`, or `data/` fixture examples until replacements exist.
+
+### Path B: empty directory
+
+Use only when GitHub is unavailable. Create this tree first:
+
+    artbastard-dmx512/
+      package.json          # root scripts: build-backend-fast, start
+      build-backend-fast.js
+      tsconfig.json         # backend compile -> dist/
+      src/
+        server.ts           # Express + Socket.IO listen
+        api.ts              # REST router
+        index.ts            # 512ch DMX engine
+        core.ts
+      react-app/
+        package.json        # Vite + React + TS
+        vite.config.ts
+        index.html
+        src/
+          main.tsx
+          App.tsx
+          index.scss
+      data/
+        appearance.json
+        fixtures/           # at least one .json profile
+      public/               # static fallback if needed
+
+Install deps:
+
+    npm init -y   # only if no package.json yet
+    npm install express socket.io dmxnet osc midi ...
+    cd react-app && npm create vite@latest . -- --template react-ts
+
+Then execute the same phases as Path A.
+
+### Phased rebuild (implement in order)
+
+| Phase | What to build | Done when |
+| --- | --- | --- |
+| 0 | Root `package.json`, `build-backend-fast.js`, backend `tsconfig`, empty `data/` | `npm run build-backend-fast` produces `dist/server.js` |
+| 1 | `src/index.ts`: `dmxChannels[512]`, init defaults; `src/server.ts`: HTTP + Socket.IO on PORT | `node dist/server.js` listens; curl returns 200 on `/` or health route |
+| 2 | Socket handlers `setDmxChannel`, `dmx:batch`, broadcast full state on connect | Two browser tabs or `scripts/api-contract-smoke.js` show synced channel changes |
+| 3 | `src/api.ts`: `GET/POST /api/appearance`, fixture CRUD stubs; persist JSON under `data/` | POST appearance writes `data/appearance.json` |
+| 4 | Art-Net via dmxnet in `index.ts`; `updateArtNetConfig` socket; `artnetStatus` emit | Settings or API can set universe IP; status event fires (LAN may show connected) |
+| 5 | `react-app`: Vite build, hash router (`RouterContext`), `Layout` with `ab-rack` class | `npm run local` or built assets load `#/dmx-control` |
+| 6 | SCSS: `design-system`, `workbench-shell`, `reason-rack`, `skeuomorphic-controls` per load order in `index.scss` | Page visibly uses rack chrome (not flat Material UI) |
+| 7 | `DmxChannelControlPage`: grid + `DmxVerticalFader`; Zustand `dmxSlice` wired to sockets | Dragging fader updates server and other clients |
+| 8 | Fixtures: `fixturesPersistence.ts`, SuperControl page `#/fixture` | Save/load fixture JSON in `data/fixtures/` |
+| 9 | Scenes: capture/recall channel arrays; `#/scenes-acts` | Scene save restores 512 values |
+| 10 | Automation envelopes + transition tracker + acts/clip launcher | Subsystems in FEATURE PARITY list below work per `DOCS/FEATURES.md` |
+| 11 | MIDI Learn, OSC, `#/mobile` route | Templates from `DOCS/MIDI_TEMPLATES.md` apply |
+| 12 | `bridge-agent/` + `bridgeRegistry.ts` cloud fan-out | `npm run test:bridge-smoke` passes |
+| 13 | ArtSnob: `FancyQuotes.tsx`, ThemeContext modes, `sync-docs-quotes.mjs` | Showcase quote wall matches app quotes |
+| 14 | `website/` hub, `npm run demo:evidence` | All test gates green |
+
+**MVP (ship-blocking minimum):** phases 0-7. User can open `#/dmx-control`, move faders, persist appearance, optional Art-Net on LAN.
+
+**Full parity:** phases 8-14 and the numbered list in the next section.
+
 ## Canonical paths
 
 | Field | Value |
