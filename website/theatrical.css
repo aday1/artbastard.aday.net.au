@@ -26,6 +26,11 @@
     z-index: 2;
 }
 
+section[id],
+.panel[id] {
+    scroll-margin-top: 5.5rem;
+}
+
 .proscenium {
     position: relative;
     min-height: 100vh;

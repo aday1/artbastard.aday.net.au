@@ -37,6 +37,18 @@
         setSpotColor: setSpotColor,
     };
 
+    function scrollToHashTarget() {
+        var hash = window.location.hash;
+        if (!hash || hash.length < 2) {
+            return;
+        }
+        var target = document.querySelector(hash);
+        if (!target) {
+            return;
+        }
+        target.scrollIntoView({ block: "start" });
+    }
+
     function openCurtains(theatre) {
         if (!theatre) return;
         var reduced = prefersReducedMotion();
@@ -48,6 +60,9 @@
                 whisper.textContent =
                     "The house lights dim. The bastard awakens. " +
                     "The Wind Dancing Masters would find our DMX channels... adequate.";
+            }
+            if (window.location.hash) {
+                setTimeout(scrollToHashTarget, reduced ? 0 : 350);
             }
         }
 
