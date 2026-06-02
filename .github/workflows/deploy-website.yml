@@ -5,7 +5,6 @@ on:
     branches:
       - main
     paths:
-      - 'index.html'
       - 'website/**'
       - 'DOCS/**'
       - '.github/workflows/deploy-website.yml'
@@ -41,20 +40,33 @@ jobs:
           REPO_OWNER="${{ github.repository_owner }}"
           REPO_NAME="${{ github.event.repository.name }}"
           if [ -f "website/index.html" ]; then
-            sed -i "s/yourusername/$REPO_OWNER/g" website/index.html website/script.js index.html || true
-            sed -i "s/ArtBastard-DMX512/$REPO_NAME/g" website/index.html website/script.js index.html || true
+            sed -i "s/yourusername/$REPO_OWNER/g" website/index.html website/script.js || true
+            sed -i "s/ArtBastard-DMX512/$REPO_NAME/g" website/index.html website/script.js || true
           fi
 
       - name: Assemble Pages bundle
         run: |
           rm -rf pages-out
-          mkdir -p pages-out/website pages-out/DOCS
-          cp index.html pages-out/
-          cp -r website/. pages-out/website/
+          mkdir -p pages-out/DOCS pages-out/website
+          cp -r website/. pages-out/
           cp -r DOCS/. pages-out/DOCS/
+          cat > pages-out/website/index.html <<'EOF'
+          <!doctype html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <meta http-equiv="refresh" content="0; url=../">
+            <link rel="canonical" href="../">
+            <title>ArtBastard showcase moved</title>
+          </head>
+          <body>
+            <p>The showcase lives at the site root now. <a href="../">Continue</a>.</p>
+          </body>
+          </html>
+          EOF
           touch pages-out/.nojekyll
           ls -la pages-out/
-          ls -la pages-out/website/ | head
+          ls -la pages-out/DOCS/ | head
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

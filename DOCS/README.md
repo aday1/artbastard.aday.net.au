@@ -46,7 +46,7 @@ https://github.com/aday1/artbastard.aday.net.au/releases/tag/v5.15.0
 
 Public showcase:
 - Quick-jump hub: https://aday1.github.io/artbastard.aday.net.au/
-- Full showcase: https://aday1.github.io/artbastard.aday.net.au/website/
+- Full showcase: https://aday1.github.io/artbastard.aday.net.au/
 
 ## Validation commands
 

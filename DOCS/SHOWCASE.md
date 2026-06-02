@@ -71,36 +71,16 @@ The running DMX app is on Linode (GHCR image + Macroverse
 `docker-compose.yml`), not Fly.io. Push `main` -> `artbastard-image` ->
 `deploy-linode`.
 
-GitHub Pages on this repo is configured as `legacy` source (branch =
-`main`, path = `/`). That means the entire repository root is served
-under `https://aday1.github.io/artbastard.aday.net.au/` for the static
-showcase hub only.
+GitHub Pages deploys via `.github/workflows/deploy-website.yml`: source
+files live in `website/` in the repo but are copied to the site root on
+deploy. `/DOCS/` is served alongside.
 
-Two URLs that matter:
+Canonical URL:
 
-- `https://aday1.github.io/artbastard.aday.net.au/` - the small hub page
-  (root `/index.html`) with quick links to the live app, test app, and
-  the demo reel.
-- `https://aday1.github.io/artbastard.aday.net.au/website/` - the full
-  showcase: hero, demo reel, feature cards, install steps, doc grid.
-
-Two GitHub Actions workflows still upload Pages artifacts:
-
-- `.github/workflows/deploy-website.yml` uploads `website/` to a Pages
-  artifact on push to main.
-- The branch-based legacy build also runs automatically.
-
-Because Pages is in `legacy` mode, the Actions deployment artifact does
-not override the branch-based deploy. Either:
-
-1. Leave Pages in legacy mode and treat both URLs above as canonical.
-2. Switch Pages source to "GitHub Actions" in the repo settings to make
-   `website/` the root of the deployed site. The artifact pipeline
-   (deploy-website.yml) is already wired for that switch.
-
-(`pages.yml` was removed in this release because it conflicted on the
-`pages` concurrency group with `deploy-website.yml` and pointed at a
-docs folder with no index.)
+- `https://aday1.github.io/artbastard.aday.net.au/` - full showcase
+  (hero, demo reel, feature cards, install steps, doc grid, Luminary wall).
+- `https://aday1.github.io/artbastard.aday.net.au/DOCS/` - documentation hub.
+- `/website/` on the deployed site redirects to `/` for old bookmarks.
 
 ## Local preview
 

@@ -49,7 +49,7 @@ Production app (not Fly.io):
 Static showcase only:
 
 - GitHub Pages source is `legacy` (branch=main, path=/). The repo root is served at `https://aday1.github.io/artbastard.aday.net.au/`.
-- The full showcase page lives at `/website/index.html`; documentation at `/DOCS/`.
+- Source lives in `website/` in the repo; deploy flattens it to the GitHub Pages root. Documentation at `/DOCS/`.
 - `.github/workflows/deploy-website.yml` uploads the `website/` directory to a Pages artifact on push to main; the legacy branch build runs in parallel. Switching Pages source to "GitHub Actions" in repo settings would make `website/` the root.
 
 ### Documentation entry points

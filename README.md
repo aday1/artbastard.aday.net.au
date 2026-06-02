@@ -9,7 +9,7 @@ Current package version: 5.1.2.0
 
 - Quick-jump hub: https://aday1.github.io/artbastard.aday.net.au/
 - Full showcase (Photonic Tour + features + docs):
-  https://aday1.github.io/artbastard.aday.net.au/website/
+  https://aday1.github.io/artbastard.aday.net.au/
 - Live app: https://artbastard.aday.net.au
 - Dev / pre-prod (same Docker service `artbastard_test`, image `:dev`): use any of
   - https://dev.artbastard.aday.net.au
