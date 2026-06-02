@@ -7,6 +7,7 @@
     <meta name="description" content="ArtBastard DMX512 v5.16.0 - Fixture-aware transition tracker, live theme tuning, Super Control, scene timelines, MIDI templates, Art-Net, OSC, LAN bridge, mobile surface. Open source.">
     <link rel="stylesheet" href="theatrical.css">
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="showcase-shell.css">
     <style>
         .theatre:not(.is-open) .curtain-l,
         .theatre:not(.is-open) .curtain-r { width: calc(50% + 1px); }
@@ -53,19 +54,20 @@
     <p id="theatre-whisper" class="theatre-whisper" aria-live="polite"></p>
     <div class="particles dmx-wash" id="particles" aria-hidden="true"></div>
 
-    <nav class="navbar theatre-nav">
-        <div class="container">
-            <div class="nav-brand">
+    <nav class="showcase-nav theatre-nav" aria-label="Showcase navigation">
+        <div class="showcase-nav-inner container">
+            <a class="showcase-nav-brand nav-brand" href="../">
                 <span class="brand-icon">DMX</span>
                 <span class="brand-text">ArtBastard</span>
-            </div>
-            <div class="nav-links">
-                <a href="../">Showcase hub</a>
+            </a>
+            <div class="showcase-nav-links nav-links">
+                <a href="../">Hub</a>
                 <a href="#luminary">Luminary</a>
-                <a href="#tour">Scenes Dramatiques</a>
-                <a href="#features">Controle DMX Ultime</a>
-                <a href="#download">Obtenir ArtBastard</a>
-                <a href="#docs">Docs</a>
+                <a href="#tour">Tour</a>
+                <a href="#features">Features</a>
+                <a href="#download">Download</a>
+                <a href="../DOCS/">Docs</a>
+                <a href="https://artbastard.aday.net.au/">Try it live</a>
                 <a href="https://github.com/aday1/artbastard.aday.net.au" target="_blank" rel="noopener">GitHub</a>
             </div>
         </div>
@@ -121,6 +123,10 @@
                         <div class="deploy-row">
                             <span class="deploy-key">Showcase</span>
                             <span><a href="https://aday1.github.io/artbastard.aday.net.au/">aday1.github.io/artbastard.aday.net.au</a></span>
+                        </div>
+                        <div class="deploy-row">
+                            <span class="deploy-key">Source</span>
+                            <span><a href="https://github.com/aday1/artbastard.aday.net.au">github.com/aday1/artbastard.aday.net.au</a></span>
                         </div>
                         <p class="deploy-note">// this is the GitHub showcase page &mdash; the live runtime above serves the actual app</p>
                     </div>
@@ -508,6 +514,9 @@
         <section id="docs" class="docs">
             <div class="container">
                 <h2 class="section-title">Documentation</h2>
+                <p class="section-subtitle showcase-section-lede" style="text-align:center;max-width:640px;margin:0 auto 2rem;">
+                    Same index as <a href="../DOCS/">/DOCS/</a>. Browse guides on GitHub Pages or jump to the docs hub.
+                </p>
                 <div class="docs-grid">
                     <a href="../DOCS/README.md" class="doc-card">
                         <h3>Getting Started</h3>

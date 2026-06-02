@@ -72,7 +72,7 @@ function setupLazyVideos() {
 
 // Subtle navbar darkening on scroll.
 function setupNavbarScroll() {
-    const navbar = document.querySelector('.navbar');
+    const navbar = document.querySelector('.showcase-nav, .navbar');
     if (!navbar) {
         return;
     }
