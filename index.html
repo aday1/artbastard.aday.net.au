@@ -10,6 +10,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,600;0,700;1,500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="website/theatrical.css">
   <link rel="stylesheet" href="website/hub.css">
+  <style>
+    .theatre:not(.is-open) .curtain-l,
+    .theatre:not(.is-open) .curtain-r { width: calc(50% + 1px); }
+    .theatre:not(.is-open) .theatre-content { visibility: hidden; }
+  </style>
 </head>
 <body class="theatre-body">
   <div class="theatre" id="theatre">

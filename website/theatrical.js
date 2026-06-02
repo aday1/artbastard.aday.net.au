@@ -39,8 +39,9 @@
 
     function openCurtains(theatre) {
         if (!theatre) return;
-        var delay = prefersReducedMotion() ? 0 : 400;
-        setTimeout(function () {
+        var reduced = prefersReducedMotion();
+
+        function reveal() {
             theatre.classList.add("is-open");
             var whisper = document.getElementById("theatre-whisper");
             if (whisper) {
@@ -48,7 +49,15 @@
                     "The house lights dim. The bastard awakens. " +
                     "The Wind Dancing Masters would find our DMX channels... adequate.";
             }
-        }, delay);
+        }
+
+        if (reduced) {
+            reveal();
+            return;
+        }
+
+        // Hold fully closed, then part the coulisse.
+        setTimeout(reveal, 1200);
     }
 
     function setupSpotlight() {

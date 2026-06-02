@@ -7,6 +7,11 @@
     <meta name="description" content="ArtBastard DMX512 v5.16.0 - Fixture-aware transition tracker, live theme tuning, Super Control, scene timelines, MIDI templates, Art-Net, OSC, LAN bridge, mobile surface. Open source.">
     <link rel="stylesheet" href="theatrical.css">
     <link rel="stylesheet" href="styles.css">
+    <style>
+        .theatre:not(.is-open) .curtain-l,
+        .theatre:not(.is-open) .curtain-r { width: calc(50% + 1px); }
+        .theatre:not(.is-open) .theatre-content { visibility: hidden; }
+    </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,600;0,700;1,500&display=swap" rel="stylesheet">

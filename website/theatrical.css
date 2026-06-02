@@ -65,12 +65,10 @@
     position: fixed;
     top: 0;
     bottom: 0;
-    width: 18vw;
-    min-width: 72px;
-    max-width: 220px;
+    width: calc(50% + 1px);
     z-index: 50;
     pointer-events: none;
-    transition: transform 2.2s cubic-bezier(0.65, 0, 0.35, 1);
+    transition: transform 2.4s cubic-bezier(0.65, 0, 0.35, 1);
     background:
         repeating-linear-gradient(
             90deg,
@@ -103,6 +101,28 @@
         linear-gradient(180deg, #6b1a28 0%, var(--velvet) 35%, var(--velvet-deep) 100%);
 }
 
+.curtain-l::before,
+.curtain-r::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 14px;
+    pointer-events: none;
+}
+
+.curtain-l::before {
+    right: 0;
+    background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.35));
+    box-shadow: 4px 0 12px rgba(0, 0, 0, 0.25);
+}
+
+.curtain-r::before {
+    left: 0;
+    background: linear-gradient(270deg, transparent, rgba(0, 0, 0, 0.35));
+    box-shadow: -4px 0 12px rgba(0, 0, 0, 0.25);
+}
+
 .curtain-l::after,
 .curtain-r::after {
     content: "";
@@ -129,8 +149,17 @@
     white-space: nowrap;
 }
 
-.curtain-label-l { left: 0.4rem; }
-.curtain-label-r { right: 0.4rem; transform: translateY(-50%) rotate(90deg); }
+.curtain-label-l { left: 22%; transform: translate(-50%, -50%) rotate(-90deg); }
+.curtain-label-r { right: 22%; transform: translate(50%, -50%) rotate(90deg); }
+
+.theatre:not(.is-open) .theatre-content {
+    visibility: hidden;
+}
+
+.theatre.is-open .theatre-content {
+    visibility: visible;
+    transition: visibility 0s linear 0.6s;
+}
 
 .theatre.is-open .curtain-l {
     transform: translateX(-102%);
@@ -431,9 +460,7 @@ body.theatre-body .hero-title {
 @media (max-width: 768px) {
     .curtain-l,
     .curtain-r {
-        width: 8vw;
-        min-width: 28px;
-        opacity: 0.85;
+        width: calc(50% + 1px);
     }
 
     .proscenium::before {
@@ -450,6 +477,11 @@ body.theatre-body .hero-title {
 }
 
 @media (prefers-reduced-motion: reduce) {
+    .curtain-l,
+    .curtain-r {
+        transition: none;
+    }
+
     .theatre.is-open .curtain-l,
     .curtain-l {
         transform: translateX(-102%);
@@ -458,6 +490,10 @@ body.theatre-body .hero-title {
     .theatre.is-open .curtain-r,
     .curtain-r {
         transform: translateX(102%);
+    }
+
+    .theatre:not(.is-open) .theatre-content {
+        visibility: visible;
     }
 
     .rig-can,
