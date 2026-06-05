@@ -40,6 +40,14 @@
   border-color: rgba(255, 196, 64, 0.65);
 }
 
+.corner[data-lane='beta'],
+.topbar[data-lane='beta'],
+.inline[data-lane='beta'] {
+  color: #fdf7e8;
+  background: rgba(180, 90, 18, 0.48);
+  border-color: rgba(232, 179, 72, 0.75);
+}
+
 .corner[data-lane='aday'],
 .topbar[data-lane='aday'],
 .inline[data-lane='aday'] {

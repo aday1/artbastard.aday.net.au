@@ -69,6 +69,9 @@ const hashToView = (hashValue: string): ViewType | null => {
 const resolveDefaultView = (): ViewType => {
   if (typeof window === 'undefined') return 'dmxControl'
   try {
+    if (window.location.hostname.toLowerCase() === 'artbastard-beta.aday.net.au') {
+      return 'mobile'
+    }
     const isSmall = window.matchMedia('(max-width: 1279px)').matches
     return isSmall ? 'mobile' : 'dmxControl'
   } catch {

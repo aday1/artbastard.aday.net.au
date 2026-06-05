@@ -58,6 +58,18 @@
   --transition-speed: 0.2s;
 }
 
+html.ab-touch-optimized {
+  --touch-target-min: 50px;
+  --touch-target-comfortable: 62px;
+  --touch-target-large: 80px;
+  --ab-touch-slider-thumb: 30px;
+  --ab-touch-slider-track: 12px;
+}
+
+html.ab-beta-host {
+  color-scheme: dark;
+}
+
 // Dark mode colors - Enhanced for professional lighting environments
 [data-theme="dark"] {
   --font-mono: var(--wb-mono, 'Share Tech Mono', 'Space Mono', Consolas, monospace);
@@ -357,6 +369,29 @@ input[type="range"]:not(.ab-styled-fader) {
     background-color: var(--color-slider-thumb);
     cursor: pointer;
     border: none;
+  }
+}
+
+html.ab-touch-optimized input[type="range"]:not(.ab-styled-fader) {
+  min-height: 44px;
+
+  &::-webkit-slider-runnable-track {
+    min-height: var(--ab-touch-slider-track);
+  }
+
+  &::-webkit-slider-thumb {
+    width: var(--ab-touch-slider-thumb);
+    height: var(--ab-touch-slider-thumb);
+    margin-top: calc((var(--ab-touch-slider-track) - var(--ab-touch-slider-thumb)) / 2);
+  }
+
+  &::-moz-range-track {
+    height: var(--ab-touch-slider-track);
+  }
+
+  &::-moz-range-thumb {
+    width: var(--ab-touch-slider-thumb);
+    height: var(--ab-touch-slider-thumb);
   }
 }
 

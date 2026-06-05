@@ -51,8 +51,11 @@ const resolveToastPosition = (): 'top-right' | 'bottom-center' => {
 // the hash whenever currentView changes) do not accidentally re-classify
 // the SPA as the standalone Mobile popup window.
 const initialHashAtLoad = typeof window !== 'undefined' ? window.location.hash : ''
+const initialHostAtLoad = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : ''
 const initialIsMobilePopup =
-  initialHashAtLoad === '#/mobile' || initialHashAtLoad === '#mobile'
+  initialHashAtLoad === '#/mobile' ||
+  initialHashAtLoad === '#mobile' ||
+  (initialHostAtLoad === 'artbastard-beta.aday.net.au' && !initialHashAtLoad)
 
 function App() {
   const isMobilePage = initialIsMobilePopup

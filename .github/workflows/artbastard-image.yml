@@ -64,6 +64,7 @@ jobs:
           $LANE_SYNC
             "deploy_switcher": {
               "live_url": "https://artbastard.aday.net.au/",
+              "beta_url": "https://artbastard-beta.aday.net.au/",
               "dev_url": "https://artbastard-dev.aday.net.au/"
             },
             "bridge_title": "Raspberry Pi LAN bridge (Art-Net / Ableton Link)",

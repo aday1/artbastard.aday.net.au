@@ -1,17 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import styles from './DeployLaneBadge.module.scss';
 
-type DeployLane = 'live' | 'dev' | 'aday';
+type DeployLane = 'live' | 'dev' | 'beta' | 'aday';
 export type DeployLanePlacement = 'corner' | 'topbar' | 'inline';
 
 function readLane(): { lane: DeployLane; label: string } {
   const w = window as Window & { __deployLane?: string; __deployLaneLabel?: string };
   const lane = String(w.__deployLane || 'live').toLowerCase();
+  const isBetaHost =
+    typeof window !== 'undefined' &&
+    window.location.hostname.toLowerCase() === 'artbastard-beta.aday.net.au';
   const k: DeployLane =
-    lane === 'dev' ? 'dev' : lane === 'aday' ? 'aday' : 'live';
+    isBetaHost ? 'beta' : lane === 'dev' ? 'dev' : lane === 'aday' ? 'aday' : 'live';
   const label =
     w.__deployLaneLabel ||
-    (k === 'dev' ? 'DEV' : k === 'aday' ? 'ADAY' : 'LIVE');
+    (k === 'beta' ? 'BETA' : k === 'dev' ? 'DEV' : k === 'aday' ? 'ADAY' : 'LIVE');
   return { lane: k, label };
 }
 
@@ -57,7 +60,8 @@ export const DeployLaneBadge: React.FC<DeployLaneBadgeProps> = ({
     pruneLegacyLaneBadges(rootRef.current);
   }, [placement]);
 
-  const title = `Deploy track: ${label} (GHCR :${lane} on Linode)`;
+  const ghcrTrack = lane === 'beta' ? 'dev' : lane;
+  const title = `Deploy track: ${label} (GHCR :${ghcrTrack} on Linode)`;
 
   if (placement === 'inline') {
     return (

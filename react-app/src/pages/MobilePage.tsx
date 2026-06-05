@@ -1,13 +1,20 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { DmxChannelControlPage } from '../components/pages/DmxChannelControlPage';
 import SuperControl from '../components/dmx/SuperControl';
 import { useTheme } from '../context/ThemeContext';
 import { LucideIcon } from '../components/ui/LucideIcon';
 import { SkeuoButton } from '../components/ui/SkeuoButton';
 import { SiteBrandingLink } from '../components/ui/SiteBrandingLink';
+import { DeployLaneBadge } from '../components/layout/DeployLaneBadge';
 import styles from './MobilePage.module.scss';
 
-type MobileTab = 'supercontrol' | 'dmx';
+const FixturePage = React.lazy(() => import('./FixturePage'));
+const ActsScenesPage = React.lazy(() => import('./ActsScenesPage'));
+const SettingsPage = React.lazy(() => import('./SettingsPage'));
+
+type MobileTab = 'dmx' | 'supercontrol' | 'fixture' | 'scenes' | 'settings';
+
+const TabFallback = () => <div className={styles.tabFallback}>Chargement...</div>;
 
 const MobilePage: React.FC = () => {
   const { theme } = useTheme();
@@ -17,8 +24,15 @@ const MobilePage: React.FC = () => {
     const handleMessage = (event: MessageEvent) => {
       if (!event.data || event.data.type !== 'switchTab') return;
       const tab = event.data.tab;
-      if (tab === 'dmx' || tab === 'supercontrol' || tab === 'control') {
-        setActiveTab(tab === 'dmx' ? 'dmx' : 'supercontrol');
+      if (
+        tab === 'dmx' ||
+        tab === 'supercontrol' ||
+        tab === 'control' ||
+        tab === 'fixture' ||
+        tab === 'scenes' ||
+        tab === 'settings'
+      ) {
+        setActiveTab(tab === 'control' ? 'supercontrol' : tab);
       }
     };
     window.addEventListener('message', handleMessage);
@@ -27,7 +41,7 @@ const MobilePage: React.FC = () => {
 
   const tabs: Array<{
     id: MobileTab;
-    icon: 'Lightbulb' | 'Zap';
+    icon: 'Lightbulb' | 'Zap' | 'LampDesk' | 'Theater' | 'Settings';
     label: { artsnob: string; standard: string };
   }> = [
     {
@@ -40,14 +54,32 @@ const MobilePage: React.FC = () => {
       icon: 'Lightbulb',
       label: { artsnob: 'Super Contrôle', standard: 'Super Control' },
     },
+    {
+      id: 'fixture',
+      icon: 'LampDesk',
+      label: { artsnob: 'Fixtures', standard: 'Fixtures' },
+    },
+    {
+      id: 'scenes',
+      icon: 'Theater',
+      label: { artsnob: 'Scènes', standard: 'Scenes' },
+    },
+    {
+      id: 'settings',
+      icon: 'Settings',
+      label: { artsnob: 'Réglages', standard: 'Settings' },
+    },
   ];
 
   return (
     <div className={styles.mobilePage}>
       <div className={styles.mobileHeader}>
-        <h1 className={styles.mobileTitle}>
-          <SiteBrandingLink brand="artbastard">ArtBastard</SiteBrandingLink>
-        </h1>
+        <div className={styles.titleRow}>
+          <h1 className={styles.mobileTitle}>
+            <SiteBrandingLink brand="artbastard">ArtBastard</SiteBrandingLink>
+          </h1>
+          <DeployLaneBadge placement="inline" className={styles.laneBadge} />
+        </div>
         <div className={`${styles.tabNavigation} ab-view-tabs`} role="tablist" aria-label="Mobile control tabs">
           {tabs.map((tab) => (
             <SkeuoButton
@@ -79,6 +111,27 @@ const MobilePage: React.FC = () => {
         {activeTab === 'dmx' && (
           <div className={styles.tabContent}>
             <DmxChannelControlPage />
+          </div>
+        )}
+        {activeTab === 'fixture' && (
+          <div className={styles.tabContent}>
+            <Suspense fallback={<TabFallback />}>
+              <FixturePage />
+            </Suspense>
+          </div>
+        )}
+        {activeTab === 'scenes' && (
+          <div className={styles.tabContent}>
+            <Suspense fallback={<TabFallback />}>
+              <ActsScenesPage />
+            </Suspense>
+          </div>
+        )}
+        {activeTab === 'settings' && (
+          <div className={styles.tabContent}>
+            <Suspense fallback={<TabFallback />}>
+              <SettingsPage />
+            </Suspense>
           </div>
         )}
       </div>

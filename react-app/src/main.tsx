@@ -6,7 +6,20 @@ import { ErrorBoundaryWithRetry } from './components/ErrorBoundaryWithRetry'
 import { checkFactoryReset } from './utils/factoryResetCheck'
 import './styles/index.scss'
 
+function tagHostSurface() {
+  if (typeof window === 'undefined') return
+  const host = window.location.hostname.toLowerCase()
+  const root = document.documentElement
+  root.classList.toggle('ab-beta-host', host === 'artbastard-beta.aday.net.au')
+  root.classList.toggle(
+    'ab-touch-optimized',
+    host === 'artbastard-beta.aday.net.au' ||
+      window.matchMedia('(pointer: coarse), (max-width: 1279px)').matches
+  )
+}
+
 async function bootstrap() {
+  tagHostSurface()
   const didReset = await checkFactoryReset()
   if (didReset) {
     window.location.reload()

@@ -17,10 +17,17 @@
 }
 
 .sizeTouch {
-  --fader-form-h: 3.65rem;
-  --fader-thumb-d: 3.1rem;
-  --fader-track-extra-w: 2.35rem;
+  --fader-form-h: 4rem;
+  --fader-thumb-d: 3.35rem;
+  --fader-track-extra-w: 2.55rem;
   min-height: 0;
+}
+
+:global(html.ab-touch-optimized) .wrap {
+  --fader-form-h: 3.95rem;
+  --fader-thumb-d: 3.25rem;
+  --fader-track-extra-w: 2.45rem;
+  min-width: 4.75rem;
 }
 
 .sizeChannel {
