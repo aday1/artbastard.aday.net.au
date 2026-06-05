@@ -1,6 +1,12 @@
 .mobilePage {
   --mobile-header-pad-x: max(12px, env(safe-area-inset-left, 0px));
   --mobile-header-pad-r: max(12px, env(safe-area-inset-right, 0px));
+  --mobile-rack-rail: clamp(8px, 2.8vw, 18px);
+  --mobile-rack-ink: #0b0a0d;
+  --mobile-rack-panel: #232029;
+  --mobile-rack-panel-hi: #3f3948;
+  --mobile-rack-brass: #d68c34;
+  --mobile-rack-led: #76f082;
   width: 100%;
   height: 100%;
   // Use the dynamic viewport height when supported so the iOS Safari
@@ -10,22 +16,75 @@
   display: flex;
   flex-direction: column;
   background:
-    linear-gradient(180deg, rgba(255, 160, 68, 0.07), transparent 14rem),
-    var(--color-background, #0f172a);
+    linear-gradient(90deg, #08070a 0 var(--mobile-rack-rail), transparent var(--mobile-rack-rail) calc(100% - var(--mobile-rack-rail)), #08070a calc(100% - var(--mobile-rack-rail)) 100%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 7px),
+    radial-gradient(circle at 50% 0%, rgba(214, 140, 52, 0.16), transparent 26rem),
+    linear-gradient(180deg, #18151c 0%, #0e0d11 100%);
   overflow: hidden;
+  position: relative;
+  isolation: isolate;
+
+  &::before,
+  &::after {
+    content: '';
+    position: fixed;
+    top: 10px;
+    bottom: 10px;
+    z-index: 0;
+    width: var(--mobile-rack-rail);
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 50% 22px, #837a83 0 2px, #171318 3px 5px, transparent 6px),
+      radial-gradient(circle at 50% calc(100% - 22px), #837a83 0 2px, #171318 3px 5px, transparent 6px),
+      linear-gradient(90deg, #050506, #171419 45%, #050506);
+    box-shadow:
+      inset 1px 0 0 rgba(255, 255, 255, 0.08),
+      inset -1px 0 0 rgba(0, 0, 0, 0.75);
+  }
+
+  &::before {
+    left: 0;
+  }
+
+  &::after {
+    right: 0;
+  }
 }
 
 .mobileHeader {
   background:
-    linear-gradient(180deg, rgba(255, 209, 128, 0.08), rgba(0, 0, 0, 0)),
-    var(--wb-panel, var(--color-surface, rgba(15, 23, 42, 0.95)));
-  border-bottom: 1px solid var(--wb-copper, var(--color-border, rgba(71, 85, 105, 0.3)));
-  padding: max(10px, env(safe-area-inset-top, 0px)) var(--mobile-header-pad-r) 12px var(--mobile-header-pad-x);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent 45%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 6px),
+    linear-gradient(180deg, #2e2935 0%, #17141c 100%);
+  border-bottom: 2px solid #070609;
+  padding: max(10px, env(safe-area-inset-top, 0px)) calc(var(--mobile-header-pad-r) + var(--mobile-rack-rail)) 12px calc(var(--mobile-header-pad-x) + var(--mobile-rack-rail));
   flex-shrink: 0;
   z-index: 100;
   box-shadow:
-    inset 0 -1px 0 rgba(255, 255, 255, 0.07),
-    0 8px 22px rgba(0, 0, 0, 0.28);
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(214, 140, 52, 0.36),
+    0 8px 22px rgba(0, 0, 0, 0.42);
+  position: relative;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    top: 18px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 32% 28%, #d9d0c0, #625963 47%, #08070a 72%);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  }
+
+  &::before {
+    left: calc(var(--mobile-rack-rail) * 0.55);
+  }
+
+  &::after {
+    right: calc(var(--mobile-rack-rail) * 0.55);
+  }
 }
 
 .titleRow {
@@ -43,22 +102,38 @@
 
 .mobileTitle {
   font-size: 18px;
-  font-weight: 700;
-  color: var(--color-text-primary, #e2e8f0);
+  font-weight: 800;
+  color: #f2e9d8;
   margin: 0;
   text-align: center;
   min-width: 0;
+  font-family: var(--font-heading, 'Playfair Display', Georgia, serif);
+  letter-spacing: 0;
+  text-shadow: 0 1px 0 #000, 0 0 14px rgba(214, 140, 52, 0.24);
+
+  a {
+    color: inherit;
+  }
 }
 
 .tabNavigation {
   display: flex;
-  gap: 10px;
+  gap: 4px;
   justify-content: stretch;
   flex-wrap: nowrap;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scroll-snap-type: x proximity;
   overscroll-behavior-x: contain;
+  padding: 4px;
+  border: 1px solid #08070a;
+  border-radius: 4px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent),
+    #0b0a0d;
+  box-shadow:
+    inset 0 2px 10px rgba(0, 0, 0, 0.78),
+    0 1px 0 rgba(255, 255, 255, 0.08);
 
   &::-webkit-scrollbar { height: 0; }
 }
@@ -68,14 +143,38 @@
   min-width: 7.25rem;
   min-height: 52px;
   scroll-snap-align: start;
+  border-radius: 2px !important;
+  border-color: #08070a !important;
+  background:
+    linear-gradient(180deg, #3a3440 0%, #211d26 48%, #121016 100%) !important;
+  color: #c9bdac !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.55),
+    0 1px 0 rgba(255, 255, 255, 0.06) !important;
+
+  &[aria-selected='true'] {
+    color: #0d0a07 !important;
+    background:
+      linear-gradient(180deg, #f0c06d 0%, #d68c34 48%, #8f551f 100%) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.36),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.28),
+      0 0 12px rgba(214, 140, 52, 0.32) !important;
+  }
 }
 
 .tabIcon {
   font-size: 16px;
+  display: inline-flex;
 }
 
 .tabLabel {
-  font-size: 13px;
+  font-size: 11px;
+  font-family: var(--rk-mono, var(--font-mono, monospace));
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .mobileContent {
@@ -84,13 +183,26 @@
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+  padding: 10px calc(var(--mobile-rack-rail) + 5px) 12px;
+  position: relative;
+  z-index: 1;
 }
 
 .tabContent {
   width: 100%;
   height: 100%;
-  padding: 8px;
+  padding: 0;
   box-sizing: border-box;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent 3rem),
+    linear-gradient(180deg, #241f29, #111015);
+  border: 1px solid #070609;
+  border-radius: 3px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 0 1px rgba(214, 140, 52, 0.08),
+    0 10px 26px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
 }
 
 .tabFallback {
@@ -104,7 +216,7 @@
 // Mobile optimizations
 @media (max-width: 768px) {
   .mobileHeader {
-    padding: max(10px, env(safe-area-inset-top, 0px)) var(--mobile-header-pad-r) 10px var(--mobile-header-pad-x);
+    padding: max(10px, env(safe-area-inset-top, 0px)) calc(var(--mobile-header-pad-r) + var(--mobile-rack-rail)) 10px calc(var(--mobile-header-pad-x) + var(--mobile-rack-rail));
   }
 
   .mobileTitle {
@@ -125,13 +237,13 @@
   }
 
   .tabContent {
-    padding: 4px;
+    padding: 0;
   }
 }
 
 @media (max-width: 480px) {
   .mobileHeader {
-    padding: 8px 10px;
+    padding: 8px calc(10px + var(--mobile-rack-rail));
   }
 
   .mobileTitle {

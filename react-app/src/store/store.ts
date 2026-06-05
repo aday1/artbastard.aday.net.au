@@ -2303,7 +2303,13 @@ export const useStore = create<State>()(
       abletonLinkAvailable: false,
       dmxFaderOrientation: (() => {
         try {
-          return localStorage.getItem('dmxFaderOrientation') === 'vertical' ? 'vertical' : 'horizontal';
+          const saved = localStorage.getItem('dmxFaderOrientation');
+          if (saved === 'vertical' || saved === 'horizontal') return saved;
+          const host = window.location.hostname.toLowerCase();
+          const touchRackDefault =
+            host === 'artbastard-beta.aday.net.au' ||
+            window.matchMedia('(pointer: coarse), (max-width: 1279px)').matches;
+          return touchRackDefault ? 'vertical' : 'horizontal';
         } catch {
           return 'horizontal';
         }

@@ -3334,3 +3334,347 @@
     grid-template-columns: 1fr;
   }
 }
+
+// Beta/touch rack skin. Scoped to the beta/touch host class so desktop
+// production keeps the existing dashboard treatment.
+:global(html.ab-touch-optimized) {
+  .dmxChannelControlPage {
+    gap: 12px;
+    min-height: 100%;
+    padding: 12px;
+    background:
+      linear-gradient(90deg, rgba(255, 255, 255, 0.035), transparent 12%, transparent 88%, rgba(0, 0, 0, 0.28)),
+      repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.028) 0 1px, transparent 1px 7px),
+      linear-gradient(180deg, #2a252d 0%, #151319 100%);
+    color: #e9dfcf;
+  }
+
+  .header,
+  .controlsPanel,
+  .globalChannelNamesSection,
+  .envelopeAutomationSection,
+  .midiOscSection,
+  .dmxChannelSection,
+  .footer {
+    border-radius: 3px;
+    border: 1px solid #070609;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.075), transparent 28%),
+      repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 8px),
+      linear-gradient(180deg, #34303a 0%, #201c24 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.14),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.65),
+      0 6px 16px rgba(0, 0, 0, 0.35);
+    backdrop-filter: none;
+  }
+
+  .header {
+    order: 1;
+    padding: 10px;
+    margin-bottom: 8px;
+  }
+
+  .titleSection {
+    gap: 8px;
+  }
+
+  .title {
+    color: #efb15a;
+    background: none;
+    -webkit-text-fill-color: currentColor;
+    font-family: var(--rk-mono, var(--font-mono, monospace));
+    font-size: clamp(16px, 4.2vw, 21px);
+    letter-spacing: 0.04em;
+    text-shadow: 0 1px 0 #000;
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+    width: 100%;
+  }
+
+  .stat,
+  .fixtureSelectorButton,
+  .viewModeButton,
+  .selectionButton,
+  .channelsPerRowPreset,
+  .activeSelectionsButton,
+  .filterSelect,
+  .pageSizeSelect,
+  .rangeInput,
+  .searchField,
+  .toggleButton,
+  .sceneButton,
+  .loadSceneButton,
+  .midiLearnButton,
+  .midiForgetButton,
+  .oscAddressButton,
+  .selectButton,
+  .colorButton,
+  .pinButton,
+  .ticksModeButton {
+    border-radius: 2px;
+    border-color: #08070a;
+    background:
+      linear-gradient(180deg, #3a3440 0%, #211d26 58%, #151218 100%);
+    color: #d7cab6;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.5);
+  }
+
+  .stat {
+    min-height: 32px;
+    padding: 5px 4px;
+    justify-content: center;
+    gap: 4px;
+    font-size: 10px;
+    line-height: 1.1;
+    text-align: center;
+  }
+
+  .headerFaderLayout {
+    display: grid;
+    grid-template-columns: minmax(4rem, 0.55fr) minmax(0, 1fr);
+    align-items: center;
+    gap: 6px;
+    padding: 7px;
+    border-radius: 2px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent),
+      #17141a;
+
+    .controlLabel {
+      font-size: 10px;
+      line-height: 1.05;
+    }
+
+    :global(.ab-view-tabs) {
+      display: flex;
+      flex-wrap: nowrap;
+      min-width: 0;
+      width: 100%;
+    }
+
+    :global(.ab-view-tab) {
+      flex: 1 1 0;
+      min-width: 0;
+      min-height: 42px;
+      padding: 6px 5px;
+      font-size: 10px;
+      gap: 4px;
+    }
+  }
+
+  .viewModeButton.active,
+  .channelsPerRowPreset.active,
+  .activeSelectionsButton.active,
+  .toggleButton.active,
+  .selectButton.selected,
+  .pinButton.pinned {
+    color: #0d0a07;
+    border-color: #4f2e11;
+    background: linear-gradient(180deg, #f0bf70 0%, #d68c34 50%, #8b511c 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.35),
+      0 0 10px rgba(214, 140, 52, 0.28);
+  }
+
+  .controlsPanel {
+    order: 4;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    gap: 10px;
+    padding: 12px;
+    max-height: min(34vh, 390px);
+    resize: none;
+  }
+
+  .controlGroup {
+    gap: 6px;
+    padding: 9px;
+    border: 1px solid rgba(0, 0, 0, 0.7);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent),
+      #17141a;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  .controlLabel,
+  .channelsPerRowHint,
+  .fixtureAddress,
+  .fixtureLabel,
+  .channelType,
+  .fixtureRef {
+    color: #a99d8c;
+    font-family: var(--rk-mono, var(--font-mono, monospace));
+    letter-spacing: 0.04em;
+  }
+
+  .fixtureSelectorDropdown {
+    border-radius: 3px;
+    border-color: #070609;
+    background: #151319;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.6);
+  }
+
+  .channelsGrid,
+  .channelsList,
+  .activeChannelsContainer {
+    border-radius: 2px;
+    border-color: #070609;
+    background:
+      linear-gradient(180deg, rgba(0, 0, 0, 0.18), transparent),
+      #111015;
+  }
+
+  .activeChannelsContainer {
+    gap: 8px;
+  }
+
+  .sceneSection,
+  .midiOscSection,
+  .globalChannelNamesSection,
+  .envelopeAutomationSection,
+  .footer {
+    order: 5;
+  }
+
+  .channelsGrid {
+    max-height: 96px;
+    padding: 8px;
+  }
+
+  .activeChannelsContainer:has(.noActiveChannels) .channelsGrid {
+    display: none;
+  }
+
+  .dmxChannelsContainer.channelStrip {
+    order: 2;
+    gap: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(8.4rem, 10.6rem));
+  }
+
+  .dmxChannel {
+    border-radius: 3px;
+    border: 1px solid #070609;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 18%),
+      repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 7px),
+      linear-gradient(180deg, #35313a 0%, #211e25 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.72),
+      0 5px 14px rgba(0, 0, 0, 0.36);
+  }
+
+  .dmxChannel.channelStripCard {
+    min-height: 23rem;
+    padding: 10px 7px 9px;
+    position: relative;
+
+    &::before,
+    &::after {
+      content: '';
+      position: absolute;
+      top: 7px;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #d7cec4, #625b62 48%, #08070a 72%);
+      pointer-events: none;
+    }
+
+    &::before {
+      left: 7px;
+    }
+
+    &::after {
+      right: 7px;
+    }
+
+    .channelHeader {
+      padding: 12px 4px 6px;
+      border-bottom: 1px solid rgba(214, 140, 52, 0.26);
+      background: linear-gradient(180deg, rgba(0, 0, 0, 0.18), transparent);
+    }
+
+    .channelSliderVertical {
+      min-height: 16rem;
+      margin: 0.35rem 0 0.45rem;
+    }
+
+    .channelActions,
+    .channelActionsStrip {
+      gap: 3px;
+    }
+  }
+
+  .channelNumber {
+    min-height: 20px;
+    color: #15100a;
+    background: linear-gradient(180deg, #e2b869, #b97828);
+    border: 1px solid #5a3516;
+    border-radius: 2px;
+    padding: 2px 6px;
+    font-family: var(--rk-mono, var(--font-mono, monospace));
+    text-shadow: none;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  }
+
+  .channelName,
+  .channelNameInput {
+    color: #eadfcb;
+    font-family: var(--rk-mono, var(--font-mono, monospace));
+    letter-spacing: 0.02em;
+  }
+
+  .channelValue {
+    color: #80f08d;
+    background: #050506;
+    border-color: #2a3a25;
+    border-radius: 2px;
+    font-family: var(--rk-mono, var(--font-mono, monospace));
+    text-shadow: 0 0 7px rgba(128, 240, 141, 0.46);
+  }
+
+  .channelRangeControls,
+  .oscAddressDisplay,
+  .midiMappingDisplay {
+    border-radius: 2px;
+    border: 1px solid #070609;
+    background: #111015;
+    color: #b9ae9f;
+  }
+
+  .noActiveChannels,
+  .emptyState {
+    border-radius: 2px;
+    border-color: rgba(214, 140, 52, 0.32);
+    background: #151319;
+    color: #b9ae9f;
+  }
+
+  @media (max-width: 640px) {
+    .dmxChannelControlPage {
+      padding: 8px;
+    }
+
+    .controlsPanel {
+      max-height: 30vh;
+      padding: 8px;
+    }
+
+    .dmxChannelsContainer.channelStrip {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .dmxChannel.channelStripCard {
+      min-height: 21.5rem;
+      padding-inline: 5px;
+    }
+  }
+}
