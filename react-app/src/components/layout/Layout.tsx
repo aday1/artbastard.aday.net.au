@@ -26,6 +26,7 @@ import { MobileTopBar } from './MobileTopBar'
 import { DeployLaneBadge } from './DeployLaneBadge'
 import { useAppContextMenu } from '../../context/ContextMenuContext'
 import { SiteBrandingLink } from '../ui/SiteBrandingLink'
+import { useRouter } from '../../context/RouterContext'
 
 interface LayoutProps {
   children?: React.ReactNode
@@ -33,12 +34,14 @@ interface LayoutProps {
 
 const LayoutBody: React.FC<LayoutProps> = ({ children }) => {
   const { openAppMenu } = useAppContextMenu()
+  const { currentView } = useRouter()
   const { theme, darkMode, toggleDarkMode, setTheme } = useTheme()
   const { 
     // Remove automation-related imports since we're removing transport controls
   } = useStore()
   const [serverAddress, setServerAddress] = useState<string>('localhost:3030');
   const { isMobileOrTablet } = useMobile();
+  const isFocusedFixtureRoute = currentView === 'fixture';
   
   // Setup auto-save on exit
   useEffect(() => {
@@ -98,6 +101,7 @@ const LayoutBody: React.FC<LayoutProps> = ({ children }) => {
         className={[
           'ab-rack',
           styles.layout,
+          isFocusedFixtureRoute ? styles.fixtureRoute : '',
           styles[theme],
           darkMode ? styles.dark : styles.light,
           isMobileOrTablet ? styles.layoutMobile : '',
@@ -130,7 +134,7 @@ const LayoutBody: React.FC<LayoutProps> = ({ children }) => {
 
         <div className={styles.contentWrapper}>
           <div className={styles.mainContent}>
-            {!isMobileOrTablet && (
+            {!isMobileOrTablet && !isFocusedFixtureRoute && (
               <>
                 <h1 className={styles.title}>
                   <SiteBrandingLink brand="artbastard">ArtBastard</SiteBrandingLink>
@@ -164,7 +168,7 @@ const LayoutBody: React.FC<LayoutProps> = ({ children }) => {
               <PageRouter />
             </main>
 
-            {!isMobileOrTablet && (
+            {!isMobileOrTablet && !isFocusedFixtureRoute && (
               <div className={styles.bottomControls}>
                 <ResetButton showLabels={true} />
 
@@ -196,8 +200,8 @@ const LayoutBody: React.FC<LayoutProps> = ({ children }) => {
         <ToastContainer />
         {!isMobileOrTablet && <StatusBar />}
 
-        {/* Global floating monitors - available on all pages */}
-        <GlobalMonitors />
+        {/* Global floating monitors stay off the fixture patch surface. */}
+        {!isFocusedFixtureRoute && <GlobalMonitors />}
 
         {/* Global Help Overlay - available on all pages */}
         <HelpOverlay />

@@ -7,6 +7,7 @@ import { ColorPickerPanel } from './ColorPickerPanel'; // Added ColorPickerPanel
 import { LucideIcon } from '../ui/LucideIcon'; // Added for icons
 import { NodeBasedFixtureEditor } from './NodeBasedFixtureEditor'; // Import Node Editor
 import { FixtureTemplateManager } from './FixtureTemplateManager'; // Import Template Manager
+import { ShowBuilderPanel } from './ShowBuilderPanel';
 import SuperControl from '../dmx/SuperControl';
 import { EnvelopeChannelPanel } from '../automation/EnvelopeChannelPanel';
 import type { FixtureChannelRange } from '../../store/types'
@@ -1181,7 +1182,7 @@ export const FixtureSetup: React.FC = () => {
     <div className={styles.fixtureSetup}>
       {/* Header with preview toggle */}
       <div className={styles.headerBar}>
-        <h2>Fixture Setup & Management</h2>
+        <h2>Fixture Setup</h2>
         <button 
           className={styles.togglePreviewBtn}
           onClick={() => setShowSuperControlPreview(!showSuperControlPreview)}
@@ -1193,6 +1194,7 @@ export const FixtureSetup: React.FC = () => {
       </div>
       {/* Main content area */}
       <div className={styles.mainArea}>
+        <ShowBuilderPanel />
         {/* Fixture Management Section */}
         <div className={styles.card}>          <div className={styles.cardHeader}>
             <h3>

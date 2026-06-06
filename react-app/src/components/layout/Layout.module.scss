@@ -275,6 +275,14 @@
   }
 }
 
+.fixtureRoute {
+  --layout-top-clearance: 128px;
+
+  .contentWrapper {
+    padding-bottom: 1rem;
+  }
+}
+
 // Theme variations
 .artsnob {
   .mainContent {

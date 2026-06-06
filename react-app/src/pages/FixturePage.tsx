@@ -7,46 +7,48 @@ import { TabPanel } from '../components/ui/TabPanel'
 import styles from './Pages.module.scss'
 
 const FixturePage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<string>('control')
+  const [activeTab, setActiveTab] = useState<string>('setup')
 
   const tabs = [
+    {
+      id: 'setup',
+      label: {
+        artsnob: 'Patch the Rig',
+        standard: 'Build & Patch',
+        minimal: 'Patch'
+      },
+      icon: 'fas fa-cog',
+      ariaLabel: 'Fixture setup panel'
+    },
     {
       id: 'control',
       label: {
         artsnob: 'Super Contrôle',
-        standard: 'Super Control',
+        standard: 'Live Control',
         minimal: 'Control'
       },
       icon: 'fas fa-sliders-h',
       ariaLabel: 'Fixture control panel'
-    },
-    {
-      id: 'setup',
-      label: {
-        artsnob: 'Definition Sanctuary',
-        standard: 'Fixture Definitions',
-        minimal: 'Setup'
-      },
-      icon: 'fas fa-cog',
-      ariaLabel: 'Fixture setup panel'
     }
   ]
 
   return (
-    <div className={styles.pageContainer}>
+    <div className={`${styles.pageContainer} ${styles.fixturePage}`}>
       <PageHeader
+        className={styles.fixturePageHeader}
         title={{
           artsnob: 'Fixture Orchestration: The Instruments of Light',
           standard: 'Fixture Management',
           minimal: 'Fixtures'
         }}
         description={{
-          artsnob: 'Define, configure, and control your luminous instruments',
-          standard: 'Configure fixture definitions and control lighting equipment',
-          minimal: 'Configure and control fixtures'
+          artsnob: 'Build the rig, patch addresses, then conduct the luminous instruments',
+          standard: 'Build a fixture list, generate DMX addresses, then control the show',
+          minimal: 'Build, patch, control'
         }}
       >
         <TabNavigation
+          className={styles.fixtureTabs}
           tabs={tabs}
           activeTab={activeTab}
           onTabChange={setActiveTab}
