@@ -6,7 +6,7 @@ import {
   validateFixtureLibraryEntries,
 } from '.';
 
-describe('source-backed fixture library', () => {
+describe('source-backed fixture profile catalog', () => {
   it('validates every canonical fixture entry', () => {
     expect(validateFixtureLibraryEntries(fixtureLibraryEntries)).toEqual([]);
   });

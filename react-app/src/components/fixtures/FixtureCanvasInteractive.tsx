@@ -504,7 +504,7 @@ export const FixtureCanvasInteractive: React.FC<FixtureCanvasInteractiveProps> =
               title="Show/hide fixture palette"
             >
               <LucideIcon name="Package" />
-              Fixture Library
+              Fixture Profiles
             </button>
           </div>
         </div>

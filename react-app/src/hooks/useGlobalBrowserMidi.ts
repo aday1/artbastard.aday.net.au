@@ -110,8 +110,11 @@ export const useGlobalBrowserMidi = () => {
       const channel = status & 0x0F;
       const messageType = status & 0xF0;
 
+      const source = input.name || 'Browser MIDI';
+
       let messageToStore: any = {
-        source: 'browser',
+        source,
+        sourceTransport: 'browser',
         timestamp: Date.now()
       };
 
@@ -121,7 +124,8 @@ export const useGlobalBrowserMidi = () => {
           channel: channel, 
           note: data1, 
           velocity: data2, 
-          source: 'browser',
+          source,
+          sourceTransport: 'browser',
           timestamp: Date.now()
         };
       } else if (messageType === 0x80 || (messageType === 0x90 && data2 === 0)) { // Note Off
@@ -130,7 +134,8 @@ export const useGlobalBrowserMidi = () => {
           channel: channel, 
           note: data1, 
           velocity: data2, 
-          source: 'browser',
+          source,
+          sourceTransport: 'browser',
           timestamp: Date.now()
         };
       } else if (messageType === 0xB0) { // Control Change
@@ -139,7 +144,8 @@ export const useGlobalBrowserMidi = () => {
           channel: channel, 
           controller: data1, 
           value: data2, 
-          source: 'browser',
+          source,
+          sourceTransport: 'browser',
           timestamp: Date.now()
         };
       } else if (messageType === 0xE0) { // Pitch Bend
@@ -148,7 +154,8 @@ export const useGlobalBrowserMidi = () => {
           _type: 'pitch',
           channel,
           value: rawPitch,
-          source: 'browser',
+          source,
+          sourceTransport: 'browser',
           timestamp: Date.now()
         };
       }

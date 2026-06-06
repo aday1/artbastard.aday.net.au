@@ -39,7 +39,7 @@ const DraggableFixturePalette: React.FC<DraggableFixturePaletteProps> = ({
     <div className={styles.fixturePalette}>
       <div className={styles.paletteHeader}>
         <LucideIcon name="Package" />
-        <h3>Fixture Library</h3>
+        <h3>Fixture Profiles</h3>
         <span className={styles.dragHint}>Drag to Canvas</span>
       </div>
       

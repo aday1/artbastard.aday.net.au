@@ -275,21 +275,21 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (state.groups && Array.isArray(state.groups)) {
           store.setGroups(state.groups);
         }
-        // Sync fixture templates from server (merge with built-in templates)
+        // Sync custom profile copies from server while keeping the canonical catalog protected.
         if (state.fixtureTemplates && Array.isArray(state.fixtureTemplates)) {
           const currentTemplates = store.fixtureTemplates;
-          const builtInTemplates = currentTemplates.filter(t => t.isBuiltIn);
-          const builtInIds = new Set(builtInTemplates.map(template => template.id));
+          const catalogProfiles = currentTemplates.filter(t => t.isBuiltIn);
+          const catalogIds = new Set(catalogProfiles.map(template => template.id));
           const serverTemplates = state.fixtureTemplates;
-          // Merge: built-in + server templates (server templates take precedence for custom ones)
-          const mergedTemplates = [...builtInTemplates];
+          // Merge: catalog profiles + server custom profiles.
+          const mergedTemplates = [...catalogProfiles];
           serverTemplates.forEach(serverTemplate => {
-            if (!serverTemplate.isBuiltIn && !builtInIds.has(serverTemplate.id)) {
+            if (!serverTemplate.isBuiltIn && !catalogIds.has(serverTemplate.id)) {
               // Validate channels
               if (!serverTemplate.channels || !Array.isArray(serverTemplate.channels) || serverTemplate.channels.length === 0) {
                 serverTemplate.channels = [{ name: 'Channel 1', type: 'other' }];
               }
-              // Remove existing custom template with same ID if exists, then add server version
+              // Replace an existing custom profile with the server version.
               const existingIndex = mergedTemplates.findIndex(t => t.id === serverTemplate.id);
               if (existingIndex >= 0) {
                 mergedTemplates[existingIndex] = serverTemplate;
@@ -298,7 +298,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               }
             }
           });
-          // Update localStorage with merged templates
+          // Update localStorage with custom profiles only.
           const customTemplates = mergedTemplates.filter(t => !t.isBuiltIn);
           try {
             localStorage.setItem('fixtureTemplates', JSON.stringify(customTemplates));
@@ -307,7 +307,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           }
           // Update store (direct assignment since there's no setter, but this will trigger re-renders via Zustand)
           useStore.setState({ fixtureTemplates: mergedTemplates });
-          debugLog.log('[SocketContext] Synced fixture templates from server:', serverTemplates.length, 'custom templates');
+          debugLog.log('[SocketContext] Synced fixture profiles from server:', serverTemplates.length, 'custom profiles');
         }
       });
 
@@ -348,23 +348,23 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
       });
 
-      // Listen for fixture template updates from backend
+      // Listen for fixture profile updates from backend.
       socketInstance.on('fixtureTemplatesUpdated', (templatesData: any[]) => {
-        debugLog.log('[SocketContext] Received fixture templates update from backend:', templatesData.length, 'templates');
+        debugLog.log('[SocketContext] Received fixture profiles update from backend:', templatesData.length, 'profiles');
         const store = useStore.getState();
         if (Array.isArray(templatesData)) {
           const currentTemplates = store.fixtureTemplates;
-          const builtInTemplates = currentTemplates.filter(t => t.isBuiltIn);
-          const builtInIds = new Set(builtInTemplates.map(template => template.id));
-          // Merge: built-in + server templates
-          const mergedTemplates = [...builtInTemplates];
+          const catalogProfiles = currentTemplates.filter(t => t.isBuiltIn);
+          const catalogIds = new Set(catalogProfiles.map(template => template.id));
+          // Merge: catalog profiles + server custom profiles.
+          const mergedTemplates = [...catalogProfiles];
           templatesData.forEach(serverTemplate => {
-            if (!serverTemplate.isBuiltIn && !builtInIds.has(serverTemplate.id)) {
+            if (!serverTemplate.isBuiltIn && !catalogIds.has(serverTemplate.id)) {
               // Validate channels
               if (!serverTemplate.channels || !Array.isArray(serverTemplate.channels) || serverTemplate.channels.length === 0) {
                 serverTemplate.channels = [{ name: 'Channel 1', type: 'other' }];
               }
-              // Remove existing custom template with same ID if exists, then add server version
+              // Replace an existing custom profile with the server version.
               const existingIndex = mergedTemplates.findIndex(t => t.id === serverTemplate.id);
               if (existingIndex >= 0) {
                 mergedTemplates[existingIndex] = serverTemplate;
@@ -373,7 +373,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               }
             }
           });
-          // Update localStorage with merged templates
+          // Update localStorage with custom profiles only.
           const customTemplates = mergedTemplates.filter(t => !t.isBuiltIn);
           try {
             localStorage.setItem('fixtureTemplates', JSON.stringify(customTemplates));

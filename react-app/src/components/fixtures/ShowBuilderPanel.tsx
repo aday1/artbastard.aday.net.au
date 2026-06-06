@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { type Group, useStore } from '../../store';
 import useStoreUtils from '../../store/storeUtils';
@@ -54,6 +54,8 @@ function fixtureFromPlanItem(item: PlannedShowFixture, index: number) {
       item.category ? `Category: ${item.category}` : '',
       `Group: ${item.groupName}`,
       `Patch: DMX ${item.startAddress}-${item.endAddress}`,
+      `Physical address: ${item.addressInstruction}`,
+      item.modeSwitchInstruction ? `Mode switches: ${item.modeSwitchInstruction}` : '',
     ].filter(Boolean).join('\n'),
     photoUrl: item.photoUrl,
     tags: Array.from(new Set([...(item.tags || []), 'SHOW', `GROUP:${item.groupName}`])),
@@ -76,6 +78,15 @@ function defaultModeName(template?: ShowBuilderTemplate) {
   return template?.modes?.[0]?.name || 'Default mode';
 }
 
+function labelWithHint(label: string, hint: string) {
+  return (
+    <span className={styles.fieldLabelText}>
+      {label}
+      <span className={styles.infoDot} title={hint}>?</span>
+    </span>
+  );
+}
+
 export const ShowBuilderPanel: React.FC = () => {
   const { fixtures, groups, fixtureTemplates, setFixtures, setGroups, setSelectedFixtures } = useStore((state) => ({
     fixtures: state.fixtures,
@@ -88,6 +99,7 @@ export const ShowBuilderPanel: React.FC = () => {
   const [showName, setShowName] = useState('Beta Show');
   const [avoidExisting, setAvoidExisting] = useState(true);
   const [rows, setRows] = useState<ShowBuilderRow[]>([]);
+  const [selectedTemplateIds, setSelectedTemplateIds] = useState<string[]>([]);
   const [isCreating, setIsCreating] = useState(false);
 
   const sortedTemplates = useMemo(() => {
@@ -110,10 +122,9 @@ export const ShowBuilderPanel: React.FC = () => {
     [fixtures]
   );
 
-  const createRowFor = (templateId = sortedTemplates[0]?.id) => {
+  const createRowFor = useCallback((templateId = sortedTemplates[0]?.id) => {
     const template = sortedTemplates.find((item) => item.id === templateId) || sortedTemplates[0];
     if (!template) return;
-    const rowNumber = rows.length + 1;
     setRows((current) => [
       ...current,
       {
@@ -124,10 +135,16 @@ export const ShowBuilderPanel: React.FC = () => {
         groupName: `${showName.trim() || 'Show'} ${template.defaultNamePrefix}`,
         startAddress: Math.min(512, Math.max(1, highestFixtureAddress + 1 + current.length * 10)),
         gapChannels: 0,
-        labelPrefix: `${template.defaultNamePrefix} ${rowNumber}`,
+        labelPrefix: template.defaultNamePrefix,
       },
     ]);
-  };
+  }, [highestFixtureAddress, showName, sortedTemplates]);
+
+  const rowCountByTemplate = useMemo(() => {
+    const counts = new Map<string, number>();
+    rows.forEach((row) => counts.set(row.templateId, (counts.get(row.templateId) || 0) + 1));
+    return counts;
+  }, [rows]);
 
   const updateRow = (rowId: string, patch: Partial<ShowBuilderRow>) => {
     setRows((current) =>
@@ -151,6 +168,32 @@ export const ShowBuilderPanel: React.FC = () => {
 
   const clearPlan = () => {
     setRows([]);
+    setSelectedTemplateIds([]);
+  };
+
+  const toggleTemplateSelection = useCallback((templateId: string) => {
+    setSelectedTemplateIds((current) =>
+      current.includes(templateId)
+        ? current.filter((id) => id !== templateId)
+        : [...current, templateId]
+    );
+  }, []);
+
+  useEffect(() => {
+    const handleApcTemplateAdd = (event: Event) => {
+      const detail = (event as CustomEvent<{ templateIndex?: number }>).detail;
+      if (!sortedTemplates.length || detail?.templateIndex === undefined) return;
+      const template = sortedTemplates[detail.templateIndex % sortedTemplates.length];
+      if (template) toggleTemplateSelection(template.id);
+    };
+
+    window.addEventListener('artbastard:apc40-add-template', handleApcTemplateAdd);
+    return () => window.removeEventListener('artbastard:apc40-add-template', handleApcTemplateAdd);
+  }, [sortedTemplates, toggleTemplateSelection]);
+
+  const addSelectedTemplates = () => {
+    const ids = selectedTemplateIds.length ? selectedTemplateIds : [sortedTemplates[0]?.id].filter(Boolean) as string[];
+    ids.forEach((templateId) => createRowFor(templateId));
   };
 
   const selections: ShowBuilderSelection[] = useMemo(() => {
@@ -269,8 +312,8 @@ export const ShowBuilderPanel: React.FC = () => {
       <div className={styles.showBuilderHeader}>
         <div>
           <span className={styles.stepKicker}>Start here</span>
-          <h3>Build a show map and patch it</h3>
-          <p>Select fixture types, split copies into groups, generate physical DMX addresses, then create the rig.</p>
+          <h3>Create the DMX show</h3>
+          <p>Select fixture profiles, add them as address blocks, set quantities/groups/start addresses, then create the patched rig.</p>
         </div>
         <div className={styles.showBuilderStats}>
           <span>{plan.fixtures.length} fixtures</span>
@@ -293,22 +336,43 @@ export const ShowBuilderPanel: React.FC = () => {
           />
           Avoid existing fixtures
         </label>
-        <button type="button" className={styles.showBuilderAddButton} onClick={() => createRowFor()}>
+        <button
+          type="button"
+          className={styles.showBuilderAddButton}
+          onClick={addSelectedTemplates}
+          title="Adds one address-block row for every selected fixture profile."
+        >
           <LucideIcon name="Plus" size={16} />
-          Add fixture row
+          {selectedTemplateIds.length ? `Add ${selectedTemplateIds.length} selected` : 'Add first fixture'}
+        </button>
+      </div>
+
+      <div className={styles.showBuilderBulk}>
+        <span>{selectedTemplateIds.length} fixture profile{selectedTemplateIds.length === 1 ? '' : 's'} selected</span>
+        <button type="button" onClick={() => setSelectedTemplateIds(sortedTemplates.map((template) => template.id))}>
+          <LucideIcon name="ListChecks" size={15} />
+          Select all
+        </button>
+        <button type="button" onClick={() => setSelectedTemplateIds([])} disabled={!selectedTemplateIds.length}>
+          <LucideIcon name="CircleOff" size={15} />
+          Clear
         </button>
       </div>
 
       <div className={styles.showTemplateGrid}>
         {sortedTemplates.map((template) => {
           const mode = getTemplateMode(template);
+          const selectedCount = rowCountByTemplate.get(template.id) || 0;
+          const isTemplateSelected = selectedTemplateIds.includes(template.id);
           return (
             <button
               key={template.id}
               type="button"
-              className={styles.showTemplateCard}
-              onClick={() => createRowFor(template.id)}
-              aria-label={`Add ${template.templateName} to show map`}
+              className={`${styles.showTemplateCard} ${isTemplateSelected ? styles.showTemplateSelected : ''}`}
+              onClick={() => toggleTemplateSelection(template.id)}
+              aria-pressed={isTemplateSelected}
+              aria-label={`${isTemplateSelected ? 'Deselect' : 'Select'} ${template.templateName}`}
+              title="Select this profile for the show seed. Use the Add selected button to create address-block rows."
             >
               <div className={styles.showTemplateImage}>
                 {template.photoUrl ? (
@@ -322,7 +386,13 @@ export const ShowBuilderPanel: React.FC = () => {
                 <span>{template.catalogId || template.type || 'Fixture'}</span>
                 <span>{mode.channels.length} channels default</span>
               </div>
-              <LucideIcon name="Plus" size={18} />
+              {isTemplateSelected ? (
+                <span className={styles.selectedPill}>
+                  {selectedCount ? `${selectedCount} row${selectedCount === 1 ? '' : 's'}` : 'Selected'}
+                </span>
+              ) : (
+                <LucideIcon name="Plus" size={18} />
+              )}
             </button>
           );
         })}
@@ -331,7 +401,7 @@ export const ShowBuilderPanel: React.FC = () => {
       <div className={styles.showRows}>
         <div className={styles.showRowsHeader}>
           <h4>Fixture groups and address blocks</h4>
-          <span>{rows.length ? 'Each row can use the same fixture type with a different group and start address.' : 'Add a fixture row above.'}</span>
+          <span>{rows.length ? 'One row equals one physical address block. Use another row for another group.' : 'Select cards above, add selected rows, or press APC40 grid pads.'}</span>
         </div>
         {rows.map((row) => {
           const template = sortedTemplates.find((item) => item.id === row.templateId);
@@ -340,7 +410,7 @@ export const ShowBuilderPanel: React.FC = () => {
           return (
             <div key={row.id} className={styles.showRowEditor}>
               <label>
-                Fixture
+                {labelWithHint('Fixture', 'The physical hardware profile from the single fixture profile catalog.')}
                 <select value={row.templateId} onChange={(event) => updateRow(row.id, { templateId: event.target.value })}>
                   {sortedTemplates.map((item) => (
                     <option key={item.id} value={item.id}>
@@ -350,7 +420,7 @@ export const ShowBuilderPanel: React.FC = () => {
                 </select>
               </label>
               <label>
-                Mode
+                {labelWithHint('Mode', 'The DMX channel mode you will set on the fixture itself.')}
                 <select
                   value={row.modeName}
                   onChange={(event) => updateRow(row.id, { modeName: event.target.value })}
@@ -367,7 +437,7 @@ export const ShowBuilderPanel: React.FC = () => {
                 </select>
               </label>
               <label>
-                Qty
+                {labelWithHint('Qty', 'How many identical physical units to patch in this row.')}
                 <input
                   type="number"
                   min={0}
@@ -377,11 +447,11 @@ export const ShowBuilderPanel: React.FC = () => {
                 />
               </label>
               <label>
-                Group
+                {labelWithHint('Group', 'Fixtures with the same group name are controlled together after creation.')}
                 <input value={row.groupName} onChange={(event) => updateRow(row.id, { groupName: event.target.value })} />
               </label>
               <label>
-                Start DMX
+                {labelWithHint('Start DMX', 'This is the address you physically set on the first fixture in this row.')}
                 <input
                   type="number"
                   min={1}
@@ -391,7 +461,7 @@ export const ShowBuilderPanel: React.FC = () => {
                 />
               </label>
               <label>
-                Gap
+                {labelWithHint('Gap', 'Optional unused channels between repeated fixtures. Leave 0 unless you need spacing.')}
                 <input
                   type="number"
                   min={0}
@@ -401,7 +471,7 @@ export const ShowBuilderPanel: React.FC = () => {
                 />
               </label>
               <label>
-                Label prefix
+                {labelWithHint('Label prefix', 'Name prefix for fixtures created from this row.')}
                 <input value={row.labelPrefix} onChange={(event) => updateRow(row.id, { labelPrefix: event.target.value })} />
               </label>
               <button type="button" className={styles.showRowRemove} onClick={() => removeRow(row.id)} aria-label="Remove fixture row">
@@ -449,7 +519,7 @@ export const ShowBuilderPanel: React.FC = () => {
         </div>
 
         {plan.fixtures.length > 0 ? (
-          <div className={styles.showPlanTable}>
+        <div className={styles.showPlanTable}>
             {plan.fixtures.map((fixture) => (
               <div key={fixture.planId} className={styles.showPlanRow}>
                 <span>{fixture.groupName}</span>
@@ -458,6 +528,10 @@ export const ShowBuilderPanel: React.FC = () => {
                 <strong>DMX {fixture.startAddress}-{fixture.endAddress}</strong>
                 <span>{fixture.channelCount}ch</span>
                 <span>{fixture.mode}</span>
+                <span title={fixture.modeSwitchInstruction || fixture.addressInstruction}>
+                  {fixture.addressInstruction}
+                  {fixture.modeSwitchInstruction ? ` | ${fixture.modeSwitchInstruction}` : ''}
+                </span>
               </div>
             ))}
           </div>

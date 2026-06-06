@@ -70,8 +70,8 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
     : [{ name: 'Channel 1', type: 'other' }];
 
   const handleStartEdit = (template: FixtureTemplate) => {
-    // Allow editing both canonical library and custom templates.
-    // Fixture-library profiles are saved as custom templates when edited.
+    // Allow editing both canonical catalog profiles and custom profiles.
+    // Catalog profiles are saved as custom copies when edited.
     // Ensure channels is always valid
     const validChannels = template?.channels && Array.isArray(template.channels) && template.channels.length > 0
       ? JSON.parse(JSON.stringify(template.channels))
@@ -100,7 +100,7 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
 
     if (editingTemplate) {
       if (editingTemplate.isBuiltIn) {
-        // If editing a fixture-library template, check if a custom version already exists
+        // If editing a catalog profile, check if a custom version already exists.
         const existingCustom = fixtureTemplates.find(
           t => !t.isBuiltIn && 
           t.templateName === templateForm.templateName &&
@@ -111,15 +111,15 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
           // Update existing custom template
           updateFixtureTemplate(existingCustom.id, templateForm);
           addNotification({
-            message: `Custom template "${templateForm.templateName}" updated`,
+            message: `Custom profile "${templateForm.templateName}" updated`,
             type: 'success',
             priority: 'normal'
           });
         } else {
-          // Create new custom template based on the fixture-library profile
+          // Create a custom copy based on the catalog profile.
           addFixtureTemplate(templateForm);
           addNotification({
-            message: `Custom template "${templateForm.templateName}" created from fixture library`,
+            message: `Custom profile "${templateForm.templateName}" created from catalog profile`,
             type: 'success',
             priority: 'normal'
           });
@@ -181,7 +181,7 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
   const handleDeleteTemplate = (template: FixtureTemplate) => {
     if (template.isBuiltIn) {
       addNotification({
-        message: 'Fixture library profiles cannot be deleted',
+        message: 'Catalog profiles cannot be deleted',
         type: 'warning',
         priority: 'normal'
       });
@@ -198,7 +198,7 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
       // Ensure template has valid channels before using
       if (!template.channels || !Array.isArray(template.channels) || template.channels.length === 0) {
         addNotification({
-          message: 'Template has invalid channels configuration',
+          message: 'Profile has invalid channels configuration',
           type: 'error',
           priority: 'high'
         });
@@ -209,16 +209,16 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
     }
   };
 
-  // Ensure fixtureTemplates is always an array and validate templates
+  // Ensure fixture profiles are always an array and validate channels.
   const safeTemplates = Array.isArray(fixtureTemplates) ? fixtureTemplates : [];
-  const builtInTemplates = safeTemplates.filter(t => 
+  const catalogProfiles = safeTemplates.filter(t =>
     t && 
     t.isBuiltIn && 
     t.channels && 
     Array.isArray(t.channels) && 
     t.channels.length > 0
   );
-  const customTemplates = safeTemplates.filter(t => 
+  const customProfiles = safeTemplates.filter(t =>
     t && 
     !t.isBuiltIn && 
     t.channels && 
@@ -231,9 +231,9 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
       <div className={styles.header}>
         <h2>
           <LucideIcon name="FileText" />
-          {theme === 'artsnob' && 'Fixture Library: The Archetypes of Illumination'}
-          {theme === 'standard' && 'Fixture Library Manager'}
-          {theme === 'minimal' && 'Templates'}
+          {theme === 'artsnob' && 'Fixture Profile Catalog: The Archetypes of Illumination'}
+          {theme === 'standard' && 'Fixture Profile Catalog'}
+          {theme === 'minimal' && 'Profiles'}
         </h2>
         <button className={styles.closeButton} onClick={onClose}>
           <LucideIcon name="X" />
@@ -246,10 +246,10 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
           <div className={styles.section}>
             <h3>
               <LucideIcon name="Package" />
-              Fixture Library
+              ArtBastard fixture profiles
             </h3>
             <div className={styles.templateGrid}>
-              {builtInTemplates.map(template => (
+              {catalogProfiles.map(template => (
                 <div key={template.id} className={`${styles.templateCard} ${styles.builtIn}`}>
                   {template.photoUrl && (
                     <div className={styles.templatePhoto}>
@@ -258,7 +258,7 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
                   )}
                   <div className={styles.templateHeader}>
                     <h4>{template.templateName}</h4>
-                    <span className={styles.badge}>Library</span>
+                    <span className={styles.badge}>Catalog</span>
                   </div>
                   <div className={styles.templateInfo}>
                     <span className={styles.prefix}>Prefix: {template.defaultNamePrefix}</span>
@@ -272,7 +272,7 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
                     <button
                       className={styles.useButton}
                       onClick={() => handleUseTemplate(template)}
-                      title="Use this template"
+                      title="Use this profile"
                     >
                       <LucideIcon name="Play" />
                       Use
@@ -280,7 +280,7 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
                     <button
                       className={styles.editButton}
                       onClick={() => handleStartEdit(template)}
-                      title="Edit library profile (saves as custom)"
+                      title="Edit catalog profile (saves a custom copy)"
                     >
                       <LucideIcon name="Edit" />
                       Edit
@@ -294,15 +294,15 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
           <div className={styles.section}>
             <h3>
               <LucideIcon name="Folder" />
-              Custom Templates
+              Custom profiles
             </h3>
-            {customTemplates.length === 0 ? (
+            {customProfiles.length === 0 ? (
               <div className={styles.emptyState}>
-                <p>No custom templates yet. Create one by copying a fixture-library profile or creating a new one.</p>
+                <p>No custom profiles yet. Create one by copying a catalog profile or creating a new one.</p>
               </div>
             ) : (
               <div className={styles.templateGrid}>
-                {customTemplates.map(template => (
+                {customProfiles.map(template => (
                   <div key={template.id} className={styles.templateCard}>
                     {template.photoUrl && (
                       <div className={styles.templatePhoto}>
@@ -324,7 +324,7 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
                       <button
                         className={styles.useButton}
                         onClick={() => handleUseTemplate(template)}
-                        title="Use this template"
+                        title="Use this profile"
                       >
                         <LucideIcon name="Play" />
                         Use
@@ -332,7 +332,7 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
                       <button
                         className={styles.editButton}
                         onClick={() => handleStartEdit(template)}
-                        title="Edit template"
+                        title="Edit profile"
                       >
                         <LucideIcon name="Edit" />
                         Edit
@@ -340,7 +340,7 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
                       <button
                         className={styles.deleteButton}
                         onClick={() => handleDeleteTemplate(template)}
-                        title="Delete template"
+                        title="Delete profile"
                       >
                         <LucideIcon name="Trash2" />
                         Delete
@@ -360,22 +360,22 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
               <>
                 <LucideIcon name="Edit" />
                 {editingTemplate.isBuiltIn ? (
-                  <>Edit Fixture Library Profile (saves as custom)</>
+                  <>Edit Catalog Profile (saves a custom copy)</>
                 ) : (
-                  <>Edit Template</>
+                  <>Edit Profile</>
                 )}
               </>
             ) : (
               <>
                 <LucideIcon name="Plus" />
-                Create New Template
+                Create New Profile
               </>
             )}
           </h3>
 
           <div className={styles.form}>
             <div className={styles.formGroup}>
-              <label>Template Name:</label>
+              <label>Profile Name:</label>
               <input
                 type="text"
                 value={templateForm.templateName}
@@ -385,7 +385,7 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
             </div>
 
             <div className={styles.formGroup}>
-              <label>Default Name Prefix:</label>
+              <label>Default Fixture Name Prefix:</label>
               <input
                 type="text"
                 value={templateForm.defaultNamePrefix}
@@ -395,11 +395,11 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
             </div>
 
             <div className={styles.formGroup}>
-              <label>Template Photo:</label>
+              <label>Profile Photo:</label>
               <div className={styles.photoUploadContainer}>
                 {templateForm.photoUrl ? (
                   <div className={styles.photoPreview}>
-                    <img src={templateForm.photoUrl} alt="Template thumbnail" />
+                    <img src={templateForm.photoUrl} alt="Profile thumbnail" />
                     <button
                       type="button"
                       className={styles.removePhotoButton}
@@ -490,7 +490,7 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
               </button>
               <button className={styles.saveButton} onClick={handleSaveTemplate}>
                 <LucideIcon name="Save" />
-                {editingTemplate ? 'Update Template' : 'Save Template'}
+                {editingTemplate ? 'Update Profile' : 'Save Profile'}
               </button>
             </div>
           </div>

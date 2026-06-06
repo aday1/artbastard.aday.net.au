@@ -1,3 +1,5 @@
+import type { FixtureDipSwitchAddressing } from '../library';
+
 export interface ShowBuilderChannel {
   name: string;
   type: string;
@@ -16,6 +18,7 @@ export interface ShowBuilderTemplate {
   catalogId?: string;
   photoUrl?: string;
   tags?: string[];
+  addressing?: FixtureDipSwitchAddressing;
   modes?: Array<{
     name: string;
     channels: number;
@@ -62,6 +65,9 @@ export interface PlannedShowFixture {
   channels: ShowBuilderChannel[];
   photoUrl?: string;
   tags?: string[];
+  addressing?: FixtureDipSwitchAddressing;
+  addressInstruction: string;
+  modeSwitchInstruction?: string;
 }
 
 export interface PlannedShowGroup {
@@ -162,6 +168,44 @@ function buildFixtureName(
   return `${prefix} ${index + 1}`;
 }
 
+function switchList(states: Array<{ switch: number; state: 'ON' | 'OFF' }>, state: 'ON' | 'OFF'): string {
+  const matching = states.filter((item) => item.state === state).map((item) => item.switch);
+  return matching.length ? matching.join(', ') : '-';
+}
+
+export function formatDipSwitchAddress(startAddress: number, addressing?: FixtureDipSwitchAddressing): string {
+  if (!addressing || addressing.method !== 'dip-switch') {
+    return `Set fixture DMX address to ${startAddress}`;
+  }
+
+  const { min, max, switches } = addressing.addressRange;
+  if (startAddress < min || startAddress > max) {
+    return `Set fixture DMX address to ${startAddress} (outside documented DIP range ${min}-${max})`;
+  }
+
+  const switchStates = switches
+    .slice()
+    .sort((a, b) => a.switch - b.switch)
+    .map((item) => ({
+      switch: item.switch,
+      state: (startAddress & item.value) === item.value ? 'ON' as const : 'OFF' as const,
+    }));
+
+  return `Set address ${startAddress}: DIP ${switchList(switchStates, 'ON')} ON; ${switchList(switchStates, 'OFF')} OFF`;
+}
+
+export function formatModeSwitches(addressing?: FixtureDipSwitchAddressing): string | undefined {
+  const dmxMode = addressing?.modeSwitches.find((mode) => /dmx/i.test(mode.description));
+  if (!dmxMode) return undefined;
+  const states = Object.entries(dmxMode.states)
+    .sort(([a], [b]) => Number(a) - Number(b))
+    .map(([switchNumber, state]) => {
+      if (state === 'either') return `S${switchNumber} either`;
+      return `S${switchNumber} ${state === 1 ? 'ON' : 'OFF'}`;
+    });
+  return `${dmxMode.description}: ${states.join(', ')}`;
+}
+
 function uniqueWarningsFor(fixtures: PlannedShowFixture[]): string[] {
   const warnings = new Set<string>();
 
@@ -259,6 +303,9 @@ export function buildShowPatchPlan(
         channels: cloneChannels(mode.channels),
         photoUrl: template.photoUrl,
         tags: template.tags,
+        addressing: template.addressing,
+        addressInstruction: formatDipSwitchAddress(startAddress, template.addressing),
+        modeSwitchInstruction: formatModeSwitches(template.addressing),
       });
 
       occupied.push({
@@ -312,7 +359,8 @@ export function buildShowPatchPlan(
 export function formatPatchSheet(plan: ShowPatchPlan): string {
   const rows = plan.fixtures.map((fixture) => {
     const catalog = fixture.catalogId ? ` ${fixture.catalogId}` : '';
-    return `${fixture.groupName} | ${fixture.fixtureName}${catalog}: DMX ${fixture.startAddress}-${fixture.endAddress} (${fixture.channelCount}ch, ${fixture.mode})`;
+    const modeSwitches = fixture.modeSwitchInstruction ? ` | ${fixture.modeSwitchInstruction}` : '';
+    return `${fixture.groupName} | ${fixture.fixtureName}${catalog}: DMX ${fixture.startAddress}-${fixture.endAddress} (${fixture.channelCount}ch, ${fixture.mode}) | ${fixture.addressInstruction}${modeSwitches}`;
   });
   return rows.join('\n');
 }
@@ -332,6 +380,8 @@ export function formatPatchCsv(plan: ShowPatchPlan): string {
     'DMX Start',
     'DMX End',
     'Channels',
+    'Physical Address',
+    'Mode Switches',
   ];
   const rows = plan.fixtures.map((fixture) => [
     fixture.groupName,
@@ -342,8 +392,9 @@ export function formatPatchCsv(plan: ShowPatchPlan): string {
     fixture.startAddress,
     fixture.endAddress,
     fixture.channelCount,
+    fixture.addressInstruction,
+    fixture.modeSwitchInstruction,
   ]);
 
   return [header, ...rows].map((row) => row.map(csv).join(',')).join('\n');
 }
-

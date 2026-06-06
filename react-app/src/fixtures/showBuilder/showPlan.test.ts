@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   buildShowPatchPlan,
   formatPatchCsv,
+  formatDipSwitchAddress,
   formatPatchSheet,
   type ShowBuilderTemplate,
 } from './showPlan';
+import { fixtureLibraryEntries } from '../library';
 
 const laserTemplate: ShowBuilderTemplate = {
   id: 'laser-twinkler',
@@ -13,6 +15,30 @@ const laserTemplate: ShowBuilderTemplate = {
   defaultNamePrefix: 'Twinkling Laser RGY',
   type: 'Laser',
   tags: ['LASER'],
+  addressing: {
+    method: 'dip-switch',
+    addressRange: {
+      min: 1,
+      max: 511,
+      switches: [
+        { switch: 1, value: 1 },
+        { switch: 2, value: 2 },
+        { switch: 3, value: 4 },
+        { switch: 4, value: 8 },
+        { switch: 5, value: 16 },
+        { switch: 6, value: 32 },
+        { switch: 7, value: 64 },
+        { switch: 8, value: 128 },
+        { switch: 9, value: 256 },
+      ],
+    },
+    modeSwitches: [
+      {
+        description: 'DMX or slave mode',
+        states: { 10: 0 },
+      },
+    ],
+  },
   modes: [
     {
       name: '5-channel mode',
@@ -138,8 +164,38 @@ describe('show patch planner', () => {
     );
 
     expect(formatPatchSheet(plan)).toContain('Lasers | Lasers Twinkling Laser RGY 1 AB-FIX-001: DMX 1-5');
+    expect(formatPatchSheet(plan)).toContain('Set address 1: DIP 1 ON; 2, 3, 4, 5, 6, 7, 8, 9 OFF');
+    expect(formatPatchSheet(plan)).toContain('DMX or slave mode: S10 OFF');
     expect(formatPatchCsv(plan)).toContain('"Group","Fixture","Catalog ID"');
+    expect(formatPatchCsv(plan)).toContain('"Physical Address","Mode Switches"');
     expect(plan.warnings).toContain('Laser fixtures require physical safety checks before output is enabled.');
   });
-});
 
+  it('formats DIP switch addresses for documented addressable fixtures', () => {
+    expect(formatDipSwitchAddress(25, laserTemplate.addressing)).toBe(
+      'Set address 25: DIP 1, 4, 5 ON; 2, 3, 6, 7, 8, 9 OFF'
+    );
+  });
+
+  it('can create addressable plan rows for every canonical fixture profile', () => {
+    const plan = buildShowPatchPlan(
+      fixtureLibraryEntries,
+      fixtureLibraryEntries.map((entry, index) => ({
+        id: entry.id,
+        templateId: entry.id,
+        quantity: 1,
+        groupName: entry.catalogId,
+        startAddress: 1 + index * 30,
+      })),
+      [],
+      { showName: 'Canonical', startAddress: 1, gapChannels: 0, avoidExisting: true }
+    );
+
+    expect(plan.errors).toEqual([]);
+    expect(plan.fixtures).toHaveLength(fixtureLibraryEntries.length);
+    expect(plan.fixtures.every((fixture) => fixture.addressInstruction.includes(String(fixture.startAddress)))).toBe(true);
+    expect(plan.fixtures.map((fixture) => fixture.catalogId)).toEqual(
+      fixtureLibraryEntries.map((entry) => entry.catalogId)
+    );
+  });
+});

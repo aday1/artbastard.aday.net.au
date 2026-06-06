@@ -16,7 +16,7 @@ export interface FixtureSlice {
   setFixtures: (fixtures: Fixture[]) => void;
   setGroups: (groups: Group[]) => void;
 
-  // Template Management
+  // Fixture profile management
   addFixtureTemplate: (template: Omit<FixtureTemplate, 'id' | 'createdAt' | 'updatedAt'>) => void;
   updateFixtureTemplate: (id: string, template: Partial<FixtureTemplate>) => void;
   deleteFixtureTemplate: (id: string) => void;
@@ -86,7 +86,7 @@ export const createFixtureSlice = (
   })(),
   groups: [],
   selectedFixtures: [],
-  fixtureTemplates: [], // Will be initialized separately
+  fixtureTemplates: [], // Will be initialized separately from the canonical profile catalog
   fixtureLayout: [],
   placedFixtures: [],
 
@@ -201,7 +201,7 @@ export const createFixtureSlice = (
     });
     
     get().addNotification?.({
-      message: `Template "${template.templateName}" saved`,
+      message: `Profile "${template.templateName}" saved`,
       type: 'success',
       priority: 'normal'
     });
@@ -230,7 +230,7 @@ export const createFixtureSlice = (
     });
     
     get().addNotification?.({
-      message: 'Template updated',
+      message: 'Profile updated',
       type: 'success',
       priority: 'normal'
     });
@@ -258,7 +258,7 @@ export const createFixtureSlice = (
     });
     
     get().addNotification?.({
-      message: 'Template deleted',
+      message: 'Profile deleted',
       type: 'success',
       priority: 'normal'
     });

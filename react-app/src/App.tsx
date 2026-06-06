@@ -8,6 +8,7 @@ import { SuperControlPreferencesProvider } from './context/SuperControlPreferenc
 import { useSceneTransitionAnimation } from './hooks/useSceneTransitionAnimation'
 import { useGlobalMidiManager } from './hooks/useGlobalMidiManager'
 import { useGlobalBrowserMidi } from './hooks/useGlobalBrowserMidi'
+import { useApc40Workflow } from './hooks/useApc40Workflow'
 import { useActsPlaybackEngine } from './hooks/useActsPlaybackEngine'
 import { useActsOscProcessor } from './hooks/useActsOscProcessor'
 import { useActsMidiProcessor } from './hooks/useActsMidiProcessor'
@@ -78,6 +79,9 @@ function App() {
   
   // Initialize global browser MIDI manager to persist across all pages
   useGlobalBrowserMidi();
+
+  // Native Akai APC40/APC40 mkII scene and fixture workflow controls
+  useApc40Workflow();
   
   // Initialize ACTS playback engine
   useActsPlaybackEngine();

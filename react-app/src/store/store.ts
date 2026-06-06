@@ -85,9 +85,9 @@ export interface FixtureTemplate {
   documentationPath?: string;
   notes?: string;
   addressing?: FixtureDipSwitchAddressing;
-  isBuiltIn?: boolean // Compatibility flag for protected fixture-library templates
-  isCustom?: boolean // Custom templates can be edited/deleted
-  isFavorite?: boolean // Favorite templates for quick access
+  isBuiltIn?: boolean // Legacy compatibility flag for protected catalog profiles
+  isCustom?: boolean // Custom profiles can be edited/deleted
+  isFavorite?: boolean // Favorite profiles for quick access
   createdAt?: number
   updatedAt?: number
   photoUrl?: string // URL or data URL for fixture template photo thumbnail
@@ -581,6 +581,7 @@ interface State extends AutomationState, TransitionTrackerSlice {
     type?: string;
     _type?: string;
     source?: string;
+    sourceTransport?: string;
     timestamp?: number;
   }>
   oscMessages: OscMessage[]; // Added for OSC Monitor
@@ -602,7 +603,7 @@ interface State extends AutomationState, TransitionTrackerSlice {
   fixtures: Fixture[]
   groups: Group[]
   selectedFixtures: string[] // Array of fixture IDs for selection
-  fixtureTemplates: FixtureTemplate[] // User-managed fixture templates
+  fixtureTemplates: FixtureTemplate[] // Canonical catalog profiles plus custom profile copies
   addFixture: (fixture: Fixture) => void;
   deleteFixture: (fixtureId: string) => void;
   setFixtures: (fixtures: Fixture[]) => void;
@@ -895,6 +896,7 @@ interface State extends AutomationState, TransitionTrackerSlice {
     type?: string;
     _type?: string;
     source?: string;
+    sourceTransport?: string;
     timestamp?: number;
   }) => void
   addMidiMapping: (dmxChannel: number, mapping: MidiMapping) => void
@@ -1346,15 +1348,15 @@ const initializeThemeColors = (): {
   }
 };
 
-// Helper function to initialize fixture templates
+// Helper function to initialize fixture profiles
 const initializeFixtureTemplates = (): FixtureTemplate[] => {
-  // Canonical fixture library templates. Generic starter profiles live in
-  // src/fixtures/library/coreFixtureLibrary.ts so every built-in profile has
-  // one source of truth.
-  const builtInTemplates: FixtureTemplate[] = fixtureLibraryEntries.map(toStoreFixtureTemplate);
+  // Canonical fixture profile catalog. Generic starter profiles live in
+  // src/fixtures/library/coreFixtureLibrary.ts, and uploaded hardware profiles
+  // live in src/fixtures/library so every protected profile has one source.
+  const catalogProfiles: FixtureTemplate[] = fixtureLibraryEntries.map(toStoreFixtureTemplate);
 
-  // Custom templates (not built-in, but provided by default)
-  const defaultCustomTemplates: FixtureTemplate[] = [
+  // Custom editable profiles provided by default.
+  const defaultCustomProfiles: FixtureTemplate[] = [
     {
       id: 'custom-blank',
       templateName: 'Blank Template',
@@ -1367,33 +1369,33 @@ const initializeFixtureTemplates = (): FixtureTemplate[] => {
     }
   ];
 
-  // Load custom templates from localStorage (server templates will be synced via SocketContext)
+  // Load custom profile copies from localStorage. Server copies sync via SocketContext.
   try {
     const stored = localStorage.getItem('fixtureTemplates');
-    const allTemplates = [...builtInTemplates, ...defaultCustomTemplates];
+    const allProfiles = [...catalogProfiles, ...defaultCustomProfiles];
     
     if (stored) {
       const customTemplates: FixtureTemplate[] = JSON.parse(stored);
-      // Add custom templates that aren't duplicates of built-ins or default custom
+      // Add custom profiles that are not duplicates of catalog/default profiles.
       customTemplates.forEach(template => {
         if (!template.isBuiltIn && 
-            !builtInTemplates.some(bt => bt.id === template.id) &&
-            !defaultCustomTemplates.some(dt => dt.id === template.id)) {
+            !catalogProfiles.some(profile => profile.id === template.id) &&
+            !defaultCustomProfiles.some(profile => profile.id === template.id)) {
           // Validate and ensure channels array exists
           if (!template.channels || !Array.isArray(template.channels) || template.channels.length === 0) {
             // If channels is missing or invalid, provide a default
             template.channels = [{ name: 'Channel 1', type: 'other' }];
           }
-          allTemplates.push(template);
+          allProfiles.push(template);
         }
       });
-      return allTemplates;
+      return allProfiles;
     }
     
-    return allTemplates;
+    return allProfiles;
   } catch (error) {
     console.warn('Failed to load fixture templates from localStorage:', error);
-    return [...builtInTemplates, ...defaultCustomTemplates];
+    return [...catalogProfiles, ...defaultCustomProfiles];
   }
 };
 
@@ -1602,7 +1604,7 @@ export const useStore = create<State>()(
         const templates = initializeFixtureTemplates();
         // Ensure it's always an array
         return Array.isArray(templates) ? templates : [];
-      })(), // User-managed fixture templates initialized from the canonical fixture library
+      })(), // Fixture profiles initialized from the canonical fixture catalog
 
       scenes: [],
 

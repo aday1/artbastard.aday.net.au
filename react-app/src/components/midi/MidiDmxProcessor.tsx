@@ -72,7 +72,7 @@ export const MidiDmxProcessor: React.FC = () => {
       const message = customEvent.detail;
       
       // Process high-frequency browser controls directly (CC and pitch)
-      if ((message._type === 'cc' || message._type === 'pitch') && message.source === 'browser') {
+      if ((message._type === 'cc' || message._type === 'pitch') && (message.source === 'browser' || message.sourceTransport === 'browser')) {
         processMidiMessageDirect(message);
       }
     };
@@ -186,7 +186,7 @@ export const MidiDmxProcessor: React.FC = () => {
     setLastProcessedMessageSignature(currentMessageSignature); // Mark as processed early
 
     // Skip browser MIDI CC/Pitch messages - they are handled directly
-    if (latestMessage.source === 'browser' && (latestMessage._type === 'cc' || latestMessage._type === 'pitch')) {
+    if ((latestMessage.source === 'browser' || (latestMessage as any).sourceTransport === 'browser') && (latestMessage._type === 'cc' || latestMessage._type === 'pitch')) {
       return;
     }
 

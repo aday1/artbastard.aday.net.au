@@ -8,6 +8,7 @@ import { LucideIcon } from '../ui/LucideIcon'; // Added for icons
 import { NodeBasedFixtureEditor } from './NodeBasedFixtureEditor'; // Import Node Editor
 import { FixtureTemplateManager } from './FixtureTemplateManager'; // Import Template Manager
 import { ShowBuilderPanel } from './ShowBuilderPanel';
+import { Apc40WorkflowPanel } from './Apc40WorkflowPanel';
 import SuperControl from '../dmx/SuperControl';
 import { EnvelopeChannelPanel } from '../automation/EnvelopeChannelPanel';
 import type { FixtureChannelRange } from '../../store/types'
@@ -71,7 +72,6 @@ export const FixtureSetup: React.FC = () => {
   const { theme } = useTheme();
   const { 
     fixtures, 
-    fixtureTemplates,
     addFixtureFlag,
     removeFixtureFlag,
     bulkAddFlag,
@@ -87,7 +87,6 @@ export const FixtureSetup: React.FC = () => {
     setOscAssignment
   } = useStore(state => ({
     fixtures: state.fixtures,
-    fixtureTemplates: state.fixtureTemplates,
     addFixtureFlag: state.addFixtureFlag,
     removeFixtureFlag: state.removeFixtureFlag,
     bulkAddFlag: state.bulkAddFlag,
@@ -1182,7 +1181,7 @@ export const FixtureSetup: React.FC = () => {
     <div className={styles.fixtureSetup}>
       {/* Header with preview toggle */}
       <div className={styles.headerBar}>
-        <h2>Fixture Setup</h2>
+        <h2>DMX Show Setup</h2>
         <button 
           className={styles.togglePreviewBtn}
           onClick={() => setShowSuperControlPreview(!showSuperControlPreview)}
@@ -1195,12 +1194,13 @@ export const FixtureSetup: React.FC = () => {
       {/* Main content area */}
       <div className={styles.mainArea}>
         <ShowBuilderPanel />
+        <Apc40WorkflowPanel />
         {/* Fixture Management Section */}
         <div className={styles.card}>          <div className={styles.cardHeader}>
             <h3>
-              {theme === 'artsnob' && 'Existing Fixtures: The Gallery of Light Instruments'}
-              {theme === 'standard' && 'Fixture Library'}
-              {theme === 'minimal' && 'Library'}
+              {theme === 'artsnob' && 'Active Patch: The Instruments on the Wire'}
+              {theme === 'standard' && 'Active Patch'}
+              {theme === 'minimal' && 'Patch'}
             </h3>
             <div style={{ fontSize: 12, opacity: 0.8, marginTop: 2 }}>Active: {fixtures.length}</div>
             <div className={styles.headerActions}>
@@ -1298,6 +1298,14 @@ export const FixtureSetup: React.FC = () => {
                 <i className="fas fa-external-link-alt"></i>
                 View Address Sheet
               </a>
+              <button
+                className={`${styles.actionButton} ${styles.exportButton}`}
+                onClick={() => setShowTemplateManager(true)}
+                title="Advanced: manage fixture profiles. Use Create the DMX show above for normal fixture creation."
+              >
+                <LucideIcon name="Settings" />
+                Profiles
+              </button>
             </div>
           </div>
           <div className={styles.cardBody}>
@@ -2226,212 +2234,11 @@ export const FixtureSetup: React.FC = () => {
               </button>
             )}
             {!showCreateFixture && (
-              <div className={styles.templateSection}>
-                <div className={styles.templateHeader}>
-                  <h4 className={styles.templateTitle}>
-                    {theme === 'artsnob'
-                      ? 'Fixture library archetypes:'
-                      : theme === 'standard'
-                        ? 'Create from fixture library:'
-                        : 'Fixture Library:'}
-                  </h4>
-                  <button
-                    className={styles.manageTemplatesButton}
-                    onClick={() => setShowTemplateManager(true)}
-                    title="Manage templates"
-                  >
-                    <LucideIcon name="Settings" />
-                    {theme === 'artsnob' && 'Manage Templates'}
-                    {theme === 'standard' && 'Manage Templates'}
-                    {theme === 'minimal' && 'Templates'}
-                  </button>
-                </div>
-                <div className={styles.templateColumns}>
-                  {/* Canonical fixture library column */}
-                  <div className={styles.templateColumn}>
-                    <h5 className={styles.columnTitle}>
-                      <LucideIcon name="Package" />
-                      Fixture Library
-                    </h5>
-                    <div className={styles.templateButtons}>
-                      {fixtureTemplates.filter(t => t.isBuiltIn && !t.isFavorite).map(template => (
-                        <button
-                          key={template.id}
-                          className={`${styles.templateButton} ${styles.builtInTemplate}`}
-                          onClick={() => {
-                            const nextAddress = calculateNextStartAddress();
-                            const existingNames = fixtures.map(f => f.name);
-                            let suggestedName = template.defaultNamePrefix;
-                            let counter = 1;
-                            while (existingNames.includes(suggestedName)) {
-                              suggestedName = `${template.defaultNamePrefix} ${counter++}`;
-                            }
-                            setFixtureForm({
-                              name: suggestedName,
-                              type: template.type || '',
-                              manufacturer: template.manufacturer || '',
-                              mode: template.modes ? template.modes[0].name : '',
-                              startAddress: nextAddress,
-                              channels: template.modes ? JSON.parse(JSON.stringify(template.modes[0].channelData)) : JSON.parse(JSON.stringify(template.channels || [])),
-                              notes: '',
-                              photoUrl: template.photoUrl,
-                              tags: template.tags || []
-                            });
-                            setCurrentTemplate(template);
-                            setEditingFixtureId(null);
-                            setShowCreateFixture(true);
-                          }}
-                          title={`${template.modes ? template.modes[0].channels : (template.channels?.length || 0)} channels`}
-                        >
-                          <div className={styles.templateImage}>
-                            {template.photoUrl ? (
-                              <img src={template.photoUrl} alt={template.templateName} />
-                            ) : (
-                              <div className={styles.imagePlaceholder}>
-                                <LucideIcon name="Image" size={24} />
-                              </div>
-                            )}
-                          </div>
-                          <div className={styles.templateInfo}>
-                            <span className={styles.templateName}>{template.templateName}</span>
-                            {template.manufacturer && (
-                              <span className={styles.templateManufacturer}>{template.manufacturer}</span>
-                            )}
-                            {template.catalogId && (
-                              <span className={styles.templateCatalog}>{template.catalogId}</span>
-                            )}
-                            {(template.category || template.type) && (
-                              <span className={styles.templateCategory}>{template.category || template.type}</span>
-                            )}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Favourites Column */}
-                  <div className={styles.templateColumn}>
-                    <h5 className={styles.columnTitle}>
-                      <LucideIcon name="Star" />
-                      Favourites
-                    </h5>
-                    <div className={styles.templateButtons}>
-                      {fixtureTemplates.filter(t => t.isFavorite).map(template => (
-                        <button
-                          key={template.id}
-                          className={`${styles.templateButton} ${styles.favoriteTemplate}`}
-                          onClick={() => {
-                            const nextAddress = calculateNextStartAddress();
-                            const existingNames = fixtures.map(f => f.name);
-                            let suggestedName = template.defaultNamePrefix;
-                            let counter = 1;
-                            while (existingNames.includes(suggestedName)) {
-                              suggestedName = `${template.defaultNamePrefix} ${counter++}`;
-                            }
-                            setFixtureForm({
-                              name: suggestedName,
-                              type: template.type || '',
-                              manufacturer: template.manufacturer || '',
-                              mode: template.modes ? template.modes[0].name : '',
-                              startAddress: nextAddress,
-                              channels: template.modes ? JSON.parse(JSON.stringify(template.modes[0].channelData)) : JSON.parse(JSON.stringify(template.channels || [])),
-                              notes: '',
-                              photoUrl: template.photoUrl,
-                              tags: template.tags || []
-                            });
-                            setCurrentTemplate(template);
-                            setEditingFixtureId(null);
-                            setShowCreateFixture(true);
-                          }}
-                          title={`${template.modes ? template.modes[0].channels : (template.channels?.length || 0)} channels`}
-                        >
-                          <div className={styles.templateImage}>
-                            {template.photoUrl ? (
-                              <img src={template.photoUrl} alt={template.templateName} />
-                            ) : (
-                              <div className={styles.imagePlaceholder}>
-                                <LucideIcon name="Image" size={24} />
-                              </div>
-                            )}
-                          </div>
-                          <div className={styles.templateInfo}>
-                            <span className={styles.templateName}>{template.templateName}</span>
-                            {template.manufacturer && (
-                              <span className={styles.templateManufacturer}>{template.manufacturer}</span>
-                            )}
-                            {template.catalogId && (
-                              <span className={styles.templateCatalog}>{template.catalogId}</span>
-                            )}
-                            {(template.category || template.type) && (
-                              <span className={styles.templateCategory}>{template.category || template.type}</span>
-                            )}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Custom Column */}
-                  <div className={styles.templateColumn}>
-                    <h5 className={styles.columnTitle}>
-                      <LucideIcon name="Folder" />
-                      Custom
-                    </h5>
-                    <div className={styles.templateButtons}>
-                      {fixtureTemplates.filter(t => t.isCustom && !t.isBuiltIn).map(template => (
-                        <button
-                          key={template.id}
-                          className={`${styles.templateButton} ${styles.customTemplate}`}
-                          onClick={() => {
-                            const nextAddress = calculateNextStartAddress();
-                            const existingNames = fixtures.map(f => f.name);
-                            let suggestedName = template.defaultNamePrefix;
-                            let counter = 1;
-                            while (existingNames.includes(suggestedName)) {
-                              suggestedName = `${template.defaultNamePrefix} ${counter++}`;
-                            }
-                            setFixtureForm({
-                              name: suggestedName,
-                              type: template.type || '',
-                              manufacturer: template.manufacturer || '',
-                              mode: template.modes ? template.modes[0].name : '',
-                              startAddress: nextAddress,
-                              channels: template.modes ? JSON.parse(JSON.stringify(template.modes[0].channelData)) : JSON.parse(JSON.stringify(template.channels || [])),
-                              notes: '',
-                              photoUrl: template.photoUrl,
-                              tags: template.tags || []
-                            });
-                            setCurrentTemplate(template);
-                            setEditingFixtureId(null);
-                            setShowCreateFixture(true);
-                          }}
-                          title={`${template.modes ? template.modes[0].channels : (template.channels?.length || 0)} channels`}
-                        >
-                          <div className={styles.templateImage}>
-                            {template.photoUrl ? (
-                              <img src={template.photoUrl} alt={template.templateName} />
-                            ) : (
-                              <div className={styles.imagePlaceholder}>
-                                <LucideIcon name="Image" size={24} />
-                              </div>
-                            )}
-                          </div>
-                          <div className={styles.templateInfo}>
-                            <span className={styles.templateName}>{template.templateName}</span>
-                            {template.manufacturer && (
-                              <span className={styles.templateManufacturer}>{template.manufacturer}</span>
-                            )}
-                            {template.catalogId && (
-                              <span className={styles.templateCatalog}>{template.catalogId}</span>
-                            )}
-                            {(template.category || template.type) && (
-                              <span className={styles.templateCategory}>{template.category || template.type}</span>
-                            )}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+              <div className={styles.advancedProfileNote}>
+                <LucideIcon name="Info" size={18} />
+                <div>
+                  <strong>Use Create the DMX show above for catalog fixture profiles.</strong>
+                  <span>Manual fixture editing and profile management are only for missing or experimental hardware.</span>
                 </div>
               </div>
             )}

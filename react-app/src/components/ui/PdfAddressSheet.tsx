@@ -42,11 +42,11 @@ export const PdfAddressSheet: React.FC = () => {
     return stored ? JSON.parse(stored) : ['uKing', 'Chauvet', 'Martin', 'Clay Paky', 'Elation', 'American DJ', 'ADJ'];
   });
 
-  // Get fixture types from library templates
+  // Get fixture types from catalog profiles.
   const getFixtureTypesFromLibrary = () => {
     const types = new Map<string, { channels: number; description: string }>();
     
-    // Add library templates
+    // Add catalog profiles.
     fixtureTemplates.forEach(template => {
       const channelCount = template.modes?.[0]?.channels || template.channels?.length || 1;
       if (!types.has(template.templateName)) {
@@ -201,7 +201,7 @@ export const PdfAddressSheet: React.FC = () => {
   };  const syncToArtBastard = (saveAsTemplate: boolean = false, templateName?: string) => {
     // Convert our fixture entries back to store format
     const convertedFixtures = fixtures.map(fixture => {
-      // Try to find matching template from library to get channel definitions
+      // Try to find matching catalog profile to get channel definitions.
       const matchingTemplate = fixtureTemplates.find(t => 
         t.templateName === fixture.type || t.type === fixture.type
       );
@@ -270,7 +270,7 @@ export const PdfAddressSheet: React.FC = () => {
         addFixtureTemplate(newTemplate);
         
         useStoreUtils.getState().addNotification({
-          message: `Saved "${templateName}" as fixture template`,
+          message: `Saved "${templateName}" as fixture profile`,
           type: 'success',
           priority: 'normal'
         });
@@ -574,27 +574,27 @@ export const PdfAddressSheet: React.FC = () => {
         <h4>💡 Quick Guide</h4>
         <ul>
           <li><strong>Add Fixture:</strong> Click "➕ Add Fixture" to add a new row</li>
-          <li><strong>Templates:</strong> Select fixture type to auto-fill channel count</li>
+          <li><strong>Profiles:</strong> Select fixture type to auto-fill channel count</li>
           <li><strong>Addresses:</strong> Start addresses auto-calculate to avoid conflicts</li>
           <li><strong>Conflicts:</strong> Red highlighting indicates overlapping addresses</li>
-          <li><strong>Sync:</strong> Use "🔄 Sync to ArtBastard" button to sync changes bidirectionally between Address Sheet and Fixture Library</li>
+          <li><strong>Sync:</strong> Use "Sync to ArtBastard" to sync changes between Address Sheet and fixture profiles</li>
           <li><strong>Export:</strong> Generate CSV for documentation or external tools</li>
           <li><strong>Print:</strong> Create physical reference sheets</li>
           <li><strong>PDF:</strong> Generate and print comprehensive DMX address documentation</li>
-          <li><strong>Custom Channels:</strong> Override template channel count by editing the number next to the type dropdown</li>
-          <li><strong>Library Fixtures:</strong> Fixture types are loaded from your fixture library templates</li>
-          <li><strong>Save as Template:</strong> When syncing, you can save fixtures as reusable templates</li>
+          <li><strong>Custom Channels:</strong> Override profile channel count by editing the number next to the type dropdown</li>
+          <li><strong>Catalog Profiles:</strong> Fixture types are loaded from the single fixture profile catalog</li>
+          <li><strong>Save as Profile:</strong> When syncing, you can save fixtures as reusable custom profiles</li>
         </ul>
       </div>
 
       {showSaveTemplateDialog && (
         <div className={styles.modalOverlay} onClick={() => setShowSaveTemplateDialog(false)}>
           <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <h4>Save as Template?</h4>
-            <p>Would you like to save this fixture configuration as a reusable template?</p>
+            <h4>Save as Profile?</h4>
+            <p>Would you like to save this fixture configuration as a reusable profile?</p>
             <div style={{ marginBottom: '1rem' }}>
               <label>
-                Template Name:
+                Profile Name:
                 <input
                   type="text"
                   value={templateNameToSave}
@@ -626,7 +626,7 @@ export const PdfAddressSheet: React.FC = () => {
                 disabled={!templateNameToSave.trim()}
                 style={{ padding: '0.5rem 1rem', background: '#4a5cff', color: 'white', border: 'none', borderRadius: '4px' }}
               >
-                Save Template
+                Save Profile
               </button>
             </div>
           </div>
