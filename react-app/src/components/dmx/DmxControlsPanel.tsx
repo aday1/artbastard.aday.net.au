@@ -250,6 +250,7 @@ export const DmxControlsPanel: React.FC<DmxControlsPanelProps> = ({
             onChange={(e) => onChannelsPerPageChange(parseInt(e.target.value, 10))}
             className={styles.pageSizeSelect}
           >
+            <option value={8}>8 per page</option>
             <option value={16}>16 per page</option>
             <option value={32}>32 per page</option>
             <option value={64}>64 per page</option>

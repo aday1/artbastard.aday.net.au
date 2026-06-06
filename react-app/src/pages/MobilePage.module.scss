@@ -8,7 +8,8 @@
   --mobile-rack-brass: #d68c34;
   --mobile-rack-led: #76f082;
   width: 100%;
-  height: 100%;
+  height: auto;
+  min-height: 0;
   // Use the dynamic viewport height when supported so the iOS Safari
   // URL bar collapse no longer crops the bottom of the surface.
   min-height: 100vh;
@@ -20,7 +21,7 @@
     repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 7px),
     radial-gradient(circle at 50% 0%, rgba(214, 140, 52, 0.16), transparent 26rem),
     linear-gradient(180deg, #18151c 0%, #0e0d11 100%);
-  overflow: hidden;
+  overflow: visible;
   position: relative;
   isolation: isolate;
 
@@ -64,7 +65,8 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.12),
     inset 0 -1px 0 rgba(214, 140, 52, 0.36),
     0 8px 22px rgba(0, 0, 0, 0.42);
-  position: relative;
+  position: sticky;
+  top: 0;
 
   &::before,
   &::after {
@@ -117,14 +119,10 @@
 }
 
 .tabNavigation {
-  display: flex;
+  display: grid !important;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 4px;
-  justify-content: stretch;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scroll-snap-type: x proximity;
-  overscroll-behavior-x: contain;
+  overflow: visible;
   padding: 4px;
   border: 1px solid #08070a;
   border-radius: 4px;
@@ -139,10 +137,10 @@
 }
 
 .tab {
-  flex: 1 0 auto;
-  min-width: 7.25rem;
-  min-height: 52px;
-  scroll-snap-align: start;
+  min-width: 0;
+  width: 100%;
+  min-height: 50px;
+  padding: 6px 2px !important;
   border-radius: 2px !important;
   border-color: #08070a !important;
   background:
@@ -170,27 +168,34 @@
 }
 
 .tabLabel {
-  font-size: 11px;
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  font-size: 9px;
   font-family: var(--rk-mono, var(--font-mono, monospace));
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.03em;
+  line-height: 1.1;
+  text-overflow: ellipsis;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .mobileContent {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
+  flex: 1 0 auto;
+  min-height: 0;
+  overflow: visible;
+  touch-action: pan-y;
   padding: 10px calc(var(--mobile-rack-rail) + 5px) 12px;
+  scroll-behavior: smooth;
   position: relative;
   z-index: 1;
 }
 
 .tabContent {
   width: 100%;
-  height: 100%;
+  height: auto;
+  min-height: 100%;
   padding: 0;
   box-sizing: border-box;
   background:
@@ -202,7 +207,11 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.1),
     inset 0 0 0 1px rgba(214, 140, 52, 0.08),
     0 10px 26px rgba(0, 0, 0, 0.35);
-  overflow: hidden;
+  overflow: visible;
+
+  > * {
+    min-width: 0;
+  }
 }
 
 .tabFallback {
@@ -224,8 +233,7 @@
   }
 
   .tab {
-    padding: 8px 12px;
-    font-size: 13px;
+    padding: 6px 1px !important;
   }
 
   .tabIcon {
@@ -233,7 +241,7 @@
   }
 
   .tabLabel {
-    font-size: 12px;
+    font-size: 8px;
   }
 
   .tabContent {
@@ -251,16 +259,15 @@
   }
 
   .tab {
-    padding: 8px 12px;
+    width: 100%;
+    min-width: 0;
+    padding: 5px 1px !important;
     font-size: 12px;
-    min-width: 92px;
     min-height: 50px;
   }
 
-  // Keep labels visible at all phone widths - the row scrolls
-  // horizontally instead of going icon-only.
   .tabLabel {
-    display: inline;
+    display: block;
   }
 
   .tabIcon {

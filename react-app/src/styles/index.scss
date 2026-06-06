@@ -238,6 +238,31 @@ body.ab-no-scroll {
   touch-action: none;
 }
 
+// The standalone mobile rack uses native document scrolling. The rest of the
+// desktop app keeps its single internal scroller through the default rules.
+html.ab-mobile-page {
+  height: auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: auto;
+
+  body {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  #root {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+}
+
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--ui-font-family-heading, var(--font-heading));
   font-weight: var(--ui-font-weight-heading, 600);

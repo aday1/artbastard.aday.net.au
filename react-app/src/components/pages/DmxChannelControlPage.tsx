@@ -26,7 +26,13 @@ import styles from './DmxChannelControlPage.module.scss';
 import pageStyles from '../../pages/Pages.module.scss';
 import { useSceneCapture } from '../../hooks/useSceneCapture';
 
-export const DmxChannelControlPage: React.FC = () => {
+interface DmxChannelControlPageProps {
+  embedded?: boolean;
+}
+
+export const DmxChannelControlPage: React.FC<DmxChannelControlPageProps> = ({
+  embedded = false,
+}) => {
   const { theme } = useTheme();
   const { openAppMenu, openChannelMenu, openFixtureMenu } = useAppContextMenu();
   const { isMobile, isTablet, isTouch } = useMobile();
@@ -44,7 +50,9 @@ export const DmxChannelControlPage: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'active' | 'selected' | 'range' | 'selectedFixtures'>('all');
   const [range, setRange] = useState({ start: 1, end: 32 });
   const [searchTerm, setSearchTerm] = useState('');
-  const [channelsPerPage, setChannelsPerPage] = useState(compactByDefault ? 32 : 64);
+  const [channelsPerPage, setChannelsPerPage] = useState(
+    isMobile ? 8 : isTablet ? 16 : 64
+  );
   const [currentPage, setCurrentPage] = useState(0);
   const [showSceneControls, setShowSceneControls] = useState(!compactByDefault);
   const [showMidiControls, setShowMidiControls] = useState(false);
@@ -383,20 +391,22 @@ export const DmxChannelControlPage: React.FC = () => {
 
   return (
     <div className={pageStyles.pageContainer}>
-      <div className={pageStyles.pageHeader}>
-        <div className={pageStyles.headerContent}>
-          <h2>
-            {theme === 'artsnob' && 'Le Contrôle DMX Ultime'}
-            {theme === 'standard' && 'DMX Channel Control'}
-            {theme === 'minimal' && 'DMX Control'}
-          </h2>
-          <p>
-            {theme === 'artsnob' && 'Direct DMX channel control with MIDI Learn/Forget functionality'}
-            {theme === 'standard' && 'Direct DMX channel control with MIDI Learn/Forget functionality'}
-            {theme === 'minimal' && 'Direct DMX channel control'}
-          </p>
+      {!embedded && (
+        <div className={pageStyles.pageHeader}>
+          <div className={pageStyles.headerContent}>
+            <h2>
+              {theme === 'artsnob' && 'Le Contrôle DMX Ultime'}
+              {theme === 'standard' && 'DMX Channel Control'}
+              {theme === 'minimal' && 'DMX Control'}
+            </h2>
+            <p>
+              {theme === 'artsnob' && 'Direct DMX channel control with MIDI Learn/Forget functionality'}
+              {theme === 'standard' && 'Direct DMX channel control with MIDI Learn/Forget functionality'}
+              {theme === 'minimal' && 'Direct DMX channel control'}
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className={pageStyles.pageContent}>
         <div

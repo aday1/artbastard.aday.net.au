@@ -1,6 +1,7 @@
 import React, { Suspense } from 'react';
 import { DmxChannelControlPage } from '../components/pages/DmxChannelControlPage';
 import SuperControl from '../components/dmx/SuperControl';
+import { MobileFixtureRack } from '../components/fixtures/MobileFixtureRack';
 import { useTheme } from '../context/ThemeContext';
 import { LucideIcon } from '../components/ui/LucideIcon';
 import { SkeuoButton } from '../components/ui/SkeuoButton';
@@ -8,7 +9,6 @@ import { SiteBrandingLink } from '../components/ui/SiteBrandingLink';
 import { DeployLaneBadge } from '../components/layout/DeployLaneBadge';
 import styles from './MobilePage.module.scss';
 
-const FixturePage = React.lazy(() => import('./FixturePage'));
 const ActsScenesPage = React.lazy(() => import('./ActsScenesPage'));
 const SettingsPage = React.lazy(() => import('./SettingsPage'));
 
@@ -19,6 +19,18 @@ const TabFallback = () => <div className={styles.tabFallback}>Chargement...</div
 const MobilePage: React.FC = () => {
   const { theme } = useTheme();
   const [activeTab, setActiveTab] = React.useState<MobileTab>('dmx');
+
+  const activateTab = React.useCallback((tab: MobileTab) => {
+    setActiveTab(tab);
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    });
+  }, []);
+
+  React.useEffect(() => {
+    document.documentElement.classList.add('ab-mobile-page');
+    return () => document.documentElement.classList.remove('ab-mobile-page');
+  }, []);
 
   React.useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -32,12 +44,12 @@ const MobilePage: React.FC = () => {
         tab === 'scenes' ||
         tab === 'settings'
       ) {
-        setActiveTab(tab === 'control' ? 'supercontrol' : tab);
+        activateTab(tab === 'control' ? 'supercontrol' : tab);
       }
     };
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, []);
+  }, [activateTab]);
 
   const tabs: Array<{
     id: MobileTab;
@@ -47,12 +59,12 @@ const MobilePage: React.FC = () => {
     {
       id: 'dmx',
       icon: 'Zap',
-      label: { artsnob: 'Canvas DMX', standard: 'Canvas DMX' },
+      label: { artsnob: 'DMX', standard: 'DMX' },
     },
     {
       id: 'supercontrol',
       icon: 'Lightbulb',
-      label: { artsnob: 'Super Contrôle', standard: 'Super Control' },
+      label: { artsnob: 'Maître', standard: 'Control' },
     },
     {
       id: 'fixture',
@@ -84,12 +96,14 @@ const MobilePage: React.FC = () => {
           {tabs.map((tab) => (
             <SkeuoButton
               key={tab.id}
+              id={`mobile-tab-${tab.id}`}
               role="tab"
               aria-selected={activeTab === tab.id}
+              aria-controls={`mobile-panel-${tab.id}`}
               active={activeTab === tab.id}
               variant="pill"
               className={styles.tab}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => activateTab(tab.id)}
             >
               <span className={styles.tabIcon} aria-hidden="true">
                 <LucideIcon name={tab.icon} size={18} />
@@ -104,31 +118,54 @@ const MobilePage: React.FC = () => {
 
       <div className={styles.mobileContent}>
         {activeTab === 'supercontrol' && (
-          <div className={styles.tabContent}>
+          <div
+            id="mobile-panel-supercontrol"
+            className={styles.tabContent}
+            role="tabpanel"
+            aria-labelledby="mobile-tab-supercontrol"
+          >
             <SuperControl preferTouchLayout />
           </div>
         )}
         {activeTab === 'dmx' && (
-          <div className={styles.tabContent}>
-            <DmxChannelControlPage />
+          <div
+            id="mobile-panel-dmx"
+            className={styles.tabContent}
+            role="tabpanel"
+            aria-labelledby="mobile-tab-dmx"
+          >
+            <DmxChannelControlPage embedded />
           </div>
         )}
         {activeTab === 'fixture' && (
-          <div className={styles.tabContent}>
-            <Suspense fallback={<TabFallback />}>
-              <FixturePage />
-            </Suspense>
+          <div
+            id="mobile-panel-fixture"
+            className={styles.tabContent}
+            role="tabpanel"
+            aria-labelledby="mobile-tab-fixture"
+          >
+            <MobileFixtureRack />
           </div>
         )}
         {activeTab === 'scenes' && (
-          <div className={styles.tabContent}>
+          <div
+            id="mobile-panel-scenes"
+            className={styles.tabContent}
+            role="tabpanel"
+            aria-labelledby="mobile-tab-scenes"
+          >
             <Suspense fallback={<TabFallback />}>
               <ActsScenesPage />
             </Suspense>
           </div>
         )}
         {activeTab === 'settings' && (
-          <div className={styles.tabContent}>
+          <div
+            id="mobile-panel-settings"
+            className={styles.tabContent}
+            role="tabpanel"
+            aria-labelledby="mobile-tab-settings"
+          >
             <Suspense fallback={<TabFallback />}>
               <SettingsPage />
             </Suspense>
