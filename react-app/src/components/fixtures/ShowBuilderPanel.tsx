@@ -1,17 +1,40 @@
 import React, { useMemo, useState } from 'react';
 import axios from 'axios';
-import { useStore } from '../../store';
+import { type Group, useStore } from '../../store';
 import useStoreUtils from '../../store/storeUtils';
 import { LucideIcon } from '../ui/LucideIcon';
 import {
   buildShowPatchPlan,
+  formatPatchCsv,
   formatPatchSheet,
+  getTemplateMode,
   type PlannedShowFixture,
   type ShowBuilderSelection,
+  type ShowBuilderTemplate,
 } from '../../fixtures/showBuilder/showPlan';
 import styles from './FixtureSetup.module.scss';
 
+interface ShowBuilderRow {
+  id: string;
+  templateId: string;
+  modeName: string;
+  quantity: number;
+  groupName: string;
+  startAddress: number;
+  gapChannels: number;
+  labelPrefix: string;
+}
+
 const clampQuantity = (value: number) => Math.max(0, Math.min(32, Math.floor(value || 0)));
+const clampAddress = (value: number) => Math.max(1, Math.min(512, Math.floor(value || 1)));
+const clampGap = (value: number) => Math.max(0, Math.min(64, Math.floor(value || 0)));
+
+const safeSlug = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '') || 'show';
 
 function fixtureFromPlanItem(item: PlannedShowFixture, index: number) {
   return {
@@ -29,31 +52,42 @@ function fixtureFromPlanItem(item: PlannedShowFixture, index: number) {
     notes: [
       item.catalogId ? `Catalog: ${item.catalogId}` : '',
       item.category ? `Category: ${item.category}` : '',
+      `Group: ${item.groupName}`,
       `Patch: DMX ${item.startAddress}-${item.endAddress}`,
     ].filter(Boolean).join('\n'),
     photoUrl: item.photoUrl,
-    tags: Array.from(new Set([...(item.tags || []), 'SHOW'])),
+    tags: Array.from(new Set([...(item.tags || []), 'SHOW', `GROUP:${item.groupName}`])),
   };
 }
 
+function makeGroup(name: string, fixtureIndices: number[]): Group {
+  return {
+    id: `group-${Date.now()}-${safeSlug(name)}-${Math.random().toString(36).slice(2, 7)}`,
+    name,
+    fixtureIndices,
+    lastStates: new Array(512).fill(0),
+    isMuted: false,
+    isSolo: false,
+    masterValue: 255,
+  };
+}
+
+function defaultModeName(template?: ShowBuilderTemplate) {
+  return template?.modes?.[0]?.name || 'Default mode';
+}
+
 export const ShowBuilderPanel: React.FC = () => {
-  const { fixtures, fixtureTemplates, setFixtures, setSelectedFixtures } = useStore((state) => ({
+  const { fixtures, groups, fixtureTemplates, setFixtures, setGroups, setSelectedFixtures } = useStore((state) => ({
     fixtures: state.fixtures,
+    groups: state.groups,
     fixtureTemplates: state.fixtureTemplates,
     setFixtures: state.setFixtures,
+    setGroups: state.setGroups,
     setSelectedFixtures: state.setSelectedFixtures,
   }));
   const [showName, setShowName] = useState('Beta Show');
-  const [startAddress, setStartAddress] = useState(() => {
-    const highest = fixtures.reduce(
-      (max, fixture) => Math.max(max, fixture.startAddress + fixture.channels.length - 1),
-      0
-    );
-    return Math.min(512, Math.max(1, highest + 1));
-  });
-  const [gapChannels, setGapChannels] = useState(1);
   const [avoidExisting, setAvoidExisting] = useState(true);
-  const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const [rows, setRows] = useState<ShowBuilderRow[]>([]);
   const [isCreating, setIsCreating] = useState(false);
 
   const sortedTemplates = useMemo(() => {
@@ -67,12 +101,70 @@ export const ShowBuilderPanel: React.FC = () => {
       });
   }, [fixtureTemplates]);
 
+  const highestFixtureAddress = useMemo(
+    () =>
+      fixtures.reduce(
+        (max, fixture) => Math.max(max, fixture.startAddress + fixture.channels.length - 1),
+        0
+      ),
+    [fixtures]
+  );
+
+  const createRowFor = (templateId = sortedTemplates[0]?.id) => {
+    const template = sortedTemplates.find((item) => item.id === templateId) || sortedTemplates[0];
+    if (!template) return;
+    const rowNumber = rows.length + 1;
+    setRows((current) => [
+      ...current,
+      {
+        id: `row-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        templateId: template.id,
+        modeName: defaultModeName(template),
+        quantity: 1,
+        groupName: `${showName.trim() || 'Show'} ${template.defaultNamePrefix}`,
+        startAddress: Math.min(512, Math.max(1, highestFixtureAddress + 1 + current.length * 10)),
+        gapChannels: 0,
+        labelPrefix: `${template.defaultNamePrefix} ${rowNumber}`,
+      },
+    ]);
+  };
+
+  const updateRow = (rowId: string, patch: Partial<ShowBuilderRow>) => {
+    setRows((current) =>
+      current.map((row) => {
+        if (row.id !== rowId) return row;
+        const next = { ...row, ...patch };
+        if (patch.templateId) {
+          const template = sortedTemplates.find((item) => item.id === patch.templateId);
+          next.modeName = defaultModeName(template);
+          next.groupName = `${showName.trim() || 'Show'} ${template?.defaultNamePrefix || 'Fixture'}`;
+          next.labelPrefix = template?.defaultNamePrefix || 'Fixture';
+        }
+        return next;
+      })
+    );
+  };
+
+  const removeRow = (rowId: string) => {
+    setRows((current) => current.filter((row) => row.id !== rowId));
+  };
+
+  const clearPlan = () => {
+    setRows([]);
+  };
+
   const selections: ShowBuilderSelection[] = useMemo(() => {
-    return Object.entries(quantities).map(([templateId, quantity]) => ({
-      templateId,
-      quantity,
+    return rows.map((row) => ({
+      id: row.id,
+      templateId: row.templateId,
+      modeName: row.modeName,
+      quantity: row.quantity,
+      groupName: row.groupName,
+      startAddress: row.startAddress,
+      gapChannels: row.gapChannels,
+      labelPrefix: row.labelPrefix,
     }));
-  }, [quantities]);
+  }, [rows]);
 
   const plan = useMemo(() => {
     return buildShowPatchPlan(
@@ -84,20 +176,9 @@ export const ShowBuilderPanel: React.FC = () => {
         startAddress: fixture.startAddress,
         channelCount: fixture.channels.length,
       })),
-      { showName, startAddress, gapChannels, avoidExisting }
+      { showName, startAddress: Math.max(1, highestFixtureAddress + 1), gapChannels: 0, avoidExisting }
     );
-  }, [avoidExisting, fixtures, gapChannels, selections, showName, sortedTemplates, startAddress]);
-
-  const updateQuantity = (templateId: string, nextQuantity: number) => {
-    setQuantities((current) => ({
-      ...current,
-      [templateId]: clampQuantity(nextQuantity),
-    }));
-  };
-
-  const clearPlan = () => {
-    setQuantities({});
-  };
+  }, [avoidExisting, fixtures, highestFixtureAddress, selections, showName, sortedTemplates]);
 
   const copyPatchSheet = async () => {
     const text = formatPatchSheet(plan);
@@ -119,24 +200,60 @@ export const ShowBuilderPanel: React.FC = () => {
     }
   };
 
+  const downloadCsv = () => {
+    if (!plan.fixtures.length) return;
+    const blob = new Blob([formatPatchCsv(plan)], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${safeSlug(showName)}-dmx-show-map.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const createShowFixtures = async () => {
     if (!plan.fixtures.length || plan.errors.length) return;
     setIsCreating(true);
     const newFixtures = plan.fixtures.map(fixtureFromPlanItem);
     const updatedFixtures = [...fixtures, ...newFixtures];
+    const baseIndex = fixtures.length;
+    const groupIndexes = new Map<string, number[]>();
+
+    plan.fixtures.forEach((fixture, index) => {
+      const indexes = groupIndexes.get(fixture.groupName) || [];
+      indexes.push(baseIndex + index);
+      groupIndexes.set(fixture.groupName, indexes);
+    });
+
+    const updatedGroups = [...groups];
+    groupIndexes.forEach((fixtureIndices, groupName) => {
+      const existingIndex = updatedGroups.findIndex((group) => group.name === groupName);
+      if (existingIndex >= 0) {
+        updatedGroups[existingIndex] = {
+          ...updatedGroups[existingIndex],
+          fixtureIndices: Array.from(new Set([...updatedGroups[existingIndex].fixtureIndices, ...fixtureIndices])),
+        };
+      } else {
+        updatedGroups.push(makeGroup(groupName, fixtureIndices));
+      }
+    });
 
     setFixtures(updatedFixtures);
+    setGroups(updatedGroups);
     setSelectedFixtures(newFixtures.map((fixture) => fixture.id));
 
     try {
-      await axios.post('/api/fixtures', { fixtures: updatedFixtures });
+      await Promise.all([
+        axios.post('/api/fixtures', { fixtures: updatedFixtures }),
+        axios.post('/api/groups', { groups: updatedGroups }),
+      ]);
       useStoreUtils.getState().addNotification({
-        message: `Created ${newFixtures.length} show fixture${newFixtures.length === 1 ? '' : 's'}`,
+        message: `Created ${newFixtures.length} fixtures and ${groupIndexes.size} group${groupIndexes.size === 1 ? '' : 's'}`,
         type: 'success',
         priority: 'normal',
       });
     } catch (error) {
-      console.error('Failed to save generated show fixtures:', error);
+      console.error('Failed to save generated show fixtures or groups:', error);
       useStoreUtils.getState().addNotification({
         message: 'Show created locally, but server save failed',
         type: 'warning',
@@ -152,11 +269,12 @@ export const ShowBuilderPanel: React.FC = () => {
       <div className={styles.showBuilderHeader}>
         <div>
           <span className={styles.stepKicker}>Start here</span>
-          <h3>Build a show and patch it</h3>
-          <p>Select fixture types, generate DMX addresses, then create the rig in one pass.</p>
+          <h3>Build a show map and patch it</h3>
+          <p>Select fixture types, split copies into groups, generate physical DMX addresses, then create the rig.</p>
         </div>
         <div className={styles.showBuilderStats}>
           <span>{plan.fixtures.length} fixtures</span>
+          <span>{plan.groups.length} groups</span>
           <span>{plan.totalChannels} channels</span>
           <span>Highest DMX {plan.highestAddress || '-'}</span>
         </div>
@@ -167,26 +285,6 @@ export const ShowBuilderPanel: React.FC = () => {
           Show name
           <input value={showName} onChange={(event) => setShowName(event.target.value)} />
         </label>
-        <label>
-          Start DMX
-          <input
-            type="number"
-            min={1}
-            max={512}
-            value={startAddress}
-            onChange={(event) => setStartAddress(Math.max(1, Math.min(512, Number(event.target.value) || 1)))}
-          />
-        </label>
-        <label>
-          Gap
-          <input
-            type="number"
-            min={0}
-            max={32}
-            value={gapChannels}
-            onChange={(event) => setGapChannels(Math.max(0, Math.min(32, Number(event.target.value) || 0)))}
-          />
-        </label>
         <label className={styles.showBuilderToggle}>
           <input
             type="checkbox"
@@ -195,16 +293,22 @@ export const ShowBuilderPanel: React.FC = () => {
           />
           Avoid existing fixtures
         </label>
+        <button type="button" className={styles.showBuilderAddButton} onClick={() => createRowFor()}>
+          <LucideIcon name="Plus" size={16} />
+          Add fixture row
+        </button>
       </div>
 
       <div className={styles.showTemplateGrid}>
         {sortedTemplates.map((template) => {
-          const quantity = quantities[template.id] || 0;
-          const channelCount = template.modes?.[0]?.channels || template.channels?.length || 1;
+          const mode = getTemplateMode(template);
           return (
-            <article
+            <button
               key={template.id}
-              className={`${styles.showTemplateCard} ${quantity > 0 ? styles.showTemplateSelected : ''}`}
+              type="button"
+              className={styles.showTemplateCard}
+              onClick={() => createRowFor(template.id)}
+              aria-label={`Add ${template.templateName} to show map`}
             >
               <div className={styles.showTemplateImage}>
                 {template.photoUrl ? (
@@ -216,33 +320,94 @@ export const ShowBuilderPanel: React.FC = () => {
               <div className={styles.showTemplateInfo}>
                 <strong>{template.templateName}</strong>
                 <span>{template.catalogId || template.type || 'Fixture'}</span>
-                <span>{channelCount} channels</span>
+                <span>{mode.channels.length} channels default</span>
               </div>
-              <div className={styles.quantityStepper}>
-                <button
-                  type="button"
-                  onClick={() => updateQuantity(template.id, quantity - 1)}
-                  aria-label={`Remove one ${template.templateName}`}
+              <LucideIcon name="Plus" size={18} />
+            </button>
+          );
+        })}
+      </div>
+
+      <div className={styles.showRows}>
+        <div className={styles.showRowsHeader}>
+          <h4>Fixture groups and address blocks</h4>
+          <span>{rows.length ? 'Each row can use the same fixture type with a different group and start address.' : 'Add a fixture row above.'}</span>
+        </div>
+        {rows.map((row) => {
+          const template = sortedTemplates.find((item) => item.id === row.templateId);
+          const modeOptions = template?.modes ?? [];
+          const selectedMode = template ? getTemplateMode(template, row.modeName) : { channels: [] };
+          return (
+            <div key={row.id} className={styles.showRowEditor}>
+              <label>
+                Fixture
+                <select value={row.templateId} onChange={(event) => updateRow(row.id, { templateId: event.target.value })}>
+                  {sortedTemplates.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.catalogId ? `${item.catalogId} - ` : ''}{item.templateName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Mode
+                <select
+                  value={row.modeName}
+                  onChange={(event) => updateRow(row.id, { modeName: event.target.value })}
                 >
-                  <LucideIcon name="Minus" size={16} />
-                </button>
+                  {modeOptions.length ? (
+                    modeOptions.map((mode) => (
+                      <option key={mode.name} value={mode.name}>
+                        {mode.name} ({mode.channels}ch)
+                      </option>
+                    ))
+                  ) : (
+                    <option value="Default mode">Default mode ({selectedMode.channels.length}ch)</option>
+                  )}
+                </select>
+              </label>
+              <label>
+                Qty
                 <input
                   type="number"
                   min={0}
                   max={32}
-                  value={quantity}
-                  onChange={(event) => updateQuantity(template.id, Number(event.target.value))}
-                  aria-label={`${template.templateName} quantity`}
+                  value={row.quantity}
+                  onChange={(event) => updateRow(row.id, { quantity: clampQuantity(Number(event.target.value)) })}
                 />
-                <button
-                  type="button"
-                  onClick={() => updateQuantity(template.id, quantity + 1)}
-                  aria-label={`Add one ${template.templateName}`}
-                >
-                  <LucideIcon name="Plus" size={16} />
-                </button>
-              </div>
-            </article>
+              </label>
+              <label>
+                Group
+                <input value={row.groupName} onChange={(event) => updateRow(row.id, { groupName: event.target.value })} />
+              </label>
+              <label>
+                Start DMX
+                <input
+                  type="number"
+                  min={1}
+                  max={512}
+                  value={row.startAddress}
+                  onChange={(event) => updateRow(row.id, { startAddress: clampAddress(Number(event.target.value)) })}
+                />
+              </label>
+              <label>
+                Gap
+                <input
+                  type="number"
+                  min={0}
+                  max={64}
+                  value={row.gapChannels}
+                  onChange={(event) => updateRow(row.id, { gapChannels: clampGap(Number(event.target.value)) })}
+                />
+              </label>
+              <label>
+                Label prefix
+                <input value={row.labelPrefix} onChange={(event) => updateRow(row.id, { labelPrefix: event.target.value })} />
+              </label>
+              <button type="button" className={styles.showRowRemove} onClick={() => removeRow(row.id)} aria-label="Remove fixture row">
+                <LucideIcon name="Trash2" size={16} />
+              </button>
+            </div>
           );
         })}
       </div>
@@ -257,15 +422,19 @@ export const ShowBuilderPanel: React.FC = () => {
 
       <div className={styles.showPlan}>
         <div className={styles.showPlanHeader}>
-          <h4>Patch sheet</h4>
+          <h4>Physical patch sheet</h4>
           <div className={styles.showPlanActions}>
-            <button type="button" onClick={clearPlan} disabled={!plan.fixtures.length}>
+            <button type="button" onClick={clearPlan} disabled={!rows.length}>
               <LucideIcon name="RotateCcw" size={16} />
               Clear
             </button>
             <button type="button" onClick={copyPatchSheet} disabled={!plan.fixtures.length}>
               <LucideIcon name="Copy" size={16} />
               Copy
+            </button>
+            <button type="button" onClick={downloadCsv} disabled={!plan.fixtures.length}>
+              <LucideIcon name="Download" size={16} />
+              CSV
             </button>
             <button
               type="button"
@@ -283,7 +452,9 @@ export const ShowBuilderPanel: React.FC = () => {
           <div className={styles.showPlanTable}>
             {plan.fixtures.map((fixture) => (
               <div key={fixture.planId} className={styles.showPlanRow}>
+                <span>{fixture.groupName}</span>
                 <span>{fixture.fixtureName}</span>
+                <span>{fixture.catalogId || fixture.templateName}</span>
                 <strong>DMX {fixture.startAddress}-{fixture.endAddress}</strong>
                 <span>{fixture.channelCount}ch</span>
                 <span>{fixture.mode}</span>
@@ -291,7 +462,7 @@ export const ShowBuilderPanel: React.FC = () => {
             ))}
           </div>
         ) : (
-          <div className={styles.showPlanEmpty}>Pick fixture quantities above to generate addresses.</div>
+          <div className={styles.showPlanEmpty}>Add fixture rows to generate physical DMX addresses.</div>
         )}
       </div>
     </section>

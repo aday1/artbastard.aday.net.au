@@ -263,6 +263,36 @@ html.ab-mobile-page {
   }
 }
 
+html.ab-fixture-scroll-page {
+  height: auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: auto;
+
+  body {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: visible;
+    touch-action: manipulation;
+  }
+
+  body.ab-no-scroll {
+    overflow: hidden;
+    touch-action: none;
+  }
+
+  #root {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+}
+
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--ui-font-family-heading, var(--font-heading));
   font-weight: var(--ui-font-weight-heading, 600);

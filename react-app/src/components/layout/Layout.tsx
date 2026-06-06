@@ -54,6 +54,20 @@ const LayoutBody: React.FC<LayoutProps> = ({ children }) => {
     document.documentElement.classList.remove('ab-no-scroll');
   }, []);
 
+  // The fixture setup route is long-form, touch-first patching UI. On mobile and
+  // tablet it needs native document scrolling instead of the desktop shell's
+  // fixed internal scroller, otherwise phone browsers can feel locked.
+  useEffect(() => {
+    const shouldUseDocumentScroll = isFocusedFixtureRoute && isMobileOrTablet;
+    document.documentElement.classList.toggle('ab-fixture-scroll-page', shouldUseDocumentScroll);
+    document.body.classList.toggle('ab-fixture-scroll-page', shouldUseDocumentScroll);
+
+    return () => {
+      document.documentElement.classList.remove('ab-fixture-scroll-page');
+      document.body.classList.remove('ab-fixture-scroll-page');
+    };
+  }, [isFocusedFixtureRoute, isMobileOrTablet]);
+
   // Setup WebSocket localStorage sync
   const { syncAllLocalStorage } = useLocalStorageSync();
   const { socket, connected } = useSocket();

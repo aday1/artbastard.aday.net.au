@@ -374,6 +374,25 @@
   }
 }
 
+.layoutMobile.fixtureRoute {
+  height: auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: visible;
+
+  .contentWrapper {
+    min-height: auto;
+    overflow: visible;
+  }
+
+  .mainContent {
+    min-height: auto;
+    overflow: visible;
+    overscroll-behavior: auto;
+    scrollbar-gutter: auto;
+  }
+}
+
 @media (min-width: 641px) and (max-width: 1279px) {
   .layoutMobile {
     padding-top: calc(var(--tablet-topbar-height, 64px) + var(--safe-top));
