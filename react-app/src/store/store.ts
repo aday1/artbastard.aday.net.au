@@ -22,6 +22,11 @@ import {
 } from '../utils/themeUtils'
 import type { ChannelEnvelope } from './types'
 import {
+  laserTwinklingRgy,
+  toStoreFixtureTemplate,
+  type FixtureDipSwitchAddressing,
+} from '../fixtures/library'
+import {
   createTransitionTrackerSlice,
   type TransitionTrackerSlice,
 } from './transitionTrackerSlice'
@@ -43,7 +48,7 @@ export interface Fixture {
   model?: string
   mode?: string
   startAddress: number
-  channels: { name: string; type: string; dmxAddress?: number; ranges?: Array<{ min: number; max: number; description: string }> }[]
+  channels: { name: string; type: string; dmxAddress?: number; ranges?: Array<{ min: number; max: number; description: string }>; ticksOnly?: boolean }[]
   notes?: string // Notes section for fixture documentation
   // Flagging system for organizing fixtures
   flags?: FixtureFlag[]
@@ -65,14 +70,21 @@ export interface FixtureTemplate {
   id: string
   templateName: string
   defaultNamePrefix: string
-  channels?: Array<{ name: string; type: string }> // For backward compatibility
+  channels?: Array<{ name: string; type: string; ticksOnly?: boolean }> // For backward compatibility
   modes?: Array<{
     name: string;
     channels: number;
-    channelData: Array<{ name: string; type: string; ranges?: Array<{ min: number; max: number; description: string }> }>;
+    channelData: Array<{ name: string; type: string; ranges?: Array<{ min: number; max: number; description: string }>; ticksOnly?: boolean }>;
   }>;
   type?: string; // Fixture type (RGB Wash, Mover, Laser, etc.)
   manufacturer?: string; // Manufacturer name (e.g., "uKing")
+  model?: string;
+  modelConfidence?: 'confirmed' | 'probable' | 'unknown';
+  catalogId?: string;
+  category?: string;
+  documentationPath?: string;
+  notes?: string;
+  addressing?: FixtureDipSwitchAddressing;
   isBuiltIn?: boolean // Built-in templates cannot be deleted
   isCustom?: boolean // Custom templates can be edited/deleted
   isFavorite?: boolean // Favorite templates for quick access
@@ -1798,7 +1810,8 @@ const initializeFixtureTemplates = (): FixtureTemplate[] => {
         }
       ],
       isBuiltIn: true
-    }
+    },
+    toStoreFixtureTemplate(laserTwinklingRgy)
   ];
 
   // Custom templates (not built-in, but provided by default)
@@ -1812,47 +1825,6 @@ const initializeFixtureTemplates = (): FixtureTemplate[] => {
       isCustom: true,
       isFavorite: false,
       tags: []
-    },
-    {
-      id: 'laser-twinkler',
-      templateName: 'Laser Twinkler',
-      defaultNamePrefix: 'Laser Twinkler',
-      tags: ['LASER'],
-      isBuiltIn: false,
-      isCustom: true,
-      isFavorite: false,
-      modes: [
-        {
-          name: '5-channel mode',
-          channels: 5,
-          channelData: [
-            {
-              name: 'Laser On/Off and Mode', type: 'macro', ranges: [
-                { min: 0, max: 49, description: 'close laser off' },
-                { min: 50, max: 99, description: 'DMX mode' },
-                { min: 100, max: 149, description: 'sound active mode' },
-                { min: 150, max: 255, description: 'auto mode' }
-              ]
-            },
-            {
-              name: 'Direction Rotation', type: 'pan', ranges: [
-                { min: 0, max: 99, description: 'clockwise direction' },
-                { min: 100, max: 199, description: 'stop running' },
-                { min: 200, max: 255, description: 'counter clockwise direction' }
-              ]
-            },
-            { name: 'Running Speed', type: 'speed', ranges: [{ min: 0, max: 255, description: '0: fast, 255: slow' }] },
-            { name: 'Twinkling Speed', type: 'speed', ranges: [{ min: 0, max: 255, description: '0: fast, 255: slow' }] },
-            {
-              name: 'Color Section', type: 'color_wheel', ranges: [
-                { min: 0, max: 99, description: 'red+green (yellow)' },
-                { min: 100, max: 199, description: 'red' },
-                { min: 200, max: 255, description: 'green' }
-              ]
-            }
-          ]
-        }
-      ]
     }
   ];
 

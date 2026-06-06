@@ -20,6 +20,10 @@ ArtBastard ships profiles for the common fixture families:
 - Specialty effects: lasers (including EL1000RGB), haze and fog
   machines, LED strips and pixel mapping, UV / blacklight fixtures.
 
+Source-backed profiles for owned hardware are indexed in
+[the fixture library](fixtures/README.md). These profiles include cleaned DMX
+maps, capability categories, addressing notes and photographed gallery assets.
+
 ## Adding a custom fixture
 
 1. Open Fixture Setup in the main navigation.

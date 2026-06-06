@@ -279,11 +279,12 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (state.fixtureTemplates && Array.isArray(state.fixtureTemplates)) {
           const currentTemplates = store.fixtureTemplates;
           const builtInTemplates = currentTemplates.filter(t => t.isBuiltIn);
+          const builtInIds = new Set(builtInTemplates.map(template => template.id));
           const serverTemplates = state.fixtureTemplates;
           // Merge: built-in + server templates (server templates take precedence for custom ones)
           const mergedTemplates = [...builtInTemplates];
           serverTemplates.forEach(serverTemplate => {
-            if (!serverTemplate.isBuiltIn) {
+            if (!serverTemplate.isBuiltIn && !builtInIds.has(serverTemplate.id)) {
               // Validate channels
               if (!serverTemplate.channels || !Array.isArray(serverTemplate.channels) || serverTemplate.channels.length === 0) {
                 serverTemplate.channels = [{ name: 'Channel 1', type: 'other' }];
@@ -354,10 +355,11 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (Array.isArray(templatesData)) {
           const currentTemplates = store.fixtureTemplates;
           const builtInTemplates = currentTemplates.filter(t => t.isBuiltIn);
+          const builtInIds = new Set(builtInTemplates.map(template => template.id));
           // Merge: built-in + server templates
           const mergedTemplates = [...builtInTemplates];
           templatesData.forEach(serverTemplate => {
-            if (!serverTemplate.isBuiltIn) {
+            if (!serverTemplate.isBuiltIn && !builtInIds.has(serverTemplate.id)) {
               // Validate channels
               if (!serverTemplate.channels || !Array.isArray(serverTemplate.channels) || serverTemplate.channels.length === 0) {
                 serverTemplate.channels = [{ name: 'Channel 1', type: 'other' }];

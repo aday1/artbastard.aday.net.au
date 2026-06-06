@@ -49,14 +49,21 @@ export interface FixtureTemplate {
   id: string;
   templateName: string;
   defaultNamePrefix: string;
-  channels?: Array<{ name: string; type: string }>;
+  channels?: Array<{ name: string; type: string; ticksOnly?: boolean }>;
   modes?: Array<{
     name: string;
     channels: number;
-    channelData: Array<{ name: string; type: string; ranges?: Array<{ min: number; max: number; description: string }> }>;
+    channelData: Array<{ name: string; type: string; ranges?: Array<{ min: number; max: number; description: string }>; ticksOnly?: boolean }>;
   }>;
   type?: string;
   manufacturer?: string; // Manufacturer name (e.g., "uKing")
+  model?: string;
+  modelConfidence?: 'confirmed' | 'probable' | 'unknown';
+  catalogId?: string;
+  category?: string;
+  documentationPath?: string;
+  notes?: string;
+  addressing?: FixtureDipSwitchAddressing;
   isBuiltIn?: boolean;
   isCustom?: boolean;
   isFavorite?: boolean; // Favorite templates for quick access
@@ -450,3 +457,4 @@ export interface PendingSceneTransitionOverride {
   easing: TransitionEasing;
 }
 
+import type { FixtureDipSwitchAddressing } from '../../fixtures/library';

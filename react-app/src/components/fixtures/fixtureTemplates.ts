@@ -1,13 +1,34 @@
+import {
+  laserTwinklingRgy,
+  toCanvasFixtureTemplate,
+  type FixtureDipSwitchAddressing,
+} from '../../fixtures/library';
+
 export interface FixtureTemplate {
   id: string;
   name: string;
   type: string;
+  catalogId?: string;
+  category?: string;
+  manufacturer?: string;
+  model?: string;
+  modelConfidence?: 'confirmed' | 'probable' | 'unknown';
+  photoUrl?: string;
+  documentationPath?: string;
+  notes?: string;
+  tags?: string[];
+  addressing?: FixtureDipSwitchAddressing;
   modes?: Array<{
     name: string;
     channels: number;
-    channelData: Array<{ name: string; type: string; ranges?: Array<{ min: number; max: number; description: string }> }>;
+    channelData: Array<{
+      name: string;
+      type: string;
+      ranges?: Array<{ min: number; max: number; description: string }>;
+      ticksOnly?: boolean;
+    }>;
   }>;
-  channels?: Array<{ name: string; type: string }>; // For backward compatibility
+  channels?: Array<{ name: string; type: string; ticksOnly?: boolean }>; // For backward compatibility
 }
 
 export const fixtureTemplates: FixtureTemplate[] = [
@@ -338,37 +359,7 @@ export const fixtureTemplates: FixtureTemplate[] = [
       }
     ]
   },
-  {
-    id: 'laser-twinkler',
-    name: 'Laser Twinkler',
-    type: 'Laser',
-    modes: [
-      {
-        name: '5-channel mode',
-        channels: 5,
-        channelData: [
-          { name: 'Laser On/Off and Mode', type: 'macro', ranges: [
-            { min: 0, max: 49, description: 'close laser off' },
-            { min: 50, max: 99, description: 'DMX mode' },
-            { min: 100, max: 149, description: 'sound active mode' },
-            { min: 150, max: 255, description: 'auto mode' }
-          ]},
-          { name: 'Direction Rotation', type: 'pan', ranges: [
-            { min: 0, max: 99, description: 'clockwise direction' },
-            { min: 100, max: 199, description: 'stop running' },
-            { min: 200, max: 255, description: 'counter clockwise direction' }
-          ]},
-          { name: 'Running Speed', type: 'speed', ranges: [{ min: 0, max: 255, description: '0: fast, 255: slow' }] },
-          { name: 'Twinkling Speed', type: 'speed', ranges: [{ min: 0, max: 255, description: '0: fast, 255: slow' }] },
-          { name: 'Color Section', type: 'color_wheel', ranges: [
-            { min: 0, max: 99, description: 'red+green (yellow)' },
-            { min: 100, max: 199, description: 'red' },
-            { min: 200, max: 255, description: 'green' }
-          ]}
-        ]
-      }
-    ]
-  },
+  toCanvasFixtureTemplate(laserTwinklingRgy),
   {
     id: 'uv-light',
     name: 'UV LIGHT',
