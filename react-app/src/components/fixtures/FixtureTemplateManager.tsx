@@ -262,6 +262,10 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
                   </div>
                   <div className={styles.templateInfo}>
                     <span className={styles.prefix}>Prefix: {template.defaultNamePrefix}</span>
+                    {template.catalogId && <span className={styles.catalog}>{template.catalogId}</span>}
+                    {(template.category || template.type) && (
+                      <span className={styles.category}>{template.category || template.type}</span>
+                    )}
                     <span className={styles.channelCount}>{template.channels?.length || 0} channels</span>
                   </div>
                   <div className={styles.templateActions}>
@@ -310,6 +314,10 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
                     </div>
                     <div className={styles.templateInfo}>
                       <span className={styles.prefix}>Prefix: {template.defaultNamePrefix}</span>
+                      {template.catalogId && <span className={styles.catalog}>{template.catalogId}</span>}
+                      {(template.category || template.type) && (
+                        <span className={styles.category}>{template.category || template.type}</span>
+                      )}
                       <span className={styles.channelCount}>{template.channels?.length || 0} channels</span>
                     </div>
                     <div className={styles.templateActions}>

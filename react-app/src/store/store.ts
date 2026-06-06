@@ -22,7 +22,7 @@ import {
 } from '../utils/themeUtils'
 import type { ChannelEnvelope } from './types'
 import {
-  laserTwinklingRgy,
+  fixtureLibraryEntries,
   toStoreFixtureTemplate,
   type FixtureDipSwitchAddressing,
 } from '../fixtures/library'
@@ -1811,7 +1811,7 @@ const initializeFixtureTemplates = (): FixtureTemplate[] => {
       ],
       isBuiltIn: true
     },
-    toStoreFixtureTemplate(laserTwinklingRgy)
+    ...fixtureLibraryEntries.map(toStoreFixtureTemplate)
   ];
 
   // Custom templates (not built-in, but provided by default)

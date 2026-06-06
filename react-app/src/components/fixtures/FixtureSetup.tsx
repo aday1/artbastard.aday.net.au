@@ -2292,6 +2292,12 @@ export const FixtureSetup: React.FC = () => {
                             {template.manufacturer && (
                               <span className={styles.templateManufacturer}>{template.manufacturer}</span>
                             )}
+                            {template.catalogId && (
+                              <span className={styles.templateCatalog}>{template.catalogId}</span>
+                            )}
+                            {(template.category || template.type) && (
+                              <span className={styles.templateCategory}>{template.category || template.type}</span>
+                            )}
                           </div>
                         </button>
                       ))}
@@ -2348,6 +2354,12 @@ export const FixtureSetup: React.FC = () => {
                             {template.manufacturer && (
                               <span className={styles.templateManufacturer}>{template.manufacturer}</span>
                             )}
+                            {template.catalogId && (
+                              <span className={styles.templateCatalog}>{template.catalogId}</span>
+                            )}
+                            {(template.category || template.type) && (
+                              <span className={styles.templateCategory}>{template.category || template.type}</span>
+                            )}
                           </div>
                         </button>
                       ))}
@@ -2403,6 +2415,12 @@ export const FixtureSetup: React.FC = () => {
                             <span className={styles.templateName}>{template.templateName}</span>
                             {template.manufacturer && (
                               <span className={styles.templateManufacturer}>{template.manufacturer}</span>
+                            )}
+                            {template.catalogId && (
+                              <span className={styles.templateCatalog}>{template.catalogId}</span>
+                            )}
+                            {(template.category || template.type) && (
+                              <span className={styles.templateCategory}>{template.category || template.type}</span>
                             )}
                           </div>
                         </button>

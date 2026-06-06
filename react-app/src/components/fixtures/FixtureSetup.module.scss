@@ -595,6 +595,19 @@
   font-style: italic;
 }
 
+.templateCatalog,
+.templateCategory {
+  font-size: 0.7rem;
+  color: var(--text-secondary, #888);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.templateCatalog {
+  font-family: var(--font-mono, 'Courier New', monospace);
+  color: var(--accent-color, #4ecdc4);
+}
+
 .builtInBadge {
   background: var(--accent-color, #4ecdc4);
   color: white;

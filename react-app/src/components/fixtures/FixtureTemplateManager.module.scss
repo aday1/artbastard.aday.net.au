@@ -138,6 +138,15 @@
   .channelCount {
     color: var(--text-tertiary, #666);
   }
+
+  .catalog {
+    color: var(--accent-color, #4a9eff);
+    font-family: var(--font-mono, 'Courier New', monospace);
+  }
+
+  .category {
+    color: var(--text-secondary, #999);
+  }
 }
 
 .templateActions {

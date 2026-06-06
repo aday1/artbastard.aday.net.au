@@ -1,5 +1,5 @@
 import {
-  laserTwinklingRgy,
+  fixtureLibraryEntries,
   toCanvasFixtureTemplate,
   type FixtureDipSwitchAddressing,
 } from '../../fixtures/library';
@@ -359,7 +359,7 @@ export const fixtureTemplates: FixtureTemplate[] = [
       }
     ]
   },
-  toCanvasFixtureTemplate(laserTwinklingRgy),
+  ...fixtureLibraryEntries.map(toCanvasFixtureTemplate),
   {
     id: 'uv-light',
     name: 'UV LIGHT',
