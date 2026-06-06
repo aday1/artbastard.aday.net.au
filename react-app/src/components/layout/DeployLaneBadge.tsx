@@ -9,7 +9,9 @@ function readLane(): { lane: DeployLane; label: string } {
   const lane = String(w.__deployLane || 'live').toLowerCase();
   const isBetaHost =
     typeof window !== 'undefined' &&
-    window.location.hostname.toLowerCase() === 'artbastard-beta.aday.net.au';
+    /^(macroverse|artbastard)-beta\.aday\.net\.au$/.test(
+      window.location.hostname.toLowerCase()
+    );
   const k: DeployLane =
     isBetaHost ? 'beta' : lane === 'dev' ? 'dev' : lane === 'aday' ? 'aday' : 'live';
   const label =

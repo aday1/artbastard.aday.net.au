@@ -9,6 +9,12 @@ import {
   tinyLedMovingHeadWash,
   uvDmxLedPar,
 } from './importedFixtureBatch';
+import {
+  basicMovingHeadSpot,
+  genericDimmer,
+  rgbwParCan,
+  simpleRgbPar,
+} from './coreFixtureLibrary';
 import type { FixtureLibraryEntry } from './types';
 
 export const fixtureLibraryEntries: FixtureLibraryEntry[] = [
@@ -21,6 +27,10 @@ export const fixtureLibraryEntries: FixtureLibraryEntry[] = [
   tinyLedMovingHeadWash,
   miniSpiderLight,
   eventLightingEl1000Rgb,
+  genericDimmer,
+  simpleRgbPar,
+  rgbwParCan,
+  basicMovingHeadSpot,
 ];
 
 export function getFixtureLibraryEntryById(id: string): FixtureLibraryEntry | undefined {

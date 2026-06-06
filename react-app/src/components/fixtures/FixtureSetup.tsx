@@ -2229,8 +2229,11 @@ export const FixtureSetup: React.FC = () => {
               <div className={styles.templateSection}>
                 <div className={styles.templateHeader}>
                   <h4 className={styles.templateTitle}>
-                    {theme === 'artsnob' ? 'Or, select an archetype:' : 
-                     theme === 'standard' ? 'Create from template:' : 'Templates:'}
+                    {theme === 'artsnob'
+                      ? 'Fixture library archetypes:'
+                      : theme === 'standard'
+                        ? 'Create from fixture library:'
+                        : 'Fixture Library:'}
                   </h4>
                   <button
                     className={styles.manageTemplatesButton}
@@ -2244,11 +2247,11 @@ export const FixtureSetup: React.FC = () => {
                   </button>
                 </div>
                 <div className={styles.templateColumns}>
-                  {/* Built-in Column */}
+                  {/* Canonical fixture library column */}
                   <div className={styles.templateColumn}>
                     <h5 className={styles.columnTitle}>
                       <LucideIcon name="Package" />
-                      Built-in
+                      Fixture Library
                     </h5>
                     <div className={styles.templateButtons}>
                       {fixtureTemplates.filter(t => t.isBuiltIn && !t.isFavorite).map(template => (

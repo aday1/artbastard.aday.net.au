@@ -64,7 +64,7 @@ export interface FixtureTemplate {
   documentationPath?: string;
   notes?: string;
   addressing?: FixtureDipSwitchAddressing;
-  isBuiltIn?: boolean;
+  isBuiltIn?: boolean; // Compatibility flag for protected fixture-library templates
   isCustom?: boolean;
   isFavorite?: boolean; // Favorite templates for quick access
   createdAt?: number;

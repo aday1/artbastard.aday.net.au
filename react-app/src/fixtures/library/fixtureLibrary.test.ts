@@ -23,6 +23,10 @@ describe('source-backed fixture library', () => {
       ['tiny-led-moving-head-wash', 'AB-FIX-007'],
       ['mini-spider-light', 'AB-FIX-008'],
       ['event-lighting-el1000rgb', 'AB-FIX-009'],
+      ['generic-dimmer', 'AB-FIX-010'],
+      ['simple-rgb-par', 'AB-FIX-011'],
+      ['rgbw-par-can', 'AB-FIX-012'],
+      ['basic-moving-head-spot', 'AB-FIX-013'],
     ].forEach(([id, catalogId]) => {
       expect(getFixtureLibraryEntryById(id)?.catalogId).toBe(catalogId);
       expect(getFixtureLibraryEntryByCatalogId(catalogId)?.id).toBe(id);

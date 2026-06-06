@@ -70,8 +70,8 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
     : [{ name: 'Channel 1', type: 'other' }];
 
   const handleStartEdit = (template: FixtureTemplate) => {
-    // Allow editing both built-in and custom templates
-    // Built-in templates will be saved as custom templates when saved
+    // Allow editing both canonical library and custom templates.
+    // Fixture-library profiles are saved as custom templates when edited.
     // Ensure channels is always valid
     const validChannels = template?.channels && Array.isArray(template.channels) && template.channels.length > 0
       ? JSON.parse(JSON.stringify(template.channels))
@@ -100,7 +100,7 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
 
     if (editingTemplate) {
       if (editingTemplate.isBuiltIn) {
-        // If editing a built-in template, check if a custom version already exists
+        // If editing a fixture-library template, check if a custom version already exists
         const existingCustom = fixtureTemplates.find(
           t => !t.isBuiltIn && 
           t.templateName === templateForm.templateName &&
@@ -116,10 +116,10 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
             priority: 'normal'
           });
         } else {
-          // Create new custom template based on built-in
+          // Create new custom template based on the fixture-library profile
           addFixtureTemplate(templateForm);
           addNotification({
-            message: `Custom template "${templateForm.templateName}" created from built-in`,
+            message: `Custom template "${templateForm.templateName}" created from fixture library`,
             type: 'success',
             priority: 'normal'
           });
@@ -181,7 +181,7 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
   const handleDeleteTemplate = (template: FixtureTemplate) => {
     if (template.isBuiltIn) {
       addNotification({
-        message: 'Built-in templates cannot be deleted',
+        message: 'Fixture library profiles cannot be deleted',
         type: 'warning',
         priority: 'normal'
       });
@@ -231,8 +231,8 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
       <div className={styles.header}>
         <h2>
           <LucideIcon name="FileText" />
-          {theme === 'artsnob' && 'Template Library: The Archetypes of Illumination'}
-          {theme === 'standard' && 'Fixture Template Manager'}
+          {theme === 'artsnob' && 'Fixture Library: The Archetypes of Illumination'}
+          {theme === 'standard' && 'Fixture Library Manager'}
           {theme === 'minimal' && 'Templates'}
         </h2>
         <button className={styles.closeButton} onClick={onClose}>
@@ -246,7 +246,7 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
           <div className={styles.section}>
             <h3>
               <LucideIcon name="Package" />
-              Built-in Templates
+              Fixture Library
             </h3>
             <div className={styles.templateGrid}>
               {builtInTemplates.map(template => (
@@ -258,7 +258,7 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
                   )}
                   <div className={styles.templateHeader}>
                     <h4>{template.templateName}</h4>
-                    <span className={styles.badge}>Built-in</span>
+                    <span className={styles.badge}>Library</span>
                   </div>
                   <div className={styles.templateInfo}>
                     <span className={styles.prefix}>Prefix: {template.defaultNamePrefix}</span>
@@ -280,7 +280,7 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
                     <button
                       className={styles.editButton}
                       onClick={() => handleStartEdit(template)}
-                      title="Edit template (saves as custom)"
+                      title="Edit library profile (saves as custom)"
                     >
                       <LucideIcon name="Edit" />
                       Edit
@@ -298,7 +298,7 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
             </h3>
             {customTemplates.length === 0 ? (
               <div className={styles.emptyState}>
-                <p>No custom templates yet. Create one by copying a built-in template or creating a new one.</p>
+                <p>No custom templates yet. Create one by copying a fixture-library profile or creating a new one.</p>
               </div>
             ) : (
               <div className={styles.templateGrid}>
@@ -360,7 +360,7 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
               <>
                 <LucideIcon name="Edit" />
                 {editingTemplate.isBuiltIn ? (
-                  <>Edit Built-in Template (saves as custom)</>
+                  <>Edit Fixture Library Profile (saves as custom)</>
                 ) : (
                   <>Edit Template</>
                 )}
@@ -380,7 +380,7 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
                 type="text"
                 value={templateForm.templateName}
                 onChange={(e) => setTemplateForm(prev => ({ ...prev, templateName: e.target.value }))}
-                placeholder="e.g., Moving Head Spot (Basic)"
+                placeholder="e.g., Basic Moving Head Spot"
               />
             </div>
 

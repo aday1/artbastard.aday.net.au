@@ -59,6 +59,11 @@
         background: rgba(232, 160, 32, 0.4);
         border-color: rgba(255, 196, 64, 0.65);
       }
+      .deploy-lane-top-badge[data-lane="beta"] {
+        color: #dff7ff;
+        background: rgba(38, 169, 255, 0.42);
+        border-color: rgba(108, 206, 255, 0.72);
+      }
       .deploy-lane-top-badge[data-lane="aday"] {
         color: #f0e6ff;
         background: rgba(176, 128, 255, 0.35);
@@ -86,6 +91,11 @@
         color: #fff4d6;
         background: rgba(232, 160, 32, 0.4);
         border-color: rgba(255, 196, 64, 0.65);
+      }
+      .deploy-lane-inline[data-lane="beta"] {
+        color: #dff7ff;
+        background: rgba(38, 169, 255, 0.42);
+        border-color: rgba(108, 206, 255, 0.72);
       }
       .deploy-lane-inline[data-lane="aday"] {
         color: #f0e6ff;
@@ -326,12 +336,17 @@
             /^test\.(macroverse|artbastard)\.aday\.net\.au$/.test(h)
           );
         }
+        function isBetaDeployHost(hostn) {
+          var h = String(hostn || "").toLowerCase();
+          return /^(macroverse|artbastard)-beta\.aday\.net\.au$/.test(h);
+        }
         function isLiveDeployHost(hostn) {
           var h = String(hostn || "").toLowerCase();
           return /^macroverse\.aday\.net\.au$/.test(h) || /^artbastard\.aday\.net\.au$/.test(h);
         }
         function laneDisplayName(lane) {
           var k = String(lane || "live").toLowerCase();
+          if (k === "beta") return "BETA";
           if (k === "dev") return "DEV";
           if (k === "aday") return "ADAY";
           return "LIVE";
@@ -350,10 +365,11 @@
             window.__deployLaneLabel = label;
           } catch (eLaneGlobal) {}
           var badge = document.getElementById("appDeployLaneBadge");
+          var ghcrTrack = k === "beta" ? "dev" : k;
           if (badge) {
             badge.textContent = label;
             badge.setAttribute("data-lane", k);
-            badge.title = "Deploy track: " + label + " (GHCR :" + k + " on Linode)";
+            badge.title = "Deploy track: " + label + " (GHCR :" + ghcrTrack + " on Linode)";
           }
           var h1Lane = document.getElementById("appTitleDeployLane");
           if (h1Lane) {
@@ -386,6 +402,7 @@
           }
           var hl = hostn.toLowerCase();
           if (/macroverse-aday|^aday\.macroverse/i.test(hl)) return "aday";
+          if (isBetaDeployHost(hostn)) return "beta";
           if (isDevDeployHost(hostn)) return "dev";
           if (isLiveDeployHost(hostn)) return "live";
           return "live";

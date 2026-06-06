@@ -14,9 +14,15 @@ fixtures represented in ArtBastard.
 | [AB-FIX-007](AB-FIX-007-tiny-led-moving-head-wash.md) | Tiny LED Moving Head Wash | Moving head / Toy LED wash | 13-channel, 11-channel | Generic |
 | [AB-FIX-008](AB-FIX-008-mini-spider-light.md) | Mini Spider Light | LED effect / Mini spider derby | 15-channel, 7-channel | Generic |
 | [AB-FIX-009](AB-FIX-009-event-lighting-el1000rgb.md) | Event Lighting EL1000RGB | Laser / ILDA RGB animation laser | 16-channel | Event Lighting |
+| [AB-FIX-010](AB-FIX-010-generic-dimmer.md) | Generic Dimmer | Generic control | 1-channel | ArtBastard canonical starter |
+| [AB-FIX-011](AB-FIX-011-simple-rgb-par.md) | Simple RGB Par Can | Par / Wash | 4-channel | ArtBastard canonical starter |
+| [AB-FIX-012](AB-FIX-012-rgbw-par-can.md) | RGBW Par Can | Par / Wash | 5-channel | ArtBastard canonical starter |
+| [AB-FIX-013](AB-FIX-013-basic-moving-head-spot.md) | Basic Moving Head Spot | Moving head | 10-channel | ArtBastard canonical starter |
 
 Profiles retain the manual's exact DMX ranges. Unconfirmed manufacturer or
 model information is labelled as probable or unknown rather than inferred.
+Generic starter profiles are kept here too so the app has one canonical fixture
+library instead of a separate legacy built-in template list.
 
 ## Adding Another Fixture
 
