@@ -92,6 +92,22 @@
         background: rgba(176, 128, 255, 0.35);
         border-color: rgba(200, 160, 255, 0.65);
       }
+      @media (max-width: 760px) {
+        #deployMetaDock {
+          max-width: min(236px, calc(100vw - 20px)) !important;
+          font-size: 10px !important;
+          line-height: 1.35 !important;
+        }
+        #deployMetaDock[data-deploy-meta-mode="collapsed"] #deploySwitcherStrip {
+          display: none !important;
+        }
+        #deployMetaDock[data-deploy-meta-mode="collapsed"] #deployMetaBar {
+          padding: 5px 6px !important;
+        }
+        #deployMetaShowBtn {
+          padding: 5px 8px !important;
+        }
+      }
     </style>
   </head>
   <body>
@@ -145,13 +161,20 @@
             var v = localStorage.getItem(LS_KEY);
             if (v === "hidden") return "hidden";
             if (v === "expanded") return "expanded";
+            if (v === "collapsed") return "collapsed";
           } catch (eU) {}
+          try {
+            if (window.matchMedia && window.matchMedia("(max-width: 760px)").matches) {
+              return "hidden";
+            }
+          } catch (eMobile) {}
           return "collapsed";
         }
         function uiSave(mode) {
           try { localStorage.setItem(LS_KEY, mode); } catch (eS) {}
         }
         function syncUi(mode) {
+          dock.setAttribute("data-deploy-meta-mode", mode);
           if (mode === "hidden") {
             restoreWrap.hidden = false;
             panel.hidden = true;

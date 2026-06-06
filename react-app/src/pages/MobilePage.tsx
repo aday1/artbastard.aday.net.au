@@ -7,6 +7,7 @@ import { LucideIcon } from '../components/ui/LucideIcon';
 import { SkeuoButton } from '../components/ui/SkeuoButton';
 import { SiteBrandingLink } from '../components/ui/SiteBrandingLink';
 import { DeployLaneBadge } from '../components/layout/DeployLaneBadge';
+import { useStore } from '../store';
 import styles from './MobilePage.module.scss';
 
 const ActsScenesPage = React.lazy(() => import('./ActsScenesPage'));
@@ -18,7 +19,10 @@ const TabFallback = () => <div className={styles.tabFallback}>Chargement...</div
 
 const MobilePage: React.FC = () => {
   const { theme } = useTheme();
-  const [activeTab, setActiveTab] = React.useState<MobileTab>('dmx');
+  const fixtureCount = useStore((state) => state.fixtures.length);
+  const [activeTab, setActiveTab] = React.useState<MobileTab>(() =>
+    fixtureCount === 0 ? 'fixture' : 'supercontrol'
+  );
 
   const activateTab = React.useCallback((tab: MobileTab) => {
     setActiveTab(tab);

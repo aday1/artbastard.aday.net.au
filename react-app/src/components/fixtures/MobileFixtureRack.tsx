@@ -54,7 +54,9 @@ export const MobileFixtureRack: React.FC = () => {
     setDmxChannel: state.setDmxChannel,
   }));
 
-  const [view, setView] = useState<FixtureRackView>('rack');
+  const [view, setView] = useState<FixtureRackView>(() =>
+    fixtures.length === 0 ? 'patch' : 'rack'
+  );
   const [search, setSearch] = useState('');
   const [expandedFixtures, setExpandedFixtures] = useState<Set<string>>(
     () => new Set(fixtures[0] ? [fixtures[0].id] : [])
@@ -133,7 +135,7 @@ export const MobileFixtureRack: React.FC = () => {
             <LucideIcon name="ArrowLeft" size={17} />
             <span>Rack</span>
           </button>
-          <strong>Fixture Patch</strong>
+          <strong>Build & Patch</strong>
         </div>
         <div className={styles.fixtureSetupHost}>
           <Suspense fallback={<div className={styles.emptyState}>Chargement...</div>}>
@@ -155,7 +157,7 @@ export const MobileFixtureRack: React.FC = () => {
           </div>
           <button type="button" className={styles.hardwareButton} onClick={() => changeView('patch')}>
             <LucideIcon name="Wrench" size={16} />
-            <span>Patch</span>
+            <span>Build & Patch</span>
           </button>
         </div>
 
@@ -204,7 +206,7 @@ export const MobileFixtureRack: React.FC = () => {
           {fixtures.length === 0 && (
             <button type="button" className={styles.hardwareButton} onClick={() => changeView('patch')}>
               <LucideIcon name="Plus" size={16} />
-              <span>Add fixture</span>
+              <span>Build & Patch</span>
             </button>
           )}
         </div>

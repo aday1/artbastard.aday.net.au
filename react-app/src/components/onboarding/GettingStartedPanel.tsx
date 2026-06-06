@@ -1,15 +1,18 @@
 import React, { useEffect, useState } from 'react';
+import { useRouter, ViewType } from '../../context/RouterContext';
 import styles from './GettingStartedPanel.module.scss';
 
 export const ONBOARDING_DISMISSED_KEY = 'artbastard-onboarding-dismissed';
 
 export const GettingStartedPanel: React.FC = () => {
+  const { setCurrentView } = useRouter();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     try {
       const dismissed = window.localStorage.getItem(ONBOARDING_DISMISSED_KEY) === '1';
-      setVisible(!dismissed);
+      const explicitRoute = window.location.hash && window.location.hash !== '#/';
+      setVisible(!dismissed && !explicitRoute);
     } catch {
       setVisible(true);
     }
@@ -22,6 +25,11 @@ export const GettingStartedPanel: React.FC = () => {
       // ignore
     }
     setVisible(false);
+  };
+
+  const openView = (view: ViewType) => {
+    setCurrentView(view);
+    dismiss();
   };
 
   if (!visible) return null;
@@ -53,8 +61,17 @@ export const GettingStartedPanel: React.FC = () => {
           </li>
         </ol>
         <div className={styles.actions}>
-          <button type="button" className={styles.primary} onClick={dismiss}>
-            Got it
+          <button type="button" className={styles.primary} onClick={() => openView('fixture')}>
+            Build & Patch Fixtures
+          </button>
+          <button type="button" className={styles.secondary} onClick={() => openView('dmxControl')}>
+            Open DMX Control
+          </button>
+          <button type="button" className={styles.secondary} onClick={() => openView('scenesActs')}>
+            Open Scenes
+          </button>
+          <button type="button" className={styles.secondary} onClick={dismiss}>
+            Just Open App
           </button>
         </div>
       </div>
