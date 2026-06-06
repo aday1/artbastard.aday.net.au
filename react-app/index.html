@@ -344,6 +344,10 @@
           var h = String(hostn || "").toLowerCase();
           return /^macroverse\.aday\.net\.au$/.test(h) || /^artbastard\.aday\.net\.au$/.test(h);
         }
+        function isLocalDeployHost(hostn) {
+          var h = String(hostn || "").toLowerCase();
+          return h === "localhost" || h === "127.0.0.1" || h === "::1" || h === "[::1]";
+        }
         function laneDisplayName(lane) {
           var k = String(lane || "live").toLowerCase();
           if (k === "beta") return "BETA";
@@ -401,6 +405,7 @@
             } catch (eC) {}
           }
           var hl = hostn.toLowerCase();
+          if (isLocalDeployHost(hostn) && ds && String(ds.live_url || "").indexOf("artbastard") >= 0) return "beta";
           if (/macroverse-aday|^aday\.macroverse/i.test(hl)) return "aday";
           if (isBetaDeployHost(hostn)) return "beta";
           if (isDevDeployHost(hostn)) return "dev";
@@ -639,10 +644,11 @@
           html += note;
           bodyEl.innerHTML = html;
         }
+        var bootHostLc = String(location.hostname || "").toLowerCase();
         var siteLcBoot =
-          (location.hostname || "").indexOf("artbastard") >= 0
-            ? "artbastard.aday.net.au"
-            : "macroverse.aday.net.au";
+          bootHostLc.indexOf("macroverse") >= 0 && bootHostLc.indexOf("artbastard") < 0
+            ? "macroverse.aday.net.au"
+            : "artbastard.aday.net.au";
         applyDeployLaneUi(
           switcherLane(location.hostname || "", resolvedSwitcher(null, siteLcBoot)),
           siteLcBoot
