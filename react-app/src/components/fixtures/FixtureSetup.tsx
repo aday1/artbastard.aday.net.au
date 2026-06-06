@@ -140,9 +140,6 @@ export const FixtureSetup: React.FC = () => {
   const [showNodeEditor, setShowNodeEditor] = useState(false);
   const [nodeEditorFixtureId, setNodeEditorFixtureId] = useState<string | null>(null);
   const [currentTemplate, setCurrentTemplate] = useState<FixtureTemplate | null>(null);
-  // Online fixture definition import URL
-  const [onlineFixtureUrl, setOnlineFixtureUrl] = useState('');
-  const [isImportingOnlineFixture, setIsImportingOnlineFixture] = useState(false);
   // Auto-patching helper state
   const [isAutoPatching, setIsAutoPatching] = useState(false);
   // Favorites filter state
@@ -855,70 +852,6 @@ export const FixtureSetup: React.FC = () => {
     event.target.value = '';
   };
 
-  // Import a single fixture definition from an online JSON URL.
-  // The JSON is expected to contain at least: { name, channels: Array<{ name, type }> }
-  const importFixtureFromUrl = async () => {
-    if (!onlineFixtureUrl.trim()) {
-      useStoreUtils.getState().addNotification({
-        message: 'Please enter a URL for the online fixture definition',
-        type: 'warning',
-        priority: 'normal'
-      });
-      return;
-    }
-
-    try {
-      setIsImportingOnlineFixture(true);
-      const response = await axios.get(onlineFixtureUrl.trim());
-      const data = response.data;
-
-      if (!data || !data.name || !Array.isArray(data.channels)) {
-        throw new Error('Fixture JSON must include "name" and "channels[]" fields');
-      }
-
-      // Map channel types to known types when possible, defaulting to "other"
-      const knownTypes = channelTypes.map(ct => ct.value);
-      const mappedChannels: FixtureChannel[] = data.channels.map((ch: any, idx: number) => ({
-        name: ch.name || `Channel ${idx + 1}`,
-        type: knownTypes.includes(ch.type) ? ch.type : 'other',
-        dmxAddress: typeof ch.dmxAddress === 'number' ? ch.dmxAddress : undefined,
-        ranges: Array.isArray(ch.ranges) ? ch.ranges : undefined,
-        ticksOnly: Boolean(ch.ticksOnly),
-      }));
-
-      const nextAddress = calculateNextStartAddress();
-
-      setFixtureForm({
-        name: data.name,
-        type: data.type || '',
-        manufacturer: data.manufacturer || '',
-        mode: data.mode || '',
-        startAddress: typeof data.startAddress === 'number' ? data.startAddress : nextAddress,
-        channels: mappedChannels,
-        notes: data.notes || '',
-        tags: data.tags || []
-      });
-
-      setEditingFixtureId(null);
-      setShowCreateFixture(true);
-
-      useStoreUtils.getState().addNotification({
-        message: `Loaded fixture definition "${data.name}" from online source`,
-        type: 'success',
-        priority: 'normal'
-      });
-    } catch (error) {
-      console.error('Failed to import fixture from URL:', error);
-      useStoreUtils.getState().addNotification({
-        message: `Failed to import fixture: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        type: 'error',
-        priority: 'high'
-      });
-    } finally {
-      setIsImportingOnlineFixture(false);
-    }
-  };
-
   // Auto-patch selected fixtures sequentially to resolve DMX address conflicts.
   const autoPatchSelectedFixtures = () => {
     if (selectedFixtures.length === 0) {
@@ -1052,6 +985,23 @@ export const FixtureSetup: React.FC = () => {
     setEditingFixtureId(null);
     setCurrentTemplate(null);
     setShowCreateFixture(false);
+  };
+
+  const startCustomFixture = () => {
+    setFixtureForm({
+      name: '',
+      type: '',
+      manufacturer: '',
+      mode: '',
+      startAddress: calculateNextStartAddress(),
+      channels: [{ name: 'Intensity', type: 'dimmer' }],
+      notes: '',
+      photoUrl: undefined,
+      tags: []
+    });
+    setEditingFixtureId(null);
+    setCurrentTemplate(null);
+    setShowCreateFixture(true);
   };
 
   const saveGroup = () => {
@@ -1220,34 +1170,14 @@ export const FixtureSetup: React.FC = () => {
                 <i className="fas fa-upload"></i>
                 Import
               </button>
-              {/* Online fixture definition import by URL */}
-              <div className={styles.onlineImport}>
-                <input
-                  type="url"
-                  placeholder="Online fixture JSON URL"
-                  value={onlineFixtureUrl}
-                  onChange={(e) => setOnlineFixtureUrl(e.target.value)}
-                  className={styles.onlineImportInput}
-                />
-                <button
-                  className={`${styles.actionButton} ${styles.onlineImportButton}`}
-                  onClick={importFixtureFromUrl}
-                  disabled={isImportingOnlineFixture}
-                  title="Load fixture definition from URL"
-                >
-                  {isImportingOnlineFixture ? (
-                    <>
-                      <i className="fas fa-spinner fa-spin"></i>
-                      Loading...
-                    </>
-                  ) : (
-                    <>
-                      <i className="fas fa-link"></i>
-                      Import URL
-                    </>
-                  )}
-                </button>
-              </div>
+              <button
+                className={`${styles.actionButton} ${styles.importButton}`}
+                onClick={startCustomFixture}
+                title="Create a local custom fixture when the hardware is not in the catalog"
+              >
+                <LucideIcon name="Plus" />
+                Custom Fixture
+              </button>
               <button
                 className={`${styles.actionButton} ${styles.exportButton}`}
                 onClick={exportAllFixtures}
@@ -2219,21 +2149,7 @@ export const FixtureSetup: React.FC = () => {
             ) : showPatchTools ? (
               <button
                 className={styles.createButton}
-                onClick={() => {
-                  setFixtureForm({
-                    name: '',
-                    type: '',
-                    manufacturer: '',
-                    mode: '',
-                    startAddress: calculateNextStartAddress(),
-                    channels: [{ name: 'Intensity', type: 'dimmer' }],
-                    notes: '',
-                    photoUrl: undefined,
-                    tags: []
-                  });
-                  setEditingFixtureId(null);
-                  setShowCreateFixture(true);
-                }}
+                onClick={startCustomFixture}
               >
                 <i className="fas fa-plus"></i>
                 {theme === 'artsnob' && 'Advanced Custom Fixture'}

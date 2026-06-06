@@ -1,45 +1,53 @@
 # ArtBastard Fixture Setup
 
-Configure your luminaires for control through ArtBastard's fixture
-management system.
+Configure real DMX fixtures through ArtBastard's canonical fixture library,
+then use the show builder to assign patch addresses and groups.
 
 ## Overview
 
-A fixture is a logical grouping of DMX channels with a starting address and
-a profile that explains what each channel does. ArtBastard stores fixtures
-as individual JSON files for clean version control.
+A fixture is a logical grouping of DMX channels with a starting address and a
+profile that explains what each channel does. ArtBastard keeps source-backed
+profiles for owned hardware and starter profiles in one fixture library.
 
-## Built-in profiles
+The canonical source for documented fixture profiles is
+[DOCS/fixtures/README.md](fixtures/README.md). Each profile links back to the
+runtime fixture entry under `react-app/src/fixtures/library` and records the
+manual-derived channel maps, capability categories, addressing notes, source
+confidence and gallery photos where available.
 
-ArtBastard ships profiles for the common fixture families:
+## Canonical Fixture Library
 
-- Moving lights: pan / tilt with speed control, colour wheels, GOBO,
-  beam control (zoom / focus / iris), animation / pattern channels.
-- LED fixtures: RGB / RGBW / RGBA mixing, strobe, dimming, colour
-  temperature (CTO / CTB), macros and special effects.
-- Specialty effects: lasers (including EL1000RGB), haze and fog
-  machines, LED strips and pixel mapping, UV / blacklight fixtures.
+The library currently covers:
 
-Source-backed profiles for owned hardware are indexed in
-[the fixture library](fixtures/README.md). These profiles include cleaned DMX
-maps, capability categories, addressing notes and photographed gallery assets.
+- Lasers: twinkling RGY, full-colour animation laser and Event Lighting
+  EL1000RGB ILDA laser.
+- Moving heads: MiniBeam spot, small gobo spot, mini LED moving-head wash,
+  toy LED pan/tilt wash and generic moving-head spot.
+- LED effects: Mini Spider derby and UV DMX LED par.
+- Utility fixtures: dimmer, simple RGB par and RGBW par can profiles.
 
-## Adding a custom fixture
+Use `Create the DMX show` in Fixture Setup for normal patching. It reads these
+library profiles, lets you add multiples of the same fixture, groups them, and
+generates the physical DMX address sheet.
+
+## Adding A Custom Fixture
 
 1. Open Fixture Setup in the main navigation.
-2. Click "Add New Fixture".
-3. Define the channel layout. Example RGB+strobe profile:
+2. Use `Create the DMX show` when the fixture exists in the canonical library.
+3. Use the advanced profile manager only when the hardware is not yet in the
+   library.
+4. Define the channel layout. Example RGB+strobe profile:
    - Channel 1: Dimmer (0-255)
    - Channel 2: Red (0-255)
    - Channel 3: Green (0-255)
    - Channel 4: Blue (0-255)
    - Channel 5: Strobe (0 = off, 1-255 = speed)
-4. Set the starting DMX address (1-512). The system computes the channel
-   span and warns about conflicts.
-5. Use the Channel Test action to verify each function. Tweak ranges if
-   needed and save the profile for future use.
+5. Set the starting DMX address (1-512). The system computes the channel span
+   and warns about conflicts.
+6. Use the Channel Test action to verify each function. Tweak ranges if needed
+   and save the profile for future use.
 
-## Address planning
+## Address Planning
 
 Suggested universe layout for a typical theatre rig:
 
@@ -50,32 +58,37 @@ Suggested universe layout for a typical theatre rig:
 Best practices:
 
 - Leave gaps between fixture groups for expansion.
-- Document your addressing scheme - export Settings as a backup.
+- Document your addressing scheme and export Settings as a backup.
 - Number fixtures stage left to stage right where possible.
+- Keep multiples of the same fixture as separate patched instances, then group
+  them for shared control when useful.
 
-## Fixture groups
+## Fixture Groups
 
-- Create groups for batch control (Front Wash, Movers, Effects, etc.).
+- Create groups for batch control, such as Front Wash, Movers, Lasers, UV or
+  Effects.
 - A fixture can belong to multiple groups.
 - Groups are reflected in SuperControl and the OSC address tree.
+- Grouping is separate from patching: two identical fixtures can be patched at
+  different addresses and still share one control group.
 
-## DIP switch calculator
+## DIP Switch Calculator
 
-Built into the Help overlay (Help > DIP Simulator). Enter a DMX address
-1-512 and read off the binary pattern alongside a fixture-style switch
-block visualisation. Useful for older fixtures with physical switches.
+Built into the Help overlay (Help > DIP Simulator). Enter a DMX address from
+1-512 and read off the binary pattern alongside a fixture-style switch block
+visualisation. This is useful for older fixtures with physical switches,
+including the Twinkling Laser Series RGY.
 
 ## Address Sheet PDF
 
-Help > Address Sheet generates a printable PDF with a row per fixture:
-name, profile, start address, channel count, group memberships. Useful
-to leave at the desk during a tech run.
+Help > Address Sheet generates a printable PDF with a row per fixture: name,
+profile, start address, channel count and group memberships. Use it as the
+physical patch sheet when assigning addresses on the fixtures.
 
-## Multi-universe planning
+## Multi-Universe Planning
 
-ArtBastard supports multiple Art-Net universes. Configure them in
-Settings > Network. The DMX Control page exposes a universe selector that
-filters the channel grid; the universe count is reflected in the OSC
-address tree as well.
+ArtBastard supports multiple Art-Net universes. Configure them in Settings >
+Network. The DMX Control page exposes a universe selector that filters the
+channel grid; the universe count is reflected in the OSC address tree as well.
 
 Next: USAGE.md, FEATURES.md, SHORTCUTS.md.

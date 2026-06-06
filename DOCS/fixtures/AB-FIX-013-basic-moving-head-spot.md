@@ -20,4 +20,4 @@ Generic ten-channel moving-head spot profile for unconfirmed or temporary moving
 ## Notes
 
 - Use this only as a starter profile until the exact fixture manual is imported.
-- This is a canonical ArtBastard fixture-library profile, not a separate legacy built-in template.
+- This lives in the same canonical ArtBastard fixture library as the source-backed hardware profiles.

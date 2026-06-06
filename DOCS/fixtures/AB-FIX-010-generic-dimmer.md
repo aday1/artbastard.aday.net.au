@@ -11,4 +11,4 @@ Generic one-channel profile for a dimmer pack, single-channel LED fixture, or an
 ## Notes
 
 - Use this when the physical fixture has only one controllable intensity channel.
-- This is a canonical ArtBastard fixture-library profile, not a separate legacy built-in template.
+- This lives in the same canonical ArtBastard fixture library as the source-backed hardware profiles.

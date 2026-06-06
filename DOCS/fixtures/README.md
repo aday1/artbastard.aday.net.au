@@ -22,7 +22,7 @@ fixtures represented in ArtBastard.
 Profiles retain the manual's exact DMX ranges. Unconfirmed manufacturer or
 model information is labelled as probable or unknown rather than inferred.
 Generic starter profiles are kept here too so the app has one canonical fixture
-library instead of a separate legacy built-in template list.
+library for source-backed hardware and temporary patching.
 
 ## Adding Another Fixture
 

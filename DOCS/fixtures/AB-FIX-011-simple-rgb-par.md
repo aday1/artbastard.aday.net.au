@@ -14,4 +14,4 @@ Generic RGB par profile for direct red, green, blue, and master dimmer control.
 ## Notes
 
 - Use this as a starter profile for simple RGB wash lights when the exact manual is not yet imported.
-- This is a canonical ArtBastard fixture-library profile, not a separate legacy built-in template.
+- This lives in the same canonical ArtBastard fixture library as the source-backed hardware profiles.
