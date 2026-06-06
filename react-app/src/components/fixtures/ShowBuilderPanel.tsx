@@ -78,6 +78,47 @@ function defaultModeName(template?: ShowBuilderTemplate) {
   return template?.modes?.[0]?.name || 'Default mode';
 }
 
+function templateChannelCount(template?: ShowBuilderTemplate, modeName?: string): number {
+  if (!template) return 1;
+  return Math.max(1, getTemplateMode(template, modeName).channels.length);
+}
+
+function makeDefaultRow(
+  template: ShowBuilderTemplate,
+  showName: string,
+  startAddress: number,
+  rowIndex: number
+): ShowBuilderRow {
+  return {
+    id: `row-${Date.now()}-${rowIndex}-${Math.random().toString(36).slice(2, 7)}`,
+    templateId: template.id,
+    modeName: defaultModeName(template),
+    quantity: 1,
+    groupName: `${showName.trim() || 'Show'} ${template.defaultNamePrefix}`,
+    startAddress,
+    gapChannels: 0,
+    labelPrefix: template.defaultNamePrefix,
+  };
+}
+
+function estimateRowEnd(row: ShowBuilderRow, templates: ShowBuilderTemplate[]): number {
+  const template = templates.find((item) => item.id === row.templateId);
+  const channelCount = templateChannelCount(template, row.modeName);
+  const quantity = Math.max(1, row.quantity);
+  const repeatedChannels = quantity * channelCount;
+  const repeatedGaps = Math.max(0, quantity - 1) * Math.max(0, row.gapChannels);
+  return row.startAddress + repeatedChannels + repeatedGaps - 1;
+}
+
+function nextEditableRowStart(
+  rows: ShowBuilderRow[],
+  templates: ShowBuilderTemplate[],
+  highestFixtureAddress: number
+): number {
+  const highestRowAddress = rows.reduce((highest, row) => Math.max(highest, estimateRowEnd(row, templates)), 0);
+  return Math.min(512, Math.max(1, highestFixtureAddress + 1, highestRowAddress + 1));
+}
+
 function labelWithHint(label: string, hint: string) {
   return (
     <span className={styles.fieldLabelText}>
@@ -121,24 +162,6 @@ export const ShowBuilderPanel: React.FC = () => {
       ),
     [fixtures]
   );
-
-  const createRowFor = useCallback((templateId = sortedTemplates[0]?.id) => {
-    const template = sortedTemplates.find((item) => item.id === templateId) || sortedTemplates[0];
-    if (!template) return;
-    setRows((current) => [
-      ...current,
-      {
-        id: `row-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        templateId: template.id,
-        modeName: defaultModeName(template),
-        quantity: 1,
-        groupName: `${showName.trim() || 'Show'} ${template.defaultNamePrefix}`,
-        startAddress: Math.min(512, Math.max(1, highestFixtureAddress + 1 + current.length * 10)),
-        gapChannels: 0,
-        labelPrefix: template.defaultNamePrefix,
-      },
-    ]);
-  }, [highestFixtureAddress, showName, sortedTemplates]);
 
   const rowCountByTemplate = useMemo(() => {
     const counts = new Map<string, number>();
@@ -191,10 +214,23 @@ export const ShowBuilderPanel: React.FC = () => {
     return () => window.removeEventListener('artbastard:apc40-add-template', handleApcTemplateAdd);
   }, [sortedTemplates, toggleTemplateSelection]);
 
-  const addSelectedTemplates = () => {
+  const addSelectedTemplates = useCallback(() => {
     const ids = selectedTemplateIds.length ? selectedTemplateIds : [sortedTemplates[0]?.id].filter(Boolean) as string[];
-    ids.forEach((templateId) => createRowFor(templateId));
-  };
+    setRows((current) => {
+      let cursor = nextEditableRowStart(current, sortedTemplates, highestFixtureAddress);
+      const newRows = ids
+        .map((templateId, index) => {
+          const template = sortedTemplates.find((item) => item.id === templateId);
+          if (!template) return undefined;
+          const row = makeDefaultRow(template, showName, cursor, current.length + index);
+          cursor = Math.min(512, cursor + templateChannelCount(template));
+          return row;
+        })
+        .filter((row): row is ShowBuilderRow => Boolean(row));
+      return [...current, ...newRows];
+    });
+    setSelectedTemplateIds([]);
+  }, [highestFixtureAddress, selectedTemplateIds, showName, sortedTemplates]);
 
   const selections: ShowBuilderSelection[] = useMemo(() => {
     return rows.map((row) => ({
@@ -209,10 +245,29 @@ export const ShowBuilderPanel: React.FC = () => {
     }));
   }, [rows]);
 
+  const selectedCardSelections: ShowBuilderSelection[] = useMemo(() => {
+    if (rows.length || !selectedTemplateIds.length) return [];
+    return selectedTemplateIds.map((templateId) => {
+      const template = sortedTemplates.find((item) => item.id === templateId);
+      return {
+        id: `selected-${templateId}`,
+        templateId,
+        modeName: defaultModeName(template),
+        quantity: 1,
+        groupName: `${showName.trim() || 'Show'} ${template?.defaultNamePrefix || 'Fixture'}`,
+        gapChannels: 0,
+        labelPrefix: template?.defaultNamePrefix || 'Fixture',
+      };
+    });
+  }, [rows.length, selectedTemplateIds, showName, sortedTemplates]);
+
+  const activeSelections = rows.length ? selections : selectedCardSelections;
+  const usingSelectedCardPlan = !rows.length && selectedCardSelections.length > 0;
+
   const plan = useMemo(() => {
     return buildShowPatchPlan(
       sortedTemplates,
-      selections,
+      activeSelections,
       fixtures.map((fixture) => ({
         id: fixture.id,
         name: fixture.name,
@@ -221,7 +276,7 @@ export const ShowBuilderPanel: React.FC = () => {
       })),
       { showName, startAddress: Math.max(1, highestFixtureAddress + 1), gapChannels: 0, avoidExisting }
     );
-  }, [avoidExisting, fixtures, highestFixtureAddress, selections, showName, sortedTemplates]);
+  }, [activeSelections, avoidExisting, fixtures, highestFixtureAddress, showName, sortedTemplates]);
 
   const copyPatchSheet = async () => {
     const text = formatPatchSheet(plan);
@@ -254,8 +309,17 @@ export const ShowBuilderPanel: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  const createShowFixtures = async () => {
-    if (!plan.fixtures.length || plan.errors.length) return;
+  const createShowFixtures = useCallback(async () => {
+    if (!plan.fixtures.length || plan.errors.length || isCreating) {
+      useStoreUtils.getState().addNotification({
+        message: plan.errors.length
+          ? 'Fix show-map errors before creating fixtures'
+          : 'Select fixture profiles or add address-block rows first',
+        type: plan.errors.length ? 'warning' : 'info',
+        priority: 'normal',
+      });
+      return;
+    }
     setIsCreating(true);
     const newFixtures = plan.fixtures.map(fixtureFromPlanItem);
     const updatedFixtures = [...fixtures, ...newFixtures];
@@ -284,6 +348,8 @@ export const ShowBuilderPanel: React.FC = () => {
     setFixtures(updatedFixtures);
     setGroups(updatedGroups);
     setSelectedFixtures(newFixtures.map((fixture) => fixture.id));
+    setRows([]);
+    setSelectedTemplateIds([]);
 
     try {
       await Promise.all([
@@ -305,7 +371,16 @@ export const ShowBuilderPanel: React.FC = () => {
     } finally {
       setIsCreating(false);
     }
-  };
+  }, [fixtures, groups, isCreating, plan, setFixtures, setGroups, setSelectedFixtures]);
+
+  useEffect(() => {
+    const handleApcCreateShow = () => {
+      void createShowFixtures();
+    };
+
+    window.addEventListener('artbastard:apc40-create-show', handleApcCreateShow);
+    return () => window.removeEventListener('artbastard:apc40-create-show', handleApcCreateShow);
+  }, [createShowFixtures]);
 
   return (
     <section className={styles.showBuilder} aria-label="Show builder and address generator">
@@ -313,7 +388,7 @@ export const ShowBuilderPanel: React.FC = () => {
         <div>
           <span className={styles.stepKicker}>Start here</span>
           <h3>Create the DMX show</h3>
-          <p>Select fixture profiles, add them as address blocks, set quantities/groups/start addresses, then create the patched rig.</p>
+          <p>Select profile cards to preview a show map immediately. Add editable rows only for duplicates, split groups, or manual address spaces.</p>
         </div>
         <div className={styles.showBuilderStats}>
           <span>{plan.fixtures.length} fixtures</span>
@@ -340,15 +415,25 @@ export const ShowBuilderPanel: React.FC = () => {
           type="button"
           className={styles.showBuilderAddButton}
           onClick={addSelectedTemplates}
-          title="Adds one address-block row for every selected fixture profile."
+          title="Adds editable address-block rows for multiples, split groups, or hand-picked DMX start addresses."
         >
           <LucideIcon name="Plus" size={16} />
-          {selectedTemplateIds.length ? `Add ${selectedTemplateIds.length} selected` : 'Add first fixture'}
+          {selectedTemplateIds.length ? `Add ${selectedTemplateIds.length} as rows` : 'Add editable row'}
         </button>
       </div>
 
+      <div className={styles.showBuilderFlow} aria-label="Show creation path">
+        <span><strong>1</strong> Select profiles</span>
+        <span><strong>2</strong> Check physical addresses</span>
+        <span><strong>3</strong> Create Show</span>
+        <span title="APC40 Play/Launch can commit the same generated show map."><strong>APC40</strong> Clip grid selects, Play creates</span>
+      </div>
+
       <div className={styles.showBuilderBulk}>
-        <span>{selectedTemplateIds.length} fixture profile{selectedTemplateIds.length === 1 ? '' : 's'} selected</span>
+        <span>
+          {selectedTemplateIds.length} fixture profile{selectedTemplateIds.length === 1 ? '' : 's'} selected
+          {usingSelectedCardPlan ? ' - previewed below as one physical unit each' : ''}
+        </span>
         <button type="button" onClick={() => setSelectedTemplateIds(sortedTemplates.map((template) => template.id))}>
           <LucideIcon name="ListChecks" size={15} />
           Select all
@@ -357,6 +442,11 @@ export const ShowBuilderPanel: React.FC = () => {
           <LucideIcon name="CircleOff" size={15} />
           Clear
         </button>
+      </div>
+
+      <div className={styles.showCatalogHeader}>
+        <h4>Fixture profile catalog</h4>
+        <span>Single source of truth for DMX channels, modes, photos, docs, and physical addressing notes.</span>
       </div>
 
       <div className={styles.showTemplateGrid}>
@@ -400,8 +490,8 @@ export const ShowBuilderPanel: React.FC = () => {
 
       <div className={styles.showRows}>
         <div className={styles.showRowsHeader}>
-          <h4>Fixture groups and address blocks</h4>
-          <span>{rows.length ? 'One row equals one physical address block. Use another row for another group.' : 'Select cards above, add selected rows, or press APC40 grid pads.'}</span>
+          <h4>Optional editable rows</h4>
+          <span>{rows.length ? 'One row equals one physical address block. Use another row for another group.' : 'Only needed for multiples, split groups, or exact start addresses.'}</span>
         </div>
         {rows.map((row) => {
           const template = sortedTemplates.find((item) => item.id === row.templateId);
@@ -492,7 +582,7 @@ export const ShowBuilderPanel: React.FC = () => {
 
       <div className={styles.showPlan}>
         <div className={styles.showPlanHeader}>
-          <h4>Physical patch sheet</h4>
+          <h4>Show map and physical addresses</h4>
           <div className={styles.showPlanActions}>
             <button type="button" onClick={clearPlan} disabled={!rows.length}>
               <LucideIcon name="RotateCcw" size={16} />
@@ -536,7 +626,7 @@ export const ShowBuilderPanel: React.FC = () => {
             ))}
           </div>
         ) : (
-          <div className={styles.showPlanEmpty}>Add fixture rows to generate physical DMX addresses.</div>
+          <div className={styles.showPlanEmpty}>Select fixture profile cards to preview a show map, or add editable rows for multiples and split groups.</div>
         )}
       </div>
     </section>

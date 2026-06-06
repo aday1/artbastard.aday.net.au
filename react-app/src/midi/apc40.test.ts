@@ -52,5 +52,16 @@ describe('APC40 workflow decoder', () => {
       sceneIndex: 2,
     });
   });
-});
 
+  it('decodes transport play as the show-commit control', () => {
+    expect(decodeApc40Message({
+      _type: 'noteon',
+      source: 'Akai APC40',
+      note: 0x5b,
+      velocity: 127,
+    })).toEqual({
+      type: 'play',
+      model: 'apc40-mk1',
+    });
+  });
+});

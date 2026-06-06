@@ -24,7 +24,7 @@ export const Apc40WorkflowPanel: React.FC = () => {
         <div>
           <span className={styles.stepKicker}>Remote control</span>
           <h3>Akai APC40 / APC40 mkII</h3>
-          <p>Plug it in, enable the MIDI input, then use the grid as a fixture/show remote.</p>
+          <p>Plug it in, enable the MIDI input, then seed shows, select fixtures, and launch scenes without leaving the desk.</p>
         </div>
         <div className={lastApcSource ? styles.apcStatusReady : styles.apcStatusIdle}>
           <LucideIcon name={lastApcSource ? 'Cable' : 'Unplug'} size={16} />
@@ -33,9 +33,9 @@ export const Apc40WorkflowPanel: React.FC = () => {
       </div>
 
       <div className={styles.apcMapGrid}>
-        <div title="Before a show exists, grid pads add fixture profile rows. After fixtures exist, grid pads toggle physical fixture selection.">
+        <div title="Before a show exists, grid pads select fixture profile cards for the show map. After fixtures exist, grid pads toggle physical fixture selection.">
           <strong>Clip grid</strong>
-          <span>Add fixture rows or select patched fixtures 1-40</span>
+          <span>Select profiles before patching, then select fixtures 1-40</span>
         </div>
         <div title="These buttons select group 1-8 when groups exist, otherwise fixture 1-8.">
           <strong>Track Select</strong>
@@ -45,9 +45,9 @@ export const Apc40WorkflowPanel: React.FC = () => {
           <strong>Scene Launch</strong>
           <span>Load or capture scenes 1-5</span>
         </div>
-        <div title="Record captures the current DMX state as a new named scene. Stop/Stop All clears fixture selection.">
-          <strong>Record / Stop</strong>
-          <span>Create a scene or clear selection</span>
+        <div title="Play commits the current show map. Record captures the current DMX state as a new scene. Stop clears fixture selection.">
+          <strong>Play / Record / Stop</strong>
+          <span>Create show, capture scene, clear selection</span>
         </div>
       </div>
 

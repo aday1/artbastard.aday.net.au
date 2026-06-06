@@ -79,6 +79,7 @@ export const FixtureSetup: React.FC = () => {
     createQuickFlag,
     getFixturesByFlag,
     getFixturesByFlagCategory,
+    selectedFixtures,
     setSelectedFixtures: setStoreSelectedFixtures,
     addFixture,
     deleteFixture,
@@ -94,6 +95,7 @@ export const FixtureSetup: React.FC = () => {
     createQuickFlag: state.createQuickFlag,
     getFixturesByFlag: state.getFixturesByFlag,
     getFixturesByFlagCategory: state.getFixturesByFlagCategory,
+    selectedFixtures: state.selectedFixtures,
     setSelectedFixtures: state.setSelectedFixtures,
     addFixture: state.addFixture,
     deleteFixture: state.deleteFixture,
@@ -105,6 +107,7 @@ export const FixtureSetup: React.FC = () => {
   const [showCreateFixture, setShowCreateFixture] = useState(false)
   const [showCreateGroup, setShowCreateGroup] = useState(false)
   const [showTemplateManager, setShowTemplateManager] = useState(false)
+  const [showPatchTools, setShowPatchTools] = useState(false)
   const [editingFixtureId, setEditingFixtureId] = useState<string | null>(null)
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null)
   const [showSuperControlPreview, setShowSuperControlPreview] = useState(false)
@@ -127,8 +130,7 @@ export const FixtureSetup: React.FC = () => {
     isSolo: false,
     masterValue: 255
   })
-  // Multi-select functionality state
-  const [selectedFixtures, setSelectedFixtures] = useState<string[]>([]);
+  // Multi-select selection is stored globally so APC40, SuperControl, and Active Patch agree.
   const [searchTerm, setSearchTerm] = useState('');
   const [showAdvancedSelection, setShowAdvancedSelection] = useState(false);
   const [showFlagPanel, setShowFlagPanel] = useState(false);
@@ -220,7 +222,6 @@ export const FixtureSetup: React.FC = () => {
           selectedFixtures.forEach(fixtureId => {
             handleDeleteFixture(fixtureId);
           });
-          setSelectedFixtures([]);
           setStoreSelectedFixtures([]);
         }
         return;
@@ -234,19 +235,16 @@ export const FixtureSetup: React.FC = () => {
   // Multi-select functionality functions
   const selectAll = () => {
     const newSelection = filteredFixtures.map(f => f.id);
-    setSelectedFixtures(newSelection);
     setStoreSelectedFixtures(newSelection);
   };
 
   const deselectAll = () => {
-    setSelectedFixtures([]);
     setStoreSelectedFixtures([]);
   };
 
   const invertSelection = () => {
     const allIds = filteredFixtures.map(f => f.id);
     const newSelection = allIds.filter(id => !selectedFixtures.includes(id));
-    setSelectedFixtures(newSelection);
     setStoreSelectedFixtures(newSelection);
   };
 
@@ -267,7 +265,6 @@ export const FixtureSetup: React.FC = () => {
       }
     });
     const newSelection = typeFixtures.map(f => f.id);
-    setSelectedFixtures(newSelection);
     setStoreSelectedFixtures(newSelection);
   };
 
@@ -284,27 +281,24 @@ export const FixtureSetup: React.FC = () => {
     });
     
     const newSelection = similarFixtures.map(f => f.id);
-    setSelectedFixtures(newSelection);
     setStoreSelectedFixtures(newSelection);
   };
 
   const selectByFlag = (flagId: string) => {
     const flaggedFixtures = getFixturesByFlag(flagId);
     const newSelection = flaggedFixtures.map(f => f.id);
-    setSelectedFixtures(newSelection);
     setStoreSelectedFixtures(newSelection);
   };
 
   const selectByFlagCategory = (category: string) => {
     const flaggedFixtures = getFixturesByFlagCategory(category);
     const newSelection = flaggedFixtures.map(f => f.id);
-    setSelectedFixtures(newSelection);
     setStoreSelectedFixtures(newSelection);
   };
 
   const selectAllFlagged = () => {
     const flaggedFixtures = filteredFixtures.filter(f => f.isFlagged);
-    setSelectedFixtures(flaggedFixtures.map(f => f.id));
+    setStoreSelectedFixtures(flaggedFixtures.map(f => f.id));
   };
 
   // Flag management functions
@@ -371,13 +365,10 @@ export const FixtureSetup: React.FC = () => {
   };
 
   const toggleFixtureSelection = (fixtureId: string) => {
-    setSelectedFixtures(prevSelected => {
-      const newSelection = prevSelected.includes(fixtureId)
-        ? prevSelected.filter(id => id !== fixtureId)
-        : [...prevSelected, fixtureId];
-      setStoreSelectedFixtures(newSelection);
-      return newSelection;
-    });
+    const newSelection = selectedFixtures.includes(fixtureId)
+      ? selectedFixtures.filter(id => id !== fixtureId)
+      : [...selectedFixtures, fixtureId];
+    setStoreSelectedFixtures(newSelection);
   };
 
   const calculateNextStartAddress = () => {
@@ -1212,6 +1203,16 @@ export const FixtureSetup: React.FC = () => {
                 style={{ display: 'none' }}
               />
               <button
+                className={`${styles.actionButton} ${styles.patchToolsToggle}`}
+                onClick={() => setShowPatchTools((visible) => !visible)}
+                title="Show import/export/profile-editor tools for the active patch"
+              >
+                <LucideIcon name="SlidersHorizontal" />
+                Patch tools
+              </button>
+              {showPatchTools && (
+                <>
+              <button
                 className={`${styles.actionButton} ${styles.importButton}`}
                 onClick={triggerImport}
                 title="Import fixtures from JSON file"
@@ -1304,8 +1305,10 @@ export const FixtureSetup: React.FC = () => {
                 title="Advanced: manage fixture profiles. Use Create the DMX show above for normal fixture creation."
               >
                 <LucideIcon name="Settings" />
-                Profiles
+                Profile editor
               </button>
+                </>
+              )}
             </div>
           </div>
           <div className={styles.cardBody}>
@@ -1365,6 +1368,7 @@ export const FixtureSetup: React.FC = () => {
                 )}
 
                 {/* Bulk Selection Controls */}
+                {showPatchTools && (
                 <div className={styles.bulkControls}>
                   <button
                     className={styles.bulkButton}
@@ -1411,9 +1415,10 @@ export const FixtureSetup: React.FC = () => {
                     <span>{isAutoPatching ? 'Patching…' : 'Auto-Patch'}</span>
                   </button>
                 </div>
+                )}
 
                 {/* Advanced Selection Panel */}
-                {showAdvancedSelection && (
+                {showPatchTools && showAdvancedSelection && (
                   <div className={styles.advancedSelection}>
                     <div className={styles.selectionByType}>
                       <h4>Select by Type:</h4>
@@ -1462,7 +1467,7 @@ export const FixtureSetup: React.FC = () => {
                 )}
 
                 {/* Flag Management Panel */}
-                {showFlagPanel && (
+                {showPatchTools && showFlagPanel && (
                   <div className={styles.flagPanel}>
                     <div className={styles.flagCreation}>
                       <input
@@ -2210,9 +2215,12 @@ export const FixtureSetup: React.FC = () => {
               </div>
               {/* Discovery Wizard removed */}
               {/* end fixture form */}
-              </> ) : (              <button 
+              </>
+            ) : showPatchTools ? (
+              <button
                 className={styles.createButton}
-                onClick={() => {                  setFixtureForm({ 
+                onClick={() => {
+                  setFixtureForm({
                     name: '',
                     type: '',
                     manufacturer: '',
@@ -2228,11 +2236,11 @@ export const FixtureSetup: React.FC = () => {
                 }}
               >
                 <i className="fas fa-plus"></i>
-                {theme === 'artsnob' && 'Craft Custom Fixture'}
-                {theme === 'standard' && 'Add Custom Fixture'}
+                {theme === 'artsnob' && 'Advanced Custom Fixture'}
+                {theme === 'standard' && 'Advanced Custom Fixture'}
                 {theme === 'minimal' && 'Custom'}
               </button>
-            )}
+            ) : null}
             {!showCreateFixture && (
               <div className={styles.advancedProfileNote}>
                 <LucideIcon name="Info" size={18} />

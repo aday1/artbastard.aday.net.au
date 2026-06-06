@@ -68,6 +68,16 @@ export function useApc40Workflow() {
       return;
     }
 
+    if (action.type === 'play') {
+      window.dispatchEvent(new CustomEvent('artbastard:apc40-create-show'));
+      addNotification({
+        message: 'APC40 requested Create Show from the current show map',
+        type: 'info',
+        priority: 'normal',
+      });
+      return;
+    }
+
     if (action.type === 'clear-selection' || action.type === 'track-stop' || action.type === 'stop') {
       deselectAllFixtures();
       addNotification({
@@ -133,4 +143,3 @@ export function useApc40Workflow() {
     setSelectedFixtures,
   ]);
 }
-
