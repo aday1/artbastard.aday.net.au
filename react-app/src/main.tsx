@@ -10,10 +10,11 @@ function tagHostSurface() {
   if (typeof window === 'undefined') return
   const host = window.location.hostname.toLowerCase()
   const root = document.documentElement
-  root.classList.toggle('ab-beta-host', host === 'artbastard-beta.aday.net.au')
+  const isBetaLaneHost = host === 'artbastard-dev.aday.net.au'
+  root.classList.toggle('ab-beta-host', isBetaLaneHost)
   root.classList.toggle(
     'ab-touch-optimized',
-    host === 'artbastard-beta.aday.net.au' ||
+    isBetaLaneHost ||
       window.matchMedia('(pointer: coarse), (max-width: 1279px)').matches
   )
 }

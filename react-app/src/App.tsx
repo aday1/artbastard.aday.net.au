@@ -56,7 +56,7 @@ const initialHostAtLoad = typeof window !== 'undefined' ? window.location.hostna
 const initialIsMobilePopup =
   initialHashAtLoad === '#/mobile' ||
   initialHashAtLoad === '#mobile' ||
-  (initialHostAtLoad === 'artbastard-beta.aday.net.au' && !initialHashAtLoad)
+  (initialHostAtLoad === 'artbastard-dev.aday.net.au' && !initialHashAtLoad)
 
 function App() {
   const isMobilePage = initialIsMobilePopup

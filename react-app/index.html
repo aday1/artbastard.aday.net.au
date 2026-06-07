@@ -23,6 +23,16 @@
     <script>
       (function () {
         var h = location.hostname.toLowerCase();
+        if (h === "artbastard-beta.aday.net.au") {
+          location.replace(
+            location.protocol +
+              "//artbastard-dev.aday.net.au" +
+              location.pathname +
+              location.search +
+              location.hash
+          );
+          return;
+        }
         var m = h.match(/^dev\.(macroverse|artbastard)\.aday\.net\.au$/);
         if (m) {
           location.replace(
@@ -289,7 +299,7 @@
             if (h === "dev.macroverse.aday.net.au" || h === "macroverse-dev.aday.net.au") {
               u.hostname = "macroverse-test.aday.net.au";
             }
-            else if (h === "dev.artbastard.aday.net.au") u.hostname = "artbastard-dev.aday.net.au";
+            else if (h === "dev.artbastard.aday.net.au" || h === "artbastard-beta.aday.net.au") u.hostname = "artbastard-dev.aday.net.au";
             return u.href;
           } catch (eCanon) {
             return url;
@@ -350,8 +360,7 @@
         }
         function laneDisplayName(lane) {
           var k = String(lane || "live").toLowerCase();
-          if (k === "beta") return "BETA";
-          if (k === "dev") return "DEV";
+          if (k === "beta" || k === "dev") return "BETA";
           if (k === "aday") return "ADAY";
           return "LIVE";
         }
@@ -405,9 +414,9 @@
             } catch (eC) {}
           }
           var hl = hostn.toLowerCase();
-          if (isLocalDeployHost(hostn) && ds && String(ds.live_url || "").indexOf("artbastard") >= 0) return "beta";
+          if (isLocalDeployHost(hostn) && ds && String(ds.live_url || "").indexOf("artbastard") >= 0) return "dev";
           if (/macroverse-aday|^aday\.macroverse/i.test(hl)) return "aday";
-          if (isBetaDeployHost(hostn)) return "beta";
+          if (isBetaDeployHost(hostn)) return "dev";
           if (isDevDeployHost(hostn)) return "dev";
           if (isLiveDeployHost(hostn)) return "live";
           return "live";
@@ -448,7 +457,7 @@
           var r = resolvedSwitcher(ds, siteLc);
           var hostn = typeof location !== "undefined" ? location.hostname : "";
           var cur = switcherLane(hostn, r);
-          var defs = [["live", "Live", "live_url"], ["dev", "Dev", "dev_url"], ["aday", "Aday", "aday_url"]];
+          var defs = [["live", "Live", "live_url"], ["dev", "Beta", "dev_url"], ["aday", "Aday", "aday_url"]];
           var parts = [];
           for (var ix = 0; ix < defs.length; ix++) {
             var k = defs[ix][0];
@@ -526,7 +535,7 @@
           var html =
             '<div style="margin:0 0 10px;padding:10px 12px;border:2px solid rgba(76,255,138,.55);border-radius:4px;background:rgba(76,255,138,.1)">';
           html +=
-            '<div style="font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;color:#efffef">Dev vs live (main)</div>';
+            '<div style="font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;color:#efffef">Beta/dev vs live (main)</div>';
           html +=
             '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:stretch;margin-bottom:6px">';
           html +=
@@ -545,13 +554,13 @@
           } else {
             if (c.ahead > 0 && c.behind === 0) {
               html +=
-                '<div style="font-size:11px">Dev has <strong>' +
+                '<div style="font-size:11px">Beta/dev has <strong>' +
                 c.ahead +
                 "</strong> commit(s) not on live yet.</div>";
             }
             if (c.behind > 0) {
               html +=
-                '<div style="color:#ffb4b4;font-size:11px;margin-top:4px">Dev is missing <strong>' +
+                '<div style="color:#ffb4b4;font-size:11px;margin-top:4px">Beta/dev is missing <strong>' +
                 c.behind +
                 "</strong> commit(s) from live — merge main into dev first.</div>";
             }

@@ -11,10 +11,8 @@ Current package version: 5.1.2.0
 - Full showcase (Photonic Tour + features + docs):
   https://aday1.github.io/artbastard.aday.net.au/
 - Live app: https://artbastard.aday.net.au
-- Beta / pre-prod (same Docker service `artbastard_test`, image `:dev`):
-  - https://artbastard-beta.aday.net.au
+- Beta / dev pre-prod lane (same Docker service `artbastard_test`, image `:dev`):
   - https://artbastard-dev.aday.net.au
-  - https://artbastard-test.aday.net.au
 
 The showcase page hosts a "Photonic Tour" demo reel: six short WebM
 clips of every major surface (DMX Control, Fixture Setup, Scenes and

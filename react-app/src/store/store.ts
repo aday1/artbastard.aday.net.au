@@ -1820,7 +1820,7 @@ export const useStore = create<State>()(
           if (saved === 'vertical' || saved === 'horizontal') return saved;
           const host = window.location.hostname.toLowerCase();
           const touchRackDefault =
-            host === 'artbastard-beta.aday.net.au' ||
+            host === 'artbastard-dev.aday.net.au' ||
             window.matchMedia('(pointer: coarse), (max-width: 1279px)').matches;
           return touchRackDefault ? 'vertical' : 'horizontal';
         } catch {

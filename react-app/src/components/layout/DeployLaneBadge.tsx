@@ -7,16 +7,11 @@ export type DeployLanePlacement = 'corner' | 'topbar' | 'inline';
 function readLane(): { lane: DeployLane; label: string } {
   const w = window as Window & { __deployLane?: string; __deployLaneLabel?: string };
   const lane = String(w.__deployLane || 'live').toLowerCase();
-  const isBetaHost =
-    typeof window !== 'undefined' &&
-    /^(macroverse|artbastard)-beta\.aday\.net\.au$/.test(
-      window.location.hostname.toLowerCase()
-    );
   const k: DeployLane =
-    isBetaHost ? 'beta' : lane === 'dev' ? 'dev' : lane === 'aday' ? 'aday' : 'live';
+    lane === 'beta' || lane === 'dev' ? 'dev' : lane === 'aday' ? 'aday' : 'live';
   const label =
     w.__deployLaneLabel ||
-    (k === 'beta' ? 'BETA' : k === 'dev' ? 'DEV' : k === 'aday' ? 'ADAY' : 'LIVE');
+    (k === 'dev' ? 'BETA' : k === 'aday' ? 'ADAY' : 'LIVE');
   return { lane: k, label };
 }
 
