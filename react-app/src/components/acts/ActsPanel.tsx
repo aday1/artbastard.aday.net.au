@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useStore, Act, ActStep } from '../../store';
 import { ActEditor } from './ActEditor';
 import { TimelineActEditor } from './TimelineActEditor';
@@ -13,13 +13,33 @@ export const ActsPanel: React.FC = () => {
   const [editorView, setEditorView] = useState<'list' | 'timeline'>('timeline'); // Default to timeline
   const [newActName, setNewActName] = useState('');
   const [newActDescription, setNewActDescription] = useState('');
+  const [pendingCreatedActName, setPendingCreatedActName] = useState<string | null>(null);
 
   const selectedAct = acts.find(act => act.id === selectedActId);
   const isPlaying = actPlaybackState.isPlaying && actPlaybackState.currentActId === selectedActId;
 
+  useEffect(() => {
+    if (pendingCreatedActName) {
+      const createdAct = [...acts].reverse().find(act => act.name === pendingCreatedActName);
+      if (createdAct) {
+        setSelectedActId(createdAct.id);
+        setShowEditor(true);
+        setPendingCreatedActName(null);
+      }
+      return;
+    }
+
+    if (acts.length > 0 && (!selectedActId || !acts.some(act => act.id === selectedActId))) {
+      setSelectedActId(acts[0].id);
+      setShowEditor(true);
+    }
+  }, [acts, pendingCreatedActName, selectedActId]);
+
   const handleCreateAct = () => {
     if (newActName.trim()) {
-      createAct(newActName.trim(), newActDescription.trim() || undefined);
+      const actName = newActName.trim();
+      createAct(actName, newActDescription.trim() || undefined);
+      setPendingCreatedActName(actName);
       setNewActName('');
       setNewActDescription('');
     }
@@ -55,7 +75,7 @@ export const ActsPanel: React.FC = () => {
       <div className={styles.header}>
         <h2>
           <i className="fas fa-theater-masks"></i>
-          ACTS - Automated Scene Transition Sequences
+          ACTS - Scene Timeline Builder
         </h2>
         <div className={styles.headerActions}>
           <button 
@@ -66,6 +86,25 @@ export const ActsPanel: React.FC = () => {
             <i className="fas fa-stop"></i>
             Stop All
           </button>
+        </div>
+      </div>
+
+      <div className={styles.workflowStrip} aria-label="Acts workflow model">
+        <div className={styles.workflowItem}>
+          <span>Act</span>
+          <strong>One song, movement, or show section</strong>
+        </div>
+        <div className={styles.workflowItem}>
+          <span>Step</span>
+          <strong>A saved scene placed on the timeline</strong>
+        </div>
+        <div className={styles.workflowItem}>
+          <span>Trigger</span>
+          <strong>Play, pause, stop, next, prev, or toggle</strong>
+        </div>
+        <div className={styles.workflowItem}>
+          <span>Timeline</span>
+          <strong>Scene steps first, advanced events when needed</strong>
         </div>
       </div>
 
@@ -114,7 +153,10 @@ export const ActsPanel: React.FC = () => {
                 <div 
                   key={act.id} 
                   className={`${styles.actCard} ${selectedActId === act.id ? styles.selected : ''}`}
-                  onClick={() => setSelectedActId(act.id)}
+                  onClick={() => {
+                    setSelectedActId(act.id);
+                    setShowEditor(true);
+                  }}
                 >
                   <div className={styles.actHeader}>
                     <h4>{act.name}</h4>
@@ -184,6 +226,43 @@ export const ActsPanel: React.FC = () => {
         </div>
 
         {/* Act Editor */}
+        {selectedAct && (
+          <div className={styles.actRunway}>
+            <div>
+              <span className={styles.runwayLabel}>Selected act</span>
+              <strong>{selectedAct.name}</strong>
+              <small>
+                {selectedAct.steps.length} step{selectedAct.steps.length === 1 ? '' : 's'} · {formatDuration(selectedAct.totalDuration)}
+              </small>
+            </div>
+            <div>
+              <span className={styles.runwayLabel}>ACT triggers</span>
+              <strong>
+                {selectedAct.triggers.filter(trigger => trigger.enabled).length || 0} active
+              </strong>
+              <small>play / pause / stop / next / prev / toggle</small>
+            </div>
+            <div>
+              <span className={styles.runwayLabel}>Timeline events</span>
+              <strong>{selectedAct.timelineEvents?.length || 0}</strong>
+              <small>MIDI/OSC events live in Advanced mode</small>
+            </div>
+            <div className={styles.runwayActions}>
+              <button
+                className={styles.playNowButton}
+                onClick={() => handlePlayAct(selectedAct.id)}
+              >
+                <LucideIcon name={isPlaying ? 'Pause' : 'Play'} />
+                {isPlaying ? 'Pause Act' : 'Play Act'}
+              </button>
+              <button className={styles.stopNowButton} onClick={stopAct}>
+                <LucideIcon name="Square" />
+                Stop
+              </button>
+            </div>
+          </div>
+        )}
+
         {selectedAct && showEditor && (
           <div className={styles.editorContainer}>
             <div className={styles.editorViewToggle}>

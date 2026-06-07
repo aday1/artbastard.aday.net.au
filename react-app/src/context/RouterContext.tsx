@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 
-export type ViewType = 'fixture' | 'planner' | 'scenesActs' | 'misc' | 'state' | 'dmxControl' | 'mobile'
+export type ViewType = 'fixture' | 'planner' | 'scenesActs' | 'acts' | 'misc' | 'state' | 'dmxControl' | 'mobile'
 
 interface RouterContextType {
   currentView: ViewType
@@ -20,6 +20,7 @@ const viewToHash: Record<ViewType, string> = {
   fixture: '#/fixture',
   planner: '#/planner',
   scenesActs: '#/scenes-acts',
+  acts: '#/acts',
   misc: '#/settings',
   state: '#/state',
   dmxControl: '#/dmx-control',
@@ -43,6 +44,8 @@ const hashToView = (hashValue: string): ViewType | null => {
     case 'scenes-acts':
     case 'scenesacts':
       return 'scenesActs'
+    case 'acts':
+      return 'acts'
     case 'settings':
     case 'misc':
       return 'misc'

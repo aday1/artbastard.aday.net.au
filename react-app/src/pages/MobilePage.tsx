@@ -11,9 +11,10 @@ import { useStore } from '../store';
 import styles from './MobilePage.module.scss';
 
 const ActsScenesPage = React.lazy(() => import('./ActsScenesPage'));
+const ActsPage = React.lazy(() => import('./ActsPage'));
 const SettingsPage = React.lazy(() => import('./SettingsPage'));
 
-type MobileTab = 'dmx' | 'supercontrol' | 'fixture' | 'scenes' | 'settings';
+type MobileTab = 'dmx' | 'supercontrol' | 'fixture' | 'scenes' | 'acts' | 'settings';
 
 const TabFallback = () => <div className={styles.tabFallback}>Chargement...</div>;
 
@@ -46,6 +47,7 @@ const MobilePage: React.FC = () => {
         tab === 'control' ||
         tab === 'fixture' ||
         tab === 'scenes' ||
+        tab === 'acts' ||
         tab === 'settings'
       ) {
         activateTab(tab === 'control' ? 'supercontrol' : tab);
@@ -57,7 +59,7 @@ const MobilePage: React.FC = () => {
 
   const tabs: Array<{
     id: MobileTab;
-    icon: 'Lightbulb' | 'Zap' | 'LampDesk' | 'Theater' | 'Settings';
+    icon: 'Lightbulb' | 'Zap' | 'LampDesk' | 'Theater' | 'Clapperboard' | 'Settings';
     label: { artsnob: string; standard: string };
   }> = [
     {
@@ -79,6 +81,11 @@ const MobilePage: React.FC = () => {
       id: 'scenes',
       icon: 'Theater',
       label: { artsnob: 'Scènes', standard: 'Scenes' },
+    },
+    {
+      id: 'acts',
+      icon: 'Clapperboard',
+      label: { artsnob: 'Actes', standard: 'Acts' },
     },
     {
       id: 'settings',
@@ -160,6 +167,18 @@ const MobilePage: React.FC = () => {
           >
             <Suspense fallback={<TabFallback />}>
               <ActsScenesPage />
+            </Suspense>
+          </div>
+        )}
+        {activeTab === 'acts' && (
+          <div
+            id="mobile-panel-acts"
+            className={styles.tabContent}
+            role="tabpanel"
+            aria-labelledby="mobile-tab-acts"
+          >
+            <Suspense fallback={<TabFallback />}>
+              <ActsPage />
             </Suspense>
           </div>
         )}

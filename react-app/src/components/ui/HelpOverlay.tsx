@@ -188,7 +188,8 @@ export const HelpOverlay: React.FC<HelpOverlayProps> = ({ embedded = false }) =>
               <ul>
                 <li><code>#/</code> - DMX Control home</li>
                 <li><code>#/fixture</code> - Fixture Setup + Advanced Fixture Control (SuperControl)</li>
-                <li><code>#/scenes-acts</code> - Scenes, ACT triggers, timeline</li>
+                <li><code>#/scenes-acts</code> - Scenes and scene timelines</li>
+                <li><code>#/acts</code> - Act timeline builder and ACT triggers</li>
                 <li><code>#/mobile</code> - Touch-first phone and tablet surface</li>
                 <li><code>#/settings</code> - Settings + embedded Help</li>
               </ul>
@@ -768,6 +769,8 @@ export const HelpOverlay: React.FC<HelpOverlayProps> = ({ embedded = false }) =>
                 <li><strong>Resize</strong> the right edge to change clip duration.</li>
                 <li><strong>Playhead:</strong> click the ruler or drag the red line to seek.</li>
                 <li><strong>Add step</strong> inserts a clip at the playhead.</li>
+                <li><strong>Scene tray</strong> adds saved scenes directly to the end of the act.</li>
+                <li><strong>Basic / Advanced</strong> keeps normal act building separate from MIDI/OSC/audio tools.</li>
                 <li><strong>+2s gap</strong> (clip selected) shifts that clip and later clips.</li>
                 <li><strong>Extend +5s</strong> adds empty timeline past the last clip.</li>
                 <li>Playback <strong>waits through gaps</strong> before the next scene loads.</li>

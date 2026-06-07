@@ -21,14 +21,15 @@ Quick start:
 3. Open Fixture Setup to define fixtures and groups.
 4. Save a baseline scene from SuperControl.
 5. Configure MIDI controllers or OSC clients in Settings.
-6. Open Scenes & Acts for timeline / clip launcher work, or run the show
+6. Open Acts for act timelines, or Scenes for scene capture / clip launcher work. Run the show
    from the DMX Control page.
 
 Routes (hash-based, deep-linkable):
 
 - `#/` - DMX Control home
 - `#/fixture` - Fixture Setup + Advanced Fixture Control (SuperControl)
-- `#/scenes-acts` - Scenes, ACT triggers, Timeline
+- `#/scenes-acts` - Scenes and scene timelines
+- `#/acts` - Act timeline builder and ACT triggers
 - `#/experimental` - OpenCV tracker, OSC placeholder, TouchOSC export
 - `#/external-console` - Dedicated operator route
 - `#/mobile` - Touch-first phone surface

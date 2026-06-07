@@ -18,6 +18,10 @@ interface TimelineActEditorProps {
   onClose: () => void;
 }
 
+type ActEditorMode = 'basic' | 'advanced';
+
+const ACT_EDITOR_MODE_KEY = 'artbastard.acts.editorMode';
+
 export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClose }) => {
   const {
     scenes,
@@ -90,6 +94,11 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
   const [editingDuration, setEditingDuration] = useState(false);
   const [durationInput, setDurationInput] = useState<string>('');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [editorMode, setEditorMode] = useState<ActEditorMode>(() => {
+    if (typeof window === 'undefined') return 'basic';
+    return window.localStorage.getItem(ACT_EDITOR_MODE_KEY) === 'advanced' ? 'advanced' : 'basic';
+  });
+  const isAdvancedMode = editorMode === 'advanced';
   
   // DAW playback state
   const [isPlaying, setIsPlaying] = useState(false);
@@ -162,6 +171,13 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
   const handlePlaybackModeChange = (mode: 'loop' | 'pingpong' | 'forward' | 'backward' | 'once') => {
     setActState(prev => ({ ...prev, playbackMode: mode }));
     updateAct(act.id, { playbackMode: mode });
+  };
+
+  const handleEditorModeChange = (mode: ActEditorMode) => {
+    setEditorMode(mode);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(ACT_EDITOR_MODE_KEY, mode);
+    }
   };
 
   // Snap time to grid
@@ -1005,6 +1021,22 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
     }
   };
 
+  const handleQuickAddSceneStep = useCallback((sceneName: string) => {
+    addActStep(act.id, {
+      sceneName,
+      duration: newStepDuration,
+      transitionDuration: newStepTransitionDuration,
+      startTime: snapTimeToGrid(layoutDuration),
+    });
+  }, [
+    act.id,
+    addActStep,
+    layoutDuration,
+    newStepDuration,
+    newStepTransitionDuration,
+    snapTimeToGrid,
+  ]);
+
   return (
     <div className={`${styles.timelineEditor} ${isFullscreen ? styles.fullscreen : ''}`}>
       {/* Hidden audio element */}
@@ -1024,8 +1056,14 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
         <div className={styles.headerLeft}>
           <h3>
             <LucideIcon name="Clock" />
-            Timeline Editor: {act.name}
+            Act Timeline: {act.name}
           </h3>
+          <div className={styles.actModelPills} aria-label="Act timeline model">
+            <span><strong>Act</strong> {act.name}</span>
+            <span><strong>Steps</strong> {act.steps.length}</span>
+            <span><strong>Triggers</strong> {act.triggers.filter(trigger => trigger.enabled).length}</span>
+            <span><strong>Events</strong> {timelineEvents.length}</span>
+          </div>
           <div className={styles.durationControl}>
             {editingDuration ? (
               <input
@@ -1069,6 +1107,22 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
                 <span>Total: {formatTime(effectiveDuration)}</span>
               </button>
             )}
+          </div>
+          <div className={styles.editorModeToggle} role="group" aria-label="Act editor mode">
+            <button
+              type="button"
+              className={editorMode === 'basic' ? styles.active : ''}
+              onClick={() => handleEditorModeChange('basic')}
+            >
+              Basic
+            </button>
+            <button
+              type="button"
+              className={editorMode === 'advanced' ? styles.active : ''}
+              onClick={() => handleEditorModeChange('advanced')}
+            >
+              Advanced
+            </button>
           </div>
         </div>
         
@@ -1154,33 +1208,35 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
             </span>
           </div>
           
-          <div className={styles.audioImport}>
-            <label className={styles.importButton}>
-              <LucideIcon name="Music" />
-              Import Audio
-              <input
-                type="file"
-                accept="audio/*"
-                onChange={handleAudioImport}
-                style={{ display: 'none' }}
-              />
-            </label>
-            {actState.audioTrack && (
-              <>
-                <span className={styles.audioName} title={actState.audioTrack.name}>
-                  {actState.audioTrack.name}
-                </span>
-                <button
-                  className={styles.fftButton}
-                  onClick={handleGenerateFFTLightshow}
-                  title="Generate Auto Lightshow from Audio"
-                >
-                  <LucideIcon name="Zap" />
-                  Auto Lightshow
-                </button>
-              </>
-            )}
-          </div>
+          {isAdvancedMode && (
+            <div className={styles.audioImport}>
+              <label className={styles.importButton}>
+                <LucideIcon name="Music" />
+                Import Audio
+                <input
+                  type="file"
+                  accept="audio/*"
+                  onChange={handleAudioImport}
+                  style={{ display: 'none' }}
+                />
+              </label>
+              {actState.audioTrack && (
+                <>
+                  <span className={styles.audioName} title={actState.audioTrack.name}>
+                    {actState.audioTrack.name}
+                  </span>
+                  <button
+                    className={styles.fftButton}
+                    onClick={handleGenerateFFTLightshow}
+                    title="Generate Auto Lightshow from Audio"
+                  >
+                    <LucideIcon name="Zap" />
+                    Auto Lightshow
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </div>
         
         <div className={styles.headerActions}>
@@ -1206,51 +1262,55 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
               Ctrl+Wheel or Shift+Wheel to zoom
             </span>
           </div>
-          <div className={styles.laneToggle}>
-            <button
-              className={`${styles.laneToggleButton} ${showLanes.midi ? styles.active : ''}`}
-              onClick={() => setShowLanes({ ...showLanes, midi: !showLanes.midi })}
-              title="Toggle MIDI Lane"
-            >
-              <LucideIcon name="Music" />
-              MIDI
-            </button>
-            <button
-              className={`${styles.laneToggleButton} ${showLanes.osc ? styles.active : ''}`}
-              onClick={() => setShowLanes({ ...showLanes, osc: !showLanes.osc })}
-              title="Toggle OSC Lane"
-            >
-              <LucideIcon name="Radio" />
-              OSC
-            </button>
-          </div>
-          <div className={styles.recordControls}>
-            <button
-              className={`${styles.recordButton} ${recordingMode === 'midi' ? styles.recording : ''}`}
-              onClick={() => {
-                if (recordingMode === 'midi') {
-                  setRecordingMode('idle');
-                  cancelMidiLearn();
-                } else {
-                  setRecordingMode('midi');
-                }
-              }}
-              title="Record MIDI Event"
-            >
-              <LucideIcon name={recordingMode === 'midi' ? 'Square' : 'Circle'} />
-              {recordingMode === 'midi' ? 'Stop MIDI' : 'Record MIDI'}
-            </button>
-            <button
-              className={`${styles.recordButton} ${recordingMode === 'osc' ? styles.recording : ''}`}
-              onClick={() => {
-                setRecordingMode(recordingMode === 'osc' ? 'idle' : 'osc');
-              }}
-              title="Record OSC Event - Click timeline to set time, then send OSC message. Events are recorded with passthrough (messages continue working) and replayed during act playback."
-            >
-              <LucideIcon name={recordingMode === 'osc' ? 'Square' : 'Circle'} />
-              {recordingMode === 'osc' ? 'Stop OSC' : 'Record OSC'}
-            </button>
-          </div>
+          {isAdvancedMode && (
+            <>
+              <div className={styles.laneToggle}>
+                <button
+                  className={`${styles.laneToggleButton} ${showLanes.midi ? styles.active : ''}`}
+                  onClick={() => setShowLanes({ ...showLanes, midi: !showLanes.midi })}
+                  title="Toggle MIDI Lane"
+                >
+                  <LucideIcon name="Music" />
+                  MIDI
+                </button>
+                <button
+                  className={`${styles.laneToggleButton} ${showLanes.osc ? styles.active : ''}`}
+                  onClick={() => setShowLanes({ ...showLanes, osc: !showLanes.osc })}
+                  title="Toggle OSC Lane"
+                >
+                  <LucideIcon name="Radio" />
+                  OSC
+                </button>
+              </div>
+              <div className={styles.recordControls}>
+                <button
+                  className={`${styles.recordButton} ${recordingMode === 'midi' ? styles.recording : ''}`}
+                  onClick={() => {
+                    if (recordingMode === 'midi') {
+                      setRecordingMode('idle');
+                      cancelMidiLearn();
+                    } else {
+                      setRecordingMode('midi');
+                    }
+                  }}
+                  title="Record MIDI Event"
+                >
+                  <LucideIcon name={recordingMode === 'midi' ? 'Square' : 'Circle'} />
+                  {recordingMode === 'midi' ? 'Stop MIDI' : 'Record MIDI'}
+                </button>
+                <button
+                  className={`${styles.recordButton} ${recordingMode === 'osc' ? styles.recording : ''}`}
+                  onClick={() => {
+                    setRecordingMode(recordingMode === 'osc' ? 'idle' : 'osc');
+                  }}
+                  title="Record OSC Event - Click timeline to set time, then send OSC message. Events are recorded with passthrough (messages continue working) and replayed during act playback."
+                >
+                  <LucideIcon name={recordingMode === 'osc' ? 'Square' : 'Circle'} />
+                  {recordingMode === 'osc' ? 'Stop OSC' : 'Record OSC'}
+                </button>
+              </div>
+            </>
+          )}
           <button
             className={styles.addStepButton}
             onClick={() => setShowAddStep(!showAddStep)}
@@ -1280,79 +1340,83 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
           >
             Extend +5s
           </button>
-          <div className={styles.snapControls}>
-            <label title="Snap events to grid">
-              <input
-                type="checkbox"
-                checked={snapToGrid}
-                onChange={(e) => setSnapToGrid(e.target.checked)}
-              />
-              Snap
-            </label>
-            {snapToGrid && (
-              <select
-                value={snapInterval}
-                onChange={(e) => setSnapInterval(Number(e.target.value))}
-                className={styles.snapInterval}
-                title="Snap interval"
+          {isAdvancedMode && (
+            <>
+              <div className={styles.snapControls}>
+                <label title="Snap events to grid">
+                  <input
+                    type="checkbox"
+                    checked={snapToGrid}
+                    onChange={(e) => setSnapToGrid(e.target.checked)}
+                  />
+                  Snap
+                </label>
+                {snapToGrid && (
+                  <select
+                    value={snapInterval}
+                    onChange={(e) => setSnapInterval(Number(e.target.value))}
+                    className={styles.snapInterval}
+                    title="Snap interval"
+                  >
+                    <option value="100">0.1s</option>
+                    <option value="250">0.25s</option>
+                    <option value="500">0.5s</option>
+                    <option value="1000">1s</option>
+                    <option value="2000">2s</option>
+                    <option value="5000">5s</option>
+                    <option value="10000">10s</option>
+                  </select>
+                )}
+              </div>
+              <button 
+                className={styles.copyButton}
+                onClick={copyEvents}
+                disabled={!selectedEventId}
+                title="Copy Selected Event (Ctrl+C)"
               >
-                <option value="100">0.1s</option>
-                <option value="250">0.25s</option>
-                <option value="500">0.5s</option>
-                <option value="1000">1s</option>
-                <option value="2000">2s</option>
-                <option value="5000">5s</option>
-                <option value="10000">10s</option>
-              </select>
-            )}
-          </div>
-          <button 
-            className={styles.copyButton}
-            onClick={copyEvents}
-            disabled={!selectedEventId}
-            title="Copy Selected Event (Ctrl+C)"
-          >
-            <LucideIcon name="Copy" />
-            Copy
-          </button>
-          <button 
-            className={styles.pasteButton}
-            onClick={() => pasteEvents()}
-            disabled={copiedEvents.length === 0}
-            title="Paste Event at Playhead (Ctrl+V)"
-          >
-            <LucideIcon name="Clipboard" />
-            Paste
-          </button>
-          <button 
-            className={styles.markerButton}
-            onClick={() => {
-              setShowAddMarker(true);
-              setNewMarkerName('');
-            }}
-            title="Add Marker at Playhead (M = next, Shift+M = previous)"
-          >
-            <LucideIcon name="Flag" />
-            Add Marker
-          </button>
-          <label className={styles.importTimelineButton} title="Import Timeline from JSON file">
-            <LucideIcon name="Upload" />
-            Import
-            <input
-              type="file"
-              accept=".json"
-              onChange={importActTimeline}
-              style={{ display: 'none' }}
-            />
-          </label>
-          <button 
-            className={styles.exportButton}
-            onClick={exportActTimeline}
-            title="Export Timeline to JSON file"
-          >
-            <LucideIcon name="Download" />
-            Export
-          </button>
+                <LucideIcon name="Copy" />
+                Copy
+              </button>
+              <button 
+                className={styles.pasteButton}
+                onClick={() => pasteEvents()}
+                disabled={copiedEvents.length === 0}
+                title="Paste Event at Playhead (Ctrl+V)"
+              >
+                <LucideIcon name="Clipboard" />
+                Paste
+              </button>
+              <button 
+                className={styles.markerButton}
+                onClick={() => {
+                  setShowAddMarker(true);
+                  setNewMarkerName('');
+                }}
+                title="Add Marker at Playhead (M = next, Shift+M = previous)"
+              >
+                <LucideIcon name="Flag" />
+                Add Marker
+              </button>
+              <label className={styles.importTimelineButton} title="Import Timeline from JSON file">
+                <LucideIcon name="Upload" />
+                Import
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={importActTimeline}
+                  style={{ display: 'none' }}
+                />
+              </label>
+              <button 
+                className={styles.exportButton}
+                onClick={exportActTimeline}
+                title="Export Timeline to JSON file"
+              >
+                <LucideIcon name="Download" />
+                Export
+              </button>
+            </>
+          )}
           <button className={styles.closeButton} onClick={onClose}>
             <LucideIcon name="X" />
             Close
@@ -1432,9 +1496,37 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
         </div>
       )}
 
+      <div className={styles.sceneTray}>
+        <div className={styles.sceneTrayHeader}>
+          <div>
+            <span>Scene tray</span>
+            <strong>Add scenes to this act</strong>
+          </div>
+          <small>{newStepDuration / 1000}s default step · {newStepTransitionDuration / 1000}s transition</small>
+        </div>
+        <div className={styles.sceneTrayList}>
+          {scenes.length === 0 ? (
+            <span className={styles.sceneTrayEmpty}>Save scenes first, then build act steps here.</span>
+          ) : (
+            scenes.map(scene => (
+              <button
+                key={scene.name}
+                type="button"
+                className={styles.sceneTrayButton}
+                onClick={() => handleQuickAddSceneStep(scene.name)}
+                title={`Add ${scene.name} at the end of this act`}
+              >
+                <LucideIcon name="Plus" size={14} />
+                {scene.name}
+              </button>
+            ))
+          )}
+        </div>
+      </div>
+
       <div className={styles.timelineContainer}>
         {/* Waveform Visualization */}
-        {actState.audioTrack && waveformData.length > 0 && (
+        {isAdvancedMode && actState.audioTrack && waveformData.length > 0 && (
           <div className={styles.waveformTrack} style={{ width: `${timeToPixels(effectiveDuration)}px` }}>
             <canvas
               ref={waveformCanvasRef}
@@ -1446,6 +1538,7 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
         )}
         
         {/* Marker Lane */}
+        {isAdvancedMode && (
         <div className={styles.markerLane} style={{ width: `${timeToPixels(effectiveDuration)}px` }}>
           {(act.markers || []).map(marker => (
             <div
@@ -1542,6 +1635,7 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
             </div>
           )}
         </div>
+        )}
         
         {/* Time Ruler */}
         <div className={styles.timeRuler} style={{ width: `${timeToPixels(effectiveDuration)}px` }}>
@@ -1607,7 +1701,7 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
               <rect width="100%" height="100%" fill="url(#timelineGridVertical)" />
             </svg>
             {/* MIDI Lane */}
-            {showLanes.midi && (() => {
+            {isAdvancedMode && showLanes.midi && (() => {
               const midiLaneState = actState.channelLanes?.[-1] || { muted: false, soloed: false }; // Use -1 as ID for MIDI lane
               const midiIsMuted = midiLaneState.muted;
               const midiIsSoloed = midiLaneState.soloed;
@@ -1767,7 +1861,7 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
             })()}
 
             {/* OSC Lane */}
-            {showLanes.osc && (() => {
+            {isAdvancedMode && showLanes.osc && (() => {
               const oscLaneState = actState.channelLanes?.[-2] || { muted: false, soloed: false }; // Use -2 as ID for OSC lane
               const oscIsMuted = oscLaneState.muted;
               const oscIsSoloed = oscLaneState.soloed;
@@ -2001,7 +2095,7 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
       </div>
 
       {/* Event Properties Panel */}
-      {selectedEventId && !selectedStepId && (
+      {isAdvancedMode && selectedEventId && !selectedStepId && (
         <div className={styles.propertiesPanel}>
           {(() => {
             const event = timelineEvents.find(e => e.id === selectedEventId);
@@ -2306,7 +2400,7 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
         )}
 
       {/* Add Event Instructions */}
-      {recordingMode !== 'idle' && (
+      {isAdvancedMode && recordingMode !== 'idle' && (
         <div className={styles.recordingInstructions}>
           <div className={styles.recordingInfo}>
             <LucideIcon name={recordingMode === 'midi' ? 'Music' : 'Radio'} size={20} />
@@ -2342,7 +2436,7 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
       )}
 
       {/* Target Selector */}
-      {showTargetSelector && pendingEvent && (
+      {isAdvancedMode && showTargetSelector && pendingEvent && (
         <TimelineEventTargetSelector
           eventType={pendingEvent.type}
           onSelect={handleTargetSelect}

@@ -7,8 +7,8 @@ Link fit together. Last updated: 2026-05-17.
 
 | Editor | Where | Purpose |
 | ------ | ----- | ------- |
-| **Scene timeline** | Scene editor on Scenes & Acts | DMX keyframe animation for one scene (channels, easing, mute/solo tracks). |
-| **Act timeline** | Open an Act (timeline icon) | Sequence **scene steps** (clips), optional **gaps**, and **MIDI/OSC events** on lanes at absolute times (ms). |
+| **Scene timeline** | Scene editor on Scenes | DMX keyframe animation for one scene (channels, easing, mute/solo tracks). |
+| **Act timeline** | `#/acts` | Sequence **scene steps** (clips), optional **gaps**, and **MIDI/OSC events** on lanes at absolute times (ms). |
 
 Scene timelines play when you launch that scene. Act timelines play when you
 **play the act** (UI, or an ACT trigger bound to that act).
@@ -62,6 +62,12 @@ times (milliseconds from act start):
 - **Drag horizontally** moves **start time** (does not reorder the list).
 - **Resize** the right edge changes duration.
 - **Add step** inserts at the **playhead** position.
+- **Scene tray** adds saved scenes directly to the end of the act.
+
+### Basic vs Advanced
+
+- **Basic** keeps the act transport, scene tray, scene steps, spacing, and timeline visible.
+- **Advanced** reveals MIDI/OSC lanes, recording, markers, audio/FFT tools, and import/export.
 
 ### Gaps and empty space
 

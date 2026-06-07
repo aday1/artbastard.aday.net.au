@@ -55,7 +55,18 @@ export const NAV_ITEMS: NavItem[] = [
       artsnob: 'Scènes Dramatiques',
       standard: 'Scenes',
       minimal: 'Scenes',
-      tooltip: 'Create, manage, and orchestrate lighting scenes and automated sequences.',
+      tooltip: 'Capture lighting scenes and scene timelines.',
+    },
+  },
+  {
+    id: 'acts',
+    icon: 'Clapperboard',
+    launch: 'route',
+    title: {
+      artsnob: 'Actes Dramatiques',
+      standard: 'Acts',
+      minimal: 'Acts',
+      tooltip: 'Arrange scenes into touch-friendly act timelines and ACT triggers.',
     },
   },
   {

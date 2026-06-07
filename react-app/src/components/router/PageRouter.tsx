@@ -5,6 +5,7 @@ import MobilePage from '../../pages/MobilePage'
 
 const FixturePage = lazy(() => import('../../pages/FixturePage'))
 const ActsScenesPage = lazy(() => import('../../pages/ActsScenesPage'))
+const ActsPage = lazy(() => import('../../pages/ActsPage'))
 const SettingsPage = lazy(() => import('../../pages/SettingsPage'))
 const PageFallback = () => (
   <div style={{ padding: 24, opacity: 0.7 }}>Loading...</div>
@@ -27,6 +28,12 @@ const PageRouter: React.FC = () => {
         return (
           <Suspense fallback={<PageFallback />}>
             <ActsScenesPage />
+          </Suspense>
+        )
+      case 'acts':
+        return (
+          <Suspense fallback={<PageFallback />}>
+            <ActsPage />
           </Suspense>
         )
       case 'misc':

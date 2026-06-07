@@ -97,14 +97,16 @@ Full shortcut list: DOCS/SHORTCUTS.md.
 
 ## Act timeline workflow
 
-1. Scenes & Acts → open an Act (timeline editor).
-2. Add scene clips; drag clips to set **start time**; resize for duration.
-3. Seek with the ruler/playhead; **Add step** inserts at the playhead.
-4. Create gaps: select a clip → **+2s gap**, or drag clips apart; use
+1. Open `#/acts` and choose or create an Act.
+2. Use **Basic** mode for scene steps and transport; switch to **Advanced** for MIDI/OSC/audio tools.
+3. Add scene clips from the scene tray, or use **Add step** at the playhead.
+4. Drag clips to set **start time**; resize for duration.
+5. Seek with the ruler/playhead.
+6. Create gaps: select a clip → **+2s gap**, or drag clips apart; use
    **Extend +5s** if the ruler runs out of room.
-5. Optional: **Sync to BPM** for bar-aligned length (uses app BPM).
-6. Optional: place **MIDI/OSC timeline events** for scheduled cues during playback.
-7. Run the show with **ACT triggers** (MIDI/OSC) — play / pause / stop / next.
+7. Optional: **Sync to BPM** for bar-aligned length (uses app BPM).
+8. Optional: place **MIDI/OSC timeline events** for scheduled cues during playback.
+9. Run the show with **ACT triggers** (MIDI/OSC) — play / pause / stop / next.
 
 Transport vs tempo: ACT triggers **start** acts; Ableton Link (Settings +
 Pi bridge) shares **BPM** only. Live transport is not mirrored unless you
