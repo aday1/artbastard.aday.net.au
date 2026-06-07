@@ -1,6 +1,6 @@
 import React from 'react';
 import { LucideIcon } from '../ui/LucideIcon';
-import type { FaderOrientation } from './FaderOrientationSwitch';
+import { FaderOrientationSwitch, type FaderOrientation } from './FaderOrientationSwitch';
 import styles from '../pages/DmxChannelControlPage.module.scss';
 
 type ViewMode = 'grid' | 'list' | 'compact';
@@ -102,6 +102,15 @@ export const DmxControlsPanel: React.FC<DmxControlsPanelProps> = ({
             Compact
           </button>
         </div>
+      </div>
+
+      <div className={`${styles.controlGroup} ${styles.faderLayoutControl}`}>
+        <label className={styles.controlLabel}>Fader layout</label>
+        <FaderOrientationSwitch
+          value={faderOrientation}
+          onChange={onFaderOrientationChange}
+          className={`${styles.orientationSwitch} ab-view-tabs`}
+        />
       </div>
 
       <div className={styles.controlGroup}>

@@ -21,6 +21,7 @@ import { DmxPinnedChannels } from '../dmx/DmxPinnedChannels';
 import { DmxActiveChannelsSummary } from '../dmx/DmxActiveChannelsSummary';
 import { DmxChannelsViewport } from '../dmx/DmxChannelsViewport';
 import { DmxPageHeader } from '../dmx/DmxPageHeader';
+import { FaderOrientationSwitch } from '../dmx/FaderOrientationSwitch';
 import { filterDmxChannels, filterFixtures, isFixtureActive } from '../dmx/dmxFiltering';
 import styles from './DmxChannelControlPage.module.scss';
 import pageStyles from '../../pages/Pages.module.scss';
@@ -564,6 +565,20 @@ export const DmxChannelControlPage: React.FC<DmxChannelControlPageProps> = ({
             onScrollToChannel={scrollToChannel}
             onChannelContextMenu={openChannelMenu}
           />
+
+          <div className={styles.faderLayoutDock} aria-label="DMX fader layout switch">
+            <div className={styles.faderLayoutDockSummary}>
+              <span className={styles.faderLayoutDockLabel}>Fader layout</span>
+              <span className={styles.faderLayoutDockValue}>
+                {faderOrientation === 'horizontal' ? 'Horizontal sliders' : 'Vertical rack strips'}
+              </span>
+            </div>
+            <FaderOrientationSwitch
+              value={faderOrientation}
+              onChange={handleFaderOrientationChange}
+              className={`${styles.faderLayoutDockSwitch} ab-view-tabs`}
+            />
+          </div>
 
           {/* DMX Channels Display */}
           <DmxChannelsViewport

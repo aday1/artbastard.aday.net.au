@@ -750,6 +750,25 @@
   gap: 8px;
 }
 
+.faderLayoutControl {
+  min-width: 0;
+}
+
+.orientationSwitch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+
+  :global(.ab-view-tab) {
+    flex: 1 1 9rem;
+    justify-content: center;
+    min-height: 42px;
+    min-width: 0;
+  }
+}
+
 .controlLabel {
   font-size: 14px;
   font-weight: 600;
@@ -1860,6 +1879,61 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+.faderLayoutDock {
+  position: sticky;
+  top: 8px;
+  z-index: 1060;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(71, 85, 105, 0.46);
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent),
+    rgba(15, 23, 42, 0.92);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(10px);
+}
+
+.faderLayoutDockSummary {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 9rem;
+}
+
+.faderLayoutDockLabel {
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.faderLayoutDockValue {
+  color: #e2e8f0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.faderLayoutDockSwitch {
+  display: flex;
+  flex: 1 1 18rem;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  min-width: 0;
+
+  :global(.ab-view-tab) {
+    flex: 1 1 9rem;
+    justify-content: center;
+    min-height: 40px;
+    min-width: 0;
+  }
 }
 
 .channelsGrid {
@@ -2983,6 +3057,29 @@
     min-height: 44px;
     font-size: 13px;
   }
+
+  .faderLayoutDock {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+    top: 6px;
+  }
+
+  .faderLayoutDockSummary {
+    align-items: center;
+    flex-direction: row;
+    justify-content: space-between;
+    min-width: 0;
+  }
+
+  .faderLayoutDockSwitch {
+    flex: 1 1 auto;
+    justify-content: stretch;
+
+    :global(.ab-view-tab) {
+      flex-basis: 0;
+    }
+  }
 }
 
 @media (max-width: 480px) {
@@ -3351,6 +3448,7 @@
 
   .header,
   .controlsPanel,
+  .faderLayoutDock,
   .globalChannelNamesSection,
   .envelopeAutomationSection,
   .midiOscSection,
@@ -3490,6 +3588,43 @@
     padding: 12px;
     max-height: min(34vh, 390px);
     resize: none;
+  }
+
+  .faderLayoutDock {
+    order: 3;
+    border-radius: 2px;
+    border-color: #070609;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.07), transparent 38%),
+      repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 7px),
+      linear-gradient(180deg, #2d2933 0%, #18151d 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.68),
+      0 9px 18px rgba(0, 0, 0, 0.35);
+    backdrop-filter: none;
+  }
+
+  .faderLayoutDockLabel,
+  .faderLayoutDockValue {
+    font-family: var(--rk-mono, var(--font-mono, monospace));
+    letter-spacing: 0.04em;
+  }
+
+  .faderLayoutDockLabel {
+    color: #a99d8c;
+  }
+
+  .faderLayoutDockValue {
+    color: #efb15a;
+    text-shadow: 0 1px 0 #000;
+  }
+
+  .orientationSwitch,
+  .faderLayoutDockSwitch {
+    :global(.ab-view-tab) {
+      min-height: 42px;
+    }
   }
 
   .controlGroup {
