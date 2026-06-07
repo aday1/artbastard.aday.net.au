@@ -511,6 +511,16 @@
   color: #10b981;
 }
 
+.fineSlider,
+.dimmerSlider,
+.brightnessSlider {
+  box-sizing: border-box;
+  width: calc(100% - 32px);
+  max-width: calc(100% - 32px);
+  margin-inline: 16px;
+  overflow: visible;
+}
+
 // Scenes
 .scenesSection {
   margin-bottom: 24px;

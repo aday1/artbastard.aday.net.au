@@ -42,6 +42,21 @@ $thumb-d: $form-h;
   pointer-events: none;
 }
 
+.horizontalHost {
+  --ab-range-end-pad: max(1rem, calc(var(--fader-thumb-d, 2.5rem) / 2));
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding-inline: var(--ab-range-end-pad);
+  overflow: visible;
+
+  .input {
+    display: block;
+    width: 100%;
+    max-width: none;
+  }
+}
+
 .input:global(.ab-dmx-range) {
   touch-action: none;
   -webkit-tap-highlight-color: transparent;
@@ -119,4 +134,10 @@ $thumb-d: $form-h;
 
 .datalist {
   display: none;
+}
+
+@media (max-width: 640px) {
+  .horizontalHost {
+    --ab-range-end-pad: max(0.85rem, calc(var(--fader-thumb-d, 2.25rem) / 2));
+  }
 }

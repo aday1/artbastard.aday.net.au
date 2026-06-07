@@ -101,7 +101,11 @@ export const MasterStyledSlider: React.FC<MasterStyledSliderProps> = ({
       style={vertical ? { height } : undefined}
       onSubmit={(e) => e.preventDefault()}
     >
-      {vertical ? <div className="ab-dmx-range-host--vertical">{rangeInput}</div> : rangeInput}
+      {vertical ? (
+        <div className="ab-dmx-range-host--vertical">{rangeInput}</div>
+      ) : (
+        <div className={styles.horizontalHost}>{rangeInput}</div>
+      )}
       <datalist id={ticksId} className={styles.datalist}>
         <option label="min" value={min} />
         <option label="max" value={max} />

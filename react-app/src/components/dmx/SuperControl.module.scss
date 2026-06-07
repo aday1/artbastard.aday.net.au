@@ -30,7 +30,7 @@
   }
 
   .monitoringSection {
-    --channel-dock-width: clamp(9.5rem, 34vw, 13rem);
+    --channel-dock-width: var(--ab-channel-dock-inline-reserve, 0px);
     padding-right: calc(var(--channel-dock-width) + 8px);
   }
 
@@ -1724,7 +1724,7 @@ $color-wheel-checker: repeating-conic-gradient(
 
 // Channel and Fixture Monitoring Section
 .monitoringSection {
-  --channel-dock-width: clamp(12rem, 22vw, 20rem);
+  --channel-dock-width: var(--ab-channel-dock-inline-reserve, 0px);
   position: relative;
   background: rgba(0, 212, 255, 0.05);
   border: 1px solid rgba(0, 212, 255, 0.2);
@@ -1815,6 +1815,7 @@ $color-wheel-checker: repeating-conic-gradient(
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
     padding: 12px;
+    min-width: min(14rem, 78vw);
     
     .fixtureHeader {
       display: flex;
