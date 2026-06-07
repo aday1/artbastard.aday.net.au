@@ -2157,7 +2157,7 @@
   &.channelStrip {
     grid-template-columns: repeat(auto-fill, minmax(9.5rem, 12.5rem));
     gap: 10px;
-    align-items: stretch;
+    align-items: start;
   }
 
   // Inline gridTemplateColumns from channels-per-row select overrides auto-fill
@@ -2175,7 +2175,7 @@
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
-  overflow: hidden;
+  overflow: visible;
 
   .channelHeader {
     flex-direction: column;
@@ -3574,6 +3574,7 @@
     min-height: 23rem;
     padding: 10px 7px 9px;
     position: relative;
+    overflow: visible;
 
     &::before,
     &::after {
@@ -3673,8 +3674,9 @@
     }
 
     .dmxChannel.channelStripCard {
-      min-height: 21.5rem;
+      min-height: auto;
       padding-inline: 5px;
+      overflow: visible;
     }
   }
 }

@@ -246,6 +246,9 @@ export const ChannelEnvelopeStrip: React.FC<ChannelEnvelopeStripProps> = ({ chan
               bpm={bpm}
               globalSpeed={(envelope.speed ?? 1) * envelopeAutomation.speed}
               editable
+              compact
+              mobileScrollFriendly
+              className={styles.quickCanvas}
               animatePlayhead={running}
               onPointsChange={(customPoints) =>
                 updateEnvelope(envelope.id, { waveform: 'custom', customPoints })

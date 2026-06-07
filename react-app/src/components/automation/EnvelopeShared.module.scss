@@ -58,11 +58,11 @@
 }
 
 .drawWrap {
-  height: 220px;
-  max-height: min(40vh, 280px);
-  min-height: 0;
+  height: auto;
+  min-height: clamp(12rem, 34dvh, 17rem);
+  max-height: none;
   flex: 0 0 auto;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .formRow {
@@ -121,5 +121,20 @@
 
   &:hover {
     background: color-mix(in srgb, #d68706 12%, transparent);
+  }
+}
+
+@media (max-width: 640px) {
+  .panel {
+    padding: 0.6rem;
+    overflow: visible;
+  }
+
+  .drawWrap {
+    min-height: clamp(13rem, 40dvh, 19rem);
+  }
+
+  .sliderRow {
+    grid-template-columns: 1fr;
   }
 }

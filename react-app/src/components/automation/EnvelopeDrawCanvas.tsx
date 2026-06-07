@@ -29,6 +29,8 @@ export interface EnvelopeDrawCanvasProps {
   onPointsChange?: (points: EnvelopePoint[]) => void;
   onWaveformChange?: (waveform: ChannelEnvelope['waveform']) => void;
   className?: string;
+  compact?: boolean;
+  mobileScrollFriendly?: boolean;
 }
 
 export type EnvelopeDrawTool = 'draw' | 'line' | 'erase';
@@ -104,6 +106,8 @@ export const EnvelopeDrawCanvas: React.FC<EnvelopeDrawCanvasProps> = ({
   onPointsChange,
   onWaveformChange,
   className = '',
+  compact = false,
+  mobileScrollFriendly = false,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -462,7 +466,17 @@ export const EnvelopeDrawCanvas: React.FC<EnvelopeDrawCanvasProps> = ({
   };
 
   return (
-    <div className={`${styles.root} ab-workbench-panel ${className}`}>
+    <div
+      className={[
+        styles.root,
+        compact ? styles.compact : '',
+        mobileScrollFriendly ? styles.mobileScrollFriendly : '',
+        'ab-workbench-panel',
+        className,
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
       {editable && (
         <div className="ab-workbench-panel__head">
           <span>Envelope editor</span>
@@ -505,6 +519,7 @@ export const EnvelopeDrawCanvas: React.FC<EnvelopeDrawCanvasProps> = ({
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
             onPointerLeave={handlePointerUp}
+            onPointerCancel={handlePointerUp}
             onContextMenu={(e) => e.preventDefault()}
           />
         </div>

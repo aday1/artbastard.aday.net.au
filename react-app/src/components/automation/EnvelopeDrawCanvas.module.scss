@@ -3,10 +3,14 @@
   flex-direction: column;
   flex: 0 0 auto;
   min-height: 0;
+  min-width: 0;
+  touch-action: pan-y;
 }
 
 .bodyPad {
   padding: 0.45rem;
+  min-height: 0;
+  overflow: visible;
 }
 
 .tools {
@@ -19,7 +23,7 @@
 .wrap {
   position: relative;
   width: 100%;
-  height: 220px;
+  height: clamp(160px, 30dvh, 220px);
   max-height: min(40vh, 280px);
   min-height: 160px;
   flex: 0 0 auto;
@@ -28,6 +32,7 @@
   box-shadow: inset 0 0 0 1px var(--wb-bevel-light, #5a48a0);
   background: #14102a;
   contain: layout size style;
+  touch-action: pan-y;
 }
 
 .wrap.editable {
@@ -45,6 +50,28 @@
   min-height: 0;
 }
 
+.compact {
+  .bodyPad {
+    padding: 0.35rem;
+  }
+
+  .wrap {
+    height: clamp(132px, 28dvh, 180px);
+    min-height: 132px;
+    max-height: none;
+  }
+
+  .hint {
+    display: none;
+  }
+}
+
+.mobileScrollFriendly {
+  .wrap.editable .canvas {
+    touch-action: pan-y;
+  }
+}
+
 .hint {
   margin: 0.4rem 0 0;
   font-family: var(--wb-mono, 'Share Tech Mono', monospace);
@@ -52,4 +79,30 @@
   letter-spacing: 0.04em;
   color: var(--wb-text-dim, #9c8cc8);
   line-height: 1.4;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .wrap.editable .canvas {
+    touch-action: pan-y;
+  }
+}
+
+@media (max-width: 640px) {
+  .bodyPad {
+    padding: 0.35rem;
+  }
+
+  .wrap.editable .canvas {
+    touch-action: pan-y;
+  }
+
+  .wrap {
+    height: clamp(150px, 34dvh, 210px);
+    min-height: 150px;
+  }
+
+  .compact .wrap {
+    height: clamp(140px, 34dvh, 190px);
+    min-height: 140px;
+  }
 }
