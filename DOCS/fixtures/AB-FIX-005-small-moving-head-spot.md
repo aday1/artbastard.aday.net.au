@@ -75,7 +75,14 @@
 | 40-47 | Gobo 6 |
 | 48-55 | Gobo 7 |
 | 56-63 | Gobo 8 |
-| 64-127 | Gobo jitter positions |
+| 64-71 | Gobo 1 jitter |
+| 72-79 | Gobo 2 jitter |
+| 80-87 | Gobo 3 jitter |
+| 88-95 | Gobo 4 jitter |
+| 96-103 | Gobo 5 jitter |
+| 104-111 | Gobo 6 jitter |
+| 112-119 | Gobo 7 jitter |
+| 120-127 | Gobo 8 jitter |
 | 128-189 | Gobo wheel rotate fast to slow, then stop |
 | 190-193 | Fast gobo rotation |
 | 194-255 | Gobo wheel rotate slow to fast |
@@ -105,8 +112,8 @@
 | Movement Macro | 250-255 | Sound effect show |
 | Dim Mode / Reset | 0-20 | Standard dim mode |
 | Dim Mode / Reset | 21-40 | Stage dim mode |
-| Dim Mode / Reset | 41-60 | All dim mode |
-| Dim Mode / Reset | 61-80 | Sliding dim mode |
+| Dim Mode / Reset | 41-60 | TV dim mode |
+| Dim Mode / Reset | 61-80 | Building dim mode |
 | Dim Mode / Reset | 81-100 | Theatre dim mode |
 | Dim Mode / Reset | 101-255 | Reset |
 

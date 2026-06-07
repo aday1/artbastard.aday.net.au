@@ -180,7 +180,14 @@ const goboWheelRanges = [
   range(40, 47, 'Gobo 6'),
   range(48, 55, 'Gobo 7'),
   range(56, 63, 'Gobo 8'),
-  range(64, 127, 'Gobo jitter positions'),
+  range(64, 71, 'Gobo 1 jitter'),
+  range(72, 79, 'Gobo 2 jitter'),
+  range(80, 87, 'Gobo 3 jitter'),
+  range(88, 95, 'Gobo 4 jitter'),
+  range(96, 103, 'Gobo 5 jitter'),
+  range(104, 111, 'Gobo 6 jitter'),
+  range(112, 119, 'Gobo 7 jitter'),
+  range(120, 127, 'Gobo 8 jitter'),
   range(128, 189, 'Gobo wheel rotate fast to slow, then stop'),
   range(190, 193, 'Fast gobo rotation'),
   range(194, 255, 'Gobo wheel rotate slow to fast'),
@@ -209,8 +216,8 @@ const smallMoverMode = channel('Movement Macro', 'macro', [
 const smallMoverDimMode = channel('Dim Mode / Reset', 'reset', [
   range(0, 20, 'Standard dim mode'),
   range(21, 40, 'Stage dim mode'),
-  range(41, 60, 'All dim mode'),
-  range(61, 80, 'Sliding dim mode'),
+  range(41, 60, 'TV dim mode'),
+  range(61, 80, 'Building dim mode'),
   range(81, 100, 'Theatre dim mode'),
   range(101, 255, 'Reset'),
 ], true);
@@ -547,4 +554,3 @@ export const eventLightingEl1000Rgb: FixtureLibraryEntry = {
     },
   ],
 };
-

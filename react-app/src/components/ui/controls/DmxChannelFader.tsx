@@ -3,6 +3,7 @@ import type { FixtureChannelRange } from '../../../store/types';
 import {
   clampToRange,
   findTickIndexForValue,
+  rangesToTickSteps,
   shouldUseTickFader,
 } from '../../../utils/fixtureChannelTicks';
 import { DmxVerticalFader, type DmxFaderSize } from './DmxVerticalFader';
@@ -41,6 +42,7 @@ export const DmxChannelFader: React.FC<DmxChannelFaderProps> = ({
 }) => {
   const useTicks = shouldUseTickFader(ticksOnly, fixtureRanges);
   const ranges = fixtureRanges ?? [];
+  const tickSteps = useMemo(() => rangesToTickSteps(ranges), [ranges]);
 
   const activeRange = useMemo(() => {
     if (!useTicks || !ranges.length) return { min, max };
@@ -52,15 +54,57 @@ export const DmxChannelFader: React.FC<DmxChannelFaderProps> = ({
   const showFullFader = !onToggleAuxFullRange || auxFullRange;
 
   if (!vertical) {
+    const tickMarks = tickSteps.flatMap((step) => [
+      {
+        value: step.min,
+        label: `${step.label}: ${step.min}-${step.max}`,
+        min: step.min,
+        max: step.max,
+      },
+      {
+        value: step.max,
+        label: `${step.label}: ${step.min}-${step.max}`,
+        min: step.min,
+        max: step.max,
+      },
+    ]);
+
     return (
-      <MasterStyledSlider
-        className={className}
-        value={value}
-        min={min}
-        max={max}
-        disabled={disabled}
-        onChange={onChange}
-      />
+      <div className={`${styles.horizontal} ${className}`}>
+        <MasterStyledSlider
+          value={value}
+          min={min}
+          max={max}
+          disabled={disabled}
+          ticks={tickMarks}
+          onChange={onChange}
+        />
+        {ticksOnly && tickSteps.length > 0 ? (
+          <div className={styles.horizontalTicks} aria-label="Fixture range notches">
+            {tickSteps.slice(0, 12).map((step, index) => {
+              const active = value >= step.min && value <= step.max;
+              return (
+                <button
+                  key={`${step.min}-${step.max}-${index}`}
+                  type="button"
+                  className={`${styles.horizontalTickButton} ${active ? styles.horizontalTickActive : ''}`}
+                  disabled={disabled}
+                  onClick={() => onChange(step.value)}
+                  title={`${step.label} (DMX ${step.min}-${step.max})`}
+                >
+                  <span>{step.label}</span>
+                  <small>{step.min}-{step.max}</small>
+                </button>
+              );
+            })}
+            {tickSteps.length > 12 ? (
+              <span className={styles.horizontalTicksMore}>
+                +{tickSteps.length - 12} more
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
     );
   }
 

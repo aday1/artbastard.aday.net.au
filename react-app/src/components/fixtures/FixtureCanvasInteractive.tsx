@@ -7,6 +7,7 @@ import DraggableFixturePalette from './DraggableFixturePalette';
 import { fixtureTemplates } from './fixtureTemplates';
 import { DmxFaderRow, ArtbastardXYPad } from '../ui/controls';
 import { getFixtureTypeColor, getFixtureTypeIcon } from '../../utils/fixturePresentation';
+import { FaderOrientationSwitch } from '../dmx/FaderOrientationSwitch';
 import styles from './FixtureCanvasInteractive.module.scss';
 
 interface FixtureCanvasInteractiveProps {
@@ -42,7 +43,9 @@ export const FixtureCanvasInteractive: React.FC<FixtureCanvasInteractiveProps> =
     midiLearnTarget,
     addNotification,
     midiMappings,
-    removeMidiMapping
+    removeMidiMapping,
+    dmxFaderOrientation,
+    setDmxFaderOrientation
   } = useStore();
 
   const { socket } = useSocket();
@@ -349,15 +352,8 @@ export const FixtureCanvasInteractive: React.FC<FixtureCanvasInteractiveProps> =
       const sliderY = controlYOffset + Math.floor(sliderCount / 4) * 90;
 
       // Special handling for common channel types
-      let orientation: 'vertical' | 'horizontal' = 'vertical';
+      let orientation: 'vertical' | 'horizontal' = dmxFaderOrientation;
       let controlLabel = channel.name;
-
-      // Color channels could be horizontal
-      if (channel.name.toLowerCase().includes('color') || 
-          channel.name.toLowerCase().includes('gobo') ||
-          channel.name.toLowerCase().includes('speed')) {
-        orientation = 'horizontal';
-      }
 
       controls.push({
         id: `control-slider-${index}-${Date.now()}`,
@@ -527,6 +523,15 @@ export const FixtureCanvasInteractive: React.FC<FixtureCanvasInteractiveProps> =
               <LucideIcon name="Magnet" />
               Snap
             </button>
+          </div>
+
+          <div className={`${styles.toolGroup} ${styles.orientationToolGroup}`}>
+            <span className={styles.toolGroupLabel}>Faders</span>
+            <FaderOrientationSwitch
+              value={dmxFaderOrientation}
+              onChange={setDmxFaderOrientation}
+              className={`${styles.orientationSwitch} ab-view-tabs`}
+            />
           </div>
 
           <div className={styles.toolGroup}>
@@ -753,6 +758,9 @@ export const FixtureCanvasInteractive: React.FC<FixtureCanvasInteractiveProps> =
               
               {/* Controls */}
               {placedFixture.controls.map(control => (
+                (() => {
+                  const controlOrientation = control.type === 'slider' ? dmxFaderOrientation : control.orientation;
+                  return (
                 <Draggable
                   key={control.id}
                   position={{ 
@@ -773,11 +781,12 @@ export const FixtureCanvasInteractive: React.FC<FixtureCanvasInteractiveProps> =
                   >
                     {control.type === 'slider' ? (
                       <div 
-                        className={`${styles.canvasSlider} ${control.orientation === 'horizontal' ? styles.horizontal : styles.vertical}`}
+                        className={`${styles.canvasSlider} ${controlOrientation === 'horizontal' ? styles.horizontal : styles.vertical}`}
                         onClick={(e) => e.stopPropagation()}
                       >
                         <DmxFaderRow
                           compact
+                          layout={controlOrientation === 'vertical' ? 'vertical' : 'horizontal'}
                           label={control.label}
                           controlName={`canvas-ctrl-${control.id}`}
                           value={control.currentValue}
@@ -880,6 +889,8 @@ export const FixtureCanvasInteractive: React.FC<FixtureCanvasInteractiveProps> =
                     ) : null}
                   </div>
                 </Draggable>
+                  );
+                })()
               ))}
             </React.Fragment>
           );
@@ -924,6 +935,7 @@ export const FixtureCanvasInteractive: React.FC<FixtureCanvasInteractiveProps> =
                 <div key={index} className={styles.channelControl}>
                   <DmxFaderRow
                     compact
+                    layout={dmxFaderOrientation}
                     label={channel.name || `Ch ${index + 1}`}
                     subtitle={`DMX ${dmxChannel + 1}`}
                     controlName={`fixture-ch-${index}`}

@@ -9,7 +9,7 @@ import {
 } from '../../context/SuperControlPreferencesContext'
 import { MidiLearnButton } from '../midi/MidiLearnButton'
 
-import { CURRENT_VERSION, getVersionDisplay, getBuildInfo } from '../../utils/version';
+import { getVersionDisplay, getBuildInfo } from '../../utils/version';
 import { isDebugEnabled, setDebugEnabled } from '../../utils/debugLog';
 import { ReleaseNotes } from './ReleaseNotes'
 import SettingsPanel from './SettingsPanel'
@@ -669,6 +669,63 @@ export const UnifiedSettings: React.FC = () => {
     }
   };
 
+  const settingsSections = [
+    { id: 'general', label: 'General', icon: 'fas fa-cogs' },
+    { id: 'theme', label: 'Theme', icon: 'fas fa-palette' },
+    { id: 'network', label: 'Network', icon: 'fas fa-network-wired' },
+    { id: 'midiOsc', label: 'MIDI & OSC', icon: 'fas fa-sliders-h' },
+    { id: 'performance', label: 'Performance', icon: 'fas fa-tachometer-alt' },
+    { id: 'debug', label: 'Debug & Diagnostics', icon: 'fas fa-bug' },
+    { id: 'help', label: 'Help & Documentation', icon: 'fas fa-question-circle' },
+    { id: 'advanced', label: 'Advanced', icon: 'fas fa-tools' },
+    { id: 'state', label: 'State Management', icon: 'fas fa-database' }
+  ];
+
+  const settingsOverviewCards = [
+    {
+      id: 'general',
+      title: 'Operate',
+      summary: `${theme} theme, ${darkMode ? 'dark' : 'light'} mode`,
+      detail: `${dmxFaderOrientation} faders`,
+      icon: 'fas fa-sliders-h',
+    },
+    {
+      id: 'network',
+      title: 'Output',
+      summary: connected ? 'Socket connected' : 'Socket disconnected',
+      detail: networkSettings.artnetEnabled ? `Art-Net ${networkSettings.port}` : 'Art-Net disabled',
+      icon: 'fas fa-network-wired',
+    },
+    {
+      id: 'midiOsc',
+      title: 'Control I/O',
+      summary: `${Object.keys(midiMappings).length} MIDI mappings`,
+      detail: 'MIDI, OSC, browser MIDI',
+      icon: 'fas fa-plug',
+    },
+    {
+      id: 'theme',
+      title: 'Look',
+      summary: serverSyncPending ? 'Appearance syncing' : 'Appearance synced',
+      detail: `${savedThemes.length} saved custom themes`,
+      icon: 'fas fa-palette',
+    },
+    {
+      id: 'state',
+      title: 'Rig Data',
+      summary: `${fixtures.length} fixtures`,
+      detail: `${masterSliders.length} master sliders`,
+      icon: 'fas fa-database',
+    },
+    {
+      id: 'debug',
+      title: 'Diagnostics',
+      summary: consoleDebugEnabled ? 'Console debug enabled' : 'Console debug off',
+      detail: getVersionDisplay(),
+      icon: 'fas fa-stethoscope',
+    },
+  ];
+
   return (
     <div className={styles.unifiedSettings}>
       <div className={styles.panel}>
@@ -715,17 +772,7 @@ export const UnifiedSettings: React.FC = () => {
         <div className={styles.panelContent}>
           {/* Navigation Tabs */}
           <div className={styles.tabNavigation}>
-            {[
-              { id: 'general', label: 'General', icon: 'fas fa-cogs' },
-              { id: 'theme', label: 'Theme', icon: 'fas fa-palette' },
-              { id: 'network', label: 'Network', icon: 'fas fa-network-wired' },
-              { id: 'midiOsc', label: 'MIDI & OSC', icon: 'fas fa-sliders-h' },
-              { id: 'performance', label: 'Performance', icon: 'fas fa-tachometer-alt' },
-              { id: 'debug', label: 'Debug & Diagnostics', icon: 'fas fa-bug' },
-              { id: 'help', label: 'Help & Documentation', icon: 'fas fa-question-circle' },
-              { id: 'advanced', label: 'Advanced', icon: 'fas fa-tools' },
-              { id: 'state', label: 'State Management', icon: 'fas fa-database' }
-            ].map(section => (
+            {settingsSections.map(section => (
               <button
                 key={section.id}
                 className={`${styles.tabButton} ${activeSection === section.id ? styles.active : ''}`}
@@ -739,6 +786,23 @@ export const UnifiedSettings: React.FC = () => {
 
           {/* Settings Sections */}
           <div className={styles.settingsContent}>
+            <div className={styles.settingsOverview} aria-label="Settings overview">
+              {settingsOverviewCards.map((card) => (
+                <button
+                  key={card.id}
+                  type="button"
+                  className={`${styles.settingsOverviewCard} ${activeSection === card.id ? styles.activeOverviewCard : ''}`}
+                  onClick={() => setActiveSection(card.id)}
+                >
+                  <i className={card.icon}></i>
+                  <span>
+                    <strong>{card.title}</strong>
+                    <small>{card.summary}</small>
+                    <em>{card.detail}</em>
+                  </span>
+                </button>
+              ))}
+            </div>
 
             {/* General Settings */}
             {activeSection === 'general' && (

@@ -41,6 +41,30 @@
   }
 }
 
+.orientationToolGroup {
+  flex-wrap: wrap;
+}
+
+.toolGroupLabel {
+  color: var(--color-text-secondary, #94a3b8);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.orientationSwitch {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 4px;
+
+  :global(.ab-view-tab) {
+    min-height: 36px;
+    padding: 0.35rem 0.55rem;
+    font-size: 0.72rem;
+  }
+}
+
 .toolButton {
   @extend .touch-target !optional;
   display: flex;
@@ -840,19 +864,19 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
   
   &.vertical {
-    height: 120px;
-    width: 60px;
+    min-height: 170px;
+    width: 92px;
     display: flex;
     flex-direction: column;
     align-items: center;
   }
   
   &.horizontal {
-    width: 120px;
-    height: 60px;
+    width: 180px;
+    min-height: 72px;
     display: flex;
-    flex-direction: row;
-    align-items: center;
+    flex-direction: column;
+    align-items: stretch;
   }
 }
 

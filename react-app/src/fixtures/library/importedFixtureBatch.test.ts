@@ -32,6 +32,21 @@ describe('imported user fixture batch AB-FIX-003 through AB-FIX-009', () => {
     expect(eventLightingEl1000Rgb.tags).toEqual(expect.arrayContaining(['ILDA', 'SAFETY']));
   });
 
+  it('keeps the small moving head manual-specific gobo and dim-mode ranges', () => {
+    const mode = smallMovingHeadSpot.modes.find((candidate) => candidate.name === '11-channel mode');
+    const gobo = mode?.channelData.find((channel) => channel.name === 'Gobo Wheel');
+    const dimMode = mode?.channelData.find((channel) => channel.name === 'Dim Mode / Reset');
+
+    expect(gobo?.ranges).toEqual(expect.arrayContaining([
+      expect.objectContaining({ min: 64, max: 71, description: 'Gobo 1 jitter' }),
+      expect.objectContaining({ min: 120, max: 127, description: 'Gobo 8 jitter' }),
+    ]));
+    expect(dimMode?.ranges).toEqual(expect.arrayContaining([
+      expect.objectContaining({ min: 41, max: 60, description: 'TV dim mode' }),
+      expect.objectContaining({ min: 61, max: 80, description: 'Building dim mode' }),
+    ]));
+  });
+
   it('keeps store and canvas adapters compatible with photo and no-photo entries', () => {
     const withPhoto = toStoreFixtureTemplate(tinyLedMovingHeadWash);
     const withoutPhoto = toCanvasFixtureTemplate(eventLightingEl1000Rgb);

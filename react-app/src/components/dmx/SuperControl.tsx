@@ -33,6 +33,79 @@ interface SuperControlProps {
 }
 
 type SelectionMode = 'channels' | 'fixtures' | 'groups' | 'capabilities';
+type SuperControlPanelId =
+  | 'selection'
+  | 'monitoring'
+  | 'midiOsc'
+  | 'scenes'
+  | 'basic'
+  | 'panTilt'
+  | 'rgb'
+  | 'effects'
+  | 'envelopes'
+  | 'directDmx'
+  | 'colorAutopilot';
+
+interface SuperControlPanelLayoutState {
+  order: SuperControlPanelId[];
+  collapsed: Partial<Record<SuperControlPanelId, boolean>>;
+  hidden: Partial<Record<SuperControlPanelId, boolean>>;
+}
+
+const SUPER_CONTROL_LAYOUT_KEY = 'artbastard.superControl.panelLayout.v1';
+const DEFAULT_SUPER_CONTROL_PANEL_ORDER: SuperControlPanelId[] = [
+  'selection',
+  'monitoring',
+  'basic',
+  'panTilt',
+  'rgb',
+  'effects',
+  'scenes',
+  'midiOsc',
+  'envelopes',
+  'directDmx',
+  'colorAutopilot',
+];
+const SUPER_CONTROL_PANEL_LABELS: Record<SuperControlPanelId, string> = {
+  selection: 'Selection',
+  monitoring: 'Monitoring',
+  midiOsc: 'MIDI/OSC',
+  scenes: 'Scenes',
+  basic: 'Basic',
+  panTilt: 'Pan/Tilt',
+  rgb: 'RGB',
+  effects: 'Effects',
+  envelopes: 'Envelopes',
+  directDmx: 'Direct DMX',
+  colorAutopilot: 'Color Auto',
+};
+
+function normalizeSuperControlPanelLayout(raw: unknown): SuperControlPanelLayoutState {
+  const parsed = raw && typeof raw === 'object' ? raw as Partial<SuperControlPanelLayoutState> : {};
+  const incomingOrder = Array.isArray(parsed.order) ? parsed.order : [];
+  const validIds = new Set(DEFAULT_SUPER_CONTROL_PANEL_ORDER);
+  const order = [
+    ...incomingOrder.filter((id): id is SuperControlPanelId => validIds.has(id as SuperControlPanelId)),
+    ...DEFAULT_SUPER_CONTROL_PANEL_ORDER.filter((id) => !incomingOrder.includes(id)),
+  ];
+  return {
+    order,
+    collapsed: parsed.collapsed && typeof parsed.collapsed === 'object' ? parsed.collapsed : {},
+    hidden: parsed.hidden && typeof parsed.hidden === 'object' ? parsed.hidden : {},
+  };
+}
+
+function loadSuperControlPanelLayout(): SuperControlPanelLayoutState {
+  if (typeof window === 'undefined') {
+    return normalizeSuperControlPanelLayout(null);
+  }
+  try {
+    const raw = localStorage.getItem(SUPER_CONTROL_LAYOUT_KEY);
+    return normalizeSuperControlPanelLayout(raw ? JSON.parse(raw) : null);
+  } catch {
+    return normalizeSuperControlPanelLayout(null);
+  }
+}
 
 interface FixtureCapability {
   type: string;
@@ -149,6 +222,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
   const [selectionMode, setSelectionMode] = useState<SelectionMode>('channels');
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
   const [selectedCapabilities, setSelectedCapabilities] = useState<string[]>([]);
+  const [panelLayout, setPanelLayout] = useState<SuperControlPanelLayoutState>(loadSuperControlPanelLayout);
   // Control values state
   const [dimmer, setDimmer] = useState(255);
   const [panValue, setPanValue] = useState(127);
@@ -204,6 +278,69 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
   const [panTiltXY, setPanTiltXY] = useState({ x: 50, y: 50 });
   const xyPadRef = useRef<HTMLDivElement>(null);
   const [isDraggingXY, setIsDraggingXY] = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SUPER_CONTROL_LAYOUT_KEY, JSON.stringify(panelLayout));
+    } catch {
+      /* ignore layout persistence failures */
+    }
+  }, [panelLayout]);
+
+  const panelOrderIndex = useCallback(
+    (panelId: SuperControlPanelId) => {
+      const index = panelLayout.order.indexOf(panelId);
+      return index === -1 ? DEFAULT_SUPER_CONTROL_PANEL_ORDER.indexOf(panelId) : index;
+    },
+    [panelLayout.order]
+  );
+
+  const panelStyle = useCallback(
+    (panelId: SuperControlPanelId): React.CSSProperties => ({
+      order: panelOrderIndex(panelId),
+      display: panelLayout.hidden[panelId] ? 'none' : undefined,
+    }),
+    [panelLayout.hidden, panelOrderIndex]
+  );
+
+  const panelClass = useCallback(
+    (panelId: SuperControlPanelId) =>
+      `${styles.gridItem} ${panelLayout.collapsed[panelId] ? styles.gridItemCollapsed : ''}`,
+    [panelLayout.collapsed]
+  );
+
+  const movePanel = useCallback((panelId: SuperControlPanelId, direction: -1 | 1) => {
+    setPanelLayout((prev) => {
+      const order = [...prev.order];
+      const index = order.indexOf(panelId);
+      const nextIndex = index + direction;
+      if (index === -1 || nextIndex < 0 || nextIndex >= order.length) return prev;
+      [order[index], order[nextIndex]] = [order[nextIndex], order[index]];
+      return { ...prev, order };
+    });
+  }, []);
+
+  const togglePanelCollapsed = useCallback((panelId: SuperControlPanelId) => {
+    setPanelLayout((prev) => ({
+      ...prev,
+      collapsed: { ...prev.collapsed, [panelId]: !prev.collapsed[panelId] },
+    }));
+  }, []);
+
+  const togglePanelHidden = useCallback((panelId: SuperControlPanelId) => {
+    setPanelLayout((prev) => ({
+      ...prev,
+      hidden: { ...prev.hidden, [panelId]: !prev.hidden[panelId] },
+    }));
+  }, []);
+
+  const showAllPanels = useCallback(() => {
+    setPanelLayout((prev) => ({ ...prev, hidden: {} }));
+  }, []);
+
+  const resetPanelLayout = useCallback(() => {
+    setPanelLayout(normalizeSuperControlPanelLayout(null));
+  }, []);
 
   // MIDI Learn Processing
   useEffect(() => {
@@ -1328,8 +1465,69 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         <SelectedChannelsFaderStrip maxVisible={10} />
       )}
 
+      <div className={styles.panelLayoutBar} aria-label="Control layout manager">
+        <div className={styles.panelLayoutTitle}>
+          <LucideIcon name="PanelsTopLeft" />
+          <span>Control layout</span>
+        </div>
+        <div className={styles.panelLayoutActions}>
+          <button type="button" onClick={showAllPanels}>
+            <LucideIcon name="Eye" />
+            Show all
+          </button>
+          <button type="button" onClick={resetPanelLayout}>
+            <LucideIcon name="RotateCcw" />
+            Restore layout
+          </button>
+        </div>
+        <div className={styles.panelChipList}>
+          {panelLayout.order.map((panelId) => {
+            const hidden = Boolean(panelLayout.hidden[panelId]);
+            const collapsed = Boolean(panelLayout.collapsed[panelId]);
+            return (
+              <div
+                key={panelId}
+                className={`${styles.panelChip} ${hidden ? styles.panelChipHidden : ''} ${collapsed ? styles.panelChipCollapsed : ''}`}
+              >
+                <button
+                  type="button"
+                  onClick={() => togglePanelHidden(panelId)}
+                  title={hidden ? `Show ${SUPER_CONTROL_PANEL_LABELS[panelId]}` : `Hide ${SUPER_CONTROL_PANEL_LABELS[panelId]}`}
+                >
+                  <LucideIcon name={hidden ? 'EyeOff' : 'Eye'} />
+                  {SUPER_CONTROL_PANEL_LABELS[panelId]}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => togglePanelCollapsed(panelId)}
+                  title={collapsed ? 'Expand panel' : 'Collapse panel'}
+                >
+                  <LucideIcon name={collapsed ? 'Maximize2' : 'Minimize2'} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => movePanel(panelId, -1)}
+                  disabled={panelOrderIndex(panelId) === 0}
+                  title="Move panel left/up"
+                >
+                  <LucideIcon name="ArrowLeft" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => movePanel(panelId, 1)}
+                  disabled={panelOrderIndex(panelId) === panelLayout.order.length - 1}
+                  title="Move panel right/down"
+                >
+                  <LucideIcon name="ArrowRight" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       <div className={styles.autoLayoutContainer}>
-        <div className={styles.gridItem}>
+        <div className={panelClass('selection')} style={panelStyle('selection')}>
           <div className={styles.gridItemHeader}>
             <LucideIcon name="ListChecks" /> Selection
           </div>
@@ -1483,7 +1681,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
           </div>
         </div>
 
-        <div className={styles.gridItem}>
+        <div className={panelClass('monitoring')} style={panelStyle('monitoring')}>
           <div className={styles.gridItemHeader}>
             <LucideIcon name="Activity" /> Monitoring
           </div>
@@ -1607,7 +1805,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
           </div>
         </div>
 
-        <div className={styles.gridItem}>
+        <div className={panelClass('midiOsc')} style={panelStyle('midiOsc')}>
           <button
             type="button"
             className={`${styles.gridItemHeader} ${styles.gridItemHeaderToggle}`}
@@ -1769,7 +1967,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
           )}
         </div>
 
-        <div className={styles.gridItem}>
+        <div className={panelClass('scenes')} style={panelStyle('scenes')}>
           <div className={styles.gridItemHeader}>
             <LucideIcon name="Film" /> Scene Management
           </div>
@@ -1942,7 +2140,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
           </div>
         </div>
 
-        <div className={styles.gridItem}>
+        <div className={panelClass('basic')} style={panelStyle('basic')}>
           <div className={styles.gridItemHeader}>
             <LucideIcon name="SlidersHorizontal" /> Basic Controls
           </div>
@@ -1966,7 +2164,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         </div>
 
         {(hasControlType('pan') || hasControlType('tilt')) && (
-          <div className={styles.gridItem}>
+          <div className={panelClass('panTilt')} style={panelStyle('panTilt')}>
             <div className={styles.gridItemHeader}>
               <LucideIcon name="Move" /> Pan/Tilt
               {panTiltAutopilot.enabled && (
@@ -2064,7 +2262,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         )}
 
         {(hasControlType('red') || hasControlType('green') || hasControlType('blue')) && (
-          <div className={styles.gridItem}>
+          <div className={panelClass('rgb')} style={panelStyle('rgb')}>
             <div className={styles.gridItemHeader}>
               <LucideIcon name="Palette" /> RGB Color
             </div>
@@ -2163,7 +2361,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         )}
 
         {(hasControlType('gobo') || hasControlType('shutter') || hasControlType('strobe') || hasControlType('lamp') || hasControlType('reset')) && (
-          <div className={styles.gridItem}>
+          <div className={panelClass('effects')} style={panelStyle('effects')}>
             <div className={styles.gridItemHeader}>
               <LucideIcon name="Zap" /> Effects
             </div>
@@ -2283,7 +2481,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         )}
 
         {selectionMode === 'channels' && selectedChannels.length > 0 && (
-          <div className={styles.gridItem}>
+          <div className={panelClass('envelopes')} style={panelStyle('envelopes')}>
             <div className={styles.gridItemHeader}>
               <LucideIcon name="Activity" /> Channel envelopes
             </div>
@@ -2303,7 +2501,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         )}
 
         {selectionMode === 'channels' && selectedChannels.length > 0 && !touchLayout && (
-          <div className={styles.gridItem}>
+          <div className={panelClass('directDmx')} style={panelStyle('directDmx')}>
             <div className={styles.gridItemHeader}>
               <LucideIcon name="Sliders" /> Direct DMX
             </div>
@@ -2369,7 +2567,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         )}
 
         {/* Color Autopilot Panel */}
-        <div className={styles.gridItem}>
+        <div className={panelClass('colorAutopilot')} style={panelStyle('colorAutopilot')}>
           <div className={styles.gridItemHeader}>
             <LucideIcon name="Palette" /> Color Autopilot
           </div>

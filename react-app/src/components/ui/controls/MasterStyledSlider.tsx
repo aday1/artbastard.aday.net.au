@@ -1,6 +1,13 @@
-import React, { useEffect, useId, useRef } from 'react';
+import React, { useEffect, useId, useMemo, useRef } from 'react';
 import { useRangeTouchGuard } from './useRangeTouchGuard';
 import styles from './MasterStyledSlider.module.scss';
+
+export interface MasterStyledSliderTick {
+  value: number;
+  label?: string;
+  min?: number;
+  max?: number;
+}
 
 export interface MasterStyledSliderProps {
   value: number;
@@ -17,6 +24,8 @@ export interface MasterStyledSliderProps {
   onTouchEnd?: () => void;
   className?: string;
   height?: number;
+  ticks?: MasterStyledSliderTick[];
+  showTickLabels?: boolean;
 }
 
 export const MasterStyledSlider: React.FC<MasterStyledSliderProps> = ({
@@ -34,10 +43,23 @@ export const MasterStyledSlider: React.FC<MasterStyledSliderProps> = ({
   onTouchEnd,
   className = '',
   height = 280,
+  ticks = [],
+  showTickLabels = false,
 }) => {
   const formRef = useRef<HTMLFormElement>(null);
   const ticksId = useId();
   const touchGuard = useRangeTouchGuard(disabled);
+  const normalizedTicks = useMemo(
+    () =>
+      ticks
+        .filter((tick) => Number.isFinite(tick.value))
+        .map((tick) => {
+          const clamped = Math.max(min, Math.min(max, tick.value));
+          const pct = max > min ? ((clamped - min) / (max - min)) * 100 : 0;
+          return { ...tick, value: clamped, pct };
+        }),
+    [ticks, min, max]
+  );
 
   useEffect(() => {
     formRef.current?.style.setProperty('--val', String(value));
@@ -104,10 +126,35 @@ export const MasterStyledSlider: React.FC<MasterStyledSliderProps> = ({
       {vertical ? (
         <div className="ab-dmx-range-host--vertical">{rangeInput}</div>
       ) : (
-        <div className={styles.horizontalHost}>{rangeInput}</div>
+        <div className={styles.horizontalHost}>
+          {rangeInput}
+          {normalizedTicks.length > 0 && (
+            <div className={styles.tickRail} aria-hidden="true">
+              {normalizedTicks.map((tick, index) => (
+                <span
+                  key={`${tick.value}-${index}`}
+                  className={styles.tickMark}
+                  style={{ left: `${tick.pct}%` }}
+                  title={tick.label}
+                >
+                  {showTickLabels && tick.label ? (
+                    <span className={styles.tickLabel}>{tick.label}</span>
+                  ) : null}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
       )}
       <datalist id={ticksId} className={styles.datalist}>
         <option label="min" value={min} />
+        {normalizedTicks.map((tick, index) => (
+          <option
+            key={`${tick.value}-${index}`}
+            label={tick.label || String(tick.value)}
+            value={tick.value}
+          />
+        ))}
         <option label="max" value={max} />
       </datalist>
     </form>
