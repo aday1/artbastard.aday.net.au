@@ -1,6 +1,6 @@
 {
   "name": "artbastard-dmx512",
-  "version": "5.2.0.8",
+  "version": "5.2.0.9",
   "description": "ArtBastard DMX512 Controller - Photonic Supremacy Edition. Élite Illumination Control for the Discerning Luminaire Artist.",
   "main": "dist/server.js",
   "bin": {

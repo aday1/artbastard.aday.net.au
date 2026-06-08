@@ -2373,29 +2373,38 @@ $color-wheel-checker: repeating-conic-gradient(
 // Auto-layout container for SuperControl panels
 .autoLayoutContainer {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  // --sc-columns lets the user override the column count from the header chrome.
+  // Falls back to responsive auto-fit when unset (the "Auto" choice).
+  grid-template-columns: var(--sc-columns, repeat(auto-fit, minmax(400px, 1fr)));
   gap: 20px;
   width: 100%;
   padding: 20px 0;
-  
+
   // Explicitly disable any react-grid-layout functionality
   .react-grid-layout,
   .react-grid-item {
     position: static !important;
     transform: none !important;
   }
-  
+
   // Hide all resize handles
   .react-resizable-handle {
     display: none !important;
   }
-  
-  @media (max-width: 1400px) {
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+
+  // When a panel is fullscreen, hide siblings — the fixed-position fullscreen
+  // panel takes the whole viewport so the rest of the grid is irrelevant.
+  &[data-fullscreen] > .gridItem:not(.gridItemFullscreen) {
+    display: none !important;
   }
-  
+
+  // Only apply the responsive fallbacks when no explicit column count is set.
+  @media (max-width: 1400px) {
+    grid-template-columns: var(--sc-columns, repeat(auto-fit, minmax(350px, 1fr)));
+  }
+
   @media (max-width: 1200px) {
-    grid-template-columns: 1fr;
+    grid-template-columns: var(--sc-columns, 1fr);
   }
 }
 
@@ -2415,6 +2424,13 @@ $color-wheel-checker: repeating-conic-gradient(
   user-select: none;
   pointer-events: auto;
   position: relative;
+  // Allow the user to drag the bottom edge to resize the panel vertically.
+  // overflow:hidden + resize:vertical gives a native handle in the corner.
+  // The content area below still has its own scroll, so the panel grows in
+  // height while its inner controls reflow within.
+  resize: vertical;
+  overflow: hidden;
+  min-height: 180px;
 
   .react-resizable-handle,
   .react-draggable-handle {
@@ -2432,9 +2448,26 @@ $color-wheel-checker: repeating-conic-gradient(
 
 .gridItemCollapsed {
   min-height: 0;
+  resize: none;
 
   .gridItemContent {
     display: none;
+  }
+}
+
+// Fullscreen overlay: lift the panel out of grid flow and pin to the viewport.
+.gridItemFullscreen {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 1000;
+  border-radius: 0;
+  resize: none;
+  height: auto !important;
+
+  .gridItemContent {
+    max-height: none;
+    height: auto;
+    flex: 1 1 auto;
   }
 }
 
@@ -2442,12 +2475,61 @@ $color-wheel-checker: repeating-conic-gradient(
   padding: 16px;
   flex: 1 1 auto;
   min-height: 150px;
-  max-height: min(70vh, 720px);
+  max-height: none;
   overflow: auto;
-  resize: both;
+  // The outer .gridItem now owns the resize handle, so the inner content just
+  // scrolls within whatever height the panel has been resized to.
+  resize: none;
   min-width: 18rem;
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--color-primary, #d68706) 45%, transparent) transparent;
+}
+
+// Header column-count picker.
+.columnPicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  border: 1px solid var(--wb-bevel-dark, #110a25);
+  background: var(--wb-surface, #251c44);
+  margin-right: 6px;
+
+  button {
+    min-width: 1.5rem;
+    height: 1.5rem;
+    padding: 0 0.4rem;
+    font: 600 0.7rem var(--wb-mono, 'Share Tech Mono', monospace);
+    border: none;
+    background: transparent;
+    color: var(--wb-text, #ece4f8);
+    border-radius: 3px;
+    cursor: pointer;
+    line-height: 1;
+
+    &:hover { color: var(--wb-copper, #ffa044); }
+  }
+
+  button.columnPickerActive {
+    background: var(--wb-copper, #ffa044);
+    color: var(--wb-panel, #2d2350);
+  }
+}
+
+.columnPickerLabel {
+  font-size: 0.65rem;
+  color: var(--wb-text-dim, #9c8cc8);
+  padding: 0 4px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+// Make the panel header look like a drag handle.
+.gridItemHeader[draggable='true'] {
+  cursor: grab;
+
+  &:active { cursor: grabbing; }
 }
 
 .envelopePanelStack {

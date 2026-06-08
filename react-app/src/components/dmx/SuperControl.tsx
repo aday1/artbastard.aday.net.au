@@ -50,7 +50,17 @@ interface SuperControlPanelLayoutState {
   order: SuperControlPanelId[];
   collapsed: Partial<Record<SuperControlPanelId, boolean>>;
   hidden: Partial<Record<SuperControlPanelId, boolean>>;
+  // 0 = auto-fit (default). 1-6 = explicit grid column count.
+  columns: number;
+  // Per-panel column span (1..columns). Defaults to 1.
+  spans: Partial<Record<SuperControlPanelId, number>>;
+  // Per-panel persisted pixel height of the content area (from user resize).
+  heights: Partial<Record<SuperControlPanelId, number>>;
+  // When set, that panel renders as a full-viewport overlay.
+  fullscreen: SuperControlPanelId | null;
 }
+
+const SUPER_CONTROL_MAX_COLUMNS = 6;
 
 const SUPER_CONTROL_LAYOUT_KEY = 'artbastard.superControl.panelLayout.v1';
 const SUPER_CONTROL_LOCAL_MIDI_MAPPINGS_KEY = 'artbastard.superControl.localMidiMappings.v1';
@@ -157,10 +167,38 @@ function normalizeSuperControlPanelLayout(raw: unknown): SuperControlPanelLayout
     ...incomingOrder.filter((id): id is SuperControlPanelId => validIds.has(id as SuperControlPanelId)),
     ...DEFAULT_SUPER_CONTROL_PANEL_ORDER.filter((id) => !incomingOrder.includes(id)),
   ];
+  const rawCols = typeof parsed.columns === 'number' ? parsed.columns : 0;
+  const columns = Math.max(0, Math.min(SUPER_CONTROL_MAX_COLUMNS, Math.floor(rawCols)));
+  const cleanSpans: Partial<Record<SuperControlPanelId, number>> = {};
+  if (parsed.spans && typeof parsed.spans === 'object') {
+    for (const id of DEFAULT_SUPER_CONTROL_PANEL_ORDER) {
+      const v = (parsed.spans as any)[id];
+      if (typeof v === 'number' && v >= 1 && v <= SUPER_CONTROL_MAX_COLUMNS) {
+        cleanSpans[id] = Math.floor(v);
+      }
+    }
+  }
+  const cleanHeights: Partial<Record<SuperControlPanelId, number>> = {};
+  if (parsed.heights && typeof parsed.heights === 'object') {
+    for (const id of DEFAULT_SUPER_CONTROL_PANEL_ORDER) {
+      const v = (parsed.heights as any)[id];
+      if (typeof v === 'number' && v >= 120 && v <= 4000) {
+        cleanHeights[id] = Math.round(v);
+      }
+    }
+  }
+  const fullscreen =
+    parsed.fullscreen && validIds.has(parsed.fullscreen as SuperControlPanelId)
+      ? (parsed.fullscreen as SuperControlPanelId)
+      : null;
   return {
     order,
     collapsed: parsed.collapsed && typeof parsed.collapsed === 'object' ? parsed.collapsed : {},
     hidden: parsed.hidden && typeof parsed.hidden === 'object' ? parsed.hidden : {},
+    columns,
+    spans: cleanSpans,
+    heights: cleanHeights,
+    fullscreen,
   };
 }
 
@@ -357,6 +395,42 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     }
   }, [panelLayout]);
 
+  // Watch user-driven resize of each panel root (CSS `resize: vertical` on
+  // .gridItem) and persist the new height keyed by the data-panel-id attribute.
+  const panelContainerRef = useRef<HTMLDivElement>(null);
+  const lastObservedHeights = useRef<Partial<Record<SuperControlPanelId, number>>>({});
+  useEffect(() => {
+    const root = panelContainerRef.current;
+    if (!root || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver((entries) => {
+      let pending: Partial<Record<SuperControlPanelId, number>> | null = null;
+      for (const entry of entries) {
+        const el = entry.target as HTMLElement;
+        const id = el.getAttribute('data-panel-id') as SuperControlPanelId | null;
+        if (!id) continue;
+        const h = Math.round(entry.contentRect.height + 1);
+        // Ignore tiny deltas (rounding noise during layout pass) and the very
+        // first observation (which is just the initial natural height).
+        const prev = lastObservedHeights.current[id];
+        lastObservedHeights.current[id] = h;
+        if (prev === undefined) continue;
+        if (Math.abs(prev - h) < 6) continue;
+        pending = pending ?? {};
+        pending[id] = h;
+      }
+      if (pending) {
+        const next = pending;
+        setPanelLayout((prevLayout) => ({
+          ...prevLayout,
+          heights: { ...prevLayout.heights, ...next },
+        }));
+      }
+    });
+    const panels = root.querySelectorAll<HTMLElement>('[data-panel-id]');
+    panels.forEach((p) => observer.observe(p));
+    return () => observer.disconnect();
+  }, [panelLayout.order]);
+
   const panelOrderIndex = useCallback(
     (panelId: SuperControlPanelId) => {
       const index = panelLayout.order.indexOf(panelId);
@@ -366,17 +440,49 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
   );
 
   const panelStyle = useCallback(
-    (panelId: SuperControlPanelId): React.CSSProperties => ({
-      order: panelOrderIndex(panelId),
-      display: panelLayout.hidden[panelId] ? 'none' : undefined,
-    }),
-    [panelLayout.hidden, panelOrderIndex]
+    (panelId: SuperControlPanelId): React.CSSProperties => {
+      const span = panelLayout.spans[panelId] ?? 1;
+      const colCount = panelLayout.columns > 0 ? panelLayout.columns : SUPER_CONTROL_MAX_COLUMNS;
+      const effectiveSpan = Math.max(1, Math.min(span, colCount));
+      const height = panelLayout.heights[panelId];
+      // Fullscreen takes over via CSS — don't pin a height in that case.
+      const isFullscreen = panelLayout.fullscreen === panelId;
+      return {
+        order: panelOrderIndex(panelId),
+        display: panelLayout.hidden[panelId] ? 'none' : undefined,
+        gridColumn: effectiveSpan > 1 ? `span ${effectiveSpan}` : undefined,
+        height: !isFullscreen && height ? `${height}px` : undefined,
+      };
+    },
+    [
+      panelLayout.columns,
+      panelLayout.fullscreen,
+      panelLayout.heights,
+      panelLayout.hidden,
+      panelLayout.spans,
+      panelOrderIndex,
+    ]
   );
 
   const panelClass = useCallback(
-    (panelId: SuperControlPanelId) =>
-      `${styles.gridItem} ${panelLayout.collapsed[panelId] ? styles.gridItemCollapsed : ''}`,
-    [panelLayout.collapsed]
+    (panelId: SuperControlPanelId) => {
+      const classes = [styles.gridItem];
+      if (panelLayout.collapsed[panelId]) classes.push(styles.gridItemCollapsed);
+      if (panelLayout.fullscreen === panelId) classes.push(styles.gridItemFullscreen);
+      return classes.join(' ');
+    },
+    [panelLayout.collapsed, panelLayout.fullscreen]
+  );
+
+  // Spread onto each panel root: className + style + data-panel-id (for the
+  // resize observer above) all in one place so individual JSX sites stay terse.
+  const panelProps = useCallback(
+    (panelId: SuperControlPanelId) => ({
+      className: panelClass(panelId),
+      style: panelStyle(panelId),
+      'data-panel-id': panelId,
+    }),
+    [panelClass, panelStyle]
   );
 
   const movePanel = useCallback((panelId: SuperControlPanelId, direction: -1 | 1) => {
@@ -408,6 +514,100 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     setPanelLayout((prev) => ({ ...prev, hidden: {} }));
   }, []);
 
+  const togglePanelFullscreen = useCallback((panelId: SuperControlPanelId) => {
+    setPanelLayout((prev) => ({
+      ...prev,
+      fullscreen: prev.fullscreen === panelId ? null : panelId,
+    }));
+  }, []);
+
+  const adjustPanelSpan = useCallback((panelId: SuperControlPanelId, delta: 1 | -1) => {
+    setPanelLayout((prev) => {
+      const current = prev.spans[panelId] ?? 1;
+      const cap = prev.columns > 0 ? prev.columns : SUPER_CONTROL_MAX_COLUMNS;
+      const next = Math.max(1, Math.min(cap, current + delta));
+      if (next === current) return prev;
+      return { ...prev, spans: { ...prev.spans, [panelId]: next } };
+    });
+  }, []);
+
+  const setColumnCount = useCallback((columns: number) => {
+    setPanelLayout((prev) => {
+      const next = Math.max(0, Math.min(SUPER_CONTROL_MAX_COLUMNS, Math.floor(columns)));
+      if (next === prev.columns) return prev;
+      // Clamp any existing spans down to the new column cap.
+      const cap = next > 0 ? next : SUPER_CONTROL_MAX_COLUMNS;
+      const spans: Partial<Record<SuperControlPanelId, number>> = {};
+      for (const [id, span] of Object.entries(prev.spans)) {
+        if (typeof span === 'number') spans[id as SuperControlPanelId] = Math.min(span, cap);
+      }
+      return { ...prev, columns: next, spans };
+    });
+  }, []);
+
+  // Drag-and-drop reordering: the header acts as the drag handle.
+  const dragIdRef = useRef<SuperControlPanelId | null>(null);
+
+  const handlePanelDragStart = useCallback(
+    (panelId: SuperControlPanelId, event: React.DragEvent<HTMLElement>) => {
+      // Ignore drags initiated on header buttons (they have their own onClick).
+      const target = event.target as HTMLElement;
+      if (target.closest('button')) {
+        event.preventDefault();
+        return;
+      }
+      dragIdRef.current = panelId;
+      event.dataTransfer.effectAllowed = 'move';
+      try {
+        event.dataTransfer.setData('text/x-supercontrol-panel', panelId);
+      } catch {
+        /* some browsers reject custom mime types — fall back below */
+      }
+    },
+    []
+  );
+
+  const handlePanelDragOver = useCallback((event: React.DragEvent<HTMLElement>) => {
+    if (!dragIdRef.current) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+  }, []);
+
+  const handlePanelDrop = useCallback(
+    (targetId: SuperControlPanelId, event: React.DragEvent<HTMLElement>) => {
+      event.preventDefault();
+      const sourceId = dragIdRef.current;
+      dragIdRef.current = null;
+      if (!sourceId || sourceId === targetId) return;
+      setPanelLayout((prev) => {
+        const order = [...prev.order];
+        const from = order.indexOf(sourceId);
+        const to = order.indexOf(targetId);
+        if (from === -1 || to === -1) return prev;
+        order.splice(from, 1);
+        order.splice(to, 0, sourceId);
+        return { ...prev, order };
+      });
+    },
+    []
+  );
+
+  const handlePanelDragEnd = useCallback(() => {
+    dragIdRef.current = null;
+  }, []);
+
+  // ESC exits fullscreen when active.
+  useEffect(() => {
+    if (!panelLayout.fullscreen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setPanelLayout((prev) => (prev.fullscreen ? { ...prev, fullscreen: null } : prev));
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [panelLayout.fullscreen]);
+
   const resetPanelLayout = useCallback(() => {
     setPanelLayout(normalizeSuperControlPanelLayout(null));
   }, []);
@@ -426,15 +626,53 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     const collapsed = Boolean(panelLayout.collapsed[panelId]);
     const index = panelOrderIndex(panelId);
     const title = SUPER_CONTROL_PANEL_LABELS[panelId];
+    const span = panelLayout.spans[panelId] ?? 1;
+    const colCap = panelLayout.columns > 0 ? panelLayout.columns : SUPER_CONTROL_MAX_COLUMNS;
+    const isFullscreen = panelLayout.fullscreen === panelId;
 
     return (
-      <div className={styles.gridItemHeader}>
+      <div
+        className={styles.gridItemHeader}
+        draggable={!isFullscreen}
+        onDragStart={(e) => handlePanelDragStart(panelId, e)}
+        onDragOver={handlePanelDragOver}
+        onDrop={(e) => handlePanelDrop(panelId, e)}
+        onDragEnd={handlePanelDragEnd}
+        title={isFullscreen ? undefined : 'Drag to reorder'}
+      >
         <span className={styles.gridItemHeaderTitle}>
+          <LucideIcon name="GripVertical" />
           {icon}
           <span>{label}</span>
         </span>
         {status && <span className={styles.gridItemHeaderStatus}>{status}</span>}
         <span className={styles.cardLayoutControls} aria-label={`${title} layout controls`}>
+          <button
+            type="button"
+            onClick={() => adjustPanelSpan(panelId, -1)}
+            disabled={span <= 1 || isFullscreen}
+            title={`Shrink ${title} (span ${span})`}
+            aria-label={`Shrink ${title}`}
+          >
+            <LucideIcon name="ChevronsLeftRight" />
+          </button>
+          <button
+            type="button"
+            onClick={() => adjustPanelSpan(panelId, 1)}
+            disabled={span >= colCap || isFullscreen}
+            title={`Widen ${title} (span ${span})`}
+            aria-label={`Widen ${title}`}
+          >
+            <LucideIcon name="ChevronsRightLeft" />
+          </button>
+          <button
+            type="button"
+            onClick={() => togglePanelFullscreen(panelId)}
+            title={isFullscreen ? `Exit fullscreen` : `Fullscreen ${title}`}
+            aria-label={isFullscreen ? `Exit fullscreen` : `Fullscreen ${title}`}
+          >
+            <LucideIcon name={isFullscreen ? 'Shrink' : 'Expand'} />
+          </button>
           <button
             type="button"
             onClick={() => togglePanelHidden(panelId)}
@@ -454,7 +692,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
           <button
             type="button"
             onClick={() => movePanel(panelId, -1)}
-            disabled={index === 0}
+            disabled={index === 0 || isFullscreen}
             title={`Move ${title} earlier`}
             aria-label={`Move ${title} earlier`}
           >
@@ -463,7 +701,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
           <button
             type="button"
             onClick={() => movePanel(panelId, 1)}
-            disabled={index === panelLayout.order.length - 1}
+            disabled={index === panelLayout.order.length - 1 || isFullscreen}
             title={`Move ${title} later`}
             aria-label={`Move ${title} later`}
           >
@@ -473,11 +711,20 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
       </div>
     );
   }, [
+    adjustPanelSpan,
+    handlePanelDragEnd,
+    handlePanelDragOver,
+    handlePanelDragStart,
+    handlePanelDrop,
     movePanel,
     panelLayout.collapsed,
+    panelLayout.columns,
+    panelLayout.fullscreen,
     panelLayout.order.length,
+    panelLayout.spans,
     panelOrderIndex,
     togglePanelCollapsed,
+    togglePanelFullscreen,
     togglePanelHidden,
   ]);
 
@@ -1633,6 +1880,21 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
             )}
           </div>
           <div className={styles.superControlHeaderActions} aria-label="Super Control layout recovery">
+            <span className={styles.columnPicker} role="group" aria-label="Column count">
+              <span className={styles.columnPickerLabel}>Cols</span>
+              {[0, 1, 2, 3, 4, 5, 6].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setColumnCount(n)}
+                  className={panelLayout.columns === n ? styles.columnPickerActive : ''}
+                  title={n === 0 ? 'Auto-fit columns' : `${n} columns`}
+                  aria-pressed={panelLayout.columns === n}
+                >
+                  {n === 0 ? 'Auto' : n}
+                </button>
+              ))}
+            </span>
             {hiddenPanelCount > 0 && (
               <button type="button" onClick={showAllPanels} title="Show hidden cards">
                 <LucideIcon name="Eye" />
@@ -1651,8 +1913,17 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         <SelectedChannelsFaderStrip maxVisible={10} />
       )}
 
-      <div className={styles.autoLayoutContainer}>
-        <div className={panelClass('selection')} style={panelStyle('selection')}>
+      <div
+        ref={panelContainerRef}
+        className={styles.autoLayoutContainer}
+        data-fullscreen={panelLayout.fullscreen ?? undefined}
+        style={
+          panelLayout.columns > 0
+            ? ({ ['--sc-columns' as any]: `repeat(${panelLayout.columns}, minmax(0, 1fr))` } as React.CSSProperties)
+            : undefined
+        }
+      >
+        <div {...panelProps('selection')}>
           {renderPanelHeader('selection', <LucideIcon name="ListChecks" />, 'Selection')}
           <div className={styles.gridItemContent}>
             {/* Selection Mode */}
@@ -1804,7 +2075,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
           </div>
         </div>
 
-        <div className={panelClass('monitoring')} style={panelStyle('monitoring')}>
+        <div {...panelProps('monitoring')}>
           {renderPanelHeader('monitoring', <LucideIcon name="Activity" />, 'Monitoring')}
           <div className={styles.gridItemContent}>
             {/* Channel/Fixture Monitoring */}
@@ -1926,7 +2197,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
           </div>
         </div>
 
-        <div className={panelClass('midiOsc')} style={panelStyle('midiOsc')}>
+        <div {...panelProps('midiOsc')}>
           {renderPanelHeader(
             'midiOsc',
             <LucideIcon name="Music" />,
@@ -2093,7 +2364,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
           )}
         </div>
 
-        <div className={panelClass('scenes')} style={panelStyle('scenes')}>
+        <div {...panelProps('scenes')}>
           {renderPanelHeader('scenes', <LucideIcon name="Film" />, 'Scene Management')}
           <div className={styles.gridItemContent}>
             {/* Scene Management */}
@@ -2277,7 +2548,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
           </div>
         </div>
 
-        <div className={panelClass('basic')} style={panelStyle('basic')}>
+        <div {...panelProps('basic')}>
           {renderPanelHeader('basic', <LucideIcon name="SlidersHorizontal" />, 'Basic Controls')}
           <div className={styles.gridItemContent}>
             <div className={styles.section}>
@@ -2299,7 +2570,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         </div>
 
         {(hasControlType('pan') || hasControlType('tilt')) && (
-          <div className={panelClass('panTilt')} style={panelStyle('panTilt')}>
+          <div {...panelProps('panTilt')}>
             {renderPanelHeader(
               'panTilt',
               <LucideIcon name="Move" />,
@@ -2398,7 +2669,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         )}
 
         {(hasControlType('red') || hasControlType('green') || hasControlType('blue')) && (
-          <div className={panelClass('rgb')} style={panelStyle('rgb')}>
+          <div {...panelProps('rgb')}>
             {renderPanelHeader('rgb', <LucideIcon name="Palette" />, 'RGB Color')}
             <div className={styles.gridItemContent}>
             <div className={styles.colorSection}>
@@ -2495,7 +2766,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         )}
 
         {(hasControlType('gobo') || hasControlType('shutter') || hasControlType('strobe') || hasControlType('lamp') || hasControlType('reset')) && (
-          <div className={panelClass('effects')} style={panelStyle('effects')}>
+          <div {...panelProps('effects')}>
             {renderPanelHeader('effects', <LucideIcon name="Zap" />, 'Effects')}
             <div className={styles.gridItemContent}>
               <div className={styles.section}>
@@ -2613,7 +2884,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         )}
 
         {selectionMode === 'channels' && selectedChannels.length > 0 && (
-          <div className={panelClass('envelopes')} style={panelStyle('envelopes')}>
+          <div {...panelProps('envelopes')}>
             {renderPanelHeader('envelopes', <LucideIcon name="Activity" />, 'Channel envelopes')}
             <div className={styles.gridItemContent}>
               <div className={styles.envelopePanelStack}>
@@ -2631,7 +2902,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         )}
 
         {selectionMode === 'channels' && selectedChannels.length > 0 && !touchLayout && (
-          <div className={panelClass('directDmx')} style={panelStyle('directDmx')}>
+          <div {...panelProps('directDmx')}>
             {renderPanelHeader('directDmx', <LucideIcon name="Sliders" />, 'Direct DMX')}
             <div className={styles.gridItemContent}>
               {/* Direct DMX Channel Controls */}
@@ -2695,7 +2966,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         )}
 
         {/* Color Autopilot Panel */}
-        <div className={panelClass('colorAutopilot')} style={panelStyle('colorAutopilot')}>
+        <div {...panelProps('colorAutopilot')}>
           {renderPanelHeader('colorAutopilot', <LucideIcon name="Palette" />, 'Color Autopilot')}
           <div className={styles.gridItemContent}>
             <div style={{ marginBottom: '12px' }}>
