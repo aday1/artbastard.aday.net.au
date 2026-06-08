@@ -4,6 +4,7 @@ import { useSocket } from '../../context/SocketContext'
 import { useTheme } from '../../context/ThemeContext'
 import { useGlobalBrowserMidi } from '../../hooks/useGlobalBrowserMidi'
 import { MIDI_CONTROLLER_TEMPLATES, detectTemplateForMidiInterface, MidiControllerTemplateId } from './midiControllerTemplates'
+import { Apc40Manual } from './Apc40Manual'
 import styles from './MidiOscSetup.module.scss'
 import { debugLog } from '../../utils/debugLog';
 
@@ -35,6 +36,7 @@ export const MidiOscSetup: React.FC = () => {
   const [applyingTemplateId, setApplyingTemplateId] = useState<MidiControllerTemplateId | null>(null)
   const [serverMidiExpanded, setServerMidiExpanded] = useState(false)
   const [browserMidiExpanded, setBrowserMidiExpanded] = useState(false)
+  const [apc40ManualExpanded, setApc40ManualExpanded] = useState(false)
 
   const {
     midiMessages,
@@ -863,6 +865,31 @@ export const MidiOscSetup: React.FC = () => {
               )}
             </div>
           </div>
+        </div>
+
+        {/* APC40 Manual Card */}
+        <div className={styles.card} style={{ gridColumn: '1 / -1' }}>
+          <button
+            type="button"
+            className={styles.cardHeaderToggle}
+            onClick={() => setApc40ManualExpanded((v) => !v)}
+            aria-expanded={apc40ManualExpanded}
+          >
+            <h3 title="Visual reference for the AKAI APC40 controller showing what each knob, fader, and button does">
+              {theme === 'artsnob' && 'APC40 Manual: The Tactile Codex'}
+              {theme === 'standard' && 'APC40 Visual Manual'}
+              {theme === 'minimal' && 'APC40 Manual'}
+            </h3>
+            <span className={styles.cardHeaderMeta}>
+              Hardware reference + live MIDI activity
+            </span>
+            <i className={`fas fa-chevron-${apc40ManualExpanded ? 'up' : 'down'}`} />
+          </button>
+          {apc40ManualExpanded && (
+            <div className={styles.cardBody}>
+              <Apc40Manual />
+            </div>
+          )}
         </div>
 
 

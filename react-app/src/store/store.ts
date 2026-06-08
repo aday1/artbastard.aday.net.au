@@ -35,6 +35,10 @@ import {
 import { sceneNameToOscPath } from '../utils/sceneCapture'
 import { debugLog } from '../utils/debugLog'
 import { shouldUseTouchOptimizedChrome } from '../utils/deviceSurface'
+import {
+  getTemplateById,
+  type SuperControlBinding,
+} from '../components/midi/midiControllerTemplates'
 
 export interface MidiMapping {
   channel: number
@@ -579,6 +583,10 @@ interface State extends AutomationState, TransitionTrackerSlice {
   midiInterfaces: string[]
   activeInterfaces: string[]
   midiMappings: Record<number, MidiMapping | undefined>;
+  // APC40-style SuperControl routing: MIDI input → SuperControl parameter
+  // applied against the current fixture selection. Keyed by binding (not by
+  // DMX channel) so a single MIDI control can update many DMX addresses.
+  superControlMidiMappings: SuperControlBinding[];
   envelopeSpeedMidiMapping: MidiMapping | null; // MIDI mapping for envelope automation speed
   midiLearnTarget:
   | { type: 'masterSlider'; id: string }
@@ -909,6 +917,9 @@ interface State extends AutomationState, TransitionTrackerSlice {
   removeMidiMapping: (dmxChannel: number) => void
   clearAllMidiMappings: () => void
   applyMidiControllerTemplate: (templateId: 'x_touch_mackie' | 'apc40_mk1', deviceName?: string) => Promise<boolean>
+  // Apply a MIDI value (0-255) to a SuperControl parameter, optionally
+  // scoped to the Nth selected fixture via slotIndex.
+  applySuperControlMidi: (controlName: string, value: number, slotIndex?: number) => void
   setEnvelopeSpeedMidiMapping: (mapping: MidiMapping | null) => void
   removeEnvelopeSpeedMidiMapping: () => void
   setMidiInterfaces: (interfaces: string[]) => void
@@ -1547,6 +1558,7 @@ export const useStore = create<State>()(
       midiInterfaces: [],
       activeInterfaces: [],
       midiMappings: {},
+      superControlMidiMappings: [],
       envelopeSpeedMidiMapping: (() => {
         // Load from localStorage
         try {
@@ -3297,6 +3309,12 @@ export const useStore = create<State>()(
             set({ midiMappings: mappingsFromServer });
           }
 
+          // Pull SuperControl bindings from the local template definition
+          // (the server only knows about raw-DMX mappings).
+          const localTemplate = getTemplateById(templateId);
+          const superControlMappings = localTemplate?.superControlMappings ?? [];
+          set({ superControlMidiMappings: superControlMappings });
+
           const templateLabel = templateId === 'x_touch_mackie'
             ? 'X-Touch Mackie template'
             : 'APC40 MK1 template';
@@ -3315,6 +3333,49 @@ export const useStore = create<State>()(
           });
           return false;
         }
+      },
+
+      applySuperControlMidi: (controlName, value, slotIndex) => {
+        const state = get();
+        const { fixtures, selectedFixtures } = state;
+        if (!selectedFixtures || selectedFixtures.length === 0) return;
+
+        const targets = slotIndex !== undefined
+          ? (selectedFixtures[slotIndex] ? [selectedFixtures[slotIndex]] : [])
+          : selectedFixtures;
+        if (targets.length === 0) return;
+
+        // Map control names to the channel-type aliases SuperControl recognises.
+        const channelTypeMap: Record<string, string[]> = {
+          masterDimmer: ['dimmer', 'intensity', 'master'],
+          dimmer: ['dimmer', 'intensity', 'master'],
+          pan: ['pan', 'pan_coarse'],
+          tilt: ['tilt', 'tilt_coarse'],
+          fine_pan: ['pan_fine', 'finepan', 'pan_lsb'],
+          fine_tilt: ['tilt_fine', 'finetilt', 'tilt_lsb'],
+          red: ['red', 'r'],
+          green: ['green', 'g'],
+          blue: ['blue', 'b'],
+          gobo: ['gobo', 'gobowheel', 'gobo_wheel'],
+          shutter: ['shutter'],
+          strobe: ['strobe'],
+          lamp: ['lamp', 'lamp_on', 'lamp_control'],
+          reset: ['reset', 'reset_control', 'function'],
+        };
+        const aliases = channelTypeMap[controlName] ?? [controlName.toLowerCase()];
+
+        targets.forEach((fixtureId) => {
+          const fixture = fixtures.find(f => f.id === fixtureId);
+          if (!fixture) return;
+          for (let i = 0; i < fixture.channels.length; i++) {
+            const ch = fixture.channels[i];
+            if (aliases.includes((ch.type || '').toLowerCase())) {
+              const dmxAddress = fixture.startAddress + i - 1;
+              get().setDmxChannelValue(dmxAddress, value);
+              break;
+            }
+          }
+        });
       },
 
       setEnvelopeSpeedMidiMapping: (mapping) => {

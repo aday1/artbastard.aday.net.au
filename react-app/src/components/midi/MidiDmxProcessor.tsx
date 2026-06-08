@@ -20,6 +20,8 @@ interface MidiRangeMapping {
 export const MidiDmxProcessor: React.FC = () => {
   const {
     midiMappings, // DMX channel mappings
+    superControlMidiMappings,
+    applySuperControlMidi,
     midiMessages,
     setDmxChannel,
     masterSliders,
@@ -29,6 +31,8 @@ export const MidiDmxProcessor: React.FC = () => {
     quickSceneMidiMapping,
   } = useStore(state => ({
     midiMappings: state.midiMappings,
+    superControlMidiMappings: state.superControlMidiMappings,
+    applySuperControlMidi: state.applySuperControlMidi,
     midiMessages: state.midiMessages,
     setDmxChannel: state.setDmxChannel,
     masterSliders: state.masterSliders,
@@ -169,7 +173,34 @@ export const MidiDmxProcessor: React.FC = () => {
         stableFunctions.setDmxChannel(dmxChannel, boundedValue);
       });
     }
-  }, [midiMappings, masterSliders, midiLearnTarget, stableFunctions, channelRangeMappings, normalizePitchToMidiValue]);
+
+    // SuperControl routing — also runs for direct (browser-low-latency) path
+    if (superControlMidiMappings && superControlMidiMappings.length > 0) {
+      superControlMidiMappings.forEach((binding) => {
+        if (binding.channel !== message.channel) return;
+        let matched = false;
+        let midiValue = 0;
+        if (messageType === 'cc' && binding.controller !== undefined &&
+            binding.controller === message.controller &&
+            typeof message.value === 'number') {
+          matched = true;
+          midiValue = message.value;
+        } else if (messageType === 'noteon' && binding.note !== undefined &&
+                   binding.note === message.note) {
+          matched = true;
+          midiValue = message.velocity ?? 0;
+        } else if (messageType === 'pitch' && binding.pitch &&
+                   typeof message.value === 'number') {
+          matched = true;
+          midiValue = normalizePitchToMidiValue(message.value);
+        }
+        if (matched) {
+          const dmxValue = Math.max(0, Math.min(255, Math.round((midiValue / 127) * 255)));
+          applySuperControlMidi(binding.controlName, dmxValue, binding.slotIndex);
+        }
+      });
+    }
+  }, [midiMappings, masterSliders, midiLearnTarget, stableFunctions, channelRangeMappings, normalizePitchToMidiValue, superControlMidiMappings, applySuperControlMidi]);
 
   // Process MIDI messages from store (for server MIDI and monitoring)
   useEffect(() => {
@@ -421,8 +452,42 @@ export const MidiDmxProcessor: React.FC = () => {
       if (!dmxMatchFound) {
         debugLog.log('[MidiDmxProcessor] No DMX channel mapped to received Note (after master slider check).');
       }    }
-    
-  }, [midiMessages, midiMappings, masterSliders, channelRangeMappings, stableFunctions, midiLearnTarget, normalizePitchToMidiValue]); // Use stable functions
+
+    // --- SuperControl routing (APC40-style template) ---
+    // Runs in addition to raw-DMX matching: a single MIDI control can drive a
+    // SuperControl parameter (dimmer / pan / RGB / etc.) across the current
+    // fixture selection. Templates that prefer this route ship an empty
+    // midiMappings, so the two paths don't double-write the same channel.
+    if (superControlMidiMappings && superControlMidiMappings.length > 0) {
+      superControlMidiMappings.forEach((binding) => {
+        if (binding.channel !== latestMessage.channel) return;
+
+        let matched = false;
+        let midiValue = 0;
+
+        if (latestType === 'cc' && binding.controller !== undefined &&
+            binding.controller === latestMessage.controller &&
+            typeof latestMessage.value === 'number') {
+          matched = true;
+          midiValue = latestMessage.value;
+        } else if (latestType === 'noteon' && binding.note !== undefined &&
+                   binding.note === latestMessage.note) {
+          matched = true;
+          midiValue = latestMessage.velocity ?? 0;
+        } else if (latestType === 'pitch' && binding.pitch &&
+                   typeof latestMessage.value === 'number') {
+          matched = true;
+          midiValue = normalizePitchToMidiValue(latestMessage.value);
+        }
+
+        if (matched) {
+          const dmxValue = Math.max(0, Math.min(255, Math.round((midiValue / 127) * 255)));
+          applySuperControlMidi(binding.controlName, dmxValue, binding.slotIndex);
+        }
+      });
+    }
+
+  }, [midiMessages, midiMappings, superControlMidiMappings, applySuperControlMidi, masterSliders, channelRangeMappings, stableFunctions, midiLearnTarget, normalizePitchToMidiValue]); // Use stable functions
   /**
    * Set a custom range mapping for a specific DMX channel
    */
