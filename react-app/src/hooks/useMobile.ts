@@ -19,7 +19,7 @@ const initialWidth = typeof window !== 'undefined' ? window.innerWidth : 1920;
  * shape of modern hardware and is the single source of truth for:
  *   - Layout -> mobile chrome vs sidebar chrome
  *   - App.tsx -> toast container position
- *   - store -> Sparkles default
+ *   - store -> touch-aware defaults
  */
 export const useMobile = () => {
   const [isMobile, setIsMobile] = useState<boolean>(initialWidth < PHONE_BP);

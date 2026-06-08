@@ -5,7 +5,6 @@ import { useMidiLearn } from '../../hooks/useMidiLearn';
 import { DockableComponent } from '../ui/DockableComponent';
 import { MasterStyledSlider } from '../ui/controls';
 import styles from './MasterFader.module.scss';
-import { Sparkles } from '../layout/Sparkles'; // Import Sparkles
 import { debugLog } from '../../utils/debugLog';
 
 
@@ -794,7 +793,6 @@ export const MasterFader: React.FC<MasterFaderProps> = ({
   };  // Render the core content
   const masterFaderContent = (
     <div className={`${styles.masterFaderContent} ${isMinimized ? styles.minimized : ''} ${compact ? styles.compact : ''}`}>
-      <Sparkles /> {/* Add Sparkles component here */}
         {/* Essential Action buttons - Always visible */}
       <div className={styles.headerActions}>
         <button 

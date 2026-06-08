@@ -420,20 +420,16 @@
 /* @media (max-width: 768px) { ... } */
 
 /* Ensure NetworkStatus and other elements fit well */
-/* This is a generic placeholder; specific styling for NetworkStatus might be needed */
-.navContent > :global(.networkStatusWrapper), /* If NetworkStatus is wrapped */
-.navContent > :global(.sparklesWrapper) { /* If Sparkles is wrapped */
+.navContent > :global(.networkStatusWrapper) {
   padding: 0.5rem 0;
   width: 100%;
 }
 
-.navBarCollapsedState .navContent > :global(.networkStatusWrapper) span,
-.navBarCollapsedState .navContent > :global(.sparklesWrapper) span { /* Example for hiding text in these too */
+.navBarCollapsedState .navContent > :global(.networkStatusWrapper) span {
   display: none;
 }
 
-.navBarCollapsedState .navContent > :global(.networkStatusWrapper) svg,
-.navBarCollapsedState .navContent > :global(.sparklesWrapper) svg {
+.navBarCollapsedState .navContent > :global(.networkStatusWrapper) svg {
   margin: 0 auto; /* Center icon */
 }
 

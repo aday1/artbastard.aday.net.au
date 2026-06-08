@@ -6,7 +6,7 @@ import { PinnedChannels } from './PinnedChannels'
 import { ToastContainer } from './ToastContainer'
 import { NetworkStatus } from './NetworkStatus'
 import FancyQuotes from './FancyQuotes'
-import { Sparkles } from './Sparkles'
+import { DmxActivityGlow } from './DmxActivityGlow'
 import BpmIndicator from '../audio/BpmIndicator'
 import SignalFlashIndicator from '../midi/SignalFlashIndicator'
 import PageRouter from '../router/PageRouter'
@@ -131,7 +131,7 @@ const LayoutBody: React.FC<LayoutProps> = ({ children }) => {
         }}
       >
         {/* Global UI Effects */}
-        <Sparkles />
+        <DmxActivityGlow />
         {/* <BpmIndicator /> */}
         {/* <SignalFlashIndicator position="bottom-left" /> */}
 

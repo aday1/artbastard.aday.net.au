@@ -12,7 +12,7 @@ export interface VersionInfo {
 }
 
 export const CURRENT_VERSION: VersionInfo = {
-  version: '5.2.0.0',
+  version: '5.2.0.1',
   buildDate: '2026-06-08',
   releaseType: 'stable',
   features: [
@@ -22,9 +22,12 @@ export const CURRENT_VERSION: VersionInfo = {
     'Channel role icons, fixture-aware tracker, live theme tuning',
     'Touch-friendly DMX faders with page-scroll isolation on mobile',
     'Single main scroll region; resizable panels; Canvas DMX mobile default',
-    'Toggleable activity and pattern trackers; compact DMX strips hide unused channels'
+    'Toggleable activity and pattern trackers; compact DMX strips hide unused channels',
+    'Lightweight DMX activity glow replaces particle Sparkles for smoother browsers'
   ],
   changelog: [
+    'v5.2.0.1: Particle Sparkles removed; DMX sends now pulse a single lightweight page glow',
+    'v5.2.0.1: Sparkles toggles removed from nav, drawer, and app context menu',
     'v5.2.0.0: Live/dev canonical build; stale beta lane labels retired',
     'v5.2.0.0: DMX strip compact mode hides unused channels with one-tap full 512 fallback',
     'v5.2.0.0: Activity tracker and pattern tracker can be toggled independently',
@@ -36,6 +39,13 @@ export const CURRENT_VERSION: VersionInfo = {
 };
 
 export const VERSION_HISTORY: VersionInfo[] = [
+  {
+    version: '5.2.0.1',
+    buildDate: '2026-06-08',
+    releaseType: 'stable',
+    features: CURRENT_VERSION.features,
+    changelog: CURRENT_VERSION.changelog
+  },
   {
     version: '5.2.0.0',
     buildDate: '2026-06-08',

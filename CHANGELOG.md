@@ -4,6 +4,19 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [5.2.0.1] - 2026-06-08 - DMX activity glow performance patch
+
+### Changed
+
+- Removed the GPU-heavy Sparkles particle layer entirely.
+- Replaced Sparkles with a single lightweight page glow when DMX channel values change.
+- Renamed the settings control to DMX Activity Glow and made off/low/medium/high control glow intensity only.
+
+### Removed
+
+- Removed Sparkles ON/OFF from the desktop navbar, mobile drawer, and app context menu.
+- Removed the duplicated Sparkles render path inside the master fader.
+
 ## [5.2.0.0] - 2026-06-08 - Confirmed live/dev ArtBastard line
 
 This is the current state-of-the-art ArtBastard build for both live and dev lanes. The separate beta identity is retired; develop on dev, promote to live, and keep both labels visibly tied to the same ArtBastard codebase.

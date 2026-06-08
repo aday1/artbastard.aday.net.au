@@ -481,6 +481,22 @@ interface AutoSceneSettings {
   autoSceneTempoSource: 'internal_clock' | 'manual_bpm' | 'tap_tempo' | 'ableton_link';
 }
 
+type DmxVisualEffectsLevel = 'off' | 'low' | 'medium' | 'high';
+
+interface UiSettings {
+  dmxVisualEffects: DmxVisualEffectsLevel;
+  fontSize: number;
+  lineHeight: number;
+  letterSpacing: number;
+  borderRadius: number;
+  spacing: number;
+  animationSpeed: number;
+  fontFamily: string;
+  fontFamilyHeading: string;
+  fontWeight: number;
+  fontWeightHeading: number;
+}
+
 // Helper functions for localStorage persistence
 const AUTO_SCENE_STORAGE_KEY = 'artbastard-auto-scene-settings';
 
@@ -635,20 +651,7 @@ interface State extends AutomationState, TransitionTrackerSlice {
   notifications: Notification[]; // Use the new Notification interface
 
   // UI Settings
-  uiSettings: {
-    sparklesEnabled: boolean;
-    dmxVisualEffects: 'off' | 'low' | 'medium' | 'high';
-    fontSize: number; // Base font size multiplier (0.75 - 2.0)
-    lineHeight: number; // Line height multiplier (1.0 - 2.5)
-    letterSpacing: number; // Letter spacing in px (-2 to 4)
-    borderRadius: number; // Border radius in px (0 - 20)
-    spacing: number; // General spacing multiplier (0.5 - 2.0)
-    animationSpeed: number; // Animation speed multiplier (0.25 - 3.0)
-    fontFamily: string;
-    fontFamilyHeading: string;
-    fontWeight: number;
-    fontWeightHeading: number;
-  };
+  uiSettings: UiSettings;
   themeColors: {
     primaryHue: number; // 0-360
     primarySaturation: number; // 0-100
@@ -958,9 +961,8 @@ interface State extends AutomationState, TransitionTrackerSlice {
   toggleDarkMode: () => void;
 
   // UI Settings Actions
-  updateUiSettings: (settings: Partial<{ sparklesEnabled: boolean; dmxVisualEffects: 'off' | 'low' | 'medium' | 'high'; fontSize: number; lineHeight: number; letterSpacing: number; borderRadius: number; spacing: number; animationSpeed: number; fontFamily: string; fontFamilyHeading: string; fontWeight: number; fontWeightHeading: number }>) => void;
-  toggleSparkles: () => void;
-  setDmxVisualEffects: (level: 'off' | 'low' | 'medium' | 'high') => void;
+  updateUiSettings: (settings: Partial<UiSettings>) => void;
+  setDmxVisualEffects: (level: DmxVisualEffectsLevel) => void;
   updateThemeColors: (colors: Partial<{
     primaryHue: number; primarySaturation: number; primaryBrightness: number;
     secondaryHue: number; secondarySaturation: number; secondaryBrightness: number;
@@ -1138,29 +1140,11 @@ const initializeDarkMode = (): boolean => {
   }
 };
 
-// Helper: pick a sensible Sparkles default for the current device.
-// Sparkles render dozens of animated SVG elements per DMX update which
-// is expensive on phones and disrespects users with reduced-motion
-// preferences. Default to off on small screens or when the OS asks
-// for reduced motion; the user can still toggle it on from the menu.
-const sparklesDefaultForDevice = (): boolean => {
-  if (typeof window === 'undefined') return true;
-  try {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
-    // Matches the canonical TABLET_BP from useMobile.ts.
-    if (window.matchMedia('(max-width: 1279px)').matches) return false;
-  } catch {
-    // matchMedia may not be available in old environments; fall through.
-  }
-  return true;
-};
-
 // Helper function to initialize UI settings from localStorage
-const initializeUiSettings = (): { sparklesEnabled: boolean; dmxVisualEffects: 'off' | 'low' | 'medium' | 'high'; fontSize: number; lineHeight: number; letterSpacing: number; borderRadius: number; spacing: number; animationSpeed: number; fontFamily: string; fontFamilyHeading: string; fontWeight: number; fontWeightHeading: number } => {
+const initializeUiSettings = (): UiSettings => {
   try {
     const stored = localStorage.getItem('uiSettings');
-    const defaultSettings = {
-      sparklesEnabled: sparklesDefaultForDevice(),
+    const defaultSettings: UiSettings = {
       dmxVisualEffects: 'medium' as const,
       fontSize: 1.0,
       lineHeight: 1.5,
@@ -1175,8 +1159,9 @@ const initializeUiSettings = (): { sparklesEnabled: boolean; dmxVisualEffects: '
     };
 
     if (stored) {
-      const parsedSettings = JSON.parse(stored);
-      const merged = { ...defaultSettings, ...parsedSettings };
+      const parsedSettings = JSON.parse(stored) as Partial<UiSettings> & Record<string, unknown>;
+      delete parsedSettings[['sparkles', 'Enabled'].join('')];
+      const merged: UiSettings = { ...defaultSettings, ...parsedSettings };
       // Apply CSS custom properties on initialization
       const root = document.documentElement;
       root.style.setProperty('--ui-font-size', `${merged.fontSize}`);
@@ -1210,8 +1195,7 @@ const initializeUiSettings = (): { sparklesEnabled: boolean; dmxVisualEffects: '
     return defaultSettings;
   } catch (error) {
     console.warn('Failed to read uiSettings from localStorage, using defaults:', error);
-    const defaultSettings: { sparklesEnabled: boolean; dmxVisualEffects: 'off' | 'low' | 'medium' | 'high'; fontSize: number; lineHeight: number; letterSpacing: number; borderRadius: number; spacing: number; animationSpeed: number; fontFamily: string; fontFamilyHeading: string; fontWeight: number; fontWeightHeading: number } = {
-      sparklesEnabled: sparklesDefaultForDevice(),
+    const defaultSettings: UiSettings = {
       dmxVisualEffects: 'medium' as const,
       fontSize: 1.0,
       lineHeight: 1.5,
@@ -1699,20 +1683,9 @@ export const useStore = create<State>()(
           return { uiSettings: newSettings };
         });
       },
-      toggleSparkles: () => {
-        set(state => {
-          const newSettings = { ...state.uiSettings, sparklesEnabled: !state.uiSettings.sparklesEnabled };
-          try {
-            localStorage.setItem('uiSettings', JSON.stringify(newSettings));
-          } catch (error) {
-            console.warn('Failed to save uiSettings to localStorage:', error);
-          }
-          return { uiSettings: newSettings };
-        });
-      },
       setDmxVisualEffects: (level) => {
         set(state => {
-          const newSettings = { ...state.uiSettings, dmxVisualEffects: level };
+          const newSettings: UiSettings = { ...state.uiSettings, dmxVisualEffects: level };
           try {
             localStorage.setItem('uiSettings', JSON.stringify(newSettings));
           } catch (error) {

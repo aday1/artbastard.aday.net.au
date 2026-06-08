@@ -118,22 +118,13 @@ export function buildDmxChannelContextMenu(h: DmxChannelMenuHandlers): ContextMe
 export interface AppSurfaceMenuOptions {
   theme: 'artsnob' | 'standard' | 'minimal';
   darkMode: boolean;
-  sparklesEnabled: boolean;
   setTheme: (t: 'artsnob' | 'standard' | 'minimal') => void;
   toggleDarkMode: () => void;
-  toggleSparkles: () => void;
   setCurrentView?: (v: ViewType) => void;
 }
 
 export function buildAppContextMenu(o: AppSurfaceMenuOptions): ContextMenuItem[] {
   const items: ContextMenuItem[] = [
-    {
-      id: 'sparkles',
-      label: o.sparklesEnabled ? 'Disable sparkles' : 'Enable sparkles',
-      icon: 'Sparkles',
-      checked: o.sparklesEnabled,
-      onClick: () => o.toggleSparkles(),
-    },
     {
       id: 'dark',
       label: o.darkMode ? 'Light mode' : 'Dark mode',

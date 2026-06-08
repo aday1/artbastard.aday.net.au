@@ -6,7 +6,6 @@ export interface UiSlice {
   darkMode: boolean;
   notifications: Notification[];
   uiSettings: {
-    sparklesEnabled: boolean;
     dmxVisualEffects: 'off' | 'low' | 'medium' | 'high';
     fontSize: number;
     lineHeight: number;
@@ -73,7 +72,6 @@ const initializeUiSettings = () => {
     console.error('Failed to load UI settings:', e);
   }
   return {
-    sparklesEnabled: true,
     dmxVisualEffects: 'medium' as const,
     fontSize: 1.0,
     lineHeight: 1.5,

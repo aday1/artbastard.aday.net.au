@@ -42,8 +42,6 @@ export const Navbar: React.FC<NavbarProps> = ({ variant = 'sidebar', onItemSelec
   const midiMessages = useStore(state => state.midiMessages)
   const dmxChannels = useStore(state => state.dmxChannels)
   const channelNames = useStore(state => state.channelNames)
-  const uiSettings = useStore(state => state.uiSettings)
-  const toggleSparkles = useStore(state => state.toggleSparkles)
   const [midiActivity, setMidiActivity] = useState(false)
   const [dmxActivity, setDmxActivity] = useState(false)
 
@@ -172,26 +170,6 @@ export const Navbar: React.FC<NavbarProps> = ({ variant = 'sidebar', onItemSelec
           <button
             type="button"
             onClick={() => {
-              toggleSparkles()
-            }}
-            className={`${styles.drawerNavItem} ${uiSettings?.sparklesEnabled ? styles.drawerNavItemActive : ''}`}
-          >
-            <span className={styles.drawerNavIcon} aria-hidden="true">
-              <LucideIcon name="Sparkles" size={20} />
-            </span>
-            <span className={styles.drawerNavText}>
-              <span className={styles.drawerNavTitle}>
-                {uiSettings?.sparklesEnabled ? 'Sparkles on' : 'Sparkles off'}
-              </span>
-              <span className={styles.drawerNavDesc}>
-                Background motion. Disabled by default on small screens for performance.
-              </span>
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
               const event = new CustomEvent('resetLayout')
               window.dispatchEvent(event)
               localStorage.removeItem('midiMonitorDismissed')
@@ -316,18 +294,6 @@ export const Navbar: React.FC<NavbarProps> = ({ variant = 'sidebar', onItemSelec
         </div>
         
         <div className={styles.toolbarExtras}>
-          <div className={styles.resetLayoutSection}>
-            <button
-              type="button"
-              onClick={toggleSparkles}
-              className={`${styles.resetLayoutButton} ${uiSettings?.sparklesEnabled ? styles.active : ''}`}
-              title={uiSettings?.sparklesEnabled ? 'Disable sparkles' : 'Enable sparkles'}
-            >
-              <LucideIcon name="Sparkles" />
-              {!isCollapsed && <span>{uiSettings?.sparklesEnabled ? 'Sparkles ON' : 'Sparkles OFF'}</span>}
-            </button>
-          </div>
-
           <div className={styles.resetLayoutSection}>
             <button
               type="button"

@@ -471,7 +471,6 @@ export const UnifiedSettings: React.FC = () => {
             envelopes: []
           },
           uiSettings: {
-            sparklesEnabled: true,
             dmxVisualEffects: 'medium'
           },
           themeColors: {
@@ -1632,24 +1631,24 @@ export const UnifiedSettings: React.FC = () => {
                   </div>
                 </div>
 
-                {/* DMX Visual Effects */}
+                {/* DMX Activity Glow */}
                 <div className={styles.settingGroup}>
                   <label className={styles.settingLabel}>
-                    <i className="fas fa-sparkles"></i>
-                    DMX Visual Effects
+                    <i className="fas fa-bolt"></i>
+                    DMX Activity Glow
                   </label>
                   <select
                     value={uiSettings?.dmxVisualEffects || 'medium'}
                     onChange={(e) => setDmxVisualEffects(e.target.value as 'off' | 'low' | 'medium' | 'high')}
                     className={styles.settingSelect}
                   >
-                    <option value="off">Off - No visual effects</option>
-                    <option value="low">Low - Minimal GPU usage</option>
-                    <option value="medium">Medium - Balanced</option>
-                    <option value="high">High - Maximum visual effects</option>
+                    <option value="off">Off - No page glow</option>
+                    <option value="low">Low - Subtle activity halo</option>
+                    <option value="medium">Medium - Clear activity halo</option>
+                    <option value="high">High - Strong activity halo</option>
                   </select>
                   <p className={styles.settingDescription}>
-                    Control the intensity of visual effects when DMX messages are sent. Lower settings reduce GPU usage.
+                    Shows one lightweight page glow when DMX values change. No particles, no animated sparkle layer.
                   </p>
                 </div>
               </div>

@@ -29,8 +29,6 @@ export function ContextMenuProvider({ children }: { children: React.ReactNode })
   const { menu, openMenu, closeMenu } = useContextMenu();
   const { theme, darkMode, toggleDarkMode, setTheme } = useTheme();
   const { setCurrentView } = useRouter();
-  const toggleSparkles = useStore((s) => s.toggleSparkles);
-  const sparklesEnabled = useStore((s) => s.uiSettings.sparklesEnabled);
 
   const dmxChannels = useStore((s) => s.dmxChannels);
   const selectedChannels = useStore((s) => s.selectedChannels);
@@ -64,10 +62,8 @@ export function ContextMenuProvider({ children }: { children: React.ReactNode })
         buildAppContextMenu({
           theme,
           darkMode,
-          sparklesEnabled,
           setTheme,
           toggleDarkMode,
-          toggleSparkles,
           setCurrentView,
         })
       );
@@ -76,10 +72,8 @@ export function ContextMenuProvider({ children }: { children: React.ReactNode })
       openMenu,
       theme,
       darkMode,
-      sparklesEnabled,
       setTheme,
       toggleDarkMode,
-      toggleSparkles,
       setCurrentView,
     ]
   );
