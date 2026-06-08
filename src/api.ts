@@ -228,29 +228,34 @@ const saveFixtureTemplates = (templates: any[]) => {
   }
 };
 
-// Check for factory reset marker
+// Check for factory reset marker. Consume-on-read: delete the marker as soon
+// as we report factoryReset:true, otherwise the client's post-reset reload
+// sees the marker again and triggers another reload, looping until expiry.
 apiRouter.get('/factory-reset-check', (req, res) => {
   try {
-    if (fs.existsSync(FACTORY_RESET_MARKER)) {
-      const markerData = JSON.parse(fs.readFileSync(FACTORY_RESET_MARKER, 'utf-8'));
-      const markerTimestamp = markerData.timestamp || 0;
-      const now = Math.floor(Date.now() / 1000);
-      const markerAge = now - markerTimestamp;
-      
-      // Keep marker for 1 minute to allow multiple page loads/reloads to detect it
-      // After 1 minute, delete it automatically
-      if (markerAge > 60) { // 1 minute = 60 seconds
-        fs.unlinkSync(FACTORY_RESET_MARKER);
-        res.json({ factoryReset: false });
-      } else {
-        res.json({ factoryReset: true, timestamp: markerTimestamp });
-      }
-    } else {
-      res.json({ factoryReset: false });
+    if (!fs.existsSync(FACTORY_RESET_MARKER)) {
+      return res.json({ factoryReset: false });
     }
+
+    let markerTimestamp = 0;
+    try {
+      const markerData = JSON.parse(fs.readFileSync(FACTORY_RESET_MARKER, 'utf-8'));
+      markerTimestamp = markerData.timestamp || 0;
+    } catch {
+      // Corrupt marker — treat as stale and clear it below.
+    }
+
+    try { fs.unlinkSync(FACTORY_RESET_MARKER); } catch { /* race ok */ }
+
+    const now = Math.floor(Date.now() / 1000);
+    const markerAge = now - markerTimestamp;
+    if (markerTimestamp <= 0 || markerAge > 60) {
+      return res.json({ factoryReset: false });
+    }
+    return res.json({ factoryReset: true, timestamp: markerTimestamp });
   } catch (error) {
     log('Error checking factory reset marker', 'ERROR', { error });
-    res.json({ factoryReset: false });
+    return res.json({ factoryReset: false });
   }
 });
 
