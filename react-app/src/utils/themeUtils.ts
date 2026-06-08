@@ -135,6 +135,27 @@ const RACK_LIGHT: RackChrome = {
   rkLabelDim: '#6a6258',
 };
 
+const RACK_BETA: RackChrome = {
+  rkBg: '#070b12',
+  rkSurface: '#101827',
+  rkPanel: '#162338',
+  rkBevelHi: '#568aa2',
+  rkBevelLo: '#02060a',
+  rkAccent: '#00d7ff',
+  rkLabel: '#d9fbff',
+  rkLabelDim: '#7fa2b4',
+};
+
+function isBetaLaneHost(): boolean {
+  if (typeof window === 'undefined') return false;
+  const host = window.location.hostname.toLowerCase();
+  return host === 'artbastard-dev.aday.net.au' || host === 'artbastard-beta.aday.net.au';
+}
+
+function rackForCurrentHost(rack: RackChrome): RackChrome {
+  return isBetaLaneHost() ? RACK_BETA : rack;
+}
+
 function preset(
   id: string,
   name: string,
@@ -229,6 +250,7 @@ export const THEME_PRESETS: ThemePreset[] = [
 
 export function applyRackChrome(rack: RackChrome): void {
   const root = document.documentElement;
+  rack = rackForCurrentHost(rack);
   root.style.setProperty('--rk-bg', rack.rkBg);
   root.style.setProperty('--rk-surface', rack.rkSurface);
   root.style.setProperty('--rk-panel', rack.rkPanel);
@@ -344,3 +366,4 @@ export interface AppearanceSettings {
   themePresetId?: string;
   themeColors?: Partial<ThemeColorsHsl>;
 }
+
