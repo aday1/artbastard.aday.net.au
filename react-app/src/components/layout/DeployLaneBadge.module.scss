@@ -35,9 +35,10 @@
 .corner[data-lane='dev'],
 .topbar[data-lane='dev'],
 .inline[data-lane='dev'] {
-  color: #fff4d6;
-  background: rgba(232, 160, 32, 0.4);
-  border-color: rgba(255, 196, 64, 0.65);
+  color: #061018;
+  background: linear-gradient(135deg, #00d7ff, #ff4fd8);
+  border-color: rgb(246 224 94 / 0.78);
+  box-shadow: 0 0 14px rgb(0 215 255 / 0.5), 0 0 18px rgb(255 79 216 / 0.28);
 }
 
 .corner[data-lane='beta'],

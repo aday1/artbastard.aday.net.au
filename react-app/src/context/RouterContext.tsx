@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { shouldDefaultToMobileSurface } from '../utils/deviceSurface'
+import { shouldDefaultToBetaWorkbench, shouldDefaultToMobileSurface } from '../utils/deviceSurface'
 
 export type ViewType = 'fixture' | 'planner' | 'scenesActs' | 'acts' | 'misc' | 'state' | 'dmxControl' | 'mobile'
 
@@ -66,13 +66,15 @@ const hashToView = (hashValue: string): ViewType | null => {
 
 /**
  * Pick a sensible default view when the URL has no hash. Phones and
- * actual touch tablets default to the dedicated touch surface; desktop
- * browsers keep the rack/control UI even on the dev lane.
+ * actual touch tablets default to the dedicated touch surface. The
+ * beta/dev lane opens on the newer fixture workbench so it does not
+ * look like the retired live DMX wall.
  */
 const resolveDefaultView = (): ViewType => {
   if (typeof window === 'undefined') return 'dmxControl'
   try {
-    return shouldDefaultToMobileSurface() ? 'mobile' : 'dmxControl'
+    if (shouldDefaultToMobileSurface()) return 'mobile'
+    return shouldDefaultToBetaWorkbench() ? 'fixture' : 'dmxControl'
   } catch {
     return 'dmxControl'
   }
