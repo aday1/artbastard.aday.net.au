@@ -1,13 +1,5 @@
 import { useState, useEffect } from 'react';
-
-const detectTouch = (): boolean => {
-  if (typeof window === 'undefined') return false;
-  return (
-    'ontouchstart' in window ||
-    (typeof navigator !== 'undefined' && (navigator.maxTouchPoints > 0 ||
-      (navigator as any).msMaxTouchPoints > 0))
-  );
-};
+import { hasTouchInput, PHONE_BP, TABLET_BP } from '../utils/deviceSurface';
 
 const initialWidth = typeof window !== 'undefined' ? window.innerWidth : 1920;
 
@@ -17,7 +9,7 @@ const initialWidth = typeof window !== 'undefined' ? window.innerWidth : 1920;
  *
  *   phone    : <  640 (one-handed phone use, single column)
  *   tablet   : 641 - 1279 (covers iPad portrait AND landscape, plus
- *               smaller-than-laptop touch devices like the Surface Go)
+ *               touch devices like the Surface Go)
  *   desktop  : >= 1280 (true laptop / monitor real estate; original
  *               sidebar chrome)
  *
@@ -26,19 +18,15 @@ const initialWidth = typeof window !== 'undefined' ? window.innerWidth : 1920;
  * chrome despite being a touch device. 1280 lines up better with the
  * shape of modern hardware and is the single source of truth for:
  *   - Layout -> mobile chrome vs sidebar chrome
- *   - RouterContext -> default landing route
  *   - App.tsx -> toast container position
  *   - store -> Sparkles default
  */
-export const PHONE_BP = 640;
-export const TABLET_BP = 1280;
-
 export const useMobile = () => {
   const [isMobile, setIsMobile] = useState<boolean>(initialWidth < PHONE_BP);
   const [isTablet, setIsTablet] = useState<boolean>(
     initialWidth >= PHONE_BP && initialWidth < TABLET_BP
   );
-  const [isTouch, setIsTouch] = useState<boolean>(detectTouch());
+  const [isTouch, setIsTouch] = useState<boolean>(hasTouchInput());
   const [screenWidth, setScreenWidth] = useState<number>(initialWidth);
 
   useEffect(() => {
@@ -49,7 +37,7 @@ export const useMobile = () => {
 
       setIsMobile(width < PHONE_BP);
       setIsTablet(width >= PHONE_BP && width < TABLET_BP);
-      setIsTouch(detectTouch());
+      setIsTouch(hasTouchInput());
     };
 
     // Re-check on mount in case the viewport changed before hydration.
@@ -71,7 +59,7 @@ export const useMobile = () => {
     isMobile,
     isTablet,
     isTouch,
-    isMobileOrTablet: isMobile || isTablet,
+    isMobileOrTablet: isMobile || (isTablet && isTouch),
     screenWidth
   };
 };

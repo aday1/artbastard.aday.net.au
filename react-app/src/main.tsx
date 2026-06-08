@@ -4,6 +4,7 @@ import App from './App'
 import ErrorBoundary from './components/ErrorBoundary'
 import { ErrorBoundaryWithRetry } from './components/ErrorBoundaryWithRetry'
 import { checkFactoryReset } from './utils/factoryResetCheck'
+import { shouldUseTouchOptimizedChrome } from './utils/deviceSurface'
 import './styles/index.scss'
 
 function tagHostSurface() {
@@ -12,11 +13,7 @@ function tagHostSurface() {
   const root = document.documentElement
   const isBetaLaneHost = host === 'artbastard-dev.aday.net.au'
   root.classList.toggle('ab-beta-host', isBetaLaneHost)
-  root.classList.toggle(
-    'ab-touch-optimized',
-    isBetaLaneHost ||
-      window.matchMedia('(pointer: coarse), (max-width: 1279px)').matches
-  )
+  root.classList.toggle('ab-touch-optimized', shouldUseTouchOptimizedChrome())
 }
 
 async function bootstrap() {

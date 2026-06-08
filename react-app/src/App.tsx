@@ -26,6 +26,7 @@ import MobilePage from './pages/MobilePage'
 import { FactoryResetBanner } from './components/layout/FactoryResetBanner'
 import { RouterProvider } from './context/RouterContext'
 import { ContextMenuProvider } from './context/ContextMenuContext'
+import { shouldDefaultToMobileSurface } from './utils/deviceSurface'
 
 /**
  * Pick a toast container position that does not overlap the new
@@ -35,11 +36,7 @@ import { ContextMenuProvider } from './context/ContextMenuContext'
 const resolveToastPosition = (): 'top-right' | 'bottom-center' => {
   if (typeof window === 'undefined') return 'top-right'
   try {
-    // Matches the canonical TABLET_BP from useMobile.ts so the toast
-    // strip moves to the bottom-centre on every device that gets the
-    // mobile chrome (phones, iPad portrait/landscape, small touch
-    // laptops). Anything wider gets the desktop top-right stack.
-    return window.matchMedia('(max-width: 1279px)').matches
+    return shouldDefaultToMobileSurface()
       ? 'bottom-center'
       : 'top-right'
   } catch {
@@ -52,11 +49,9 @@ const resolveToastPosition = (): 'top-right' | 'bottom-center' => {
 // the hash whenever currentView changes) do not accidentally re-classify
 // the SPA as the standalone Mobile popup window.
 const initialHashAtLoad = typeof window !== 'undefined' ? window.location.hash : ''
-const initialHostAtLoad = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : ''
 const initialIsMobilePopup =
   initialHashAtLoad === '#/mobile' ||
-  initialHashAtLoad === '#mobile' ||
-  (initialHostAtLoad === 'artbastard-dev.aday.net.au' && !initialHashAtLoad)
+  initialHashAtLoad === '#mobile'
 
 function App() {
   const isMobilePage = initialIsMobilePopup

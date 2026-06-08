@@ -32,6 +32,7 @@ import {
 } from './transitionTrackerSlice'
 import { sceneNameToOscPath } from '../utils/sceneCapture'
 import { debugLog } from '../utils/debugLog'
+import { shouldUseTouchOptimizedChrome } from '../utils/deviceSurface'
 
 export interface MidiMapping {
   channel: number
@@ -1818,11 +1819,7 @@ export const useStore = create<State>()(
         try {
           const saved = localStorage.getItem('dmxFaderOrientation');
           if (saved === 'vertical' || saved === 'horizontal') return saved;
-          const host = window.location.hostname.toLowerCase();
-          const touchRackDefault =
-            host === 'artbastard-dev.aday.net.au' ||
-            window.matchMedia('(pointer: coarse), (max-width: 1279px)').matches;
-          return touchRackDefault ? 'vertical' : 'horizontal';
+          return shouldUseTouchOptimizedChrome() ? 'vertical' : 'horizontal';
         } catch {
           return 'horizontal';
         }

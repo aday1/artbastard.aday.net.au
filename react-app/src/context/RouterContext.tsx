@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { shouldDefaultToMobileSurface } from '../utils/deviceSurface'
 
 export type ViewType = 'fixture' | 'planner' | 'scenesActs' | 'acts' | 'misc' | 'state' | 'dmxControl' | 'mobile'
 
@@ -64,19 +65,14 @@ const hashToView = (hashValue: string): ViewType | null => {
 }
 
 /**
- * Pick a sensible default view when the URL has no hash. On phones and
- * tablets we drop the user straight onto the touch-optimised Mobile
- * surface (which has its own embedded DMX/SuperControl tabs) instead
- * of the desktop DMX page that requires a mouse to be usable.
+ * Pick a sensible default view when the URL has no hash. Phones and
+ * actual touch tablets default to the dedicated touch surface; desktop
+ * browsers keep the rack/control UI even on the dev lane.
  */
 const resolveDefaultView = (): ViewType => {
   if (typeof window === 'undefined') return 'dmxControl'
   try {
-    if (window.location.hostname.toLowerCase() === 'artbastard-dev.aday.net.au') {
-      return 'mobile'
-    }
-    const isSmall = window.matchMedia('(max-width: 1279px)').matches
-    return isSmall ? 'mobile' : 'dmxControl'
+    return shouldDefaultToMobileSurface() ? 'mobile' : 'dmxControl'
   } catch {
     return 'dmxControl'
   }
