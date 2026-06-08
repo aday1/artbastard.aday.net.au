@@ -175,6 +175,50 @@ html.ab-beta-host body::before {
   --error-color: var(--color-error);
 }
 
+html.ab-beta-host[data-theme="dark"] {
+  --color-background: #090d14;
+  --color-text: #e8fbff;
+  --color-primary: #00d7ff;
+  --color-secondary: #7bdff2;
+  --color-accent: #ff4fd8;
+  --color-card-bg: #111827;
+  --color-card-border: #214158;
+  --color-slider-track: #152236;
+  --color-slider-thumb: #00d7ff;
+  --color-button-bg: #00d7ff;
+  --color-button-text: #061018;
+  --color-nav-active: #00d7ff;
+  --color-nav-inactive: #8aa2b2;
+  --color-channel-bg: #0d1420;
+  --color-channel-border: #214158;
+  --color-channel-selected: rgb(0 215 255 / 0.18);
+  --bg-primary: #090d14;
+  --bg-secondary: #111827;
+  --bg-tertiary: #0d1420;
+  --bg-hover: #17253a;
+  --text-primary: #e8fbff;
+  --text-secondary: #9fc6d6;
+  --accent-color: #ff4fd8;
+  --border-color: #214158;
+  --header-bg: #0b1220;
+  --input-bg: #0b1220;
+  --rk-bg: #070b12;
+  --rk-surface: #101827;
+  --rk-module: #162338;
+  --rk-module-edge: #264863;
+  --rk-bevel-hi: #568aa2;
+  --rk-bevel-lo: #02060a;
+  --rk-label: #d9fbff;
+  --rk-label-dim: #7fa2b4;
+  --rk-accent: #00d7ff;
+  --rk-accent-glow: rgb(0 215 255 / 0.62);
+  --rk-playhead: #ff4fd8;
+  --rk-grid-bg: #0a101a;
+  --rk-grid-line: #1f334b;
+  --rk-cell: #101827;
+  --rk-cell-active: #173955;
+}
+
 // Art Snob theme overrides
 body.artsnob {
   --font-heading: 'Playfair Display', serif;
