@@ -4,6 +4,27 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [5.2.0.2] - 2026-06-08 - Gold standard release with improved discoverability
+
+### Added
+
+- **QUICKSTART.md**: Single entry point for local development, Docker deployment, and hot-reload workflows. Agents and new users can now easily discover how to build locally or deploy to servers.
+- **docker-compose.yml**: Portable Docker Compose configuration for offline server deployment with persistent volumes and health checks. Enables `docker compose pull && docker compose up -d` for any environment.
+- **.env.example**: Documented environment variables for configuration (PORT, DMX interfaces, Art-Net settings, bridge URL). Improves discoverability and reduces setup friction.
+
+### Changed
+
+- Updated README.md and LOCAL_DEV.txt links to point to new QUICKSTART.md as the primary entry point.
+
+### Documentation
+
+This release marks the **gold standard** for ArtBastard v5.2 with:
+- Full production deployment on Linode (LIVE + DEV lanes)
+- DMX activity glow replacing GPU-heavy Sparkles layer
+- Improved agent/server deployment discoverability
+- Comprehensive Docker and environment documentation
+- Future enhancements and fixes will build on this baseline
+
 ## [5.2.0.1] - 2026-06-08 - DMX activity glow performance patch
 
 ### Changed
