@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { shouldDefaultToBetaWorkbench, shouldDefaultToMobileSurface } from '../utils/deviceSurface'
+import { shouldDefaultToMobileSurface, shouldDefaultToRefreshedWorkbench } from '../utils/deviceSurface'
 
 export type ViewType = 'fixture' | 'planner' | 'scenesActs' | 'acts' | 'misc' | 'state' | 'dmxControl' | 'mobile'
 
@@ -67,14 +67,14 @@ const hashToView = (hashValue: string): ViewType | null => {
 /**
  * Pick a sensible default view when the URL has no hash. Phones and
  * actual touch tablets default to the dedicated touch surface. The
- * beta/dev lane opens on the newer fixture workbench so it does not
- * look like the retired live DMX wall.
+ * refreshed ArtBastard hosts open on the newer fixture workbench so
+ * the retired live DMX wall does not come back after promotion.
  */
 const resolveDefaultView = (): ViewType => {
   if (typeof window === 'undefined') return 'dmxControl'
   try {
     if (shouldDefaultToMobileSurface()) return 'mobile'
-    return shouldDefaultToBetaWorkbench() ? 'fixture' : 'dmxControl'
+    return shouldDefaultToRefreshedWorkbench() ? 'fixture' : 'dmxControl'
   } catch {
     return 'dmxControl'
   }
@@ -166,3 +166,4 @@ export const useRouter = (): RouterContextType => {
   }
   return context
 }
+

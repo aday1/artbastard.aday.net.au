@@ -1,7 +1,8 @@
 export const PHONE_BP = 640
 export const TABLET_BP = 1280
 
-const BETA_HOSTS = new Set([
+const REFRESHED_ARTBASTARD_HOSTS = new Set([
+  'artbastard.aday.net.au',
   'artbastard-dev.aday.net.au',
   'artbastard-beta.aday.net.au',
 ])
@@ -17,9 +18,9 @@ const matchesMedia = (query: string): boolean => {
   }
 }
 
-export const isBetaLaneHost = (): boolean => {
+export const isRefreshedArtBastardHost = (): boolean => {
   if (!canUseWindow()) return false
-  return BETA_HOSTS.has(window.location.hostname.toLowerCase())
+  return REFRESHED_ARTBASTARD_HOSTS.has(window.location.hostname.toLowerCase())
 }
 
 export const hasTouchInput = (): boolean => {
@@ -41,8 +42,8 @@ export const isTabletViewport = (): boolean =>
 export const shouldDefaultToMobileSurface = (): boolean =>
   isPhoneViewport() || (isTabletViewport() && hasTouchInput())
 
-export const shouldDefaultToBetaWorkbench = (): boolean =>
-  isBetaLaneHost() && !shouldDefaultToMobileSurface()
+export const shouldDefaultToRefreshedWorkbench = (): boolean =>
+  isRefreshedArtBastardHost() && !shouldDefaultToMobileSurface()
 
 export const shouldUseTouchOptimizedChrome = (): boolean =>
   isPhoneViewport() || hasTouchInput()

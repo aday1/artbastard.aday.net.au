@@ -3432,8 +3432,8 @@
   }
 }
 
-// Beta/touch rack skin. Scoped to the beta/touch host class so desktop
-// production keeps the existing dashboard treatment.
+// Refreshed/touch rack skin. Scoped to host and touch classes so the
+// old dashboard treatment does not return after live promotion.
 :global(html.ab-touch-optimized) {
   .dmxChannelControlPage {
     gap: 12px;
@@ -3815,3 +3815,4 @@
     }
   }
 }
+

@@ -11,7 +11,7 @@ function readLane(): { lane: DeployLane; label: string } {
     lane === 'beta' || lane === 'dev' ? 'dev' : lane === 'aday' ? 'aday' : 'live';
   const label =
     w.__deployLaneLabel ||
-    (k === 'dev' ? 'BETA' : k === 'aday' ? 'ADAY' : 'LIVE');
+    (k === 'dev' ? 'DEV' : k === 'aday' ? 'ADAY' : 'LIVE');
   return { lane: k, label };
 }
 
@@ -88,3 +88,4 @@ export const DeployLaneBadge: React.FC<DeployLaneBadgeProps> = ({
     </span>
   );
 };
+

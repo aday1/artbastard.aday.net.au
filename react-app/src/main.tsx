@@ -4,13 +4,13 @@ import App from './App'
 import ErrorBoundary from './components/ErrorBoundary'
 import { ErrorBoundaryWithRetry } from './components/ErrorBoundaryWithRetry'
 import { checkFactoryReset } from './utils/factoryResetCheck'
-import { isBetaLaneHost, shouldUseTouchOptimizedChrome } from './utils/deviceSurface'
+import { isRefreshedArtBastardHost, shouldUseTouchOptimizedChrome } from './utils/deviceSurface'
 import './styles/index.scss'
 
 function tagHostSurface() {
   if (typeof window === 'undefined') return
   const root = document.documentElement
-  root.classList.toggle('ab-beta-host', isBetaLaneHost())
+  root.classList.toggle('ab-refresh-host', isRefreshedArtBastardHost())
   root.classList.toggle('ab-touch-optimized', shouldUseTouchOptimizedChrome())
 }
 
@@ -48,3 +48,4 @@ async function bootstrap() {
 }
 
 bootstrap()
+

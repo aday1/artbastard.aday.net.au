@@ -135,7 +135,7 @@ const RACK_LIGHT: RackChrome = {
   rkLabelDim: '#6a6258',
 };
 
-const RACK_BETA: RackChrome = {
+const RACK_REFRESHED: RackChrome = {
   rkBg: '#070b12',
   rkSurface: '#101827',
   rkPanel: '#162338',
@@ -146,14 +146,14 @@ const RACK_BETA: RackChrome = {
   rkLabelDim: '#7fa2b4',
 };
 
-function isBetaLaneHost(): boolean {
+function isRefreshedArtBastardHost(): boolean {
   if (typeof window === 'undefined') return false;
   const host = window.location.hostname.toLowerCase();
-  return host === 'artbastard-dev.aday.net.au' || host === 'artbastard-beta.aday.net.au';
+  return host === 'artbastard.aday.net.au' || host === 'artbastard-dev.aday.net.au' || host === 'artbastard-beta.aday.net.au';
 }
 
 function rackForCurrentHost(rack: RackChrome): RackChrome {
-  return isBetaLaneHost() ? RACK_BETA : rack;
+  return isRefreshedArtBastardHost() ? RACK_REFRESHED : rack;
 }
 
 function preset(
@@ -366,4 +366,5 @@ export interface AppearanceSettings {
   themePresetId?: string;
   themeColors?: Partial<ThemeColorsHsl>;
 }
+
 

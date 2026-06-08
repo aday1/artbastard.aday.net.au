@@ -66,7 +66,7 @@ html.ab-touch-optimized {
   --ab-touch-slider-track: 12px;
 }
 
-html.ab-beta-host {
+html.ab-refresh-host {
   color-scheme: dark;
   --color-background: #090d14;
   --color-text: #e8fbff;
@@ -111,7 +111,7 @@ html.ab-beta-host {
   --rk-cell-active: #173955;
 }
 
-html.ab-beta-host body {
+html.ab-refresh-host body {
   background:
     linear-gradient(180deg, rgb(0 215 255 / 0.08), transparent 34%),
     repeating-linear-gradient(
@@ -122,7 +122,7 @@ html.ab-beta-host body {
     var(--color-background);
 }
 
-html.ab-beta-host body::before {
+html.ab-refresh-host body::before {
   content: '';
   position: fixed;
   inset: 0 0 auto;
@@ -175,7 +175,7 @@ html.ab-beta-host body::before {
   --error-color: var(--color-error);
 }
 
-html.ab-beta-host {
+html.ab-refresh-host {
   --color-background: #090d14;
   --color-text: #e8fbff;
   --color-primary: #00d7ff;
@@ -643,4 +643,5 @@ html.ab-touch-optimized input[type="range"]:not(.ab-styled-fader) {
   display: flex;
   flex-direction: column;
 }
+
 

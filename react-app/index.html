@@ -65,9 +65,9 @@
         background: rgba(46, 204, 113, 0.35);
       }
       .deploy-lane-top-badge[data-lane="dev"] {
-        color: #fff4d6;
-        background: rgba(232, 160, 32, 0.4);
-        border-color: rgba(255, 196, 64, 0.65);
+        color: #061018;
+        background: linear-gradient(135deg, #00d7ff, #ff4fd8);
+        border-color: rgba(246, 224, 94, 0.78);
       }
       .deploy-lane-top-badge[data-lane="beta"] {
         color: #dff7ff;
@@ -98,9 +98,9 @@
         background: rgba(46, 204, 113, 0.35);
       }
       .deploy-lane-inline[data-lane="dev"] {
-        color: #fff4d6;
-        background: rgba(232, 160, 32, 0.4);
-        border-color: rgba(255, 196, 64, 0.65);
+        color: #061018;
+        background: linear-gradient(135deg, #00d7ff, #ff4fd8);
+        border-color: rgba(246, 224, 94, 0.78);
       }
       .deploy-lane-inline[data-lane="beta"] {
         color: #dff7ff;
@@ -360,7 +360,7 @@
         }
         function laneDisplayName(lane) {
           var k = String(lane || "live").toLowerCase();
-          if (k === "beta" || k === "dev") return "BETA";
+          if (k === "beta" || k === "dev") return "DEV";
           if (k === "aday") return "ADAY";
           return "LIVE";
         }
@@ -675,3 +675,4 @@
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
+
