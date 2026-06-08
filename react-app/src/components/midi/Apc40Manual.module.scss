@@ -1,14 +1,20 @@
+// The APC40 "Tactile Codex" panel. Theme-aware: the device chrome adopts the
+// app's surface colours so light mode stays readable, while dark mode keeps the
+// black-rack look. Hardware accents (LED reds, knob orange) are kept literal
+// because they reference the physical APC40, not the UI theme.
+
 .manual {
   display: flex;
   flex-direction: column;
   gap: 1rem;
   font-size: 0.9rem;
+  color: var(--color-text, var(--text-primary, #1f2937));
 }
 
 .intro {
   p {
     margin: 0 0 0.5rem;
-    color: var(--text-secondary, #94a3b8);
+    color: var(--text-secondary, var(--color-text-secondary, #475569));
     line-height: 1.4;
   }
 }
@@ -27,23 +33,77 @@
   padding: 0.25rem 0.6rem;
   border-radius: 4px;
 }
-.statusOn  { color: #22c55e; background: rgba(34,197,94,0.12); }
-.statusOff { color: #94a3b8; background: rgba(148,163,184,0.12); }
+.statusOn  { color: #16a34a; background: rgba(34,197,94,0.12); }
+.statusOff { color: var(--text-secondary, #64748b); background: rgba(100,116,139,0.12); }
 
-.statusMeta { color: var(--text-secondary, #94a3b8); font-size: 0.85rem; }
+.statusMeta { color: var(--text-secondary, #475569); font-size: 0.85rem; }
 .templateHint {
   margin: 0.25rem 0 0 !important;
   font-size: 0.85rem;
   font-style: italic;
 }
 
+.learnBanner {
+  background: rgba(59,130,246,0.12);
+  border: 1px solid rgba(59,130,246,0.4);
+  color: var(--color-text, #1f2937);
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin: 0.25rem 0 0;
+
+  button {
+    background: rgba(239,68,68,0.15);
+    border: 1px solid rgba(239,68,68,0.5);
+    color: #b91c1c;
+    padding: 0.25rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:hover { background: rgba(239,68,68,0.25); }
+  }
+}
+
+.activityTicker {
+  background: var(--color-card-bg, rgba(15,17,21,0.04));
+  border: 1px solid var(--color-card-border, rgba(0,0,0,0.08));
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  font-size: 0.72rem;
+  color: var(--text-secondary, #475569);
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  min-height: 1.6rem;
+  align-items: center;
+
+  span { white-space: nowrap; }
+}
+
+// The device frame keeps a slightly darker tint so the simulated hardware
+// reads as a separate object from the page background in both themes.
 .deviceFrame {
-  background: linear-gradient(180deg, #1a1d24 0%, #0f1115 100%);
-  border: 2px solid #2a2f3a;
+  background: var(--apc40-frame-bg,
+    linear-gradient(180deg, color-mix(in srgb, var(--color-card-bg, #1a1d24) 92%, black) 0%, var(--color-card-bg, #0f1115) 100%)
+  );
+  border: 2px solid var(--color-border, var(--color-card-border, #2a2f3a));
   border-radius: 10px;
   padding: 1rem;
-  color: #e5e7eb;
+  color: var(--color-text, #e5e7eb);
   contain: layout paint;
+}
+
+[data-theme="light"] .deviceFrame {
+  background: linear-gradient(180deg, #f1f3f9 0%, #e2e6ef 100%);
+  color: #1f2937;
 }
 
 .deviceHeader {
@@ -52,7 +112,7 @@
   align-items: baseline;
   margin-bottom: 0.75rem;
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid #2a2f3a;
+  border-bottom: 1px solid var(--color-border, #2a2f3a);
 
   .brand {
     font-weight: 800;
@@ -61,7 +121,7 @@
   }
   .model {
     font-size: 0.75rem;
-    color: #64748b;
+    color: var(--text-secondary, #64748b);
     letter-spacing: 0.05em;
     text-transform: uppercase;
   }
@@ -79,17 +139,22 @@
 }
 
 .cluster {
-  background: #14171d;
-  border: 1px solid #242832;
+  background: var(--color-card-bg, rgba(255,255,255,0.04));
+  border: 1px solid var(--color-card-border, rgba(255,255,255,0.06));
   border-radius: 6px;
   padding: 0.6rem;
+}
+
+[data-theme="light"] .cluster {
+  background: rgba(255,255,255,0.55);
+  border-color: rgba(0,0,0,0.08);
 }
 
 .clusterLabel {
   font-size: 0.7rem;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: #64748b;
+  color: var(--text-secondary, #64748b);
   margin-bottom: 0.5rem;
 }
 
@@ -108,7 +173,7 @@
   border-radius: 50%;
   aspect-ratio: 1;
   position: relative;
-  cursor: help;
+  cursor: pointer;
   transition: transform 120ms ease, box-shadow 120ms ease;
   display: flex;
   flex-direction: column;
@@ -119,6 +184,16 @@
     transform: scale(1.08);
     box-shadow: 0 0 14px rgba(59,130,246,0.6);
   }
+
+  &.learning {
+    animation: learnPulse 900ms ease-in-out infinite;
+    box-shadow: 0 0 16px rgba(59,130,246,0.9);
+  }
+}
+
+@keyframes learnPulse {
+  0%, 100% { border-color: #3b82f6; }
+  50% { border-color: #f59e0b; }
 }
 
 .knobDot {
@@ -139,19 +214,32 @@
   transform: translateX(-50%);
   font-size: 0.65rem;
   white-space: nowrap;
-  color: #cbd5e1;
-  background: rgba(0,0,0,0.6);
+  color: var(--color-text, #cbd5e1);
+  background: var(--color-card-bg, rgba(0,0,0,0.75));
   padding: 0.1rem 0.3rem;
   border-radius: 3px;
   opacity: 0;
   pointer-events: none;
   transition: opacity 150ms ease;
   z-index: 5;
+  border: 1px solid var(--color-card-border, rgba(255,255,255,0.08));
 }
 .knob:hover .controlLabel,
 .fader:hover .controlLabel,
 .crossfader:hover .controlLabel {
   opacity: 1;
+}
+
+.controlSig {
+  position: absolute;
+  bottom: -1.05rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.6rem;
+  color: var(--text-secondary, #64748b);
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 // Clip grid
@@ -195,13 +283,13 @@
   padding: 0.4rem 0.5rem;
   border-radius: 3px;
   font-size: 0.65rem;
-  font-weight: 600;
+  font-weight: 700;
   color: #1a1d24;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: help;
-  opacity: 0.6;
+  opacity: 0.85;
   transition: opacity 120ms ease, transform 120ms ease;
   &.active {
     opacity: 1;
@@ -234,7 +322,7 @@
   text-align: center;
   width: 100%;
   cursor: help;
-  opacity: 0.7;
+  opacity: 0.85;
   transition: opacity 120ms ease, box-shadow 120ms ease;
 
   &.active {
@@ -246,18 +334,23 @@
 .fader {
   position: relative;
   width: 100%;
-  height: 90px;
-  cursor: help;
+  height: 110px;
+  cursor: pointer;
   transition: box-shadow 120ms ease;
 
   &.active {
     box-shadow: 0 0 10px rgba(59,130,246,0.6);
   }
+
+  &.learning {
+    box-shadow: 0 0 14px rgba(59,130,246,0.85);
+    animation: learnPulse 900ms ease-in-out infinite;
+  }
 }
 .faderTrack {
   width: 6px;
   height: 100%;
-  background: #2a2f3a;
+  background: var(--color-slider-track, #2a2f3a);
   margin: 0 auto;
   border-radius: 3px;
   position: relative;
@@ -299,7 +392,7 @@
   padding: 0.5rem 0.8rem;
   border-radius: 4px;
   cursor: help;
-  opacity: 0.85;
+  opacity: 0.9;
   transition: opacity 120ms ease, transform 120ms ease;
   &:hover { opacity: 1; transform: translateY(-1px); }
 }
@@ -308,14 +401,19 @@
   position: relative;
   width: 140px;
   height: 36px;
-  cursor: help;
+  cursor: pointer;
   display: flex;
   align-items: center;
+
+  &.learning {
+    box-shadow: 0 0 14px rgba(59,130,246,0.85);
+    animation: learnPulse 900ms ease-in-out infinite;
+  }
 }
 .crossfaderTrack {
   width: 100%;
   height: 6px;
-  background: #2a2f3a;
+  background: var(--color-slider-track, #2a2f3a);
   border-radius: 3px;
   position: relative;
 }
@@ -336,14 +434,14 @@
 
 // Legend
 .legend {
-  background: var(--color-card-bg, #14171d);
+  background: var(--color-card-bg, rgba(255,255,255,0.04));
   padding: 0.75rem;
   border-radius: 6px;
-  border: 1px solid var(--border-color-soft, #242832);
+  border: 1px solid var(--color-card-border, rgba(0,0,0,0.08));
 
-  h4 { margin: 0 0 0.5rem; font-size: 0.95rem; }
+  h4 { margin: 0 0 0.5rem; font-size: 0.95rem; color: var(--color-text); }
   ul { list-style: none; padding: 0; margin: 0; display: flex; gap: 1rem; flex-wrap: wrap; }
-  li { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; }
+  li { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--color-text); }
 }
 
 .legendSwatch {
@@ -358,20 +456,47 @@
 .legendNote {
   margin: 0.5rem 0 0;
   font-size: 0.78rem;
-  color: var(--text-secondary, #94a3b8);
+  color: var(--text-secondary, #475569);
   font-style: italic;
 }
 
-// Hardwire table
-.hardwireTable {
-  background: var(--color-card-bg, #14171d);
+// Hardwire + binding tables
+.hardwireTable,
+.bindingTable {
+  background: var(--color-card-bg, rgba(255,255,255,0.04));
   padding: 0.75rem;
   border-radius: 6px;
-  border: 1px solid var(--border-color-soft, #242832);
+  border: 1px solid var(--color-card-border, rgba(0,0,0,0.08));
 
-  h4 { margin: 0 0 0.5rem; font-size: 0.95rem; }
-  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-  th, td { text-align: left; padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--border-color-soft, #242832); }
-  th { color: var(--text-secondary, #94a3b8); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  h4 { margin: 0 0 0.5rem; font-size: 0.95rem; color: var(--color-text); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; color: var(--color-text); }
+  th, td { text-align: left; padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--color-card-border, rgba(0,0,0,0.08)); }
+  th { color: var(--text-secondary, #475569); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; }
   td:first-child { white-space: nowrap; font-weight: 600; }
+
+  code {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.78rem;
+    padding: 0.05rem 0.3rem;
+    border-radius: 3px;
+    background: rgba(59,130,246,0.12);
+    color: var(--color-text);
+  }
+
+  .relearnBtn {
+    background: transparent;
+    border: 1px solid var(--color-card-border, rgba(0,0,0,0.15));
+    color: var(--color-text);
+    padding: 0.2rem 0.55rem;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    cursor: pointer;
+
+    &:hover { background: rgba(59,130,246,0.12); border-color: rgba(59,130,246,0.45); }
+    &.learningBtn {
+      background: rgba(59,130,246,0.18);
+      border-color: rgba(59,130,246,0.6);
+      color: #1d4ed8;
+    }
+  }
 }

@@ -587,6 +587,12 @@ interface State extends AutomationState, TransitionTrackerSlice {
   // applied against the current fixture selection. Keyed by binding (not by
   // DMX channel) so a single MIDI control can update many DMX addresses.
   superControlMidiMappings: SuperControlBinding[];
+  // When set, the next incoming MIDI message rewrites the matching SuperControl
+  // binding's signature (channel + cc/note/pitch). Lets the Apc40Manual act as
+  // a live re-learn surface for the SuperControl routing layer.
+  superControlLearnTarget:
+    | { controlName: string; slotIndex?: number }
+    | null;
   envelopeSpeedMidiMapping: MidiMapping | null; // MIDI mapping for envelope automation speed
   midiLearnTarget:
   | { type: 'masterSlider'; id: string }
@@ -920,6 +926,14 @@ interface State extends AutomationState, TransitionTrackerSlice {
   // Apply a MIDI value (0-255) to a SuperControl parameter, optionally
   // scoped to the Nth selected fixture via slotIndex.
   applySuperControlMidi: (controlName: string, value: number, slotIndex?: number) => void
+  // Re-learn the MIDI signature for a SuperControl binding (used by the APC40
+  // tactile-codex panel). Pass null to cancel.
+  startSuperControlLearn: (target: { controlName: string; slotIndex?: number } | null) => void
+  rebindSuperControl: (
+    controlName: string,
+    slotIndex: number | undefined,
+    signature: { channel: number; controller?: number; note?: number; pitch?: boolean }
+  ) => void
   setEnvelopeSpeedMidiMapping: (mapping: MidiMapping | null) => void
   removeEnvelopeSpeedMidiMapping: () => void
   setMidiInterfaces: (interfaces: string[]) => void
@@ -1559,6 +1573,7 @@ export const useStore = create<State>()(
       activeInterfaces: [],
       midiMappings: {},
       superControlMidiMappings: [],
+      superControlLearnTarget: null,
       envelopeSpeedMidiMapping: (() => {
         // Load from localStorage
         try {
@@ -3304,15 +3319,22 @@ export const useStore = create<State>()(
             templateId,
             deviceName
           });
-          const mappingsFromServer = response.data?.midiMappings;
-          if (mappingsFromServer && typeof mappingsFromServer === 'object') {
-            set({ midiMappings: mappingsFromServer });
-          }
 
-          // Pull SuperControl bindings from the local template definition
-          // (the server only knows about raw-DMX mappings).
           const localTemplate = getTemplateById(templateId);
           const superControlMappings = localTemplate?.superControlMappings ?? [];
+          const localHasRawMappings = Object.keys(localTemplate?.mappings ?? {}).length > 0;
+
+          const mappingsFromServer = response.data?.midiMappings;
+          if (mappingsFromServer && typeof mappingsFromServer === 'object') {
+            // If the local template owns no raw-DMX bindings (e.g. APC40 routes
+            // through SuperControl), trust the local intent and ignore any raw
+            // mappings the server may have generated — otherwise the operator
+            // ends up with double-routed faders.
+            set({ midiMappings: localHasRawMappings ? mappingsFromServer : {} });
+          } else if (!localHasRawMappings) {
+            set({ midiMappings: {} });
+          }
+
           set({ superControlMidiMappings: superControlMappings });
 
           const templateLabel = templateId === 'x_touch_mackie'
@@ -3375,6 +3397,36 @@ export const useStore = create<State>()(
               break;
             }
           }
+        });
+      },
+
+      startSuperControlLearn: (target) => {
+        set({ superControlLearnTarget: target });
+      },
+
+      rebindSuperControl: (controlName, slotIndex, signature) => {
+        const current = get().superControlMidiMappings;
+        const idx = current.findIndex((b) =>
+          b.controlName === controlName && b.slotIndex === slotIndex
+        );
+        const baseLabel = idx >= 0 ? current[idx].label : `${controlName}${slotIndex !== undefined ? ` slot ${slotIndex + 1}` : ''}`;
+        const updated: SuperControlBinding = {
+          controlName: (controlName as SuperControlBinding['controlName']),
+          slotIndex,
+          channel: signature.channel,
+          controller: signature.controller,
+          note: signature.note,
+          pitch: signature.pitch,
+          label: baseLabel,
+        };
+        const next = idx >= 0
+          ? current.map((b, i) => (i === idx ? updated : b))
+          : [...current, updated];
+        set({ superControlMidiMappings: next, superControlLearnTarget: null });
+        get().addNotification({
+          message: `Rebound ${baseLabel}`,
+          type: 'success',
+          priority: 'normal',
         });
       },
 

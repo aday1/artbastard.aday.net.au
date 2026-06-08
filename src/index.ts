@@ -1134,12 +1134,10 @@ const getControllerTemplateMappings = (templateId: MidiControllerTemplateId): Mi
         return mappings;
     }
 
-    for (let dmxChannel = 0; dmxChannel < 8; dmxChannel++) {
-        mappings[dmxChannel] = {
-            channel: dmxChannel,
-            controller: 7
-        };
-    }
+    // APC40 MK1: no raw-DMX bindings. The client routes faders/knobs through
+    // SuperControl (per-fixture dimmer, pan/tilt/RGB/gobo/shutter/strobe across
+    // the current selection) so generating channels 1-8 here would double-route
+    // and overwrite whatever the operator already had mapped.
     return mappings;
 };
 
@@ -1207,7 +1205,11 @@ const sendXTouchScribbleDisplay = (labels: string[], preferredDeviceName?: strin
 
 export function applyMidiControllerTemplate(io: Server, templateId: MidiControllerTemplateId, preferredDeviceName?: string) {
     const templateMappings = getControllerTemplateMappings(templateId);
-    const nextMappings: MidiMappings = { ...midiMappings, ...templateMappings };
+    // APC40 routes everything via SuperControl on the client, so the raw mapping
+    // table must be wiped to avoid stale leftovers from a prior template.
+    const nextMappings: MidiMappings = templateId === 'apc40_mk1'
+        ? { ...templateMappings }
+        : { ...midiMappings, ...templateMappings };
     midiMappings = nextMappings;
     saveConfig();
 

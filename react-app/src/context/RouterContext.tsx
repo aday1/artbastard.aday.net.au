@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { shouldDefaultToMobileSurface, shouldDefaultToRefreshedWorkbench } from '../utils/deviceSurface'
+import { shouldDefaultToMobileSurface } from '../utils/deviceSurface'
 
 export type ViewType = 'fixture' | 'planner' | 'scenesActs' | 'acts' | 'misc' | 'state' | 'dmxControl' | 'mobile'
 
@@ -71,12 +71,12 @@ const hashToView = (hashValue: string): ViewType | null => {
  * the retired live DMX wall does not come back after promotion.
  */
 const resolveDefaultView = (): ViewType => {
-  if (typeof window === 'undefined') return 'dmxControl'
+  if (typeof window === 'undefined') return 'fixture'
   try {
     if (shouldDefaultToMobileSurface()) return 'mobile'
-    return shouldDefaultToRefreshedWorkbench() ? 'fixture' : 'dmxControl'
+    return 'fixture'
   } catch {
-    return 'dmxControl'
+    return 'fixture'
   }
 }
 

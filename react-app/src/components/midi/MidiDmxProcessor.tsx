@@ -22,6 +22,8 @@ export const MidiDmxProcessor: React.FC = () => {
     midiMappings, // DMX channel mappings
     superControlMidiMappings,
     applySuperControlMidi,
+    superControlLearnTarget,
+    rebindSuperControl,
     midiMessages,
     setDmxChannel,
     masterSliders,
@@ -33,6 +35,8 @@ export const MidiDmxProcessor: React.FC = () => {
     midiMappings: state.midiMappings,
     superControlMidiMappings: state.superControlMidiMappings,
     applySuperControlMidi: state.applySuperControlMidi,
+    superControlLearnTarget: state.superControlLearnTarget,
+    rebindSuperControl: state.rebindSuperControl,
     midiMessages: state.midiMessages,
     setDmxChannel: state.setDmxChannel,
     masterSliders: state.masterSliders,
@@ -91,6 +95,25 @@ export const MidiDmxProcessor: React.FC = () => {
   const processMidiMessageDirect = useCallback((message: any) => {
     if (midiLearnTarget !== null) {
       return; // Skip if in learn mode
+    }
+
+    // SuperControl re-learn: rewrite the binding signature for the targeted
+    // control from the next inbound MIDI message, then stop here so the message
+    // doesn't also drive a stale binding.
+    if (superControlLearnTarget) {
+      const t = message._type || message.type;
+      const sig =
+        t === 'cc' && message.controller !== undefined
+          ? { channel: message.channel, controller: message.controller }
+          : t === 'noteon' && message.note !== undefined
+          ? { channel: message.channel, note: message.note }
+          : t === 'pitch'
+          ? { channel: message.channel, pitch: true }
+          : null;
+      if (sig) {
+        rebindSuperControl(superControlLearnTarget.controlName, superControlLearnTarget.slotIndex, sig);
+        return;
+      }
     }
 
     // Process for Master Sliders first
@@ -200,7 +223,7 @@ export const MidiDmxProcessor: React.FC = () => {
         }
       });
     }
-  }, [midiMappings, masterSliders, midiLearnTarget, stableFunctions, channelRangeMappings, normalizePitchToMidiValue, superControlMidiMappings, applySuperControlMidi]);
+  }, [midiMappings, masterSliders, midiLearnTarget, stableFunctions, channelRangeMappings, normalizePitchToMidiValue, superControlMidiMappings, applySuperControlMidi, superControlLearnTarget, rebindSuperControl]);
 
   // Process MIDI messages from store (for server MIDI and monitoring)
   useEffect(() => {
@@ -227,6 +250,23 @@ export const MidiDmxProcessor: React.FC = () => {
     if (midiLearnTarget !== null) {
       debugLog.log(`[MidiDmxProcessor] Skipping processing - MIDI Learn mode active for:`, midiLearnTarget);
       return;
+    }
+
+    // SuperControl re-learn (Tactile Codex). Capture the message, rebind, abort.
+    if (superControlLearnTarget) {
+      const t = (latestMessage as any)._type || (latestMessage as any).type;
+      const sig =
+        t === 'cc' && (latestMessage as any).controller !== undefined
+          ? { channel: (latestMessage as any).channel, controller: (latestMessage as any).controller }
+          : t === 'noteon' && (latestMessage as any).note !== undefined
+          ? { channel: (latestMessage as any).channel, note: (latestMessage as any).note }
+          : t === 'pitch'
+          ? { channel: (latestMessage as any).channel, pitch: true }
+          : null;
+      if (sig) {
+        rebindSuperControl(superControlLearnTarget.controlName, superControlLearnTarget.slotIndex, sig);
+        return;
+      }
     }
 
     let messageHandledByMasterSlider = false;
@@ -487,7 +527,7 @@ export const MidiDmxProcessor: React.FC = () => {
       });
     }
 
-  }, [midiMessages, midiMappings, superControlMidiMappings, applySuperControlMidi, masterSliders, channelRangeMappings, stableFunctions, midiLearnTarget, normalizePitchToMidiValue]); // Use stable functions
+  }, [midiMessages, midiMappings, superControlMidiMappings, applySuperControlMidi, masterSliders, channelRangeMappings, stableFunctions, midiLearnTarget, normalizePitchToMidiValue, superControlLearnTarget, rebindSuperControl]); // Use stable functions
   /**
    * Set a custom range mapping for a specific DMX channel
    */
