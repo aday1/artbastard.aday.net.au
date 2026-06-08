@@ -1,6 +1,9 @@
 .fancyQuote {
   font-style: italic;
-  color: var(--text-secondary);
+  // Use --text-primary (not --text-secondary) so the quote stays legible
+  // against the dark workbench background. The thin italic serif used in
+  // artsnob mode washes out at the muted secondary tone.
+  color: var(--text-primary, var(--color-text, #e8fbff));
   margin: 0.5rem 0;
   padding: 1rem 1.25rem;
   max-height: min(22vh, 200px);
@@ -64,8 +67,10 @@
     z-index: 1;
     display: block;
     margin-bottom: 0.5rem;
-    font-weight: 300;
-    
+    // 400 keeps the elegant italic look without disappearing on dark theme.
+    font-weight: 400;
+    color: inherit;
+
     &::before, &::after {
       content: none;
     }
