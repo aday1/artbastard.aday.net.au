@@ -1192,8 +1192,28 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     panTiltAutopilotEnabled: false,
     hasSelection: false,
   });
+  // Mirrors the most recent Roli touch position so the LED effect always has
+  // a cursor source even when no fixture is selected (touch feedback first,
+  // DMX writes second).
+  const liveTouchRef = useRef<{ x: number; y: number } | null>(null);
+  const [liveTouchVersion, setLiveTouchVersion] = useState(0);
   useEffect(() => {
     roli.onTouch((ev) => {
+      // Always reflect the touch on the device + canvas, even without a
+      // fixture selected. Pan/tilt writes are gated on selection further down.
+      liveTouchRef.current =
+        ev.phase === 'end' ? null : { x: ev.x, y: ev.y };
+      setLiveTouchVersion((v) => (v + 1) & 0xffff);
+
+      // Route into the XY pad's path state so the canvas draws the touch
+      // and onPathChange / onPathSaved fire just like a mouse pencil stroke.
+      const pad = xyPadHandleRef.current;
+      if (pad) {
+        if (ev.phase === 'start') pad.beginExternalPath(ev.x, ev.y);
+        else if (ev.phase === 'move') pad.extendExternalPath(ev.x, ev.y);
+        else if (ev.phase === 'end') pad.endExternalPath();
+      }
+
       if (!roliApplyRef.current.hasSelection) return;
       const p = Math.round(Math.max(0, Math.min(255, ev.x * 255)));
       const t = Math.round(Math.max(0, Math.min(255, (1 - ev.y) * 255)));
@@ -1205,14 +1225,6 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
       roliApplyRef.current.setPanTiltXY({ x: (p / 255) * 100, y: (1 - t / 255) * 100 });
       roliApplyRef.current.apply('pan', p);
       roliApplyRef.current.apply('tilt', t);
-
-      // Route into the XY pad's path state so the canvas draws the touch
-      // and onPathChange / onPathSaved fire just like a mouse pencil stroke.
-      const pad = xyPadHandleRef.current;
-      if (!pad) return;
-      if (ev.phase === 'start') pad.beginExternalPath(ev.x, ev.y);
-      else if (ev.phase === 'move') pad.extendExternalPath(ev.x, ev.y);
-      else if (ev.phase === 'end') pad.endExternalPath();
     });
   }, [roli]);
 
@@ -1227,11 +1239,16 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
       activeSlot && activeSlot.path.length > 1
         ? activeSlot.path.map((p) => ({ x: p.x / 255, y: 1 - p.y / 255 }))
         : livePathRef.current;
+    // Prefer the live Roli touch as the cursor source so finger-on-pad always
+    // lights an LED; fall back to pan/tilt-derived cursor for autopilot etc.
+    const cursor = liveTouchRef.current
+      ? { x: liveTouchRef.current.x, y: liveTouchRef.current.y }
+      : { x: panValue / 255, y: 1 - tiltValue / 255 };
     roli.sendFrame({
       path: trail,
-      cursor: { x: panValue / 255, y: 1 - tiltValue / 255 },
+      cursor,
     });
-  }, [roli, panValue, tiltValue, pathSlots, livePathVersion]);
+  }, [roli, panValue, tiltValue, pathSlots, livePathVersion, liveTouchVersion]);
 
   // XY Pad handlers
   const handleXYPadMouseDown = (e: React.MouseEvent) => {

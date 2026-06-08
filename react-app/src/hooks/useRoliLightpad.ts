@@ -7,6 +7,7 @@ import {
   getRoliStatus,
   sendLedFrame,
   setOnDeviceChange,
+  setOnHandshakeDone,
   setOnTouch,
 } from '../engines/roliLightpad';
 
@@ -41,10 +42,13 @@ export function useRoliLightpad(): UseRoliLightpadResult {
       if (cancelled) return;
       setConnected(info.connected);
       setDeviceName(info.inputName ?? info.outputName ?? null);
-      // Handshake completes ~300ms after output binds; poll briefly.
-      setTimeout(() => {
-        if (!cancelled) setHandshakeDone(getRoliStatus().handshakeDone);
-      }, 350);
+      // Don't trust the polling alone — clear the flag immediately on
+      // device-change so we don't keep sending into a stale handshake state.
+      setHandshakeDone(getRoliStatus().handshakeDone);
+    });
+    setOnHandshakeDone((done) => {
+      if (cancelled) return;
+      setHandshakeDone(done);
     });
     setOnTouch((ev) => touchRef.current?.(ev));
     connectRoliLightpad().then((ok) => {
@@ -52,14 +56,13 @@ export function useRoliLightpad(): UseRoliLightpadResult {
       const status = getRoliStatus();
       setConnected(ok || status.connected);
       setDeviceName(status.inputName ?? status.outputName ?? null);
-      setTimeout(() => {
-        if (!cancelled) setHandshakeDone(getRoliStatus().handshakeDone);
-      }, 400);
+      setHandshakeDone(status.handshakeDone);
     });
     return () => {
       cancelled = true;
       setOnTouch(null);
       setOnDeviceChange(null);
+      setOnHandshakeDone(null);
       // Keep the MIDI access alive in case another mount wants it; only release
       // listeners. Full disconnect on full app teardown happens implicitly.
     };

@@ -36,6 +36,7 @@ export type RoliDeviceChangeCallback = (info: {
   inputName: string | null;
   outputName: string | null;
 }) => void;
+export type RoliHandshakeCallback = (done: boolean) => void;
 
 interface InternalState {
   midiAccess: WebMidi.MIDIAccess | null;
@@ -52,8 +53,10 @@ interface InternalState {
   lastX: number;
   lastY: number;
   lastZ: number;
+  needsFullRepaint: boolean;
   onTouch: RoliTouchCallback | null;
   onDevice: RoliDeviceChangeCallback | null;
+  onHandshake: RoliHandshakeCallback | null;
 }
 
 const s: InternalState = {
@@ -71,8 +74,10 @@ const s: InternalState = {
   lastX: 0.5,
   lastY: 0.5,
   lastZ: 0,
+  needsFullRepaint: false,
   onTouch: null,
   onDevice: null,
+  onHandshake: null,
 };
 
 class Packed7BitBuilder {
@@ -270,6 +275,11 @@ function doHandshake(): void {
         s.handshakeDone = true;
         s.packetCounter = 1;
         s.prevLedData = new Uint8Array(LED_BYTE_COUNT);
+        // The handshake's BITMAP_LED_DUMP_1/2 leaves a junk pattern on the
+        // grid. Force the next sendLedFrame to encode every pixel so the
+        // first user frame wipes that pattern in one shot.
+        s.needsFullRepaint = true;
+        s.onHandshake?.(true);
       }, 100);
     }, 100);
   }, 100);
@@ -401,12 +411,14 @@ function refreshAndAutoMap(): void {
     s.output = chosenOutput;
     s.outputName = chosenOutput.name || null;
     s.handshakeDone = false;
+    s.onHandshake?.(false);
     s.ledFailCount = 0;
     doHandshake();
   } else if (!chosenOutput && s.output) {
     s.output = null;
     s.outputName = null;
     s.handshakeDone = false;
+    s.onHandshake?.(false);
   }
 
   s.onDevice?.({
@@ -454,6 +466,10 @@ export function setOnDeviceChange(cb: RoliDeviceChangeCallback | null): void {
   s.onDevice = cb;
 }
 
+export function setOnHandshakeDone(cb: RoliHandshakeCallback | null): void {
+  s.onHandshake = cb;
+}
+
 export function getRoliStatus(): { connected: boolean; inputName: string | null; outputName: string | null; handshakeDone: boolean } {
   return {
     connected: !!(s.input || s.output),
@@ -487,7 +503,16 @@ export function sendLedFrame(pixels: Uint8ClampedArray | Uint8Array): boolean {
     newLed[i * 2 + 1] = (c16 >> 8) & 0xff;
   }
 
-  const messages = buildDataChangeMessages(newLed, s.prevLedData);
+  // After handshake (or any reconnect) the device's LED state is the dump
+  // pattern, not zeros. Force every byte to look different from prev so the
+  // diff encoder emits a full frame and wipes the pattern.
+  let prevForDiff = s.prevLedData;
+  if (s.needsFullRepaint) {
+    prevForDiff = new Uint8Array(LED_BYTE_COUNT);
+    for (let i = 0; i < LED_BYTE_COUNT; i++) prevForDiff[i] = newLed[i] ^ 0xff;
+    s.needsFullRepaint = false;
+  }
+  const messages = buildDataChangeMessages(newLed, prevForDiff);
   for (const msg of messages) {
     try {
       s.output.send(buildBlockSysEx(DEVICE_INDEX, msg));
@@ -520,8 +545,11 @@ export function composeLedFrame(opts: {
     pixels[i * 4 + 2] = bg[2];
     pixels[i * 4 + 3] = bg[3];
   }
-  const trail = opts.trailColor ?? [60, 20, 80, 160];
-  const cursorC = opts.cursorColor ?? [255, 80, 255, 255];
+  // Bright trail so a single-pixel path is actually readable on the 15x15
+  // BGR565 grid (the old [60,20,80,160] quantised down to ~r5=4 / b5=12 — a
+  // hint at best). [110,40,210,255] keeps the violet identity but lights up.
+  const trail = opts.trailColor ?? [110, 40, 210, 255];
+  const cursorC = opts.cursorColor ?? [255, 120, 255, 255];
 
   const plot = (nx: number, ny: number, color: [number, number, number, number]) => {
     const cx = Math.max(0, Math.min(ROLI_GRID_COLS - 1, Math.round(nx * (ROLI_GRID_COLS - 1))));
