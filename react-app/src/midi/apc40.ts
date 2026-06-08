@@ -9,7 +9,10 @@ export type Apc40Action =
   | { type: 'play'; model: Apc40Model }
   | { type: 'stop'; model: Apc40Model }
   | { type: 'clear-selection'; model: Apc40Model }
-  | { type: 'shift'; model: Apc40Model };
+  | { type: 'shift'; model: Apc40Model }
+  | { type: 'nav-fixture'; model: Apc40Model; direction: 'next' | 'prev' }
+  | { type: 'nav-scene'; model: Apc40Model; direction: 'next' | 'prev' }
+  | { type: 'select-all'; model: Apc40Model };
 
 export interface MidiLikeMessage {
   channel?: number;
@@ -62,6 +65,16 @@ export function decodeApc40Message(message: MidiLikeMessage): Apc40Action | null
   if (note === 0x5c) return { type: 'stop', model };
   if (note === 0x5d || note === 0x66) return { type: 'record', model };
   if (note === 0x62) return { type: 'shift', model };
+  // Navigation cluster (Up / Down arrows → cycle fixtures,
+  // Left / Right arrows → cycle scenes). Note numbers match APC40 MK1
+  // hardware: Up=0x5E, Down=0x5F, Left=0x60, Right=0x61.
+  if (note === 0x5e) return { type: 'nav-fixture', model, direction: 'prev' };
+  if (note === 0x5f) return { type: 'nav-fixture', model, direction: 'next' };
+  if (note === 0x60) return { type: 'nav-scene', model, direction: 'prev' };
+  if (note === 0x61) return { type: 'nav-scene', model, direction: 'next' };
+  // Pan button (note 0x57) doubles as "select all fixtures" — easy to reach
+  // and the APC40 hardware LED gives positive feedback when pressed.
+  if (note === 0x57) return { type: 'select-all', model };
 
   if (model === 'apc40-mk1' && note >= 0x35 && note <= 0x39) {
     const row = note - 0x35;

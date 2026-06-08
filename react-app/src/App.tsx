@@ -9,6 +9,7 @@ import { useSceneTransitionAnimation } from './hooks/useSceneTransitionAnimation
 import { useGlobalMidiManager } from './hooks/useGlobalMidiManager'
 import { useGlobalBrowserMidi } from './hooks/useGlobalBrowserMidi'
 import { useApc40Workflow } from './hooks/useApc40Workflow'
+import { useApc40LedFeedback } from './hooks/useApc40LedFeedback'
 import { useActsPlaybackEngine } from './hooks/useActsPlaybackEngine'
 import { useActsOscProcessor } from './hooks/useActsOscProcessor'
 import { useActsMidiProcessor } from './hooks/useActsMidiProcessor'
@@ -77,6 +78,8 @@ function App() {
 
   // Native Akai APC40/APC40 mkII scene and fixture workflow controls
   useApc40Workflow();
+  // Push LED state back to APC40 so the device surface mirrors scene + selection state.
+  useApc40LedFeedback();
   
   // Initialize ACTS playback engine
   useActsPlaybackEngine();

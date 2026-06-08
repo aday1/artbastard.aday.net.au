@@ -942,6 +942,8 @@ interface State extends AutomationState, TransitionTrackerSlice {
   // Scene Actions
   saveScene: (name: string, oscAddress: string) => void
   loadScene: (nameOrIndex: string | number) => void
+  loadNextScene: () => void
+  loadPreviousScene: () => void
   deleteScene: (name: string) => void
   updateScene: (originalName: string, updates: Partial<Scene>) => void; // New action for updating scenes
   setTuningScene: (name: string | null) => void;
@@ -3867,6 +3869,26 @@ export const useStore = create<State>()(
         } else {
           get().addNotification({ message: `Scene "${originalName}" not found`, type: 'error' })
         }
+      },
+
+      loadNextScene: () => {
+        const { scenes, activeSceneName } = get();
+        if (!scenes || scenes.length === 0) return;
+        const idx = activeSceneName
+          ? scenes.findIndex((s: Scene) => s.name === activeSceneName)
+          : -1;
+        const next = scenes[(idx + 1 + scenes.length) % scenes.length];
+        if (next) get().loadScene(next.name);
+      },
+
+      loadPreviousScene: () => {
+        const { scenes, activeSceneName } = get();
+        if (!scenes || scenes.length === 0) return;
+        const idx = activeSceneName
+          ? scenes.findIndex((s: Scene) => s.name === activeSceneName)
+          : 0;
+        const prev = scenes[(idx - 1 + scenes.length) % scenes.length];
+        if (prev) get().loadScene(prev.name);
       },
 
       deleteScene: (name) => {

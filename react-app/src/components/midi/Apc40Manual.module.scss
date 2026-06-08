@@ -167,6 +167,33 @@
   gap: 0.4rem;
 }
 
+// Inline label block under any control. Always visible (no hover) so the user
+// can see at a glance what every knob/fader is assigned to and the MIDI sig.
+.knobBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.controlBlockLabel {
+  margin-top: 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-text, #e5e7eb);
+  text-align: center;
+  line-height: 1.1;
+  max-width: 7rem;
+  word-break: break-word;
+}
+
+.controlBlockSig {
+  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  font-size: 0.62rem;
+  color: var(--text-secondary, #94a3b8);
+  text-align: center;
+}
+
 .knob {
   background: radial-gradient(circle at 30% 30%, #3a3f4a 0%, #1a1d24 70%);
   border: 2px solid #475569;
@@ -205,6 +232,37 @@
   left: 50%;
   transform: translateX(-50%);
   border-radius: 2px;
+  transition: transform 80ms ease-out;
+}
+
+// Compact 4-way nav pad: ▲ ◀ ▶ ▼ in a + layout.
+.navCluster {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  grid-template-areas:
+    "up    right"
+    "left  down";
+  gap: 0.15rem;
+  width: 7rem;
+  align-self: center;
+}
+
+.navBtn {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #0f1115;
+  padding: 0.3rem 0.4rem;
+  border-radius: 3px;
+  text-align: center;
+  cursor: help;
+  opacity: 0.85;
+  transition: opacity 120ms ease, box-shadow 120ms ease;
+
+  &.active {
+    opacity: 1;
+    box-shadow: 0 0 10px currentColor;
+  }
 }
 
 .controlLabel {
@@ -365,6 +423,7 @@
   left: 50%;
   transform: translate(-50%, -50%);
   box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  transition: top 80ms ease-out;
 }
 .faderLive .faderCap {
   background: linear-gradient(180deg, #fde047 0%, #f59e0b 100%);

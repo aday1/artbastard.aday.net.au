@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../../store';
 import { getTemplateById, SuperControlBinding } from './midiControllerTemplates';
 import styles from './Apc40Manual.module.scss';
@@ -14,6 +14,9 @@ type SectionKey =
   | 'crossfader'
   | 'cueLevel'
   | 'deviceKnob'
+  | 'navFixture'
+  | 'navScene'
+  | 'selectAll'
   | 'shift'
   | 'clear';
 
@@ -21,19 +24,20 @@ interface HardwireSpec {
   key: SectionKey;
   label: string;
   description: string;
-  category: 'selection' | 'scene' | 'transport' | 'superControl' | 'utility';
+  category: 'selection' | 'scene' | 'transport' | 'superControl' | 'utility' | 'nav';
 }
 
-// Wiring that lives in useApc40Workflow.ts (not in the template) — kept here
-// for the visual manual so the user can see what every button does.
 const HARDWIRED: HardwireSpec[] = [
   { key: 'clipGrid',    label: 'Clip Grid (8×5)',     description: 'Toggle fixture selection by slot; empty slot prompts to add a fixture template.', category: 'selection' },
-  { key: 'sceneLaunch', label: 'Scene Launch (1–5)',  description: 'Load saved scene from slot; if slot is empty, captures current DMX state into it.', category: 'scene' },
-  { key: 'trackSelect', label: 'Track Select (1–8)',  description: 'Select fixture group by index. Falls back to selecting the single fixture in that column.', category: 'selection' },
+  { key: 'sceneLaunch', label: 'Scene Launch (1–5)',  description: 'Load saved scene; LED green = saved/available, orange = active, off = empty (press to capture current state).', category: 'scene' },
+  { key: 'trackSelect', label: 'Track Select (1–8)',  description: 'Select fixture group by index; falls back to single fixture in that column.', category: 'selection' },
   { key: 'trackStop',   label: 'Track Stop',          description: 'Stops/clears the per-column group binding.', category: 'utility' },
-  { key: 'transport',   label: 'Play / Stop / Record', description: 'Play = create show; Stop = deselect all; Record = quick-capture scene with timestamp.', category: 'scene' },
-  { key: 'shift',       label: 'Shift',                description: 'Modifier reserved for shift-combos.', category: 'utility' },
+  { key: 'transport',   label: 'Play / Stop / Record', description: 'Play = create show; Stop = deselect all; Record = quick-capture scene.', category: 'scene' },
+  { key: 'navFixture',  label: 'Up / Down arrows',    description: 'Cycle through fixtures: Up = previous, Down = next.', category: 'nav' },
+  { key: 'navScene',    label: 'Left / Right arrows', description: 'Cycle through scenes: Left = previous, Right = next.', category: 'nav' },
+  { key: 'selectAll',   label: 'Pan button',           description: 'Select all fixtures at once.', category: 'selection' },
   { key: 'clear',       label: 'Clear Selection',     description: 'Deselects all fixtures.', category: 'selection' },
+  { key: 'shift',       label: 'Shift',                description: 'Modifier reserved for shift-combos.', category: 'utility' },
 ];
 
 const categoryColor: Record<HardwireSpec['category'] | 'superControl', string> = {
@@ -42,6 +46,7 @@ const categoryColor: Record<HardwireSpec['category'] | 'superControl', string> =
   transport:     '#ec4899',
   utility:       '#64748b',
   superControl:  '#3b82f6',
+  nav:           '#a855f7',
 };
 
 const sigForBinding = (b?: SuperControlBinding): string => {
@@ -62,36 +67,73 @@ const fmtMidiMsg = (m: any): string => {
   return t ?? 'msg';
 };
 
+const messageKey = (m: any): string | null => {
+  const t = m?._type || m?.type;
+  if (t === 'cc') return `cc:${m.channel}:${m.controller}`;
+  if (t === 'noteon') return `note:${m.channel}:${m.note}`;
+  if (t === 'pitch') return `pitch:${m.channel}`;
+  return null;
+};
+
 export const Apc40Manual: React.FC = () => {
   const superControlMidiMappings = useStore(s => s.superControlMidiMappings);
   const midiMessages = useStore(s => s.midiMessages);
   const selectedFixtures = useStore(s => s.selectedFixtures);
+  const scenes = useStore(s => s.scenes);
+  const activeSceneName = useStore(s => s.activeSceneName);
   const superControlLearnTarget = useStore(s => s.superControlLearnTarget);
   const startSuperControlLearn = useStore(s => s.startSuperControlLearn);
 
   const [activeKey, setActiveKey] = useState<string | null>(null);
+  // Live values per signature, used to animate knob rotation / fader position.
+  const [liveValues, setLiveValues] = useState<Record<string, number>>({});
+  // Direct-path activity ring for the ticker (the store's midiMessages only
+  // covers the server transport; Web MIDI dispatches `midiMessageDirect`).
+  const [directLog, setDirectLog] = useState<any[]>([]);
+  const activeTimerRef = useRef<number | null>(null);
 
-  // Highlight the matching control when a MIDI message arrives.
+  const flashActive = (key: string) => {
+    setActiveKey(key);
+    if (activeTimerRef.current) window.clearTimeout(activeTimerRef.current);
+    activeTimerRef.current = window.setTimeout(() => setActiveKey(prev => (prev === key ? null : prev)), 300);
+  };
+
+  // React to server-MIDI store updates.
   useEffect(() => {
     if (!midiMessages || midiMessages.length === 0) return;
     const m: any = midiMessages[midiMessages.length - 1];
-    const type = m?.type || m?._type;
-    let key: string | null = null;
-    if (type === 'cc') {
-      key = `cc:${m.channel}:${m.controller}`;
-    } else if (type === 'noteon') {
-      key = `note:${m.channel}:${m.note}`;
-    } else if (type === 'pitch') {
-      key = `pitch:${m.channel}`;
-    }
+    const key = messageKey(m);
     if (key) {
-      setActiveKey(key);
-      const t = window.setTimeout(() => setActiveKey(prev => (prev === key ? null : prev)), 250);
-      return () => window.clearTimeout(t);
+      flashActive(key);
+      const t = m._type || m.type;
+      if (t === 'cc' && typeof m.value === 'number') {
+        setLiveValues(prev => ({ ...prev, [key]: m.value }));
+      }
     }
   }, [midiMessages]);
 
-  // Build a quick lookup from MIDI signature → SuperControl binding label.
+  // React to direct browser-MIDI events (Web MIDI bypasses the store for
+  // throttled CC traffic, so the visualizer needs its own listener).
+  useEffect(() => {
+    const onDirect = (e: Event) => {
+      const m = (e as CustomEvent).detail;
+      const key = messageKey(m);
+      if (!key) return;
+      flashActive(key);
+      const t = m._type || m.type;
+      if (t === 'cc' && typeof m.value === 'number') {
+        setLiveValues(prev => ({ ...prev, [key]: m.value }));
+      }
+      setDirectLog(prev => [...prev.slice(-9), m]);
+    };
+    window.addEventListener('midiMessageDirect', onDirect as EventListener);
+    return () => window.removeEventListener('midiMessageDirect', onDirect as EventListener);
+  }, []);
+
+  useEffect(() => () => {
+    if (activeTimerRef.current) window.clearTimeout(activeTimerRef.current);
+  }, []);
+
   const bindingByKey = useMemo(() => {
     const map = new Map<string, SuperControlBinding>();
     superControlMidiMappings.forEach((b) => {
@@ -102,9 +144,6 @@ export const Apc40Manual: React.FC = () => {
     return map;
   }, [superControlMidiMappings]);
 
-  // Lookup by SuperControl identity (controlName + slotIndex) for the "current
-  // signature" labels on each control. After a re-learn the binding may move
-  // to a totally different CC/note, so we key by control identity not by sig.
   const bindingByControl = useMemo(() => {
     const map = new Map<string, SuperControlBinding>();
     superControlMidiMappings.forEach((b) => {
@@ -128,32 +167,60 @@ export const Apc40Manual: React.FC = () => {
 
   const beginLearn = (controlName: string, slotIndex?: number) => {
     if (isLearningKey(controlName, slotIndex)) {
-      startSuperControlLearn(null); // toggle off
+      startSuperControlLearn(null);
     } else {
       startSuperControlLearn({ controlName, slotIndex });
     }
   };
 
-  // Activity ticker: last 5 messages
+  // Combined activity ticker — last few messages from either path.
   const lastMessages = useMemo(() => {
-    const tail = midiMessages?.slice(-5) ?? [];
-    return tail.slice().reverse();
-  }, [midiMessages]);
+    const combined = [...(midiMessages ?? []), ...directLog];
+    return combined.slice(-5).reverse();
+  }, [midiMessages, directLog]);
+
+  // Per-knob rotation: bind a knob's visual dot angle to the latest CC value.
+  const knobAngle = (cc: number): number => {
+    const key = `cc:0:${cc}`;
+    const v = liveValues[key];
+    if (v === undefined) return -135; // resting angle
+    // 0-127 mapped to -135°..+135°
+    return -135 + (v / 127) * 270;
+  };
+
+  const faderTopPct = (b?: SuperControlBinding): number => {
+    if (!b) return 60;
+    let key: string | null = null;
+    if (b.controller !== undefined) key = `cc:${b.channel}:${b.controller}`;
+    else if (b.note !== undefined) key = `note:${b.channel}:${b.note}`;
+    if (!key) return 60;
+    const v = liveValues[key];
+    if (v === undefined) return 60;
+    // 0 = cap at bottom (100%), 127 = cap at top (0%)
+    return 100 - (v / 127) * 100;
+  };
+
+  // Scene LED status for the visual scene column (mirrors what useApc40LedFeedback pushes).
+  const sceneStatus = (idx: number): 'empty' | 'saved' | 'active' => {
+    const s = scenes?.[idx];
+    if (!s) return 'empty';
+    return s.name === activeSceneName ? 'active' : 'saved';
+  };
 
   return (
     <div className={styles.manual}>
       <div className={styles.intro}>
         <p>
-          Visual reference for the AKAI APC40 MK1. Hover any control to read what it does;
-          click a fader, knob, master, cue or crossfader to <b>re-learn</b> its MIDI signature —
-          the next inbound MIDI message will rebind that SuperControl parameter.
-          Hardware buttons (grid, scenes, transport) keep their roles regardless of template state.
+          Visual reference for the AKAI APC40 MK1. Controls light up and animate as MIDI arrives —
+          click any knob, fader, master, cue or crossfader to <b>re-learn</b> its SuperControl binding.
+          Scene LEDs reflect status: <b style={{color:'#22c55e'}}>green</b> = saved, <b style={{color:'#f59e0b'}}>orange</b> = active, off = empty.
         </p>
         <div className={styles.statusRow}>
           <span className={`${styles.status} ${templateApplied ? styles.statusOn : styles.statusOff}`}>
             {templateApplied ? '● APC40 template applied' : '○ APC40 template not applied'}
           </span>
           <span className={styles.statusMeta}>Selected fixtures: <b>{selectedFixtures.length}</b></span>
+          <span className={styles.statusMeta}>Active scene: <b>{activeSceneName ?? '—'}</b></span>
         </div>
         {template && (
           <p className={styles.templateHint}>{template.details}</p>
@@ -171,7 +238,7 @@ export const Apc40Manual: React.FC = () => {
 
         <div className={styles.activityTicker} aria-label="Live MIDI activity">
           {lastMessages.length === 0
-            ? <span>No MIDI messages yet — connect APC40 (Settings → MIDI/OSC) and wiggle a control.</span>
+            ? <span>No MIDI yet — connect APC40 (Settings → MIDI/OSC) and touch a control.</span>
             : lastMessages.map((m, i) => <span key={i}>{fmtMidiMsg(m)}</span>)}
         </div>
       </div>
@@ -183,9 +250,9 @@ export const Apc40Manual: React.FC = () => {
         </div>
 
         <div className={styles.layout}>
-          {/* Top-right device knob cluster */}
+          {/* Device knobs (CC16-23) */}
           <div className={`${styles.cluster} ${styles.deviceKnobs}`}>
-            <div className={styles.clusterLabel}>Device Knobs (CC16–23) — click to re-learn</div>
+            <div className={styles.clusterLabel}>Device Knobs (CC16–23) — rotate with MIDI · click to re-learn</div>
             <div className={styles.knobRow}>
               {[16, 17, 18, 19, 20, 21, 22, 23].map((cc) => {
                 const key = `cc:0:${cc}`;
@@ -193,28 +260,30 @@ export const Apc40Manual: React.FC = () => {
                 const controlName = b?.controlName ?? '';
                 const slot = b?.slotIndex;
                 const learning = controlName && isLearningKey(controlName, slot);
+                const angle = knobAngle(cc);
                 return (
-                  <div
-                    key={cc}
-                    className={`${styles.knob} ${activeKey === key ? styles.active : ''} ${learning ? styles.learning : ''}`}
-                    style={{ borderColor: learning ? '#3b82f6' : categoryColor.superControl }}
-                    title={`${b?.label ?? `CC${cc}`} — click to re-learn`}
-                    onClick={() => b && beginLearn(controlName, slot)}
-                    role="button"
-                    tabIndex={0}
-                  >
-                    <div className={styles.knobDot} />
-                    <div className={styles.controlLabel}>{b?.label ?? `Device Knob CC${cc}`}</div>
-                    <div className={styles.controlSig}>{sigForBinding(b)}</div>
+                  <div key={cc} className={styles.knobBlock}>
+                    <div
+                      className={`${styles.knob} ${activeKey === key ? styles.active : ''} ${learning ? styles.learning : ''}`}
+                      style={{ borderColor: learning ? '#3b82f6' : categoryColor.superControl }}
+                      title={`${b?.label ?? `CC${cc}`} — click to re-learn`}
+                      onClick={() => b && beginLearn(controlName, slot)}
+                      role="button"
+                      tabIndex={0}
+                    >
+                      <div className={styles.knobDot} style={{ transform: `translateX(-50%) rotate(${angle}deg)`, transformOrigin: '50% 200%' }} />
+                    </div>
+                    <div className={styles.controlBlockLabel}>{b?.label?.replace(/^Device Knob \d+\s*→\s*/, '') ?? `CC${cc}`}</div>
+                    <div className={styles.controlBlockSig}>{sigForBinding(b)}</div>
                   </div>
                 );
               })}
             </div>
           </div>
 
-          {/* 8x5 clip grid + scene launch column */}
+          {/* Clip grid + scene launch column */}
           <div className={`${styles.cluster} ${styles.clipGrid}`}>
-            <div className={styles.clusterLabel}>Clip Grid 8×5 → fixture select (hardware-wired)</div>
+            <div className={styles.clusterLabel}>Clip Grid 8×5 → fixture select · Scene LEDs reflect saved/active</div>
             <div className={styles.gridAndScenes}>
               <div className={styles.grid}>
                 {Array.from({ length: 5 }).map((_, row) => (
@@ -237,12 +306,16 @@ export const Apc40Manual: React.FC = () => {
               <div className={styles.sceneColumn}>
                 {[0x52, 0x53, 0x54, 0x55, 0x56].map((note, idx) => {
                   const key = `note:0:${note}`;
+                  const status = sceneStatus(idx);
+                  const bg = status === 'active' ? '#f59e0b'
+                    : status === 'saved' ? '#22c55e'
+                    : '#334155';
                   return (
                     <div
                       key={note}
                       className={`${styles.scenePad} ${activeKey === key ? styles.active : ''}`}
-                      style={{ background: categoryColor.scene }}
-                      title={`Scene ${idx + 1}: load if saved, capture if empty`}
+                      style={{ background: bg, color: status === 'empty' ? '#94a3b8' : '#0f172a' }}
+                      title={`Scene ${idx + 1}: ${status === 'empty' ? 'empty (press to capture)' : status === 'active' ? 'currently active' : 'saved'}`}
                     >
                       Scene {idx + 1}
                     </div>
@@ -252,7 +325,7 @@ export const Apc40Manual: React.FC = () => {
             </div>
           </div>
 
-          {/* Track row: select + stop buttons above each fader */}
+          {/* Tracks 1-8 + master */}
           <div className={`${styles.cluster} ${styles.tracks}`}>
             <div className={styles.clusterLabel}>Tracks 1–8: fader → slot dimmer · click fader to re-learn</div>
             <div className={styles.trackRow}>
@@ -265,11 +338,12 @@ export const Apc40Manual: React.FC = () => {
                   : (b?.note !== undefined ? `note:${b.channel}:${b.note}` : (b?.pitch ? `pitch:${b.channel}` : `cc:${trackIdx}:7`));
                 const slotInUse = trackIdx < selectedFixtures.length;
                 const learning = isLearningKey('dimmer', trackIdx);
+                const capTop = faderTopPct(b);
                 return (
                   <div key={trackIdx} className={styles.track}>
                     <div
                       className={`${styles.trackButton} ${activeKey === selectKey ? styles.active : ''}`}
-                      style={{ background: categoryColor.selection }}
+                      style={{ background: slotInUse ? categoryColor.selection : '#475569' }}
                       title={`Track ${trackIdx + 1} Select → group/fixture index ${trackIdx + 1}`}
                     >SEL</div>
                     <div
@@ -285,16 +359,15 @@ export const Apc40Manual: React.FC = () => {
                       tabIndex={0}
                     >
                       <div className={styles.faderTrack}>
-                        <div className={styles.faderCap} />
+                        <div className={styles.faderCap} style={{ top: `${capTop}%` }} />
                       </div>
-                      <div className={styles.controlLabel}>{b?.label ?? `Track ${trackIdx + 1} Fader`}</div>
-                      <div className={styles.controlSig}>{sigForBinding(b)}</div>
                     </div>
+                    <div className={styles.controlBlockLabel}>Slot {trackIdx + 1} dim</div>
+                    <div className={styles.controlBlockSig}>{sigForBinding(b)}</div>
                   </div>
                 );
               })}
 
-              {/* Master fader on the right */}
               <div className={styles.track}>
                 <div className={styles.trackButton} style={{ background: categoryColor.utility, visibility: 'hidden' }}>·</div>
                 <div className={styles.trackButton} style={{ background: categoryColor.utility, visibility: 'hidden' }}>·</div>
@@ -306,57 +379,68 @@ export const Apc40Manual: React.FC = () => {
                   tabIndex={0}
                 >
                   <div className={styles.faderTrack}>
-                    <div className={styles.faderCap} />
+                    <div className={styles.faderCap} style={{ top: `${faderTopPct(masterFaderBinding)}%` }} />
                   </div>
-                  <div className={styles.controlLabel}>
-                    {masterFaderBinding?.label ?? 'Master Fader'}
-                  </div>
-                  <div className={styles.controlSig}>{sigForBinding(masterFaderBinding)}</div>
                 </div>
+                <div className={styles.controlBlockLabel}>Master</div>
+                <div className={styles.controlBlockSig}>{sigForBinding(masterFaderBinding)}</div>
               </div>
             </div>
           </div>
 
-          {/* Bottom-left transport + crossfader cluster */}
+          {/* Transport + nav cluster */}
           <div className={`${styles.cluster} ${styles.transport}`}>
-            <div className={styles.clusterLabel}>Transport / Trim — knob &amp; crossfader are click-to-re-learn</div>
+            <div className={styles.clusterLabel}>Transport / Nav — Up/Down cycles fixtures, Left/Right cycles scenes</div>
             <div className={styles.transportRow}>
               <div className={styles.transportButton} style={{ background: categoryColor.scene }} title="Play → dispatch 'create show' event">▶ PLAY</div>
               <div className={styles.transportButton} style={{ background: categoryColor.utility }} title="Stop → deselect all fixtures">■ STOP</div>
               <div className={styles.transportButton} style={{ background: categoryColor.transport }} title="Record → quick-capture current state into the next free scene slot">● REC</div>
               <div className={styles.transportButton} style={{ background: categoryColor.utility }} title="Clear Selection">CLEAR</div>
               <div className={styles.transportButton} style={{ background: categoryColor.utility }} title="Shift modifier">SHIFT</div>
-              <div
-                className={`${styles.knob} ${activeKey === `cc:${cueBinding?.channel ?? 0}:${cueBinding?.controller ?? 47}` ? styles.active : ''} ${isLearningKey('fine_pan') ? styles.learning : ''}`}
-                style={{ borderColor: categoryColor.superControl }}
-                title={`${cueBinding?.label ?? 'Cue Level → Fine Pan'} — click to re-learn`}
-                onClick={() => beginLearn('fine_pan')}
-                role="button"
-                tabIndex={0}
-              >
-                <div className={styles.knobDot} />
-                <div className={styles.controlLabel}>{cueBinding?.label ?? 'Cue Level'}</div>
-                <div className={styles.controlSig}>{sigForBinding(cueBinding)}</div>
+              <div className={styles.transportButton} style={{ background: categoryColor.selection }} title="Pan button → Select All fixtures">SEL ALL</div>
+
+              {/* Nav arrows */}
+              <div className={styles.navCluster} title="Up/Down → cycle fixtures · Left/Right → cycle scenes">
+                <div className={`${styles.navBtn} ${activeKey === 'note:0:94' ? styles.active : ''}`} style={{ background: categoryColor.nav, gridArea: 'up' }} title="Up → previous fixture">▲ FX-</div>
+                <div className={`${styles.navBtn} ${activeKey === 'note:0:96' ? styles.active : ''}`} style={{ background: categoryColor.nav, gridArea: 'left' }} title="Left → previous scene">◀ SC-</div>
+                <div className={`${styles.navBtn} ${activeKey === 'note:0:97' ? styles.active : ''}`} style={{ background: categoryColor.nav, gridArea: 'right' }} title="Right → next scene">SC+ ▶</div>
+                <div className={`${styles.navBtn} ${activeKey === 'note:0:95' ? styles.active : ''}`} style={{ background: categoryColor.nav, gridArea: 'down' }} title="Down → next fixture">▼ FX+</div>
               </div>
-              <div
-                className={`${styles.crossfader} ${activeKey === `cc:${crossfaderBinding?.channel ?? 0}:${crossfaderBinding?.controller ?? 15}` ? styles.active : ''} ${isLearningKey('fine_tilt') ? styles.learning : ''}`}
-                title={`${crossfaderBinding?.label ?? 'Crossfader → Fine Tilt'} — click to re-learn`}
-                onClick={() => beginLearn('fine_tilt')}
-                role="button"
-                tabIndex={0}
-              >
-                <div className={styles.crossfaderTrack}>
-                  <div className={styles.crossfaderCap} />
+
+              <div className={styles.knobBlock}>
+                <div
+                  className={`${styles.knob} ${activeKey === `cc:${cueBinding?.channel ?? 0}:${cueBinding?.controller ?? 47}` ? styles.active : ''} ${isLearningKey('fine_pan') ? styles.learning : ''}`}
+                  style={{ borderColor: categoryColor.superControl }}
+                  title={`${cueBinding?.label ?? 'Cue Level → Fine Pan'} — click to re-learn`}
+                  onClick={() => beginLearn('fine_pan')}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <div className={styles.knobDot} />
                 </div>
-                <div className={styles.controlLabel}>{crossfaderBinding?.label ?? 'Crossfader'}</div>
-                <div className={styles.controlSig}>{sigForBinding(crossfaderBinding)}</div>
+                <div className={styles.controlBlockLabel}>Cue</div>
+                <div className={styles.controlBlockSig}>{sigForBinding(cueBinding)}</div>
+              </div>
+              <div className={styles.knobBlock}>
+                <div
+                  className={`${styles.crossfader} ${activeKey === `cc:${crossfaderBinding?.channel ?? 0}:${crossfaderBinding?.controller ?? 15}` ? styles.active : ''} ${isLearningKey('fine_tilt') ? styles.learning : ''}`}
+                  title={`${crossfaderBinding?.label ?? 'Crossfader → Fine Tilt'} — click to re-learn`}
+                  onClick={() => beginLearn('fine_tilt')}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <div className={styles.crossfaderTrack}>
+                    <div className={styles.crossfaderCap} />
+                  </div>
+                </div>
+                <div className={styles.controlBlockLabel}>Crossfader</div>
+                <div className={styles.controlBlockSig}>{sigForBinding(crossfaderBinding)}</div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Active SuperControl bindings — the source of truth */}
       <div className={styles.bindingTable}>
         <h4>SuperControl Bindings ({superControlMidiMappings.length})</h4>
         {superControlMidiMappings.length === 0 ? (
@@ -408,13 +492,13 @@ export const Apc40Manual: React.FC = () => {
                 transport: 'Capture / Transport',
                 utility: 'Utility',
                 superControl: 'SuperControl param',
+                nav: 'Navigation (next/prev)',
               } as Record<string, string>)[cat]}
             </li>
           ))}
         </ul>
         <p className={styles.legendNote}>
-          Controls light up briefly when the matching MIDI message is received.
-          Hardware wiring (grid/scenes/transport) is fixed; everything else can be re-learned.
+          Knobs rotate and faders track live with incoming MIDI values. Scene pads show real status: green = saved, orange = active.
         </p>
       </div>
 

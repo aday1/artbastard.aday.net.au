@@ -23,6 +23,11 @@ export function useApc40Workflow() {
   const setSelectedFixtures = useStore((state) => state.setSelectedFixtures);
   const selectFixtureGroup = useStore((state) => state.selectFixtureGroup);
   const deselectAllFixtures = useStore((state) => state.deselectAllFixtures);
+  const selectAllFixtures = useStore((state) => state.selectAllFixtures);
+  const selectNextFixture = useStore((state) => state.selectNextFixture);
+  const selectPreviousFixture = useStore((state) => state.selectPreviousFixture);
+  const loadNextScene = useStore((state) => state.loadNextScene);
+  const loadPreviousScene = useStore((state) => state.loadPreviousScene);
   const addNotification = useStore((state) => state.addNotification);
   const lastSignature = useRef('');
 
@@ -111,6 +116,28 @@ export function useApc40Workflow() {
       return;
     }
 
+    if (action.type === 'nav-fixture') {
+      if (action.direction === 'next') selectNextFixture();
+      else selectPreviousFixture();
+      return;
+    }
+
+    if (action.type === 'nav-scene') {
+      if (action.direction === 'next') loadNextScene();
+      else loadPreviousScene();
+      return;
+    }
+
+    if (action.type === 'select-all') {
+      selectAllFixtures();
+      addNotification({
+        message: 'APC40 selected all fixtures',
+        type: 'info',
+        priority: 'low',
+      });
+      return;
+    }
+
     if (action.type === 'clip-launch') {
       const fixture = fixtures[action.index];
       if (fixture) {
@@ -135,10 +162,15 @@ export function useApc40Workflow() {
     fixtures,
     groups,
     latestMessage,
+    loadNextScene,
+    loadPreviousScene,
     loadScene,
     saveScene,
     scenes,
+    selectAllFixtures,
     selectFixtureGroup,
+    selectNextFixture,
+    selectPreviousFixture,
     selectedFixtures,
     setSelectedFixtures,
   ]);
