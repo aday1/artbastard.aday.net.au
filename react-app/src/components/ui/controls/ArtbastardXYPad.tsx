@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { LucideIcon } from '../LucideIcon';
 import styles from './ArtbastardXYPad.module.scss';
 import {
@@ -42,6 +42,16 @@ export interface ArtbastardXYPadProps {
   /** Roli Lightpad status (optional badge). */
   roliConnected?: boolean;
   roliDeviceName?: string | null;
+  /** Fires whenever the internal path mutates (drawing, shape, Roli touch). */
+  onPathChange?: (points: PathPoint[]) => void;
+}
+
+export interface ArtbastardXYPadHandle {
+  /** Start a Roli-driven path. Coords are normalized 0..1 (origin top-left, same as Roli y). */
+  beginExternalPath: (nx: number, ny: number) => void;
+  extendExternalPath: (nx: number, ny: number) => void;
+  /** Finalize the path and fire onPathSaved if it has any meaningful length. */
+  endExternalPath: () => void;
 }
 
 type ToolMode = 'live' | 'pencil';
@@ -57,7 +67,7 @@ const PAD_TOOLS = [
   { id: 'shapes', icon: 'Shapes', title: 'Insert shape path (tap to cycle)' },
 ] as const;
 
-export const ArtbastardXYPad: React.FC<ArtbastardXYPadProps> = ({
+export const ArtbastardXYPad = forwardRef<ArtbastardXYPadHandle, ArtbastardXYPadProps>(({
   pan,
   tilt,
   disabled = false,
@@ -77,7 +87,8 @@ export const ArtbastardXYPad: React.FC<ArtbastardXYPadProps> = ({
   onClearSlot,
   roliConnected = false,
   roliDeviceName = null,
-}) => {
+  onPathChange,
+}, ref) => {
   const padRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -460,4 +471,6 @@ export const ArtbastardXYPad: React.FC<ArtbastardXYPadProps> = ({
       ) : null}
     </div>
   );
-};
+});
+
+ArtbastardXYPad.displayName = 'ArtbastardXYPad';
