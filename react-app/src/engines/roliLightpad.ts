@@ -38,9 +38,9 @@ export type RoliDeviceChangeCallback = (info: {
 }) => void;
 
 interface InternalState {
-  midiAccess: MIDIAccess | null;
-  input: MIDIInput | null;
-  output: MIDIOutput | null;
+  midiAccess: WebMidi.MIDIAccess | null;
+  input: WebMidi.MIDIInput | null;
+  output: WebMidi.MIDIOutput | null;
   inputName: string | null;
   outputName: string | null;
   handshakeDone: boolean;
@@ -326,14 +326,14 @@ function parseRoliTouchSysex(data: Uint8Array): void {
   }
 }
 
-function onMidiMessage(event: MIDIMessageEvent): void {
+function onMidiMessage(event: WebMidi.MIDIMessageEvent): void {
   const d = event.data;
   if (!d || d.length < 1) return;
 
   if (d[0] === 0xf0) {
     s.sysexBuf = Array.from(d);
   } else if (s.sysexBuf.length > 0) {
-    s.sysexBuf.push(...Array.from(d));
+    s.sysexBuf.push(...Array.from(d as unknown as number[]));
   }
   if (s.sysexBuf.length > 0 && s.sysexBuf[s.sysexBuf.length - 1] === 0xf7) {
     const full = new Uint8Array(s.sysexBuf);
@@ -377,8 +377,8 @@ export function isRoliblockLike(name: string): boolean {
 
 function refreshAndAutoMap(): void {
   if (!s.midiAccess) return;
-  let chosenInput: MIDIInput | null = null;
-  let chosenOutput: MIDIOutput | null = null;
+  let chosenInput: WebMidi.MIDIInput | null = null;
+  let chosenOutput: WebMidi.MIDIOutput | null = null;
   s.midiAccess.inputs.forEach((inp) => {
     if (!chosenInput && isRoliblockLike(inp.name || '')) chosenInput = inp;
   });
