@@ -625,10 +625,12 @@ interface State extends AutomationState, TransitionTrackerSlice {
     sceneAName: string | null;
     sceneBName: string | null;
     shiftLatched: boolean;
+    mode: 'save' | 'pickA' | 'pickB' | null;
   };
   setApc40SceneA: (name: string | null) => void;
   setApc40SceneB: (name: string | null) => void;
   setApc40Shift: (latched: boolean) => void;
+  setApc40Mode: (mode: 'save' | 'pickA' | 'pickB' | null) => void;
 
   // Audio/BPM State
   bpm: number // Current BPM value
@@ -1608,6 +1610,7 @@ export const useStore = create<State>()(
         sceneAName: null,
         sceneBName: null,
         shiftLatched: false,
+        mode: null,
       },
       setApc40SceneA: (name) => set((state) => ({
         apc40CrossfaderState: { ...state.apc40CrossfaderState, sceneAName: name },
@@ -1617,6 +1620,9 @@ export const useStore = create<State>()(
       })),
       setApc40Shift: (latched) => set((state) => ({
         apc40CrossfaderState: { ...state.apc40CrossfaderState, shiftLatched: latched },
+      })),
+      setApc40Mode: (mode) => set((state) => ({
+        apc40CrossfaderState: { ...state.apc40CrossfaderState, mode },
       })),
 
       // Audio/BPM State defaults

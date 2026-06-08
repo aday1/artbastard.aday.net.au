@@ -93,7 +93,6 @@ export function decodeApc40Message(message: MidiLikeMessage): Apc40Action | null
   const scene = sceneLaunch(model, note);
   if (scene) return scene;
 
-  if (note === 0x30) return { type: 'record', model };
   if (note === 0x31) return { type: 'multi-select-solo', model, trackIndex };
   if (note === 0x32) return { type: 'multi-select-add', model, trackIndex };
   if (note === 0x33) return { type: 'track-select', model, trackIndex };

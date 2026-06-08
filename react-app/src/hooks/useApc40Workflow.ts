@@ -7,11 +7,6 @@ function sceneSlotName(index: number) {
   return `APC40 Scene ${index + 1}`;
 }
 
-function quickSceneName() {
-  const stamp = new Date().toISOString().slice(11, 19).replace(/:/g, '-');
-  return `APC40 Capture ${stamp}`;
-}
-
 const FADER_CONTROL_BY_TRACK = [
   'dimmer',
   'pan',
@@ -49,11 +44,12 @@ export function useApc40Workflow() {
   const setApc40SceneA = useStore((state) => state.setApc40SceneA);
   const setApc40SceneB = useStore((state) => state.setApc40SceneB);
   const setApc40Shift = useStore((state) => state.setApc40Shift);
+  const setApc40Mode = useStore((state) => state.setApc40Mode);
   const lastSignature = useRef('');
   const shiftHeldRef = useRef(false);
   const sceneARef = useRef<string | null>(null);
   const sceneBRef = useRef<string | null>(null);
-  const nextAssignRef = useRef<'A' | 'B'>('A');
+  const modeRef = useRef<'save' | 'pickA' | 'pickB' | null>(null);
 
   useEffect(() => {
     if (!latestMessage || !isApc40Source(latestMessage.source)) return;
@@ -107,40 +103,103 @@ export function useApc40Workflow() {
     }
 
     if (action.type === 'shift') {
+      // SHIFT now cancels any active picker/save mode (escape gesture).
+      if (modeRef.current) {
+        modeRef.current = null;
+        setApc40Mode(null);
+        addNotification({
+          message: 'APC40 mode cancelled',
+          type: 'info',
+          priority: 'low',
+        });
+        return;
+      }
       const next = !shiftHeldRef.current;
       shiftHeldRef.current = next;
       setApc40Shift(next);
+      return;
+    }
+
+    if (action.type === 'record') {
+      const next = modeRef.current === 'save' ? null : 'save';
+      modeRef.current = next;
+      setApc40Mode(next);
       addNotification({
-        message: `APC40 SHIFT ${next ? 'latched — next scene press assigns to crossfader' : 'released'}`,
+        message: next
+          ? 'APC40 SAVE mode — tap a scene pad to overwrite/fill it'
+          : 'APC40 SAVE mode cancelled',
         type: 'info',
-        priority: 'low',
+        priority: 'normal',
+      });
+      return;
+    }
+
+    if (action.type === 'play') {
+      const next = modeRef.current === 'pickA' ? null : 'pickA';
+      modeRef.current = next;
+      setApc40Mode(next);
+      addNotification({
+        message: next
+          ? 'APC40 PLAY — pick Scene A for crossfader'
+          : 'APC40 pick-A cancelled',
+        type: 'info',
+        priority: 'normal',
+      });
+      return;
+    }
+
+    if (action.type === 'stop') {
+      const next = modeRef.current === 'pickB' ? null : 'pickB';
+      modeRef.current = next;
+      setApc40Mode(next);
+      addNotification({
+        message: next
+          ? 'APC40 STOP — pick Scene B for crossfader'
+          : 'APC40 pick-B cancelled',
+        type: 'info',
+        priority: 'normal',
       });
       return;
     }
 
     if (action.type === 'scene-launch') {
-      if (shiftHeldRef.current) {
+      const mode = modeRef.current;
+
+      if (mode === 'save') {
+        const existing = scenes[action.sceneIndex];
+        const name = existing ? existing.name : sceneSlotName(action.sceneIndex);
+        saveScene(name, sceneNameToOscPath(name));
+        modeRef.current = null;
+        setApc40Mode(null);
+        addNotification({
+          message: `APC40 SAVE → "${name}" (slot ${action.sceneIndex + 1})`,
+          type: 'success',
+          priority: 'normal',
+        });
+        return;
+      }
+
+      if (mode === 'pickA' || mode === 'pickB') {
         const scene = scenes[action.sceneIndex];
         if (!scene) {
           addNotification({
-            message: `APC40 SHIFT+scene: slot ${action.sceneIndex + 1} is empty — assign skipped`,
+            message: `APC40 pick-${mode === 'pickA' ? 'A' : 'B'}: slot ${action.sceneIndex + 1} is empty`,
             type: 'warning',
             priority: 'normal',
           });
           return;
         }
-        const slot = nextAssignRef.current;
-        if (slot === 'A') {
+        if (mode === 'pickA') {
           sceneARef.current = scene.name;
           setApc40SceneA(scene.name);
-          nextAssignRef.current = 'B';
         } else {
           sceneBRef.current = scene.name;
           setApc40SceneB(scene.name);
-          nextAssignRef.current = 'A';
         }
+        modeRef.current = null;
+        setApc40Mode(null);
         addNotification({
-          message: `APC40 Crossfader ${slot} = "${scene.name}"`,
+          message: `APC40 Crossfader ${mode === 'pickA' ? 'A' : 'B'} = "${scene.name}"`,
           type: 'success',
           priority: 'normal',
         });
@@ -167,28 +226,7 @@ export function useApc40Workflow() {
       return;
     }
 
-    if (action.type === 'record') {
-      const name = quickSceneName();
-      saveScene(name, sceneNameToOscPath(name));
-      addNotification({
-        message: `APC40 captured "${name}"`,
-        type: 'success',
-        priority: 'normal',
-      });
-      return;
-    }
-
-    if (action.type === 'play') {
-      window.dispatchEvent(new CustomEvent('artbastard:apc40-create-show'));
-      addNotification({
-        message: 'APC40 requested Create Show from the current show map',
-        type: 'info',
-        priority: 'normal',
-      });
-      return;
-    }
-
-    if (action.type === 'clear-selection' || action.type === 'track-stop' || action.type === 'stop') {
+    if (action.type === 'clear-selection' || action.type === 'track-stop') {
       deselectAllFixtures();
       addNotification({
         message: 'APC40 cleared fixture selection',
@@ -309,6 +347,7 @@ export function useApc40Workflow() {
     setApc40SceneA,
     setApc40SceneB,
     setApc40Shift,
+    setApc40Mode,
     setDmxChannelValue,
     setSelectedFixtures,
   ]);
