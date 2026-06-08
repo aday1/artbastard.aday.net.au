@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  artbastard:
+    image: ghcr.io/aday1/artbastard.aday.net.au:latest
+    container_name: artbastard
+    ports:
+      - "3030:3030"
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${PORT:-3030}
+      # Optional: DMX hardware interfaces
+      DMX_INTERFACE: ${DMX_INTERFACE:-}
+      ARTNET_HOST: ${ARTNET_HOST:-}
+      ARTNET_PORT: ${ARTNET_PORT:-6454}
+      # Optional: Cloud + LAN bridge (see DOCS/BRIDGE.md)
+      BRIDGE_URL: ${BRIDGE_URL:-}
+    volumes:
+      # Persist scenes, config, and app state across container restarts
+      - artbastard-data:/app/data
+      # Optional: Mount local USB device for DMX (Linux only)
+      # - /dev/bus/usb:/dev/bus/usb:rw
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3030/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  artbastard-data:
+    driver: local
