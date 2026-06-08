@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ArtBastard DMX512 v5.16.0 - Tracker Columns Edition</title>
-    <meta name="description" content="ArtBastard DMX512 v5.16.0 - Fixture-aware transition tracker, live theme tuning, Super Control, scene timelines, MIDI templates, Art-Net, OSC, LAN bridge, mobile surface. Open source.">
+    <title>ArtBastard DMX512 v5.2.2.0 - Surface Symphony Edition</title>
+    <meta name="description" content="ArtBastard DMX512 v5.2.2.0 - APC40 deep integration, Roli Lightpad XY-pad path memory, fixture-aware transition tracker, live theme tuning, Super Control, scene timelines, MIDI templates, Art-Net, OSC, LAN bridge, mobile surface. Open source.">
     <link rel="stylesheet" href="theatrical.css">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="showcase-shell.css">
@@ -80,7 +80,7 @@
                     <span class="showcase-banner-sub">Academie des Illuminations Pretentieuses</span>
                     <h1 class="hero-title marquee-title">
                         <span class="gradient-text">ArtBastard</span>
-                        <span class="hero-subtitle">DMX512 v5.16.0 - Tracker Columns Edition</span>
+                        <span class="hero-subtitle">DMX512 v5.2.2.0 - Surface Symphony Edition</span>
                     </h1>
                     <p class="tagline">Breath of Light Manuscripts // Photonic Supremacy</p>
                     <span class="tagline-secondary">Theatre des Photons // ruelle parisienne</span>
@@ -190,7 +190,7 @@
                         <div class="rack-module-header">
                             <span class="rack-screw rack-screw-tl" aria-hidden="true"></span>
                             <span class="rack-screw rack-screw-tr" aria-hidden="true"></span>
-                            <span class="rack-module-title">RACK DOCTRINE v5.16</span>
+                            <span class="rack-module-title">RACK DOCTRINE v5.2.2</span>
                         </div>
                         <div class="rack-module-body">
                             <p>
@@ -410,6 +410,29 @@
                             <code>POST /api/midi/controller-template</code>.</p>
                     </div>
                     <div class="feature-card">
+                        <div class="feature-icon">APC40</div>
+                        <h3>APC40 MK1 Deep Integration</h3>
+                        <p>The full surface, alive. Launched scene <strong>red-blinks</strong>
+                            so you spot it across the room. <strong>ACTIVATOR</strong> row
+                            adds/removes fixtures from selection; <strong>SOLO</strong> collapses
+                            to one. Eight channel faders drive Super Control
+                            (dim, pan, tilt, R, G, B, gobo, strobe); master fader = global
+                            dimmer. Hold <strong>SHIFT</strong> + tap two scene pads to bind
+                            them to crossfader A/B, then the crossfader blends between the two
+                            scenes' DMX state. Track-select picks fixture groups; nav arrows
+                            cycle fixtures and scenes; PAN = select-all.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">ROLI</div>
+                        <h3>Roli Lightpad XY-Pad Mirror</h3>
+                        <p>Plug in a Roli Lightpad BLOCK and it becomes an MPE-aware XY pad
+                            for Super Control. Touch-draw a path on the surface and it renders
+                            live on the React canvas; pencil-draw on the canvas and the LED
+                            mirrors it as you go. Save up to <strong>8 path slots (A–H)</strong>
+                            per fixture, recall by tapping the strip, right-click to rename
+                            or clear. Bidirectional path memory between hardware and software.</p>
+                    </div>
+                    <div class="feature-card">
                         <div class="feature-icon">OSC</div>
                         <h3>OSC Integration</h3>
                         <p>Two-way OSC for Super Control, scenes, master faders, and ACT triggers.
@@ -447,7 +470,7 @@
                     <div class="feature-card">
                         <div class="feature-icon">THEME</div>
                         <h3>Live Theme Tuning</h3>
-                        <p>HSL sliders and rack presets apply to the UI as you move them (v5.16.0).
+                        <p>HSL sliders and rack presets apply to the UI as you move them.
                             Debounced server sync via /api/appearance; Sync now and Reload UI for
                             multi-client shows. Typography, spacing, and animation speed included.</p>
                     </div>
@@ -485,14 +508,14 @@
                             <code>http://localhost:3030</code>.</p>
                         <div class="download-buttons">
                             <a href="https://github.com/aday1/artbastard.aday.net.au/releases/latest" class="btn btn-primary btn-large">
-                                Download v5.16.0
+                                Download v5.2.2.0
                             </a>
                             <a href="https://github.com/aday1/artbastard.aday.net.au" target="_blank" rel="noopener" class="btn btn-secondary btn-large">
                                 View Source
                             </a>
                         </div>
                         <div class="version-info">
-                            <p>Latest Version: <span id="latest-version">v5.16.0</span> - Photonic Supremacy Edition</p>
+                            <p>Latest Version: <span id="latest-version">v5.2.2.0</span> - Surface Symphony Edition</p>
                         </div>
                     </div>
                     <div class="install-steps">
@@ -539,7 +562,7 @@
                     </a>
                     <a href="DOCS/FEATURES.md" class="doc-card">
                         <h3>Features Guide</h3>
-                        <p>Full feature inventory by subsystem after the v5.16.0 release.</p>
+                        <p>Full feature inventory by subsystem after the v5.2.2.0 release.</p>
                     </a>
                     <a href="DOCS/FIXTURES.md" class="doc-card">
                         <h3>Fixture Setup</h3>
@@ -605,7 +628,7 @@
                     "Light is not merely illumination &mdash; it is emotion made visible, dreams given form."
                 </p>
                 <p>
-                    &copy; 2026 ArtBastard DMX512 v5.16.0 - Tracker Columns Edition. MIT licensed.
+                    &copy; 2026 ArtBastard DMX512 v5.2.2.0 - Surface Symphony Edition. MIT licensed.
                     <a href="DOCS/HISTORY.md">Chronicles</a>
                 </p>
             </div>
