@@ -620,6 +620,16 @@ interface State extends AutomationState, TransitionTrackerSlice {
   oscMessages: OscMessage[]; // Added for OSC Monitor
   midiActivity: number // Activity level for MIDI signal flash indicator
 
+  // APC40 crossfader + shift latch (session-only — both APC40 hooks read this)
+  apc40CrossfaderState: {
+    sceneAName: string | null;
+    sceneBName: string | null;
+    shiftLatched: boolean;
+  };
+  setApc40SceneA: (name: string | null) => void;
+  setApc40SceneB: (name: string | null) => void;
+  setApc40Shift: (latched: boolean) => void;
+
   // Audio/BPM State
   bpm: number // Current BPM value
   isPlaying: boolean // Whether audio/MIDI is currently playing
@@ -1593,6 +1603,21 @@ export const useStore = create<State>()(
       midiMessages: [],
       oscMessages: [], // Initialized oscMessages
       midiActivity: 0, // Default MIDI activity level
+
+      apc40CrossfaderState: {
+        sceneAName: null,
+        sceneBName: null,
+        shiftLatched: false,
+      },
+      setApc40SceneA: (name) => set((state) => ({
+        apc40CrossfaderState: { ...state.apc40CrossfaderState, sceneAName: name },
+      })),
+      setApc40SceneB: (name) => set((state) => ({
+        apc40CrossfaderState: { ...state.apc40CrossfaderState, sceneBName: name },
+      })),
+      setApc40Shift: (latched) => set((state) => ({
+        apc40CrossfaderState: { ...state.apc40CrossfaderState, shiftLatched: latched },
+      })),
 
       // Audio/BPM State defaults
       bpm: 120, // Default BPM

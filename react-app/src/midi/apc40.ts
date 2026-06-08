@@ -5,6 +5,11 @@ export type Apc40Action =
   | { type: 'scene-launch'; model: Apc40Model; sceneIndex: number }
   | { type: 'track-select'; model: Apc40Model; trackIndex: number }
   | { type: 'track-stop'; model: Apc40Model; trackIndex: number }
+  | { type: 'multi-select-add'; model: Apc40Model; trackIndex: number }
+  | { type: 'multi-select-solo'; model: Apc40Model; trackIndex: number }
+  | { type: 'channel-fader'; model: Apc40Model; trackIndex: number; value: number }
+  | { type: 'master-fader'; model: Apc40Model; value: number }
+  | { type: 'crossfader'; model: Apc40Model; value: number }
   | { type: 'record'; model: Apc40Model }
   | { type: 'play'; model: Apc40Model }
   | { type: 'stop'; model: Apc40Model }
@@ -36,6 +41,19 @@ function isButtonPress(message: MidiLikeMessage): boolean {
   return type === 'noteon' && (message.velocity ?? message.value ?? 0) > 0;
 }
 
+function isCcMessage(message: MidiLikeMessage): boolean {
+  const type = message.type || message._type;
+  return type === 'cc' || type === 'controlchange';
+}
+
+function getController(message: MidiLikeMessage): number | undefined {
+  // Project uses `controller` (see useBrowserMidi.ts:155, MidiVisualizer.tsx:12);
+  // fall back to `note`/`value` defensively.
+  const raw = (message as { controller?: number }).controller;
+  if (raw !== undefined) return raw;
+  return message.note;
+}
+
 function sceneLaunch(model: Apc40Model, note: number): Apc40Action | null {
   if (note >= 0x52 && note <= 0x56) {
     return { type: 'scene-launch', model, sceneIndex: note - 0x52 };
@@ -44,9 +62,7 @@ function sceneLaunch(model: Apc40Model, note: number): Apc40Action | null {
 }
 
 export function decodeApc40Message(message: MidiLikeMessage): Apc40Action | null {
-  if (!isApc40Source(message.source) || !isButtonPress(message)) return null;
-  const note = message.note;
-  if (note === undefined) return null;
+  if (!isApc40Source(message.source)) return null;
 
   const source = message.source || '';
   const model: Apc40Model = /\b(mk2|mkii|mk\s?ii|apc40ii)\b/i.test(source)
@@ -54,10 +70,32 @@ export function decodeApc40Message(message: MidiLikeMessage): Apc40Action | null
     : 'apc40-mk1';
   const trackIndex = Math.max(0, Math.min(7, Math.floor(message.channel ?? 0)));
 
+  if (isCcMessage(message)) {
+    const controller = getController(message);
+    const value = message.value ?? message.velocity ?? 0;
+    if (controller === undefined) return null;
+    if (controller === 0x07) {
+      return { type: 'channel-fader', model, trackIndex, value };
+    }
+    if (controller === 0x0e && (message.channel ?? 0) === 0) {
+      return { type: 'master-fader', model, value };
+    }
+    if (controller === 0x0f && (message.channel ?? 0) === 0) {
+      return { type: 'crossfader', model, value };
+    }
+    return null;
+  }
+
+  if (!isButtonPress(message)) return null;
+  const note = message.note;
+  if (note === undefined) return null;
+
   const scene = sceneLaunch(model, note);
   if (scene) return scene;
 
   if (note === 0x30) return { type: 'record', model };
+  if (note === 0x31) return { type: 'multi-select-solo', model, trackIndex };
+  if (note === 0x32) return { type: 'multi-select-add', model, trackIndex };
   if (note === 0x33) return { type: 'track-select', model, trackIndex };
   if (note === 0x34) return { type: 'track-stop', model, trackIndex };
   if (note === 0x51) return { type: 'clear-selection', model };
