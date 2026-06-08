@@ -1,28 +1,48 @@
 # ArtBastard rebuild reference
 
-**Start with `AGENT-REBUILD.md` at repo root** for from-scratch phases, MVP, and Done-when checks. This file is the deep appendix (architecture, sockets, file map).
+Start with `AGENT-REBUILD.md` at repo root for phases, MVP, and Done-when checks. This file is the appendix for architecture, file map, and contracts.
 
 Canonical repo: `C:/aday.repo/ArtBastard-DMX512`
 
 ## Architecture diagram
 
 ```
-Browser clients (desktop / #/mobile / external console)
-        |  REST /api/*  +  Socket.IO
+Browser clients
+  live/dev desktop -> #/fixture by default
+  direct channel work -> #/dmx-control
+  phones/touch tablets -> #/mobile
+  external console / scenes / acts
+        | REST /api/* + Socket.IO
         v
   dist/server.js
-    src/server.ts    Express + Socket.IO bootstrap
-    src/api.ts       REST router
-    src/index.ts     DMX / MIDI / OSC engine (512ch)
-    src/effects.ts   Effect engine
-    src/fixturesPersistence.ts
-        |  dmxnet Art-Net
+    src/server.ts              Express + Socket.IO bootstrap
+    src/api.ts                 REST router
+    src/index.ts               DMX / MIDI / OSC engine (512ch)
+    src/effects.ts             Effects
+    src/fixturesPersistence.ts Runtime fixture JSON
+        | dmxnet Art-Net
         v
-  LAN node (or unreachable in cloud)
+  LAN node when reachable
 
 Optional:
   bridge-agent/ (Pi) --WSS outbound--> cloud --fan-out--> local Art-Net + Ableton Link
 ```
+
+## Current lane model
+
+| Host | Branch/tag | Label | Default |
+| --- | --- | --- | --- |
+| `artbastard.aday.net.au` | `main` / `:live` | `LIVE` | `#/fixture` on refreshed desktop |
+| `artbastard-dev.aday.net.au` | `dev` / `:dev` | `DEV` | `#/fixture` on refreshed desktop |
+| `artbastard-beta...` | retired | n/a | 301 to dev |
+
+Key files:
+
+- `react-app/src/components/layout/DeployLaneBadge.tsx`
+- `react-app/src/utils/deviceSurface.ts`
+- `react-app/src/main.tsx`
+- `react-app/src/context/RouterContext.tsx`
+- `react-app/src/styles/index.scss`
 
 ## Backend modules
 
@@ -30,11 +50,11 @@ Optional:
 | --- | --- |
 | `src/server.ts` | HTTP server, Socket.IO wiring, clock broadcasts |
 | `src/index.ts` | DMX universe, MIDI, OSC, scene application |
-| `src/api.ts` | REST endpoints (fixtures, scenes, config, appearance, bridge tokens) |
+| `src/api.ts` | REST endpoints: fixtures, scenes, config, appearance, bridge tokens |
 | `src/core.ts` | Re-exports to break circular deps |
-| `src/bridgeRegistry.ts` | Cloud -> Pi DMX fan-out |
+| `src/bridgeRegistry.ts` | Cloud to Pi DMX fan-out |
 | `src/bridgeHandlers.ts` | Bridge socket handlers |
-| `src/sessionManager.ts` | Shared show session (DEFAULT_SESSION_ID today) |
+| `src/sessionManager.ts` | Shared show session (`DEFAULT_SESSION_ID` today) |
 | `src/clockManager.ts` | Master clock, Ableton Link bridge |
 | `src/effects.ts` | Channel effects |
 | `bridge-agent/` | Pi-side outbound WSS + local Art-Net |
@@ -44,15 +64,49 @@ Optional:
 ```
 data/
   appearance.json
-  config.json (via loaders)
-  fixtures/*.json     one file per fixture
+  config.json
+  fixtures/*.json     runtime saved fixtures
   scenes/
   acts/
 ```
 
 No database. Factory reset via `--reset` / `-Reset` on start scripts.
 
-## Socket events (partial — see server.ts for full list)
+## Fixture library source of truth
+
+Library fixtures are code, not runtime JSON:
+
+| Path | Role |
+| --- | --- |
+| `react-app/src/fixtures/library/types.ts` | Fixture profile schema |
+| `coreFixtureLibrary.ts` | Generic core fixtures |
+| `importedFixtureBatch.ts` | User-owned DMX hardware batch |
+| `entries.ts` / `index.ts` | Registry exports |
+| `validation.ts` | Channel/address sanity checks |
+| `DOCS/fixtures/*.md` | Cleaned manuals and fixture docs |
+| `react-app/public/fixtures/*.jpg` | Gallery/reference photos |
+
+Important owned fixtures currently include twinkling laser RGY, MiniBeam moving head, mini LED moving head wash, UV DMX LED par, small moving head spot, full-colour animation laser, tiny moving head wash, Mini Spider Light, and Event Lighting EL1000RGB.
+
+## Show-map planning
+
+| File | Role |
+| --- | --- |
+| `react-app/src/fixtures/showBuilder/showPlan.ts` | Address allocation and warnings |
+| `showPlan.test.ts` | Address planning tests |
+| `react-app/src/components/fixtures/ShowBuilderPanel.tsx` | UI for multiples, groups, address plan |
+| `react-app/src/components/fixtures/FixtureSetup.tsx` | Fixture workbench host |
+| `react-app/src/components/ui/PdfAddressSheet.tsx` | Printable/exportable patch sheet |
+
+Show-map rules:
+
+- allocate DMX addresses sequentially unless user overrides
+- never silently overlap addresses
+- support multiples of the same fixture
+- allow grouping and split control across address spaces
+- expose the physical address values the operator must set on hardware
+
+## Socket events (partial)
 
 | Event | Direction | Purpose |
 | --- | --- | --- |
@@ -67,20 +121,20 @@ No database. Factory reset via `--reset` / `-Reset` on start scripts.
 | `browserMidiMessage` | client -> server | Web MIDI input |
 | Scene save/load events | both | Scene snapshots |
 
-Bridge-specific handlers in `bridgeHandlers.ts` and `sessionHandlers.ts`.
+Bridge-specific handlers live in `bridgeHandlers.ts` and `sessionHandlers.ts`.
 
-## REST API (partial — see api.ts)
+## REST API (partial)
 
 | Endpoint | Purpose |
 | --- | --- |
 | `GET/POST /api/appearance` | Theme HSL + rack preset persistence |
-| `POST /api/fixtures` | Bulk fixture save |
-| `POST /api/fixtures/:id` | Single fixture save |
-| `DELETE /api/fixtures/:id` | Delete fixture |
+| `POST /api/fixtures` | Bulk runtime fixture save |
+| `POST /api/fixtures/:id` | Single runtime fixture save |
+| `DELETE /api/fixtures/:id` | Delete runtime fixture |
 | `POST /api/midi/controller-template` | Apply X-Touch / APC40 template |
-| Bridge token endpoints | Pi pairing (see DOCS/BRIDGE.md) |
+| Bridge token endpoints | Pi pairing, see `DOCS/BRIDGE.md` |
 
-Full inventory: `DOCS/FEATURES.md`, smoke script `scripts/api-contract-smoke.js`.
+Full inventory: `DOCS/FEATURES.md`; smoke script: `scripts/api-contract-smoke.js`.
 
 ## Frontend routing
 
@@ -88,60 +142,96 @@ Full inventory: `DOCS/FEATURES.md`, smoke script `scripts/api-contract-smoke.js`
 
 | ViewType | Hash |
 | --- | --- |
-| dmxControl | `#/dmx-control` |
-| fixture | `#/fixture` |
-| scenesActs | `#/scenes-acts` |
-| misc | `#/settings` |
-| mobile | `#/mobile` |
-| planner | `#/planner` |
+| `fixture` | `#/fixture` |
+| `dmxControl` | `#/dmx-control` |
+| `scenesActs` | `#/scenes-acts` |
+| `acts` | `#/acts` |
+| `misc` | `#/settings` |
+| `mobile` | `#/mobile` |
+| `planner` | `#/planner` |
 
 Aliases: `#/main`, `#/external-console`, `#/experimental` -> dmxControl.
 
-Mobile default: narrow viewports open `#/mobile` unless hash already set.
+Default policy:
+
+- phone / touch tablet -> `#/mobile`
+- refreshed live/dev desktop -> `#/fixture`
+- explicit hash always wins
 
 ## Zustand slices and stores
 
-`react-app/src/store/store.ts` — primary monolithic store:
+`react-app/src/store/store.ts` remains the central store:
 
-- `dmxSlice` — channel values, names, ranges
-- `fixtureSlice` — profiles, groups, SuperControl state
-- `sceneSlice` — scenes, capture/recall
-- `automationSlice` — envelopes, workbench UI
-- `transitionTrackerSlice` — pattern grid, pages, lanes
-- `clipLauncherStore` — session grid
-- `timeline.ts` — scene/act timeline state
+- `dmxSlice` - channel values, names, ranges
+- `fixtureSlice` - profiles, groups, SuperControl state
+- `sceneSlice` - scenes, capture/recall
+- `automationSlice` - envelopes, workbench UI
+- `transitionTrackerSlice` - pattern grid, pages, lanes
+- `clipLauncherStore` - session grid
+- `timeline.ts` - scene/act timeline state
 - `midiSlice`, `oscSlice`, `universeSlice`, `uiSlice`
 
-Engines (keep mounted in App.tsx):
+Engines that must stay mounted in `App.tsx`:
 
-- `envelopeEngine.ts` — per-channel automation playback
-- `transitionTrackerEngine.ts` — tracker playback
-- `artbastardEasing.ts` — outExpo easing (anime.js)
+- `envelopeEngine.ts`
+- `transitionTrackerEngine.ts`
+- `artbastardEasing.ts`
+- `useApc40Workflow.ts`
 
 ## Rack UI file map
 
 | Path | Role |
 | --- | --- |
+| `react-app/src/styles/index.scss` | Global host classes and refreshed lane tint |
 | `react-app/src/styles/reason-rack.scss` | `--rk-*`, `.ab-rack-module`, screw corners |
-| `react-app/src/styles/workbench-shell.scss` | Wired Atelier copper/amber |
+| `react-app/src/styles/workbench-shell.scss` | Wired Atelier / workbench chrome |
 | `react-app/src/styles/skeuomorphic-controls.scss` | Shared control chrome |
-| `react-app/src/styles/metallic-range.scss` | Gold fader CSS |
+| `react-app/src/styles/metallic-range.scss` | Metallic fader CSS |
 | `react-app/src/components/ui/rack/RackModule.tsx` | Module shell |
 | `react-app/src/components/ui/rack/RotaryKnob.tsx` | Rotary control |
 | `react-app/src/components/ui/controls/DmxVerticalFader.tsx` | Vertical fader |
+| `react-app/src/components/ui/controls/MasterStyledSlider.tsx` | Shared horizontal slider |
 | `react-app/src/components/ui/controls/ArtbastardXYPad.tsx` | Pan/tilt pad |
-| `react-app/src/utils/themeUtils.ts` | Presets + HSL application |
+| `react-app/src/utils/themeUtils.ts` | Presets, HSL application, refreshed rack chrome |
+
+## Touch/mobile surfaces
+
+| Path | Role |
+| --- | --- |
+| `react-app/src/pages/MobilePage.tsx` | Mobile page shell |
+| `react-app/src/components/fixtures/MobileFixtureRack.tsx` | Touch fixture rack |
+| `react-app/src/components/ui/ChannelMonitorDock.tsx` | Compact activity monitor |
+| `react-app/src/components/automation/EnvelopeDrawCanvas.tsx` | Envelope editor |
+
+Mobile requirements:
+
+- scroll works inside the envelope editor and page body
+- activity indicators never block the right side
+- controls are modular, hideable, resizable/movable where supported
+- horizontal slider mode must expose a visible way back to vertical mode
+
+## MIDI and APC40
+
+| Path | Role |
+| --- | --- |
+| `react-app/src/midi/apc40.ts` | APC40/APC40 mkII source detection and workflow decoder |
+| `react-app/src/hooks/useApc40Workflow.ts` | Scene/fixture workflow actions |
+| `react-app/src/components/fixtures/Apc40WorkflowPanel.tsx` | Fixture-page APC40 status/help |
+| `react-app/src/components/midi/midiControllerTemplates.ts` | X-Touch/APC40 templates |
+| `DOCS/MIDI_TEMPLATES.md` | Controller reference |
+
+APC40 must be practical, not decorative: clip grid launches/captures scenes, fixture/group selection works, and MIDI Learn buttons give feedback.
 
 ## Show sequencing subsystems
 
 | Subsystem | Key files | Notes |
 | --- | --- | --- |
-| Scenes | sceneSlice, DmxSceneControls | Snapshot channelValues[] |
-| Scene timeline | timeline editors under automation/ | DMX keyframes 0-255 |
-| Acts | DOCS/ACT_TIMELINE.md | Clips, gaps, MIDI/OSC lanes |
+| Scenes | sceneSlice, DmxSceneControls | Snapshot channel values |
+| Scene timeline | timeline editors under automation | DMX keyframes 0-255 |
+| Acts | `DOCS/ACT_TIMELINE.md` | Clips, gaps, MIDI/OSC lanes |
 | Clip launcher | clipLauncherStore.ts | Ableton-style grid |
-| Transition tracker | DmxTransitionTracker.tsx, transitionTrackerSlice.ts | Renoise-inspired hex grid |
-| Envelopes | envelopeEngine.ts | Shift+click arming, PLAY/EDIT |
+| Transition tracker | DmxTransitionTracker.tsx, transitionTrackerSlice.ts | Renoise-inspired grid |
+| Envelopes | envelopeEngine.ts | Shift-click arming, PLAY/EDIT |
 
 ## Personality / brand files
 
@@ -161,6 +251,7 @@ Engines (keep mounted in App.tsx):
 | `DOCS/FEATURES.md` | Feature inventory |
 | `DOCS/USAGE.md` | Operator workflows |
 | `DOCS/BRIDGE.md` | Pi LAN bridge |
+| `DOCS/fixtures/README.md` | Fixture manual index |
 | `AGENTS.md` | CI/cloud agent notes |
 
 ## Demo evidence pipeline
@@ -176,10 +267,11 @@ Engines (keep mounted in App.tsx):
 - GHCR `:live` / `:dev` on push main/dev
 - Linode via `deploy-linode`
 - Pages: `website/` showcase
+- After a live promotion, verify both `/deploy-meta.json` files and browser-rendered labels
 
-## Secondary packages (not main app)
+## Secondary packages
 
 | Path | Role |
 | --- | --- |
-| `artbastard-nextjs-frontend/` | Experiment — not production |
+| `artbastard-nextjs-frontend/` | Experiment - not production |
 | `face-tracker/` | OpenCV sidecar |
