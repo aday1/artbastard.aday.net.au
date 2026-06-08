@@ -62,7 +62,7 @@ export const ClipCell: React.FC<ClipCellProps> = ({
             {/* Scene Preview */}
             <div className={styles.scenePreview} style={{ backgroundColor: displayColor }}>
               {preview?.thumbnail && (
-                <img src={preview.thumbnail} alt={clip.sceneName || ''} />
+                <img src={preview.thumbnail} alt={clip.sceneName || ''} loading="lazy" decoding="async" />
               )}
             </div>
 

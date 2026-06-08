@@ -33,8 +33,6 @@ export default defineConfig({
   ],  // Add better error handling for development
   esbuild: {
     logOverride: { 'this-is-undefined-in-esm': 'silent' },
-    sourcemap: true, // Enable source maps in esbuild
-    keepNames: true // Keep function and class names for better stack traces
   },
   resolve: {
     alias: {
@@ -75,9 +73,11 @@ export default defineConfig({
     },
     // Force Rollup to avoid native dependencies - fixes @rollup/rollup-win32-x64-msvc error
     exclude: ['@rollup/rollup-win32-x64-msvc']  },  build: {
-    minify: false, // Disabled minification for better debugging
-    // terserOptions removed since minification is disabled
-    sourcemap: true, // Enable source maps for better debugging
+    // esbuild minifier (default Vite); keeps build fast vs terser
+    minify: 'esbuild',
+    // Hidden source maps: emit .map files for debugging but don't link from output
+    sourcemap: 'hidden',
+    target: 'es2020',
     reportCompressedSize: !skipTypeChecking,
     rollupOptions: {
       // Force Rollup to use JavaScript fallback instead of native binaries

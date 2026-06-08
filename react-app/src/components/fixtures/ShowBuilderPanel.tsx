@@ -466,7 +466,7 @@ export const ShowBuilderPanel: React.FC = () => {
             >
               <div className={styles.showTemplateImage}>
                 {template.photoUrl ? (
-                  <img src={template.photoUrl} alt={template.templateName} />
+                  <img src={template.photoUrl} alt={template.templateName} loading="lazy" decoding="async" />
                 ) : (
                   <LucideIcon name="Package" />
                 )}

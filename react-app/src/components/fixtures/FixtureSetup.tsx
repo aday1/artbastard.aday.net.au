@@ -1831,7 +1831,7 @@ export const FixtureSetup: React.FC = () => {
                   <div className={styles.photoUploadContainer}>
                     {fixtureForm.photoUrl ? (
                       <div className={styles.photoPreview}>
-                        <img src={fixtureForm.photoUrl} alt="Fixture thumbnail" />
+                        <img src={fixtureForm.photoUrl} alt="Fixture thumbnail" loading="lazy" decoding="async" />
                         <button
                           type="button"
                           className={styles.removePhotoButton}

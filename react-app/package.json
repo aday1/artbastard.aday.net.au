@@ -1,6 +1,6 @@
 {
   "name": "artbastard-dmx",
-  "version": "5.2.0.1",
+  "version": "5.2.0.3",
   "private": true,
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
@@ -78,7 +78,7 @@
     "test:coverage": "vitest --coverage",
     "test:watch": "vitest --watch",
     "postinstall": "npm --omit=optional run copy-fonts && node setup-build.js",
-    "copy-fonts": "copyfiles -u 1 node_modules/@fortawesome/fontawesome-free/css/* public/fontawesome/css/ && copyfiles -u 1 node_modules/@fortawesome/fontawesome-free/webfonts/* public/fontawesome/webfonts/"
+    "copy-fonts": "copyfiles -u 4 \"node_modules/@fortawesome/fontawesome-free/css/*\" public/fontawesome/css/ && copyfiles -u 4 \"node_modules/@fortawesome/fontawesome-free/webfonts/*\" public/fontawesome/webfonts/"
   },
   "eslintConfig": {
     "extends": [

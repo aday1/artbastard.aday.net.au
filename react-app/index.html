@@ -15,10 +15,9 @@
       content="ArtBastard DMX512FTW - Advanced DMX Controller with WebGL and MIDI Integration"
     />    <link rel="apple-touch-icon" href="/logo192.png" />    <!-- Locally hosted fonts -->
     <link rel="stylesheet" href="/fonts/fonts.css" />
-    <!-- FontAwesome CDN to restore icons -->
-    <link rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-          integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <!-- FontAwesome served locally (was cdnjs CDN; switched for perf + offline) -->
+    <link rel="preload" as="font" type="font/woff2" href="/fontawesome/webfonts/fa-solid-900.woff2" crossorigin />
+    <link rel="stylesheet" href="/fontawesome/css/all.min.css" />
     <title>ArtBastard DMX512FTW - The Illuminated Canvas [LIVE]</title>
     <script>
       (function () {

@@ -215,7 +215,7 @@ const PresetLibrary: React.FC = () => {
               {preset.thumbnail && (
                 <div className={styles.presetThumbnail}>
                   {preset.thumbnail.type === 'image' ? (
-                    <img src={preset.thumbnail.data} alt={preset.name} />
+                    <img src={preset.thumbnail.data} alt={preset.name} loading="lazy" decoding="async" />
                   ) : preset.thumbnail.type === 'color' ? (
                     <div
                       style={{ backgroundColor: preset.thumbnail.data }}

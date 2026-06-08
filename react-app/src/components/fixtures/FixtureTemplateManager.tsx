@@ -253,7 +253,7 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
                 <div key={template.id} className={`${styles.templateCard} ${styles.builtIn}`}>
                   {template.photoUrl && (
                     <div className={styles.templatePhoto}>
-                      <img src={template.photoUrl} alt={template.templateName} />
+                      <img src={template.photoUrl} alt={template.templateName} loading="lazy" decoding="async" />
                     </div>
                   )}
                   <div className={styles.templateHeader}>
@@ -306,7 +306,7 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
                   <div key={template.id} className={styles.templateCard}>
                     {template.photoUrl && (
                       <div className={styles.templatePhoto}>
-                        <img src={template.photoUrl} alt={template.templateName} />
+                        <img src={template.photoUrl} alt={template.templateName} loading="lazy" decoding="async" />
                       </div>
                     )}
                     <div className={styles.templateHeader}>
