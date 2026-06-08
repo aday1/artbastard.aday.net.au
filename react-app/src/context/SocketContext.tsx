@@ -100,6 +100,21 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setError(`Data parsing error. Try refreshing the page.`);
       });
 
+      socketInstance.on('midiMessage', (msg: any) => {
+        const normalizedType = msg?.type || msg?._type;
+        if (!normalizedType) return;
+        useStore.getState().addMidiMessage({
+          ...msg,
+          type: normalizedType,
+          _type: normalizedType,
+          source: msg?.source || 'server',
+        });
+      });
+
+      socketInstance.on('oscChannelActivity', (data: { channelIndex: number; value: number }) => {
+        useStore.getState().reportOscActivity(data.channelIndex, data.value);
+      });
+
       // Listen for masterClockUpdate from backend
       socketInstance.on('masterClockUpdate', (data: any) => {
         debugLog.log('[SocketContext] Received masterClockUpdate:', data);

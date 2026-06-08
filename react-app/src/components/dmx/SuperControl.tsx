@@ -53,6 +53,7 @@ interface SuperControlPanelLayoutState {
 }
 
 const SUPER_CONTROL_LAYOUT_KEY = 'artbastard.superControl.panelLayout.v1';
+const SUPER_CONTROL_LOCAL_MIDI_MAPPINGS_KEY = 'artbastard.superControl.localMidiMappings.v1';
 const DEFAULT_SUPER_CONTROL_PANEL_ORDER: SuperControlPanelId[] = [
   'selection',
   'monitoring',
@@ -78,6 +79,74 @@ const SUPER_CONTROL_PANEL_LABELS: Record<SuperControlPanelId, string> = {
   envelopes: 'Envelopes',
   directDmx: 'Direct DMX',
   colorAutopilot: 'Color Auto',
+};
+
+interface LocalMidiMapping {
+  channel?: number;
+  note?: number;
+  cc?: number;
+  pitch?: boolean;
+  minValue: number;
+  maxValue: number;
+  oscAddress?: string;
+}
+
+const normalizeMidiMessage = (message: any) => {
+  const type = message?.type || message?._type;
+  const channel = typeof message?.channel === 'number' ? message.channel : undefined;
+  if (channel === undefined) return null;
+
+  if (type === 'cc' && typeof message.controller === 'number') {
+    return {
+      type: 'cc' as const,
+      channel,
+      cc: message.controller,
+      value: typeof message.value === 'number' ? message.value : 0,
+    };
+  }
+
+  if ((type === 'noteon' || type === 'noteoff') && typeof message.note === 'number') {
+    return {
+      type: type as 'noteon' | 'noteoff',
+      channel,
+      note: message.note,
+      value: type === 'noteoff' ? 0 : typeof message.velocity === 'number' ? message.velocity : 127,
+    };
+  }
+
+  if (type === 'pitch' && typeof message.value === 'number') {
+    const bounded = message.value > 127
+      ? Math.max(0, Math.min(1, message.value / 16383))
+      : Math.max(0, Math.min(1, message.value / 127));
+    return {
+      type: 'pitch' as const,
+      channel,
+      value: Math.round(bounded * 127),
+    };
+  }
+
+  return null;
+};
+
+const midiMappingLabel = (mapping?: LocalMidiMapping) => {
+  if (!mapping) return null;
+  const displayChannel = (mapping.channel ?? 0) + 1;
+  if (mapping.cc !== undefined) return `CH${displayChannel} CC${mapping.cc}`;
+  if (mapping.note !== undefined) return `CH${displayChannel} Note ${mapping.note}`;
+  if (mapping.pitch) return `CH${displayChannel} Pitch`;
+  return `CH${displayChannel}`;
+};
+
+const loadLocalMidiMappings = (): Record<string, LocalMidiMapping> => {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(SUPER_CONTROL_LOCAL_MIDI_MAPPINGS_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
 };
 
 function normalizeSuperControlPanelLayout(raw: unknown): SuperControlPanelLayoutState {
@@ -200,6 +269,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     scenes,
     deleteScene,
     loadScene: storeLoadScene,
+    addNotification,
   } = useStore();
 
   const { captureScene } = useSceneCapture();
@@ -460,14 +530,11 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     groupNav: true,
   });
   // Enhanced MIDI Learn state with range support
-  const [midiMappings, setMidiMappings] = useState<Record<string, {
-    channel?: number;
-    note?: number;
-    cc?: number;
-    minValue: number;
-    maxValue: number;
-    oscAddress?: string;
-  }>>({});
+  const [midiMappings, setMidiMappings] = useState<Record<string, LocalMidiMapping>>(loadLocalMidiMappings);
+  const midiLearnRangeRef = useRef<{ target: string; minValue: number; maxValue: number } | null>(null);
+  const midiLearnTimeoutRef = useRef<number | null>(null);
+  const lastLearnMidiSignatureRef = useRef<string | null>(null);
+  const lastActionMidiSignatureRef = useRef<string | null>(null);
 
   // Fixture/Group navigation state
   const [currentFixtureIndex, setCurrentFixtureIndex] = useState(0);
@@ -476,6 +543,14 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
   // Scene management state (using global store for scenes)
   const [currentSceneIndex, setCurrentSceneIndex] = useState(0);
   const [sceneAutoSave, setSceneAutoSave] = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SUPER_CONTROL_LOCAL_MIDI_MAPPINGS_KEY, JSON.stringify(midiMappings));
+    } catch {
+      /* ignore local MIDI persistence failures */
+    }
+  }, [midiMappings]);
 
   // Configuration management state
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -765,210 +840,105 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     setColorSaturation(s);
   }, [red, green, blue, isDraggingColor]);
 
-  // Enhanced MIDI Learn with range support
-  const startMidiLearn = (controlType: string, minValue: number = 0, maxValue: number = 255) => {
+  const stopMidiLearn = useCallback(() => {
+    if (midiLearnTimeoutRef.current) {
+      window.clearTimeout(midiLearnTimeoutRef.current);
+      midiLearnTimeoutRef.current = null;
+    }
+    midiLearnRangeRef.current = null;
+    setMidiLearnTarget(null);
+    addNotification({
+      message: 'MIDI learn cancelled',
+      type: 'info',
+      priority: 'low',
+    });
+  }, [addNotification]);
+
+  // Enhanced MIDI Learn with range support, backed by the shared app MIDI stream.
+  const startMidiLearn = useCallback((controlType: string, minValue: number = 0, maxValue: number = 255) => {
+    if (midiLearnTimeoutRef.current) {
+      window.clearTimeout(midiLearnTimeoutRef.current);
+    }
+
+    midiLearnRangeRef.current = { target: controlType, minValue, maxValue };
+    lastLearnMidiSignatureRef.current = midiMessages.length > 0
+      ? JSON.stringify(midiMessages[midiMessages.length - 1])
+      : null;
     setMidiLearnTarget(controlType);
     debugLog.log(`Starting MIDI learn for ${controlType} (range: ${minValue}-${maxValue})`);
+    addNotification({
+      message: `MIDI learn: move a control for ${controlType.replace(/[_-]/g, ' ')}`,
+      type: 'info',
+      priority: 'normal',
+    });
 
-    // Listen for MIDI input
-    const handleMidiMessage = (event: any) => {
-      const [status, data1, data2] = event.data;
-      const channel = status & 0x0F;
-      const messageType = status & 0xF0;
-
-      let mapping: any = { channel, minValue, maxValue };
-
-      if (messageType === 0x90 || messageType === 0x80) { // Note on/off
-        mapping.note = data1;
-      } else if (messageType === 0xB0) { // Control Change
-        mapping.cc = data1;
-      }
-
-      setMidiMappings(prev => ({
-        ...prev,
-        [controlType]: mapping
-      }));
-
-      setMidiLearnTarget(null);
-      debugLog.log(`MIDI learned for ${controlType}:`, mapping);
-    };
-
-    // Add MIDI listener
-    if (navigator.requestMIDIAccess) {
-      navigator.requestMIDIAccess().then((midiAccess) => {
-        const inputs = Array.from(midiAccess.inputs.values());
-        inputs.forEach(input => {
-          input.addEventListener('midimessage', handleMidiMessage);
-
-          // Remove listener after 5 seconds or when learning is complete
-          setTimeout(() => {
-            input.removeEventListener('midimessage', handleMidiMessage);
-            if (midiLearnTarget === controlType) {
-              setMidiLearnTarget(null);
-            }
-          }, 5000);
+    midiLearnTimeoutRef.current = window.setTimeout(() => {
+      setMidiLearnTarget((current) => {
+        if (current !== controlType) return current;
+        midiLearnRangeRef.current = null;
+        addNotification({
+          message: `MIDI learn timed out for ${controlType.replace(/[_-]/g, ' ')}`,
+          type: 'warning',
+          priority: 'normal',
         });
-      }).catch(err => {
-        console.error('MIDI access denied:', err);
-        setMidiLearnTarget(null);
+        return null;
       });
-    }
-  };
+      midiLearnTimeoutRef.current = null;
+    }, 30000);
+  }, [addNotification, midiMessages]);
 
-  // Handle MIDI-triggered actions
+  useEffect(() => () => {
+    if (midiLearnTimeoutRef.current) {
+      window.clearTimeout(midiLearnTimeoutRef.current);
+    }
+  }, []);
+
   useEffect(() => {
-    const handleMidiInput = (event: any) => {
-      const [status, data1, data2] = event.data;
-      const channel = status & 0x0F;
-      const messageType = status & 0xF0;
+    if (!midiLearnTarget || midiMessages.length === 0) return;
 
-      Object.entries(midiMappings).forEach(([action, mapping]) => {
-        if (mapping.channel !== channel) return;
+    const latestMessage = midiMessages[midiMessages.length - 1];
+    const signature = JSON.stringify(latestMessage);
+    if (signature === lastLearnMidiSignatureRef.current) return;
+    lastLearnMidiSignatureRef.current = signature;
 
-        let midiValue = 0;
-        let triggered = false;
+    const normalized = normalizeMidiMessage(latestMessage);
+    if (!normalized || normalized.type === 'noteoff') return;
 
-        if (mapping.note !== undefined && (messageType === 0x90 || messageType === 0x80)) {
-          if (mapping.note === data1) {
-            triggered = data2 > 0; // Note on with velocity > 0
-            midiValue = data2;
-          }
-        } else if (mapping.cc !== undefined && messageType === 0xB0) {
-          if (mapping.cc === data1) {
-            triggered = true;
-            midiValue = data2;
-          }
-        }
-        if (triggered) {
-          // Scale MIDI value (0-127) to control range
-          const scaledValue = Math.round(
-            mapping.minValue + (midiValue / 127) * (mapping.maxValue - mapping.minValue)
-          );
-
-          debugLog.log(`MIDI triggered for ${action}: value=${midiValue}, scaled=${scaledValue}`);
-
-          // Check affected fixtures before applying control
-          const affectedFixtures = getAffectedFixtures();
-          debugLog.log(`Affected fixtures for ${action}:`, affectedFixtures.length, affectedFixtures);
-
-          // Apply the action based on the control type
-          switch (action) {
-            case 'dimmer':
-              setDimmer(scaledValue);
-              applyControl('dimmer', scaledValue);
-              break;
-            case 'pan':
-              setPanValue(scaledValue);
-              setPanTiltXY(prev => ({ ...prev, x: (scaledValue / 255) * 100 }));
-              applyControl('pan', scaledValue);
-              break;
-            case 'tilt':
-              setTiltValue(scaledValue);
-              setPanTiltXY(prev => ({ ...prev, y: (scaledValue / 255) * 100 }));
-              applyControl('tilt', scaledValue);
-              break;
-            case 'red':
-              setRed(scaledValue);
-              applyControl('red', scaledValue);
-              break;
-            case 'green':
-              setGreen(scaledValue);
-              applyControl('green', scaledValue);
-              break;
-            case 'blue':
-              setBlue(scaledValue);
-              applyControl('blue', scaledValue);
-              break;
-            case 'gobo':
-              setGobo(scaledValue);
-              applyControl('gobo', scaledValue);
-              break;
-            case 'shutter':
-              setShutter(scaledValue);
-              applyControl('shutter', scaledValue);
-              break;
-            case 'strobe':
-              setStrobe(scaledValue);
-              applyControl('strobe', scaledValue);
-              break;
-            case 'lamp':
-              setLamp(scaledValue);
-              applyControl('lamp', scaledValue);
-              break;
-            case 'reset':
-              setReset(scaledValue);
-              applyControl('reset', scaledValue);
-              break; case 'fixture_next':
-              if (midiValue > 63) selectNextFixture();
-              break;
-            case 'fixture_prev':
-            case 'fixture_previous':
-              if (midiValue > 63) selectPreviousFixture();
-              break;
-            case 'group_next':
-              if (midiValue > 63) selectNextGroup();
-              break;
-            case 'group_prev':
-            case 'group_previous':
-              if (midiValue > 63) selectPreviousGroup();
-              break;
-            case 'scene_next':
-              if (midiValue > 63) selectNextScene();
-              break;
-            case 'scene_prev':
-            case 'scene_previous':
-              if (midiValue > 63) selectPreviousScene();
-              break;
-            case 'scene_save':
-            case 'scene_capture':
-              if (midiValue > 63) captureCurrentScene();
-              break;
-            case 'scene_load':
-              if (midiValue > 63) loadSceneByIndex(currentSceneIndex);
-              break;
-            default:
-              // Check for individual scene mappings
-              if (action.startsWith('scene-')) {
-                const sceneName = action.replace('scene-', '');
-                const sceneIndex = scenes.findIndex(s => s.name === sceneName);
-                if (sceneIndex !== -1 && midiValue > 63) {
-                  loadSceneByIndex(sceneIndex);
-                }
-              }
-              break;
-          }
-        }
-      });
+    const learnRange = midiLearnRangeRef.current ?? {
+      target: midiLearnTarget,
+      minValue: 0,
+      maxValue: 255,
+    };
+    const mapping: LocalMidiMapping = {
+      channel: normalized.channel,
+      minValue: learnRange.minValue,
+      maxValue: learnRange.maxValue,
     };
 
-    if (navigator.requestMIDIAccess) {
-      navigator.requestMIDIAccess().then((midiAccess) => {
-        const inputs = Array.from(midiAccess.inputs.values());
-        inputs.forEach(input => {
-          input.addEventListener('midimessage', handleMidiInput);
-        });
+    if (normalized.type === 'cc') mapping.cc = normalized.cc;
+    if (normalized.type === 'noteon') mapping.note = normalized.note;
+    if (normalized.type === 'pitch') mapping.pitch = true;
 
-        return () => {
-          inputs.forEach(input => {
-            input.removeEventListener('midimessage', handleMidiInput);
-          });
-        };
-      });
+    setMidiMappings(prev => ({
+      ...prev,
+      [learnRange.target]: mapping,
+    }));
+
+    if (midiLearnTimeoutRef.current) {
+      window.clearTimeout(midiLearnTimeoutRef.current);
+      midiLearnTimeoutRef.current = null;
     }
-  }, [midiMappings, currentSceneIndex, scenes]);
-
-  const stopMidiLearn = () => {
+    midiLearnRangeRef.current = null;
     setMidiLearnTarget(null);
-  };
+    addNotification({
+      message: `${learnRange.target.replace(/[_-]/g, ' ')} mapped to ${midiMappingLabel(mapping)}`,
+      type: 'success',
+      priority: 'normal',
+    });
+    debugLog.log(`MIDI learned for ${learnRange.target}:`, mapping);
+  }, [addNotification, midiLearnTarget, midiMessages]);
 
-  const setMidiMapping = (controlType: string, midiData: {
-    channel?: number;
-    note?: number;
-    cc?: number;
-    minValue: number;
-    maxValue: number;
-    oscAddress?: string;
-  }) => {
+  const setMidiMapping = (controlType: string, midiData: LocalMidiMapping) => {
     setMidiMappings(prev => ({
       ...prev,
       [controlType]: midiData
@@ -981,6 +951,16 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
       delete updated[controlType];
       return updated;
     });
+    addNotification({
+      message: `MIDI mapping removed for ${controlType.replace(/[_-]/g, ' ')}`,
+      type: 'info',
+      priority: 'low',
+    });
+  };
+
+  const midiButtonLabel = (controlType: string, fallback: string) => {
+    if (midiLearnTarget === controlType) return 'Listening';
+    return midiMappingLabel(midiMappings[controlType]) || fallback;
   };
 
   // Fixture Navigation Functions
@@ -1070,6 +1050,131 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     const prevIndex = currentSceneIndex === 0 ? scenes.length - 1 : currentSceneIndex - 1;
     loadSceneByIndex(prevIndex);
   };
+
+  // Handle MIDI-triggered local SuperControl actions from the shared app MIDI stream.
+  useEffect(() => {
+    if (midiLearnTarget || midiMessages.length === 0) return;
+
+    const latestMessage = midiMessages[midiMessages.length - 1];
+    const signature = JSON.stringify(latestMessage);
+    if (signature === lastActionMidiSignatureRef.current) return;
+    lastActionMidiSignatureRef.current = signature;
+
+    const normalized = normalizeMidiMessage(latestMessage);
+    if (!normalized) return;
+
+    Object.entries(midiMappings).forEach(([action, mapping]) => {
+      if (mapping.channel !== normalized.channel) return;
+
+      let midiValue = 0;
+      let triggered = false;
+
+      if (mapping.note !== undefined && (normalized.type === 'noteon' || normalized.type === 'noteoff')) {
+        triggered = mapping.note === normalized.note;
+        midiValue = normalized.value;
+      } else if (mapping.cc !== undefined && normalized.type === 'cc') {
+        triggered = mapping.cc === normalized.cc;
+        midiValue = normalized.value;
+      } else if (mapping.pitch && normalized.type === 'pitch') {
+        triggered = true;
+        midiValue = normalized.value;
+      }
+
+      if (!triggered) return;
+
+      const scaledValue = Math.round(
+        mapping.minValue + (midiValue / 127) * (mapping.maxValue - mapping.minValue)
+      );
+
+      debugLog.log(`MIDI triggered for ${action}: value=${midiValue}, scaled=${scaledValue}`);
+
+      switch (action) {
+        case 'dimmer':
+          setDimmer(scaledValue);
+          applyControl('dimmer', scaledValue);
+          break;
+        case 'pan':
+          setPanValue(scaledValue);
+          setPanTiltXY(prev => ({ ...prev, x: (scaledValue / 255) * 100 }));
+          applyControl('pan', scaledValue);
+          break;
+        case 'tilt':
+          setTiltValue(scaledValue);
+          setPanTiltXY(prev => ({ ...prev, y: (scaledValue / 255) * 100 }));
+          applyControl('tilt', scaledValue);
+          break;
+        case 'red':
+          setRed(scaledValue);
+          applyControl('red', scaledValue);
+          break;
+        case 'green':
+          setGreen(scaledValue);
+          applyControl('green', scaledValue);
+          break;
+        case 'blue':
+          setBlue(scaledValue);
+          applyControl('blue', scaledValue);
+          break;
+        case 'gobo':
+          setGobo(scaledValue);
+          applyControl('gobo', scaledValue);
+          break;
+        case 'shutter':
+          setShutter(scaledValue);
+          applyControl('shutter', scaledValue);
+          break;
+        case 'strobe':
+          setStrobe(scaledValue);
+          applyControl('strobe', scaledValue);
+          break;
+        case 'lamp':
+          setLamp(scaledValue);
+          applyControl('lamp', scaledValue);
+          break;
+        case 'reset':
+          setReset(scaledValue);
+          applyControl('reset', scaledValue);
+          break;
+        case 'fixture_next':
+          if (midiValue > 63) selectNextFixture();
+          break;
+        case 'fixture_prev':
+        case 'fixture_previous':
+          if (midiValue > 63) selectPreviousFixture();
+          break;
+        case 'group_next':
+          if (midiValue > 63) selectNextGroup();
+          break;
+        case 'group_prev':
+        case 'group_previous':
+          if (midiValue > 63) selectPreviousGroup();
+          break;
+        case 'scene_next':
+          if (midiValue > 63) selectNextScene();
+          break;
+        case 'scene_prev':
+        case 'scene_previous':
+          if (midiValue > 63) selectPreviousScene();
+          break;
+        case 'scene_save':
+        case 'scene_capture':
+          if (midiValue > 63) captureCurrentScene();
+          break;
+        case 'scene_load':
+          if (midiValue > 63) loadSceneByIndex(currentSceneIndex);
+          break;
+        default:
+          if (action.startsWith('scene-') && midiValue > 63) {
+            const sceneName = action.replace('scene-', '');
+            const sceneIndex = scenes.findIndex(s => s.name === sceneName);
+            if (sceneIndex !== -1) {
+              loadSceneByIndex(sceneIndex);
+            }
+          }
+          break;
+      }
+    });
+  }, [midiLearnTarget, midiMessages, midiMappings, currentSceneIndex, scenes]);
 
   // Scene OSC address management
   const updateSceneOscAddress = (sceneId: string, address: string) => {
@@ -2026,25 +2131,34 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
               </div>
               <div className={styles.midiLearnRow}>
                 <button
-                  className={`${styles.midiLearnBtn} ${midiLearnTarget === 'scene_save' ? styles.learning : ''}`}
+                  type="button"
+                  className={`${styles.midiLearnBtn} ${midiLearnTarget === 'scene_save' ? styles.learning : ''} ${midiMappings.scene_save ? styles.mapped : ''}`}
                   onClick={() => midiLearnTarget === 'scene_save' ? stopMidiLearn() : startMidiLearn('scene_save')}
+                  title={midiMappings.scene_save ? `Remap ${midiMappingLabel(midiMappings.scene_save)}` : 'Learn MIDI for Save Scene'}
+                  aria-pressed={midiLearnTarget === 'scene_save'}
                 >
-                  <LucideIcon name="Music" />
-                  MIDI Save
+                  <LucideIcon name={midiLearnTarget === 'scene_save' ? 'Radio' : 'Music'} />
+                  {midiButtonLabel('scene_save', 'MIDI Save')}
                 </button>
                 <button
-                  className={`${styles.midiLearnBtn} ${midiLearnTarget === 'scene_previous' ? styles.learning : ''}`}
+                  type="button"
+                  className={`${styles.midiLearnBtn} ${midiLearnTarget === 'scene_previous' ? styles.learning : ''} ${midiMappings.scene_previous ? styles.mapped : ''}`}
                   onClick={() => midiLearnTarget === 'scene_previous' ? stopMidiLearn() : startMidiLearn('scene_previous')}
+                  title={midiMappings.scene_previous ? `Remap ${midiMappingLabel(midiMappings.scene_previous)}` : 'Learn MIDI for Previous Scene'}
+                  aria-pressed={midiLearnTarget === 'scene_previous'}
                 >
-                  <LucideIcon name="Music" />
-                  MIDI Prev
+                  <LucideIcon name={midiLearnTarget === 'scene_previous' ? 'Radio' : 'Music'} />
+                  {midiButtonLabel('scene_previous', 'MIDI Prev')}
                 </button>
                 <button
-                  className={`${styles.midiLearnBtn} ${midiLearnTarget === 'scene_next' ? styles.learning : ''}`}
+                  type="button"
+                  className={`${styles.midiLearnBtn} ${midiLearnTarget === 'scene_next' ? styles.learning : ''} ${midiMappings.scene_next ? styles.mapped : ''}`}
                   onClick={() => midiLearnTarget === 'scene_next' ? stopMidiLearn() : startMidiLearn('scene_next')}
+                  title={midiMappings.scene_next ? `Remap ${midiMappingLabel(midiMappings.scene_next)}` : 'Learn MIDI for Next Scene'}
+                  aria-pressed={midiLearnTarget === 'scene_next'}
                 >
-                  <LucideIcon name="Music" />
-                  MIDI Next
+                  <LucideIcon name={midiLearnTarget === 'scene_next' ? 'Radio' : 'Music'} />
+                  {midiButtonLabel('scene_next', 'MIDI Next')}
                 </button>
                 <input
                   type="text"
@@ -2086,16 +2200,20 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                       <div className={styles.sceneConnectionControls}>
                         <div className={styles.sceneMidiSection}>
                           <button
-                            className={`${styles.midiLearnBtn} ${styles.small} ${midiLearnTarget === `scene-${scene.name}` ? styles.learning : ''}`}
+                            type="button"
+                            className={`${styles.midiLearnBtn} ${styles.small} ${midiLearnTarget === `scene-${scene.name}` ? styles.learning : ''} ${midiMappings[`scene-${scene.name}`] ? styles.mapped : ''}`}
                             onClick={() => midiLearnTarget === `scene-${scene.name}` ? stopMidiLearn() : startMidiLearn(`scene-${scene.name}`)}
+                            title={midiMappings[`scene-${scene.name}`] ? `Remap ${midiMappingLabel(midiMappings[`scene-${scene.name}`])}` : `Learn MIDI for ${scene.name}`}
+                            aria-pressed={midiLearnTarget === `scene-${scene.name}`}
                           >
-                            <LucideIcon name="Music" />
-                            MIDI
+                            <LucideIcon name={midiLearnTarget === `scene-${scene.name}` ? 'Radio' : 'Music'} />
+                            {midiButtonLabel(`scene-${scene.name}`, 'MIDI')}
                           </button>
                           {midiMappings[`scene-${scene.name}`] && (
                             <div className={styles.midiInfo}>
-                              <span>CH{midiMappings[`scene-${scene.name}`].channel} CC{midiMappings[`scene-${scene.name}`].cc}</span>
+                              <span>{midiMappingLabel(midiMappings[`scene-${scene.name}`])}</span>
                               <button
+                                type="button"
                                 className={styles.clearBtn}
                                 onClick={() => clearMidiMapping(`scene-${scene.name}`)}
                               >
