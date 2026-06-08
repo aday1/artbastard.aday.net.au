@@ -412,6 +412,75 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     setPanelLayout(normalizeSuperControlPanelLayout(null));
   }, []);
 
+  const hiddenPanelCount = useMemo(
+    () => Object.values(panelLayout.hidden).filter(Boolean).length,
+    [panelLayout.hidden]
+  );
+
+  const renderPanelHeader = useCallback((
+    panelId: SuperControlPanelId,
+    icon: React.ReactNode,
+    label: React.ReactNode,
+    status?: React.ReactNode
+  ) => {
+    const collapsed = Boolean(panelLayout.collapsed[panelId]);
+    const index = panelOrderIndex(panelId);
+    const title = SUPER_CONTROL_PANEL_LABELS[panelId];
+
+    return (
+      <div className={styles.gridItemHeader}>
+        <span className={styles.gridItemHeaderTitle}>
+          {icon}
+          <span>{label}</span>
+        </span>
+        {status && <span className={styles.gridItemHeaderStatus}>{status}</span>}
+        <span className={styles.cardLayoutControls} aria-label={`${title} layout controls`}>
+          <button
+            type="button"
+            onClick={() => togglePanelHidden(panelId)}
+            title={`Hide ${title}`}
+            aria-label={`Hide ${title}`}
+          >
+            <LucideIcon name="EyeOff" />
+          </button>
+          <button
+            type="button"
+            onClick={() => togglePanelCollapsed(panelId)}
+            title={collapsed ? `Expand ${title}` : `Collapse ${title}`}
+            aria-label={collapsed ? `Expand ${title}` : `Collapse ${title}`}
+          >
+            <LucideIcon name={collapsed ? 'Maximize2' : 'Minimize2'} />
+          </button>
+          <button
+            type="button"
+            onClick={() => movePanel(panelId, -1)}
+            disabled={index === 0}
+            title={`Move ${title} earlier`}
+            aria-label={`Move ${title} earlier`}
+          >
+            <LucideIcon name="ArrowLeft" />
+          </button>
+          <button
+            type="button"
+            onClick={() => movePanel(panelId, 1)}
+            disabled={index === panelLayout.order.length - 1}
+            title={`Move ${title} later`}
+            aria-label={`Move ${title} later`}
+          >
+            <LucideIcon name="ArrowRight" />
+          </button>
+        </span>
+      </div>
+    );
+  }, [
+    movePanel,
+    panelLayout.collapsed,
+    panelLayout.order.length,
+    panelOrderIndex,
+    togglePanelCollapsed,
+    togglePanelHidden,
+  ]);
+
   // MIDI Learn Processing
   useEffect(() => {
     if (midiMessages.length > 0) {
@@ -1563,6 +1632,18 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
               </p>
             )}
           </div>
+          <div className={styles.superControlHeaderActions} aria-label="Super Control layout recovery">
+            {hiddenPanelCount > 0 && (
+              <button type="button" onClick={showAllPanels} title="Show hidden cards">
+                <LucideIcon name="Eye" />
+                <span>{hiddenPanelCount} hidden</span>
+              </button>
+            )}
+            <button type="button" onClick={resetPanelLayout} title="Restore default card layout">
+              <LucideIcon name="RotateCcw" />
+              <span>Reset</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1570,72 +1651,9 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         <SelectedChannelsFaderStrip maxVisible={10} />
       )}
 
-      <div className={styles.panelLayoutBar} aria-label="Control layout manager">
-        <div className={styles.panelLayoutTitle}>
-          <LucideIcon name="PanelsTopLeft" />
-          <span>Control layout</span>
-        </div>
-        <div className={styles.panelLayoutActions}>
-          <button type="button" onClick={showAllPanels}>
-            <LucideIcon name="Eye" />
-            Show all
-          </button>
-          <button type="button" onClick={resetPanelLayout}>
-            <LucideIcon name="RotateCcw" />
-            Restore layout
-          </button>
-        </div>
-        <div className={styles.panelChipList}>
-          {panelLayout.order.map((panelId) => {
-            const hidden = Boolean(panelLayout.hidden[panelId]);
-            const collapsed = Boolean(panelLayout.collapsed[panelId]);
-            return (
-              <div
-                key={panelId}
-                className={`${styles.panelChip} ${hidden ? styles.panelChipHidden : ''} ${collapsed ? styles.panelChipCollapsed : ''}`}
-              >
-                <button
-                  type="button"
-                  onClick={() => togglePanelHidden(panelId)}
-                  title={hidden ? `Show ${SUPER_CONTROL_PANEL_LABELS[panelId]}` : `Hide ${SUPER_CONTROL_PANEL_LABELS[panelId]}`}
-                >
-                  <LucideIcon name={hidden ? 'EyeOff' : 'Eye'} />
-                  {SUPER_CONTROL_PANEL_LABELS[panelId]}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => togglePanelCollapsed(panelId)}
-                  title={collapsed ? 'Expand panel' : 'Collapse panel'}
-                >
-                  <LucideIcon name={collapsed ? 'Maximize2' : 'Minimize2'} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => movePanel(panelId, -1)}
-                  disabled={panelOrderIndex(panelId) === 0}
-                  title="Move panel left/up"
-                >
-                  <LucideIcon name="ArrowLeft" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => movePanel(panelId, 1)}
-                  disabled={panelOrderIndex(panelId) === panelLayout.order.length - 1}
-                  title="Move panel right/down"
-                >
-                  <LucideIcon name="ArrowRight" />
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
       <div className={styles.autoLayoutContainer}>
         <div className={panelClass('selection')} style={panelStyle('selection')}>
-          <div className={styles.gridItemHeader}>
-            <LucideIcon name="ListChecks" /> Selection
-          </div>
+          {renderPanelHeader('selection', <LucideIcon name="ListChecks" />, 'Selection')}
           <div className={styles.gridItemContent}>
             {/* Selection Mode */}
             <div className={styles.fixtureSelection}>
@@ -1787,9 +1805,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         </div>
 
         <div className={panelClass('monitoring')} style={panelStyle('monitoring')}>
-          <div className={styles.gridItemHeader}>
-            <LucideIcon name="Activity" /> Monitoring
-          </div>
+          {renderPanelHeader('monitoring', <LucideIcon name="Activity" />, 'Monitoring')}
           <div className={styles.gridItemContent}>
             {/* Channel/Fixture Monitoring */}
             {hasSelection ? (
@@ -1911,15 +1927,20 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         </div>
 
         <div className={panelClass('midiOsc')} style={panelStyle('midiOsc')}>
-          <button
-            type="button"
-            className={`${styles.gridItemHeader} ${styles.gridItemHeaderToggle}`}
-            onClick={() => setMidiOscNavExpanded((v) => !v)}
-            aria-expanded={midiOscNavExpanded}
-          >
-            <span><LucideIcon name="Music" /> MIDI/OSC & Navigation</span>
-            <LucideIcon name={midiOscNavExpanded ? 'ChevronUp' : 'ChevronDown'} />
-          </button>
+          {renderPanelHeader(
+            'midiOsc',
+            <LucideIcon name="Music" />,
+            'MIDI/OSC & Navigation',
+            <button
+              type="button"
+              className={styles.gridItemHeaderDisclosure}
+              onClick={() => setMidiOscNavExpanded((v) => !v)}
+              aria-expanded={midiOscNavExpanded}
+              title={midiOscNavExpanded ? 'Hide MIDI/OSC navigation' : 'Show MIDI/OSC navigation'}
+            >
+              <LucideIcon name={midiOscNavExpanded ? 'ChevronUp' : 'ChevronDown'} />
+            </button>
+          )}
           {midiOscNavExpanded && (
           <div className={styles.gridItemContent}>
             {/* MIDI/OSC Learning and Navigation Controls */}
@@ -2073,9 +2094,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         </div>
 
         <div className={panelClass('scenes')} style={panelStyle('scenes')}>
-          <div className={styles.gridItemHeader}>
-            <LucideIcon name="Film" /> Scene Management
-          </div>
+          {renderPanelHeader('scenes', <LucideIcon name="Film" />, 'Scene Management')}
           <div className={styles.gridItemContent}>
             {/* Scene Management */}
             <div className={styles.navigationGroup}>
@@ -2259,9 +2278,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         </div>
 
         <div className={panelClass('basic')} style={panelStyle('basic')}>
-          <div className={styles.gridItemHeader}>
-            <LucideIcon name="SlidersHorizontal" /> Basic Controls
-          </div>
+          {renderPanelHeader('basic', <LucideIcon name="SlidersHorizontal" />, 'Basic Controls')}
           <div className={styles.gridItemContent}>
             <div className={styles.section}>
               <div className={styles.faderStack}>
@@ -2283,13 +2300,14 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
 
         {(hasControlType('pan') || hasControlType('tilt')) && (
           <div className={panelClass('panTilt')} style={panelStyle('panTilt')}>
-            <div className={styles.gridItemHeader}>
-              <LucideIcon name="Move" /> Pan/Tilt
-              {panTiltAutopilot.enabled && (
+            {renderPanelHeader(
+              'panTilt',
+              <LucideIcon name="Move" />,
+              'Pan/Tilt',
+              panTiltAutopilot.enabled ? (
                 <span
                   className={styles.autopilotIndicator}
                   style={{
-                    marginLeft: 'auto',
                     fontSize: '12px',
                     backgroundColor: '#28a745',
                     color: 'white',
@@ -2301,8 +2319,8 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                 >
                   AUTO
                 </span>
-              )}
-            </div>
+              ) : null
+            )}
             <div className={styles.gridItemContent}>
             <div className={styles.section}>
               <div className={styles.panTiltSliders}>
@@ -2381,9 +2399,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
 
         {(hasControlType('red') || hasControlType('green') || hasControlType('blue')) && (
           <div className={panelClass('rgb')} style={panelStyle('rgb')}>
-            <div className={styles.gridItemHeader}>
-              <LucideIcon name="Palette" /> RGB Color
-            </div>
+            {renderPanelHeader('rgb', <LucideIcon name="Palette" />, 'RGB Color')}
             <div className={styles.gridItemContent}>
             <div className={styles.colorSection}>
               <div className={styles.colorWheelWrap}>
@@ -2480,9 +2496,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
 
         {(hasControlType('gobo') || hasControlType('shutter') || hasControlType('strobe') || hasControlType('lamp') || hasControlType('reset')) && (
           <div className={panelClass('effects')} style={panelStyle('effects')}>
-            <div className={styles.gridItemHeader}>
-              <LucideIcon name="Zap" /> Effects
-            </div>
+            {renderPanelHeader('effects', <LucideIcon name="Zap" />, 'Effects')}
             <div className={styles.gridItemContent}>
               <div className={styles.section}>
                 {hasControlType('gobo') && (
@@ -2600,9 +2614,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
 
         {selectionMode === 'channels' && selectedChannels.length > 0 && (
           <div className={panelClass('envelopes')} style={panelStyle('envelopes')}>
-            <div className={styles.gridItemHeader}>
-              <LucideIcon name="Activity" /> Channel envelopes
-            </div>
+            {renderPanelHeader('envelopes', <LucideIcon name="Activity" />, 'Channel envelopes')}
             <div className={styles.gridItemContent}>
               <div className={styles.envelopePanelStack}>
                 {selectedChannels.slice(0, touchLayout ? 2 : 4).map((ch) => (
@@ -2620,9 +2632,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
 
         {selectionMode === 'channels' && selectedChannels.length > 0 && !touchLayout && (
           <div className={panelClass('directDmx')} style={panelStyle('directDmx')}>
-            <div className={styles.gridItemHeader}>
-              <LucideIcon name="Sliders" /> Direct DMX
-            </div>
+            {renderPanelHeader('directDmx', <LucideIcon name="Sliders" />, 'Direct DMX')}
             <div className={styles.gridItemContent}>
               {/* Direct DMX Channel Controls */}
               <div className={styles.dmxChannelSection}>
@@ -2686,9 +2696,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
 
         {/* Color Autopilot Panel */}
         <div className={panelClass('colorAutopilot')} style={panelStyle('colorAutopilot')}>
-          <div className={styles.gridItemHeader}>
-            <LucideIcon name="Palette" /> Color Autopilot
-          </div>
+          {renderPanelHeader('colorAutopilot', <LucideIcon name="Palette" />, 'Color Autopilot')}
           <div className={styles.gridItemContent}>
             <div style={{ marginBottom: '12px' }}>
               <SkeuoButton
