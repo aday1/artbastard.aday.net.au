@@ -1181,16 +1181,20 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     setTiltValue: (v: number) => void;
     setPanTiltXY: (xy: { x: number; y: number }) => void;
     togglePanTiltAutopilot: () => void;
+    setPanTiltAutopilot: (cfg: Record<string, unknown>) => void;
     panTiltAutopilotEnabled: boolean;
     hasSelection: boolean;
+    addNotification: (n: { message: string; type?: string; priority?: string }) => void;
   }>({
     apply: () => {},
     setPanValue: () => {},
     setTiltValue: () => {},
     setPanTiltXY: () => {},
     togglePanTiltAutopilot: () => {},
+    setPanTiltAutopilot: () => {},
     panTiltAutopilotEnabled: false,
     hasSelection: false,
+    addNotification: () => {},
   });
   // Mirrors the most recent Roli touch position so the LED effect always has
   // a cursor source even when no fixture is selected (touch feedback first,
@@ -1209,17 +1213,42 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
       // and onPathChange / onPathSaved fire just like a mouse pencil stroke.
       const pad = xyPadHandleRef.current;
       if (pad) {
-        if (ev.phase === 'start') pad.beginExternalPath(ev.x, ev.y);
-        else if (ev.phase === 'move') pad.extendExternalPath(ev.x, ev.y);
-        else if (ev.phase === 'end') pad.endExternalPath();
+        if (ev.phase === 'start') {
+          // New draw — kill any running autopilot loop so the user isn't
+          // fighting a previous recording while sketching a new one.
+          if (roliApplyRef.current.panTiltAutopilotEnabled) {
+            roliApplyRef.current.setPanTiltAutopilot({ enabled: false });
+          }
+          pad.beginExternalPath(ev.x, ev.y);
+        } else if (ev.phase === 'move') {
+          pad.extendExternalPath(ev.x, ev.y);
+        } else if (ev.phase === 'end') {
+          // endExternalPath() synchronously fires onPathSaved which writes
+          // customPath into panTiltAutopilot. Right after, enable autopilot
+          // so the loop the user just drew starts playing on the selected
+          // fixture's pan/tilt.
+          pad.endExternalPath();
+          if (
+            roliApplyRef.current.hasSelection &&
+            livePathRef.current.length >= 2
+          ) {
+            roliApplyRef.current.setPanTiltAutopilot({
+              enabled: true,
+              pathType: 'custom',
+            });
+            roliApplyRef.current.addNotification({
+              message: 'Roli loop playing — touch the pad again to redraw',
+              type: 'info',
+              priority: 'low',
+            });
+          }
+        }
       }
 
       if (!roliApplyRef.current.hasSelection) return;
+      if (ev.phase !== 'move' && ev.phase !== 'start') return;
       const p = Math.round(Math.max(0, Math.min(255, ev.x * 255)));
       const t = Math.round(Math.max(0, Math.min(255, (1 - ev.y) * 255)));
-      if (roliApplyRef.current.panTiltAutopilotEnabled) {
-        roliApplyRef.current.togglePanTiltAutopilot();
-      }
       roliApplyRef.current.setPanValue(p);
       roliApplyRef.current.setTiltValue(t);
       roliApplyRef.current.setPanTiltXY({ x: (p / 255) * 100, y: (1 - t / 255) * 100 });
@@ -1235,10 +1264,21 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     const activeSlot = pathSlots.activeSlotId
       ? pathSlots.slots.find((s) => s.id === pathSlots.activeSlotId)
       : null;
+    // While the autopilot is playing back a custom path the user just drew,
+    // show that path lit on the device so the loop is visible. Slot trail
+    // wins if a slot is active; otherwise prefer the running autopilot loop;
+    // otherwise fall back to the live pencil path.
+    const autopilotLoop =
+      panTiltAutopilot.enabled &&
+      panTiltAutopilot.pathType === 'custom' &&
+      panTiltAutopilot.customPath &&
+      panTiltAutopilot.customPath.length > 1
+        ? panTiltAutopilot.customPath.map((p) => ({ x: p.x / 255, y: 1 - p.y / 255 }))
+        : null;
     const trail =
       activeSlot && activeSlot.path.length > 1
         ? activeSlot.path.map((p) => ({ x: p.x / 255, y: 1 - p.y / 255 }))
-        : livePathRef.current;
+        : autopilotLoop ?? livePathRef.current;
     // Prefer the live Roli touch as the cursor source so finger-on-pad always
     // lights an LED; fall back to pan/tilt-derived cursor for autopilot etc.
     const cursor = liveTouchRef.current
@@ -1248,7 +1288,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
       path: trail,
       cursor,
     });
-  }, [roli, panValue, tiltValue, pathSlots, livePathVersion, liveTouchVersion]);
+  }, [roli, panValue, tiltValue, pathSlots, livePathVersion, liveTouchVersion, panTiltAutopilot.enabled, panTiltAutopilot.pathType, panTiltAutopilot.customPath]);
 
   // XY Pad handlers
   const handleXYPadMouseDown = (e: React.MouseEvent) => {
@@ -2876,8 +2916,10 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                   setTiltValue,
                   setPanTiltXY,
                   togglePanTiltAutopilot,
+                  setPanTiltAutopilot,
                   panTiltAutopilotEnabled: panTiltAutopilot.enabled,
                   hasSelection,
+                  addNotification,
                 };
                 return null;
               })()}
