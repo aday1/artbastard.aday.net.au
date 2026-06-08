@@ -34,11 +34,11 @@ export const ThemePresetStrip: React.FC<ThemePresetStripProps> = ({
             onClick={() => {
               setActiveId(preset.id);
               localStorage.setItem('themePresetId', preset.id);
-              const colors = applyThemePreset(preset);
-              onPreview(colors);
               if (preset.preferDark !== undefined) {
                 onPreferDark?.(preset.preferDark);
               }
+              const colors = applyThemePreset(preset);
+              onPreview(colors);
             }}
           >
             <span className={styles.swatch} style={{ background: preset.rack.rkAccent }} />

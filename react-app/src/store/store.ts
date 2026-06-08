@@ -19,6 +19,8 @@ import {
   applyRackChrome,
   getPresetById,
   DEFAULT_THEME_COLORS,
+  getModeAwarePreset,
+  applyModeAwarePreset,
 } from '../utils/themeUtils'
 import type { ChannelEnvelope } from './types'
 import {
@@ -1643,7 +1645,12 @@ export const useStore = create<State>()(
           const newDarkMode = !state.darkMode;
           localStorage.setItem('darkMode', String(newDarkMode));
           document.documentElement.setAttribute('data-theme', newDarkMode ? 'dark' : 'light');
-          return { darkMode: newDarkMode };
+          const colors = applyModeAwarePreset(
+            newDarkMode,
+            localStorage.getItem('themePresetId')
+          );
+
+          return { darkMode: newDarkMode, themeColors: colors };
         });
       },
 
@@ -1744,23 +1751,30 @@ export const useStore = create<State>()(
           const { fetchAppearance } = await import('../utils/themeApi');
           const appearance = await fetchAppearance();
           if (!appearance) return;
+          if (typeof appearance.darkMode === 'boolean') {
+            const current = document.documentElement.getAttribute('data-theme') === 'dark';
+            if (appearance.darkMode !== current) get().toggleDarkMode();
+          }
           if (appearance.themePresetId) {
-            localStorage.setItem('themePresetId', appearance.themePresetId);
-            const preset = getPresetById(appearance.themePresetId);
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const preset = getModeAwarePreset(appearance.themePresetId, isDark);
+            localStorage.setItem('themePresetId', preset.id);
             if (preset) applyRackChrome(preset.rack);
           }
           if (appearance.themeColors) {
-            const merged = { ...get().themeColors, ...appearance.themeColors };
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const requestedPresetId = appearance.themePresetId ?? localStorage.getItem('themePresetId');
+            const requestedPreset = requestedPresetId ? getPresetById(requestedPresetId) : undefined;
+            const preset = getModeAwarePreset(requestedPresetId, isDark);
+            const canUseServerColors = isDark || requestedPreset?.preferDark === false;
+            const merged = canUseServerColors ? { ...get().themeColors, ...appearance.themeColors } : preset.colors;
             applyThemeColorsToDocument(merged);
+            applyRackChrome(preset.rack);
             localStorage.setItem('themeColors', JSON.stringify(merged));
             set({ themeColors: merged });
           }
           if (appearance.theme) {
             get().setTheme(appearance.theme as 'artsnob' | 'standard' | 'minimal');
-          }
-          if (typeof appearance.darkMode === 'boolean') {
-            const current = document.documentElement.getAttribute('data-theme') === 'dark';
-            if (appearance.darkMode !== current) get().toggleDarkMode();
           }
         } catch (error) {
           console.warn('Failed to load appearance from server:', error);
@@ -1772,11 +1786,23 @@ export const useStore = create<State>()(
       // UI Settings
       uiSettings: initializeUiSettings(),
       themeColors: (() => {
-        const colors = initializeThemeColors();
+        const storedPresetId = localStorage.getItem('themePresetId');
+        const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+        const modePreset = getModeAwarePreset(storedPresetId, isDark);
+        const storedPreset = storedPresetId ? getPresetById(storedPresetId) : undefined;
+        const useStoredColors = Boolean(storedPreset && storedPreset.id === modePreset.id);
+        const colors = useStoredColors ? initializeThemeColors() : modePreset.colors;
+
         applyThemeColorsToDocument(colors);
-        const presetId = localStorage.getItem('themePresetId') || 'reason-rack';
-        const preset = getPresetById(presetId) ?? getPresetById('reason-rack');
-        if (preset) applyRackChrome(preset.rack);
+        applyRackChrome(modePreset.rack);
+
+        try {
+          localStorage.setItem('themePresetId', modePreset.id);
+          if (!useStoredColors) localStorage.setItem('themeColors', JSON.stringify(colors));
+        } catch {
+          // Local storage may be unavailable in tests.
+        }
+
         return colors;
       })(),
 

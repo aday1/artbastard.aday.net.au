@@ -54,6 +54,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     document.body.className = theme
   }, [theme])
 
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light')
+  }, [darkMode])
+
   return (
     <ThemeContext.Provider value={{ theme, darkMode, setTheme, toggleDarkMode }}>
       {children}

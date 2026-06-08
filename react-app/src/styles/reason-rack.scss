@@ -26,19 +26,23 @@
 }
 
 [data-theme='light'] {
-  --rk-bg: #e8e4dc;
-  --rk-surface: #f0ece4;
-  --rk-module: #f5f1e8;
-  --rk-module-edge: #c8c0b0;
+  --rk-bg: #eef2f4;
+  --rk-surface: #e4ebee;
+  --rk-module: #f8faf8;
+  --rk-module-edge: #c5d0d6;
   --rk-bevel-hi: #ffffff;
-  --rk-bevel-lo: #b8b0a0;
-  --rk-label: #3a3228;
-  --rk-label-dim: #6a6258;
-  --rk-accent: #d97706;
-  --rk-grid-bg: #ebe6dc;
-  --rk-grid-line: #d0c8b8;
-  --rk-cell: #f8f4ec;
-  --rk-cell-active: #e8dcc8;
+  --rk-bevel-lo: #aab4ba;
+  --rk-screw: #87949c;
+  --rk-label: #1f2933;
+  --rk-label-dim: #60707a;
+  --rk-accent: #0e8fb1;
+  --rk-accent-glow: rgb(14 143 177 / 0.35);
+  --rk-led-off: #c7d2d8;
+  --rk-playhead: #c76a18;
+  --rk-grid-bg: #e8eef1;
+  --rk-grid-line: #c5d0d6;
+  --rk-cell: #ffffff;
+  --rk-cell-active: #d9edf3;
 }
 
 .ab-rack {

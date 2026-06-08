@@ -66,7 +66,7 @@ html.ab-touch-optimized {
   --ab-touch-slider-track: 12px;
 }
 
-html.ab-refresh-host {
+html.ab-refresh-host[data-theme="dark"] {
   color-scheme: dark;
   --color-background: #090d14;
   --color-text: #e8fbff;
@@ -111,7 +111,7 @@ html.ab-refresh-host {
   --rk-cell-active: #173955;
 }
 
-html.ab-refresh-host body {
+html.ab-refresh-host[data-theme="dark"] body {
   background:
     linear-gradient(180deg, rgb(0 215 255 / 0.08), transparent 34%),
     repeating-linear-gradient(
@@ -122,7 +122,7 @@ html.ab-refresh-host body {
     var(--color-background);
 }
 
-html.ab-refresh-host body::before {
+html.ab-refresh-host[data-theme="dark"] body::before {
   content: '';
   position: fixed;
   inset: 0 0 auto;
@@ -131,6 +131,84 @@ html.ab-refresh-host body::before {
   pointer-events: none;
   background: linear-gradient(90deg, #00d7ff, #ff4fd8 42%, #f6e05e 72%, #00d7ff);
   box-shadow: 0 0 18px rgb(0 215 255 / 0.72), 0 0 28px rgb(255 79 216 / 0.32);
+}
+
+html.ab-refresh-host[data-theme="light"] {
+  color-scheme: light;
+  --color-background: #eef2f4;
+  --color-text: #1f2933;
+  --color-primary: #0e8fb1;
+  --color-secondary: #425563;
+  --color-accent: #c76a18;
+  --color-card-bg: #ffffff;
+  --color-card-border: #c5d0d6;
+  --color-slider-track: #d9e2e7;
+  --color-slider-thumb: #0e8fb1;
+  --color-button-bg: #0e8fb1;
+  --color-button-text: #f7fbfd;
+  --color-nav-active: #0e8fb1;
+  --color-nav-inactive: #5f6f7a;
+  --color-channel-bg: #f8faf8;
+  --color-channel-border: #c5d0d6;
+  --color-channel-selected: rgb(14 143 177 / 0.16);
+  --bg-primary: #eef2f4;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #e4ebee;
+  --bg-hover: #dce8ee;
+  --text-primary: #1f2933;
+  --text-secondary: #52636e;
+  --accent-color: #c76a18;
+  --border-color: #c5d0d6;
+  --header-bg: #e5ecef;
+  --input-bg: #ffffff;
+  --wb-bg: #eef2f4;
+  --wb-surface: #e4ebee;
+  --wb-panel: #f8faf8;
+  --wb-bevel-light: #ffffff;
+  --wb-bevel-dark: #aab4ba;
+  --wb-text: #1f2933;
+  --wb-text-dim: #60707a;
+  --wb-accent: #0e8fb1;
+  --wb-copper: #c76a18;
+  --wb-amber: #c99920;
+  --rk-bg: #eef2f4;
+  --rk-surface: #e4ebee;
+  --rk-module: #f8faf8;
+  --rk-module-edge: #c5d0d6;
+  --rk-bevel-hi: #ffffff;
+  --rk-bevel-lo: #aab4ba;
+  --rk-screw: #87949c;
+  --rk-label: #1f2933;
+  --rk-label-dim: #60707a;
+  --rk-accent: #0e8fb1;
+  --rk-accent-glow: rgb(14 143 177 / 0.35);
+  --rk-playhead: #c76a18;
+  --rk-grid-bg: #e8eef1;
+  --rk-grid-line: #c5d0d6;
+  --rk-cell: #ffffff;
+  --rk-cell-active: #d9edf3;
+}
+
+html.ab-refresh-host[data-theme="light"] body {
+  background:
+    linear-gradient(180deg, rgb(14 143 177 / 0.11), transparent 32%),
+    repeating-linear-gradient(
+      90deg,
+      rgb(31 41 51 / 0.035) 0 1px,
+      transparent 1px 20px
+    ),
+    var(--color-background);
+}
+
+html.ab-refresh-host[data-theme="light"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0 0 auto;
+  height: 4px;
+  z-index: 10002;
+  pointer-events: none;
+  background: linear-gradient(90deg, #0e8fb1, #c76a18 42%, #6b5ca5 72%, #0e8fb1);
+  box-shadow: 0 1px 12px rgb(14 143 177 / 0.26);
 }
 
 // Dark mode colors - Enhanced for professional lighting environments
@@ -175,7 +253,7 @@ html.ab-refresh-host body::before {
   --error-color: var(--color-error);
 }
 
-html.ab-refresh-host {
+html.ab-refresh-host[data-theme="dark"] {
   --color-background: #090d14;
   --color-text: #e8fbff;
   --color-primary: #00d7ff;

@@ -125,14 +125,14 @@ const RACK_REASON: RackChrome = {
 };
 
 const RACK_LIGHT: RackChrome = {
-  rkBg: '#e8e4dc',
-  rkSurface: '#f0ece4',
-  rkPanel: '#f5f1e8',
+  rkBg: '#eef2f4',
+  rkSurface: '#f7f8f5',
+  rkPanel: '#ffffff',
   rkBevelHi: '#ffffff',
-  rkBevelLo: '#b8b0a0',
-  rkAccent: '#d97706',
-  rkLabel: '#3a3228',
-  rkLabelDim: '#6a6258',
+  rkBevelLo: '#aab4ba',
+  rkAccent: '#0e8fb1',
+  rkLabel: '#1f2933',
+  rkLabelDim: '#60707a',
 };
 
 const RACK_REFRESHED: RackChrome = {
@@ -152,8 +152,15 @@ function isRefreshedArtBastardHost(): boolean {
   return host === 'artbastard.aday.net.au' || host === 'artbastard-dev.aday.net.au' || host === 'artbastard-beta.aday.net.au';
 }
 
+function isLightThemeActive(): boolean {
+  if (typeof document === 'undefined') return false;
+  return document.documentElement.getAttribute('data-theme') === 'light';
+}
+
 function rackForCurrentHost(rack: RackChrome): RackChrome {
-  return isRefreshedArtBastardHost() ? RACK_REFRESHED : rack;
+  return isRefreshedArtBastardHost() && !isLightThemeActive()
+    ? RACK_REFRESHED
+    : rack;
 }
 
 function preset(
@@ -231,14 +238,25 @@ export const THEME_PRESETS: ThemePreset[] = [
   }, RACK_REASON, { preferDark: true }),
 
   preset('studio-light', 'Studio Light', {
-    backgroundHue: 40,
-    backgroundSaturation: 12,
-    backgroundBrightness: 94,
-    primaryHue: 220,
-    textPrimaryBrightness: 18,
-    textSecondaryBrightness: 35,
-    borderBrightness: 75,
-    cardBrightness: 96,
+    backgroundHue: 205,
+    backgroundSaturation: 18,
+    backgroundBrightness: 93,
+    primaryHue: 194,
+    primarySaturation: 74,
+    primaryBrightness: 38,
+    secondaryHue: 265,
+    secondarySaturation: 32,
+    secondaryBrightness: 42,
+    accentHue: 31,
+    accentSaturation: 84,
+    accentBrightness: 48,
+    textPrimaryBrightness: 16,
+    textSecondaryBrightness: 34,
+    textTertiaryBrightness: 48,
+    borderBrightness: 70,
+    borderSaturation: 14,
+    cardBrightness: 3,
+    cardSaturation: 14,
   }, RACK_LIGHT, { preferDark: false, description: 'Bright booth / programming in daylight' }),
 
   preset('brighter-default', 'Brighter Dark', {
@@ -283,6 +301,22 @@ export function applyThemeColorsToDocument(colors: ThemeColorsHsl): void {
   root.style.setProperty('--theme-accent-hue', `${applyRotation(colors.accentHue)}`);
   root.style.setProperty('--theme-accent-saturation', `${colors.accentSaturation}%`);
   root.style.setProperty('--theme-accent-brightness', `${colors.accentBrightness}%`);
+
+  const primaryColor = `hsl(${applyRotation(colors.primaryHue)}, ${colors.primarySaturation}%, ${colors.primaryBrightness}%)`;
+  const secondaryColor = `hsl(${applyRotation(colors.secondaryHue)}, ${colors.secondarySaturation}%, ${colors.secondaryBrightness}%)`;
+  const accentColor = `hsl(${applyRotation(colors.accentHue)}, ${colors.accentSaturation}%, ${colors.accentBrightness}%)`;
+  root.style.setProperty('--color-primary', primaryColor);
+  root.style.setProperty('--color-secondary', secondaryColor);
+  root.style.setProperty('--color-accent', accentColor);
+  root.style.setProperty('--accent-color', accentColor);
+  root.style.setProperty('--color-slider-thumb', primaryColor);
+  root.style.setProperty('--color-button-bg', primaryColor);
+  root.style.setProperty(
+    '--color-button-text',
+    colors.backgroundBrightness > 60 ? '#ffffff' : '#f8fafc'
+  );
+  root.style.setProperty('--color-nav-active', primaryColor);
+  root.style.setProperty('--color-nav-inactive', secondaryColor);
 
   const bgHue = colors.backgroundHue ?? 220;
   const bgSaturation = colors.backgroundSaturation ?? 20;
@@ -358,6 +392,37 @@ export function applyThemePreset(preset: ThemePreset): ThemeColorsHsl {
 
 export function getPresetById(id: string): ThemePreset | undefined {
   return THEME_PRESETS.find((p) => p.id === id);
+}
+
+export function getModeAwarePreset(
+  preferredPresetId: string | null | undefined,
+  darkMode: boolean
+): ThemePreset {
+  const preferred = preferredPresetId ? getPresetById(preferredPresetId) : undefined;
+
+  if (preferred) {
+    if (darkMode && preferred.preferDark !== false) return preferred;
+    if (!darkMode && preferred.preferDark === false) return preferred;
+  }
+
+  return getPresetById(darkMode ? 'reason-rack' : 'studio-light') ?? THEME_PRESETS[0];
+}
+
+export function applyModeAwarePreset(
+  darkMode: boolean,
+  preferredPresetId?: string | null
+): ThemeColorsHsl {
+  const preset = getModeAwarePreset(preferredPresetId, darkMode);
+  const colors = applyThemePreset(preset);
+
+  try {
+    localStorage.setItem('themePresetId', preset.id);
+    localStorage.setItem('themeColors', JSON.stringify(colors));
+  } catch {
+    // Local storage is optional during SSR/tests.
+  }
+
+  return colors;
 }
 
 export interface AppearanceSettings {
