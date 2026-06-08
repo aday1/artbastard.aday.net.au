@@ -17,6 +17,8 @@ import {
   DmxLedChannelMeter,
   SkeuoKnobSlider,
 } from '../ui/controls';
+import { PATH_SLOT_IDS, PathSlotId, PathSlotSummary } from '../ui/controls/ArtbastardXYPad';
+import { useRoliLightpad } from '../../hooks/useRoliLightpad';
 import { SkeuoButton } from '../ui/SkeuoButton';
 import { ChannelMonitorDock } from '../ui/ChannelMonitorDock';
 import { SelectedChannelsFaderStrip } from './SelectedChannelsFaderStrip';
@@ -64,6 +66,73 @@ const SUPER_CONTROL_MAX_COLUMNS = 6;
 
 const SUPER_CONTROL_LAYOUT_KEY = 'artbastard.superControl.panelLayout.v1';
 const SUPER_CONTROL_LOCAL_MIDI_MAPPINGS_KEY = 'artbastard.superControl.localMidiMappings.v1';
+const SUPER_CONTROL_PATH_SLOTS_KEY = 'artbastard.superControl.pathSlots.v1';
+
+interface PathSlotData {
+  id: PathSlotId;
+  label: string;
+  path: { x: number; y: number }[];
+  savedAt: number;
+}
+
+interface PathSlotsState {
+  slots: PathSlotData[];
+  activeSlotId: PathSlotId | null;
+}
+
+function defaultPathSlots(): PathSlotsState {
+  return {
+    slots: PATH_SLOT_IDS.map((id) => ({ id, label: id, path: [], savedAt: 0 })),
+    activeSlotId: null,
+  };
+}
+
+function normalizePathSlots(raw: unknown): PathSlotsState {
+  const base = defaultPathSlots();
+  if (!raw || typeof raw !== 'object') return base;
+  const parsed = raw as Partial<PathSlotsState>;
+  const incoming = Array.isArray(parsed.slots) ? parsed.slots : [];
+  const byId = new Map<PathSlotId, PathSlotData>();
+  for (const s of incoming) {
+    if (!s || typeof s !== 'object') continue;
+    const id = (s as any).id as PathSlotId;
+    if (!PATH_SLOT_IDS.includes(id)) continue;
+    const rawPath = Array.isArray((s as any).path) ? (s as any).path : [];
+    const path: { x: number; y: number }[] = [];
+    for (const p of rawPath) {
+      if (!p || typeof p !== 'object') continue;
+      const x = (p as any).x;
+      const y = (p as any).y;
+      if (typeof x !== 'number' || typeof y !== 'number') continue;
+      if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+      path.push({
+        x: Math.max(0, Math.min(255, Math.round(x))),
+        y: Math.max(0, Math.min(255, Math.round(y))),
+      });
+    }
+    const label = typeof (s as any).label === 'string' && (s as any).label.trim()
+      ? String((s as any).label).slice(0, 24)
+      : id;
+    const savedAt = typeof (s as any).savedAt === 'number' ? (s as any).savedAt : 0;
+    byId.set(id, { id, label, path, savedAt });
+  }
+  const slots = PATH_SLOT_IDS.map((id) => byId.get(id) ?? { id, label: id, path: [], savedAt: 0 });
+  const activeSlotId =
+    parsed.activeSlotId && PATH_SLOT_IDS.includes(parsed.activeSlotId as PathSlotId)
+      ? (parsed.activeSlotId as PathSlotId)
+      : null;
+  return { slots, activeSlotId };
+}
+
+function loadPathSlots(): PathSlotsState {
+  if (typeof window === 'undefined') return defaultPathSlots();
+  try {
+    const raw = localStorage.getItem(SUPER_CONTROL_PATH_SLOTS_KEY);
+    return normalizePathSlots(raw ? JSON.parse(raw) : null);
+  } catch {
+    return defaultPathSlots();
+  }
+}
 const DEFAULT_SUPER_CONTROL_PANEL_ORDER: SuperControlPanelId[] = [
   'selection',
   'monitoring',
@@ -868,6 +937,61 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     }
   }, [midiMappings]);
 
+  // Pan/Tilt path memory slots (A–H, localStorage-persisted)
+  const [pathSlots, setPathSlots] = useState<PathSlotsState>(loadPathSlots);
+  useEffect(() => {
+    try {
+      localStorage.setItem(SUPER_CONTROL_PATH_SLOTS_KEY, JSON.stringify(pathSlots));
+    } catch {
+      /* ignore slot persistence failures */
+    }
+  }, [pathSlots]);
+  const slotSummaries = useMemo<PathSlotSummary[]>(
+    () =>
+      pathSlots.slots.map((s) => ({
+        id: s.id,
+        label: s.label,
+        filled: s.path.length > 1,
+      })),
+    [pathSlots.slots]
+  );
+  const saveSlotPath = useCallback(
+    (id: PathSlotId, points: { x: number; y: number }[]) => {
+      setPathSlots((prev) => ({
+        activeSlotId: id,
+        slots: prev.slots.map((s) =>
+          s.id === id ? { ...s, path: points, savedAt: Date.now() } : s
+        ),
+      }));
+    },
+    []
+  );
+  const loadSlotPath = useCallback(
+    (id: PathSlotId) => {
+      const slot = pathSlots.slots.find((s) => s.id === id);
+      if (!slot || slot.path.length < 2) return;
+      setPathSlots((prev) => ({ ...prev, activeSlotId: id }));
+      setPanTiltAutopilot({ customPath: slot.path, pathType: 'custom' });
+    },
+    [pathSlots.slots, setPanTiltAutopilot]
+  );
+  const renameSlot = useCallback((id: PathSlotId, label: string) => {
+    setPathSlots((prev) => ({
+      ...prev,
+      slots: prev.slots.map((s) => (s.id === id ? { ...s, label: label.slice(0, 24) } : s)),
+    }));
+  }, []);
+  const clearSlot = useCallback((id: PathSlotId) => {
+    setPathSlots((prev) => ({
+      activeSlotId: prev.activeSlotId === id ? null : prev.activeSlotId,
+      slots: prev.slots.map((s) => (s.id === id ? { ...s, path: [], savedAt: 0 } : s)),
+    }));
+  }, []);
+
+  // Roli Lightpad: touch -> pan/tilt, LED -> cursor + active-slot trail.
+  const roli = useRoliLightpad();
+  const roliTouchPathRef = useRef<{ x: number; y: number }[]>([]);
+
   // Configuration management state
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [sceneOscAddresses, setSceneOscAddresses] = useState<Record<string, string>>({});
@@ -1037,6 +1161,71 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
       }
     });
   };
+
+  // --- Roli Lightpad: touch in + LED feedback ---
+  // Use refs so the touch handler always sees the latest store values without
+  // re-subscribing on every keystroke.
+  const roliApplyRef = useRef<{
+    apply: (controlType: string, value: number) => void;
+    setPanValue: (v: number) => void;
+    setTiltValue: (v: number) => void;
+    setPanTiltXY: (xy: { x: number; y: number }) => void;
+    togglePanTiltAutopilot: () => void;
+    panTiltAutopilotEnabled: boolean;
+    onPathSaved: (points: { x: number; y: number }[]) => void;
+    hasSelection: boolean;
+  }>({
+    apply: () => {},
+    setPanValue: () => {},
+    setTiltValue: () => {},
+    setPanTiltXY: () => {},
+    togglePanTiltAutopilot: () => {},
+    panTiltAutopilotEnabled: false,
+    onPathSaved: () => {},
+    hasSelection: false,
+  });
+  useEffect(() => {
+    roli.onTouch((ev) => {
+      if (!roliApplyRef.current.hasSelection) return;
+      const p = Math.round(Math.max(0, Math.min(255, ev.x * 255)));
+      const t = Math.round(Math.max(0, Math.min(255, (1 - ev.y) * 255)));
+      if (roliApplyRef.current.panTiltAutopilotEnabled) {
+        roliApplyRef.current.togglePanTiltAutopilot();
+      }
+      roliApplyRef.current.setPanValue(p);
+      roliApplyRef.current.setTiltValue(t);
+      roliApplyRef.current.setPanTiltXY({ x: (p / 255) * 100, y: (1 - t / 255) * 100 });
+      roliApplyRef.current.apply('pan', p);
+      roliApplyRef.current.apply('tilt', t);
+
+      if (ev.phase === 'start') {
+        roliTouchPathRef.current = [{ x: p, y: t }];
+      } else if (ev.phase === 'move') {
+        roliTouchPathRef.current.push({ x: p, y: t });
+      } else if (ev.phase === 'end') {
+        const pts = roliTouchPathRef.current;
+        if (pts.length > 1) roliApplyRef.current.onPathSaved(pts.slice());
+        roliTouchPathRef.current = [];
+      }
+    });
+  }, [roli]);
+
+  // LED feedback: push the active slot trail + current cursor to the Lightpad.
+  // Throttling lives inside the engine; we just re-render on state changes.
+  useEffect(() => {
+    if (!roli.handshakeDone) return;
+    const activeSlot = pathSlots.activeSlotId
+      ? pathSlots.slots.find((s) => s.id === pathSlots.activeSlotId)
+      : null;
+    const trail =
+      activeSlot && activeSlot.path.length > 1
+        ? activeSlot.path.map((p) => ({ x: p.x / 255, y: 1 - p.y / 255 }))
+        : roliTouchPathRef.current.map((p) => ({ x: p.x / 255, y: 1 - p.y / 255 }));
+    roli.sendFrame({
+      path: trail,
+      cursor: { x: panValue / 255, y: 1 - tiltValue / 255 },
+    });
+  }, [roli, panValue, tiltValue, pathSlots]);
 
   // XY Pad handlers
   const handleXYPadMouseDown = (e: React.MouseEvent) => {
@@ -2645,7 +2834,31 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                   setPanTiltAutopilot({ customPath: points, pathType: 'custom' });
                 }}
                 onOpenPathEditor={() => setShowPanTiltPathEditor(true)}
+                slots={slotSummaries}
+                activeSlotId={pathSlots.activeSlotId}
+                onSaveToSlot={saveSlotPath}
+                onLoadSlot={loadSlotPath}
+                onRenameSlot={renameSlot}
+                onClearSlot={clearSlot}
+                roliConnected={roli.connected}
+                roliDeviceName={roli.deviceName}
               />
+              {(() => {
+                // Keep the Roli touch handler ref in sync with the latest closures.
+                roliApplyRef.current = {
+                  apply: applyControl,
+                  setPanValue,
+                  setTiltValue,
+                  setPanTiltXY,
+                  togglePanTiltAutopilot,
+                  panTiltAutopilotEnabled: panTiltAutopilot.enabled,
+                  onPathSaved: (points) => {
+                    setPanTiltAutopilot({ customPath: points, pathType: 'custom' });
+                  },
+                  hasSelection,
+                };
+                return null;
+              })()}
               <div className={styles.panTiltControls}>
                 <button
                   className={styles.centerResetBtn}

@@ -10,6 +10,15 @@ import {
   smoothUserPath,
 } from './xyPadPathUtils';
 
+export type PathSlotId = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H';
+export const PATH_SLOT_IDS: PathSlotId[] = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+
+export interface PathSlotSummary {
+  id: PathSlotId;
+  label: string;
+  filled: boolean;
+}
+
 export interface ArtbastardXYPadProps {
   pan: number;
   tilt: number;
@@ -23,6 +32,16 @@ export interface ArtbastardXYPadProps {
   onPathSaved?: (points: { x: number; y: number }[]) => void;
   onOpenPathEditor?: () => void;
   className?: string;
+  /** Path slot strip — when provided, renders A–H slot row. */
+  slots?: PathSlotSummary[];
+  activeSlotId?: PathSlotId | null;
+  onSaveToSlot?: (id: PathSlotId, pointsDmx: { x: number; y: number }[]) => void;
+  onLoadSlot?: (id: PathSlotId) => void;
+  onRenameSlot?: (id: PathSlotId, label: string) => void;
+  onClearSlot?: (id: PathSlotId) => void;
+  /** Roli Lightpad status (optional badge). */
+  roliConnected?: boolean;
+  roliDeviceName?: string | null;
 }
 
 type ToolMode = 'live' | 'pencil';
@@ -50,6 +69,14 @@ export const ArtbastardXYPad: React.FC<ArtbastardXYPadProps> = ({
   onPathSaved,
   onOpenPathEditor,
   className = '',
+  slots,
+  activeSlotId = null,
+  onSaveToSlot,
+  onLoadSlot,
+  onRenameSlot,
+  onClearSlot,
+  roliConnected = false,
+  roliDeviceName = null,
 }) => {
   const padRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -269,6 +296,37 @@ export const ArtbastardXYPad: React.FC<ArtbastardXYPadProps> = ({
   const xFill = xy.x;
   const yFill = xy.y;
 
+  const saveCurrentToSlot = useCallback(
+    (id: PathSlotId) => {
+      if (!onSaveToSlot) return;
+      if (path.length < 2) return;
+      const pad = padRef.current;
+      const w = pad?.clientWidth ?? 320;
+      const h = pad?.clientHeight ?? 320;
+      onSaveToSlot(id, pathToDmxPoints(path, w, h));
+    },
+    [onSaveToSlot, path]
+  );
+
+  const handleSlotContext = useCallback(
+    (e: React.MouseEvent, slot: PathSlotSummary) => {
+      e.preventDefault();
+      if (!onRenameSlot && !onClearSlot) return;
+      const next = window.prompt(
+        `Slot ${slot.id} — rename (blank = keep) or type CLEAR to empty:`,
+        slot.label
+      );
+      if (next == null) return;
+      const trimmed = next.trim();
+      if (trimmed.toUpperCase() === 'CLEAR') {
+        onClearSlot?.(slot.id);
+        return;
+      }
+      if (trimmed && trimmed !== slot.label) onRenameSlot?.(slot.id, trimmed);
+    },
+    [onRenameSlot, onClearSlot]
+  );
+
   return (
     <div className={`${styles.card} ${className} ${disabled ? styles.disabled : ''}`}>
       <div className={styles.mainContent}>
@@ -353,6 +411,53 @@ export const ArtbastardXYPad: React.FC<ArtbastardXYPadProps> = ({
       <div className={styles.readout}>
         Pan {pan} / Tilt {tilt}
       </div>
+      {slots && slots.length > 0 ? (
+        <div className={styles.slotStrip} role="group" aria-label="Path memory slots">
+          {slots.map((slot) => {
+            const active = slot.id === activeSlotId;
+            const canSave = !!onSaveToSlot && path.length > 1 && !disabled;
+            return (
+              <div key={slot.id} className={styles.slotCell}>
+                <button
+                  type="button"
+                  className={`${styles.slotButton} ${slot.filled ? styles.slotFilled : ''} ${active ? styles.slotActive : ''}`}
+                  title={`${slot.label}${slot.filled ? ' — click to load, right-click to rename/clear' : ' — click to save current path'}`}
+                  disabled={disabled || (!slot.filled && !canSave)}
+                  onClick={() => {
+                    if (slot.filled) onLoadSlot?.(slot.id);
+                    else if (canSave) saveCurrentToSlot(slot.id);
+                  }}
+                  onContextMenu={(e) => handleSlotContext(e, slot)}
+                  aria-label={`Slot ${slot.id} ${slot.label}`}
+                >
+                  <span className={styles.slotId}>{slot.id}</span>
+                  <span className={styles.slotLabel}>{slot.label}</span>
+                  {slot.filled ? <span className={styles.slotDot} aria-hidden="true" /> : null}
+                </button>
+                {slot.filled && onSaveToSlot ? (
+                  <button
+                    type="button"
+                    className={styles.slotOverwrite}
+                    title={`Overwrite slot ${slot.id} with current path`}
+                    disabled={disabled || path.length < 2}
+                    onClick={() => saveCurrentToSlot(slot.id)}
+                    aria-label={`Overwrite slot ${slot.id}`}
+                  >
+                    <LucideIcon name="Save" size={12} />
+                  </button>
+                ) : null}
+              </div>
+            );
+          })}
+          <div
+            className={`${styles.roliBadge} ${roliConnected ? styles.roliBadgeOn : ''}`}
+            title={roliConnected ? `Roli: ${roliDeviceName ?? 'connected'}` : 'No Roli Lightpad detected'}
+          >
+            <LucideIcon name="Square" size={12} />
+            <span>{roliConnected ? 'Roli' : 'Roli —'}</span>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 };
