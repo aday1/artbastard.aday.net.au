@@ -175,7 +175,7 @@ html.ab-beta-host body::before {
   --error-color: var(--color-error);
 }
 
-html.ab-beta-host[data-theme="dark"] {
+html.ab-beta-host {
   --color-background: #090d14;
   --color-text: #e8fbff;
   --color-primary: #00d7ff;
