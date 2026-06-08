@@ -1825,40 +1825,40 @@ $color-wheel-checker: repeating-conic-gradient(
   position: relative;
   background: rgba(0, 212, 255, 0.05);
   border: 1px solid rgba(0, 212, 255, 0.2);
-  border-radius: 10px;
-  padding: 16px;
-  padding-right: calc(var(--channel-dock-width) + 12px);
-  margin-bottom: 20px;
+  border-radius: 6px;
+  padding: 8px;
+  padding-right: calc(var(--channel-dock-width) + 8px);
+  margin-bottom: 10px;
   
   .sectionHeader {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 16px;
-    padding-bottom: 12px;
+    margin-bottom: 8px;
+    padding-bottom: 7px;
     border-bottom: 1px solid rgba(0, 212, 255, 0.3);
     
     h4 {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       margin: 0;
       color: #00d4ff;
-      font-size: 1.2rem;
+      font-size: 0.9rem;
       font-weight: 600;
       
       svg {
-        width: 20px;
-        height: 20px;
+        width: 16px;
+        height: 16px;
       }
     }
     
     .totalFixtures {
       background: rgba(0, 212, 255, 0.2);
       color: #00d4ff;
-      padding: 4px 12px;
-      border-radius: 6px;
-      font-size: 0.85rem;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.7rem;
       font-weight: 500;
     }
   }
@@ -1910,36 +1910,42 @@ $color-wheel-checker: repeating-conic-gradient(
   .fixtureMonitor {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    padding: 12px;
-    min-width: min(14rem, 78vw);
+    border-radius: 5px;
+    padding: 5px;
+    min-width: 0;
+    flex: 0 0 auto;
     
     .fixtureHeader {
       display: flex;
       align-items: center;
-      gap: 8px;
-      margin-bottom: 12px;
-      padding-bottom: 8px;
+      gap: 5px;
+      margin-bottom: 4px;
+      padding-bottom: 3px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       
       svg {
-        width: 16px;
-        height: 16px;
+        width: 12px;
+        height: 12px;
         color: #00d4ff;
       }
       
       .fixtureName {
+        min-width: 0;
         font-weight: 600;
+        font-size: 0.68rem;
         color: #ffffff;
         flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
       
       .fixtureRange {
         background: rgba(100, 100, 100, 0.3);
         color: #ccc;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 0.8rem;
+        padding: 1px 5px;
+        border-radius: 3px;
+        font-size: 0.62rem;
         font-family: monospace;
       }
     }
@@ -1947,41 +1953,42 @@ $color-wheel-checker: repeating-conic-gradient(
     .channelStripRow {
       display: flex;
       flex-direction: row;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       align-items: stretch;
       justify-content: flex-start;
-      gap: 6px;
-      min-height: 9.5rem;
-      overflow: hidden;
+      gap: 4px;
+      min-height: 0;
+      overflow-x: auto;
+      overflow-y: hidden;
     }
   }
   
   .controlIndicators {
     border-top: 1px solid rgba(0, 212, 255, 0.3);
-    padding-top: 12px;
+    padding-top: 7px;
     
     .indicatorRow {
       display: flex;
       flex-wrap: wrap;
-      gap: 12px;
+      gap: 6px;
       justify-content: center;
     }
     
     .indicator {
       display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 6px 12px;
+      gap: 4px;
+      padding: 3px 7px;
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 6px;
-      font-size: 0.8rem;
+      border-radius: 4px;
+      font-size: 0.68rem;
       color: #ccc;
       transition: all 0.3s ease;
       
       svg {
-        width: 14px;
-        height: 14px;
+        width: 12px;
+        height: 12px;
         opacity: 0.6;
       }
       
@@ -1989,7 +1996,7 @@ $color-wheel-checker: repeating-conic-gradient(
         background: rgba(0, 212, 255, 0.2);
         border-color: rgba(0, 212, 255, 0.5);
         color: #00d4ff;
-        box-shadow: 0 0 8px rgba(0, 212, 255, 0.3);
+        box-shadow: 0 0 6px rgba(0, 212, 255, 0.22);
         
         svg {
           opacity: 1;

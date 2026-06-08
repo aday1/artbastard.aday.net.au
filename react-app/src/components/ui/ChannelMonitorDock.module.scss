@@ -11,8 +11,8 @@
   -webkit-backdrop-filter: blur(14px);
   box-shadow: -8px 0 28px rgba(0, 0, 0, 0.45);
   overflow: hidden;
-  min-width: 54px;
-  min-height: 54px;
+  min-width: 42px;
+  min-height: 42px;
   max-width: calc(100vw - 24px);
   max-height: calc(100dvh - 24px - var(--safe-top, 0px) - var(--safe-bottom, 0px));
 }
@@ -46,12 +46,12 @@
 
 .dockRight.collapsed {
   bottom: auto;
-  height: 54px;
+  height: 42px;
 }
 
 .dockBottom.collapsed {
   left: auto;
-  width: 54px;
+  width: 42px;
 }
 
 .toolbar {
@@ -59,11 +59,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 7px 8px 7px 12px;
+  gap: 5px;
+  padding: 4px 5px 4px 8px;
   border-bottom: 1px solid rgba(0, 212, 255, 0.22);
   background: rgba(5, 8, 16, 0.78);
-  min-height: 42px;
+  min-height: 31px;
 }
 
 .draggableToolbar {
@@ -76,9 +76,9 @@
   gap: 6px;
   min-width: 0;
   color: #9deaff;
-  font-size: 0.72rem;
+  font-size: 0.62rem;
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   text-transform: uppercase;
   white-space: nowrap;
 
@@ -92,7 +92,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 4px;
+  gap: 3px;
   min-width: 0;
   flex-wrap: wrap;
 }
@@ -133,19 +133,24 @@
 }
 
 .iconButton {
-  width: 30px;
-  height: 30px;
-  border-radius: 6px;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
 }
 
 .textButton {
-  height: 30px;
-  gap: 5px;
-  padding: 0 8px;
-  border-radius: 6px;
-  font-size: 0.7rem;
+  width: 24px;
+  height: 24px;
+  gap: 0;
+  padding: 0;
+  border-radius: 4px;
+  font-size: 0.62rem;
   font-weight: 700;
   white-space: nowrap;
+
+  span {
+    display: none;
+  }
 }
 
 .active {
@@ -155,8 +160,8 @@
 }
 
 .collapsedButton {
-  width: 44px;
-  height: 44px;
+  width: 34px;
+  height: 34px;
   border-radius: 999px;
 }
 
@@ -165,20 +170,20 @@
   right: calc(0.75rem + var(--safe-right, 0px));
   bottom: calc(0.75rem + var(--safe-bottom, 0px));
   z-index: 121;
-  gap: 7px;
-  min-height: 42px;
-  padding: 0 12px;
+  gap: 5px;
+  min-height: 34px;
+  padding: 0 9px;
   border-radius: 999px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.42);
-  font-size: 0.75rem;
+  font-size: 0.66rem;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0;
 }
 
 .gripTop {
   flex: 0 0 auto;
-  height: 9px;
+  height: 6px;
   cursor: ns-resize;
   background: linear-gradient(
     180deg,
@@ -195,9 +200,9 @@
 .gripLeft {
   position: absolute;
   left: 0;
-  top: 42px;
+  top: 31px;
   bottom: 0;
-  width: 9px;
+  width: 6px;
   z-index: 2;
   cursor: ew-resize;
   background: linear-gradient(
@@ -216,8 +221,8 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 10px 8px 12px 14px;
+  gap: 6px;
+  padding: 6px 6px 7px 10px;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -245,7 +250,7 @@
   align-items: stretch;
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 10px 12px 12px;
+  padding: 6px 8px 7px;
 }
 
 .dockBottom .gripTop {
@@ -257,7 +262,7 @@
 }
 
 .dockFloating .scroll {
-  padding-right: 10px;
+  padding-right: 7px;
 }
 
 @media (max-width: 900px) {
@@ -267,7 +272,7 @@
     right: calc(0.75rem + var(--safe-right, 0px));
     bottom: calc(0.75rem + var(--safe-bottom, 0px));
     width: auto !important;
-    height: min(34dvh, 240px);
+    height: min(22dvh, 136px);
     border-radius: 10px;
   }
 
@@ -289,12 +294,4 @@
     max-width: min(74vw, 420px);
   }
 
-  .textButton span {
-    display: none;
-  }
-
-  .textButton {
-    width: 30px;
-    padding: 0;
-  }
 }

@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
 import styles from './DmxLedChannelMeter.module.scss';
 
-const DEFAULT_LED_COUNT = 10;
-const RED_ZONE = 4;
+const DEFAULT_LED_COUNT = 6;
+const RED_ZONE = 2;
 
 export interface DmxLedChannelMeterProps {
   value: number;

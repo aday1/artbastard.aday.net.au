@@ -2,13 +2,13 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { LucideIcon } from './LucideIcon';
 import styles from './ChannelMonitorDock.module.scss';
 
-const STORAGE_KEY = 'artbastard.channelDock.layout.v2';
+const STORAGE_KEY = 'artbastard.channelDock.layout.v3';
 const LEGACY_STORAGE_KEY = 'artbastard.channelDock';
-const MIN_WIDTH = 140;
-const MAX_WIDTH = 460;
-const MIN_HEIGHT = 150;
-const MAX_HEIGHT = 520;
-const COLLAPSED_SIZE = 54;
+const MIN_WIDTH = 96;
+const MAX_WIDTH = 360;
+const MIN_HEIGHT = 86;
+const MAX_HEIGHT = 360;
+const COLLAPSED_SIZE = 42;
 
 type DockPosition = 'right' | 'bottom' | 'floating';
 
@@ -53,8 +53,8 @@ function defaultLayout(): DockLayout {
   const viewportWidth = isBrowser() ? window.innerWidth : 1280;
   const viewportHeight = isBrowser() ? window.innerHeight : 800;
   const legacyWidth = getLegacyWidth();
-  const width = clamp(legacyWidth ?? (bottom ? viewportWidth - 24 : 220), MIN_WIDTH, MAX_WIDTH);
-  const height = clamp(bottom ? 220 : 280, MIN_HEIGHT, Math.min(MAX_HEIGHT, viewportHeight - 96));
+  const width = clamp(legacyWidth ?? (bottom ? viewportWidth - 24 : 180), MIN_WIDTH, MAX_WIDTH);
+  const height = clamp(bottom ? 118 : 220, MIN_HEIGHT, Math.min(MAX_HEIGHT, viewportHeight - 96));
 
   return {
     dock: bottom ? 'bottom' : 'right',
