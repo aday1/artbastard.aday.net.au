@@ -79,6 +79,32 @@ from Help > Shortcuts (Ctrl+H to open Help).
 | A        | Toggle automation   |
 | P        | Toggle autopilot    |
 
+## APC40 MK1 (hardware shortcuts)
+
+The APC40's live integration mirrors a lot of the app onto the surface.
+Full reference: [APC40_CHEATSHEET.md](APC40_CHEATSHEET.md). Quick gestures:
+
+| Button                 | Action                                              |
+| ---------------------- | --------------------------------------------------- |
+| Scene 1-5              | Launch saved scene (or fill empty slot)             |
+| REC (transport)        | Toggle SAVE mode → next scene-pad tap overwrites it |
+| PLAY (transport)       | Toggle pick-A mode → next scene-pad tap = scene A   |
+| STOP (transport)       | Toggle pick-B mode → next scene-pad tap = scene B   |
+| Crossfader             | Blend between scene A and B                         |
+| Channel faders 1-8     | Super Control: dim / pan / tilt / R / G / B / gobo / strobe |
+| Master fader           | Global dimmer across every fixture                  |
+| TRACK SELECT 1-8       | Pick fixture (or group) N                           |
+| ACTIVATOR 1-8          | Toggle fixture N in multi-selection                 |
+| SOLO 1-8               | Collapse selection to just fixture N                |
+| PAN                    | Select all fixtures                                 |
+| Nav ↑ / ↓              | Cycle fixtures                                      |
+| Nav ← / →              | Cycle scenes                                        |
+| SHIFT                  | Cancel any active mode                              |
+
+LED meanings: scene pads green = saved, red-blink = active, orange-blink
+= bound to crossfader A/B, green-blink = mode armed. Transport row LED
+lights up to confirm which mode you're in (REC=save, PLAY=pickA, STOP=pickB).
+
 ## Notes
 
 - Shortcuts that conflict with browser defaults (Ctrl+S, Ctrl+O, Ctrl+N)

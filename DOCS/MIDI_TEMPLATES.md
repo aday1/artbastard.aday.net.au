@@ -52,7 +52,13 @@ channel name changes (rename, fixture template apply, scene capture).
 
 ## Akai APC40 MK1
 
-The APC40 template assumes the device is in mode 0 (factory). Mappings:
+> **The APC40 has a dedicated live integration that runs without applying any
+> template — see [APC40_CHEATSHEET.md](APC40_CHEATSHEET.md) for the full
+> button-by-button reference (REC=SAVE mode, PLAY/STOP=crossfader pickers,
+> faders → Super Control, ACTIVATOR/SOLO multi-select, etc.).** The template
+> below remains available for backwards-compatible mappings.
+
+The APC40 template assumes the device is in mode 0 (factory). Template mappings:
 
 - Pad grid (8x5): cells trigger the corresponding clip launcher cells.
 - Track buttons (8): SuperControl axis selection (R / G / B / W / Pan /
@@ -65,6 +71,11 @@ The APC40 template assumes the device is in mode 0 (factory). Mappings:
 
 Pitch-bend on MIDI channel 1 is also wired to master brightness for
 controllers that send pitch-bend on the crossfader.
+
+When the live integration is active (default since v5.2.x), it intercepts
+the same notes/CCs **before** the template-mapped behavior runs, so the
+template entries above act as the fallback for any button the live hook
+doesn't claim.
 
 ## Custom mappings on top of templates
 
