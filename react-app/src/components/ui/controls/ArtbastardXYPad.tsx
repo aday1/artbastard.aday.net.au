@@ -42,8 +42,8 @@ export interface ArtbastardXYPadProps {
   /** Roli Lightpad status (optional badge). */
   roliConnected?: boolean;
   roliDeviceName?: string | null;
-  /** Fires whenever the internal path mutates (drawing, shape, Roli touch). */
-  onPathChange?: (points: PathPoint[]) => void;
+  /** Fires whenever the internal path mutates (drawing, shape, Roli touch). Normalized 0..1 coords. */
+  onPathChange?: (points: Array<{ x: number; y: number }>) => void;
 }
 
 export interface ArtbastardXYPadHandle {
@@ -336,6 +336,68 @@ export const ArtbastardXYPad = forwardRef<ArtbastardXYPadHandle, ArtbastardXYPad
       if (trimmed && trimmed !== slot.label) onRenameSlot?.(slot.id, trimmed);
     },
     [onRenameSlot, onClearSlot]
+  );
+
+  // Notify parent of every path mutation so the LED mirror can stay in sync.
+  const onPathChangeRef = useRef(onPathChange);
+  useEffect(() => {
+    onPathChangeRef.current = onPathChange;
+  }, [onPathChange]);
+  useEffect(() => {
+    const cb = onPathChangeRef.current;
+    if (!cb) return;
+    const pad = padRef.current;
+    const w = pad?.clientWidth ?? 320;
+    const h = pad?.clientHeight ?? 320;
+    cb(path.map((p) => ({ x: p.x / w, y: p.y / h })));
+  }, [path]);
+
+  // Roli touches mutate the same internal path state pencil drawing uses,
+  // so the React canvas renders them and the LED + slot save logic see them.
+  const onPathSavedRef = useRef(onPathSaved);
+  useEffect(() => {
+    onPathSavedRef.current = onPathSaved;
+  }, [onPathSaved]);
+  const externalDrawingRef = useRef(false);
+  const normToPx = useCallback((nx: number, ny: number) => {
+    const pad = padRef.current;
+    const w = pad?.clientWidth ?? 320;
+    const h = pad?.clientHeight ?? 320;
+    return {
+      x: Math.max(0, Math.min(w, nx * w)),
+      y: Math.max(0, Math.min(h, ny * h)),
+    };
+  }, []);
+  useImperativeHandle(
+    ref,
+    () => ({
+      beginExternalPath(nx, ny) {
+        stopPlayback();
+        const { x, y } = normToPx(nx, ny);
+        setIsPredefinedShape(false);
+        setPath([{ x, y, timestamp: performance.now() }]);
+        externalDrawingRef.current = true;
+      },
+      extendExternalPath(nx, ny) {
+        if (!externalDrawingRef.current) return;
+        const { x, y } = normToPx(nx, ny);
+        setPath((prev) => [...prev, { x, y, timestamp: performance.now() }]);
+      },
+      endExternalPath() {
+        if (!externalDrawingRef.current) return;
+        externalDrawingRef.current = false;
+        setPath((prev) => {
+          if (prev.length > 1) {
+            const pad = padRef.current;
+            const w = pad?.clientWidth ?? 320;
+            const h = pad?.clientHeight ?? 320;
+            onPathSavedRef.current?.(pathToDmxPoints(prev, w, h));
+          }
+          return prev;
+        });
+      },
+    }),
+    [normToPx, stopPlayback]
   );
 
   return (

@@ -17,7 +17,7 @@ import {
   DmxLedChannelMeter,
   SkeuoKnobSlider,
 } from '../ui/controls';
-import { PATH_SLOT_IDS, PathSlotId, PathSlotSummary } from '../ui/controls/ArtbastardXYPad';
+import { PATH_SLOT_IDS, PathSlotId, PathSlotSummary, ArtbastardXYPadHandle } from '../ui/controls/ArtbastardXYPad';
 import { useRoliLightpad } from '../../hooks/useRoliLightpad';
 import { SkeuoButton } from '../ui/SkeuoButton';
 import { ChannelMonitorDock } from '../ui/ChannelMonitorDock';
@@ -990,7 +990,17 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
 
   // Roli Lightpad: touch -> pan/tilt, LED -> cursor + active-slot trail.
   const roli = useRoliLightpad();
-  const roliTouchPathRef = useRef<{ x: number; y: number }[]>([]);
+  const xyPadHandleRef = useRef<ArtbastardXYPadHandle>(null);
+  // Mirror the pad's internal path so the LED effect sees mouse-drawn paths too.
+  const livePathRef = useRef<Array<{ x: number; y: number }>>([]);
+  const [livePathVersion, setLivePathVersion] = useState(0);
+  const handleXyPadPathChange = useCallback(
+    (points: Array<{ x: number; y: number; timestamp?: number }>) => {
+      livePathRef.current = points.map((p) => ({ x: p.x, y: p.y }));
+      setLivePathVersion((v) => (v + 1) & 0xffff);
+    },
+    []
+  );
 
   // Configuration management state
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1172,7 +1182,6 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     setPanTiltXY: (xy: { x: number; y: number }) => void;
     togglePanTiltAutopilot: () => void;
     panTiltAutopilotEnabled: boolean;
-    onPathSaved: (points: { x: number; y: number }[]) => void;
     hasSelection: boolean;
   }>({
     apply: () => {},
@@ -1181,7 +1190,6 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     setPanTiltXY: () => {},
     togglePanTiltAutopilot: () => {},
     panTiltAutopilotEnabled: false,
-    onPathSaved: () => {},
     hasSelection: false,
   });
   useEffect(() => {
@@ -1198,15 +1206,13 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
       roliApplyRef.current.apply('pan', p);
       roliApplyRef.current.apply('tilt', t);
 
-      if (ev.phase === 'start') {
-        roliTouchPathRef.current = [{ x: p, y: t }];
-      } else if (ev.phase === 'move') {
-        roliTouchPathRef.current.push({ x: p, y: t });
-      } else if (ev.phase === 'end') {
-        const pts = roliTouchPathRef.current;
-        if (pts.length > 1) roliApplyRef.current.onPathSaved(pts.slice());
-        roliTouchPathRef.current = [];
-      }
+      // Route into the XY pad's path state so the canvas draws the touch
+      // and onPathChange / onPathSaved fire just like a mouse pencil stroke.
+      const pad = xyPadHandleRef.current;
+      if (!pad) return;
+      if (ev.phase === 'start') pad.beginExternalPath(ev.x, ev.y);
+      else if (ev.phase === 'move') pad.extendExternalPath(ev.x, ev.y);
+      else if (ev.phase === 'end') pad.endExternalPath();
     });
   }, [roli]);
 
@@ -1220,12 +1226,12 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     const trail =
       activeSlot && activeSlot.path.length > 1
         ? activeSlot.path.map((p) => ({ x: p.x / 255, y: 1 - p.y / 255 }))
-        : roliTouchPathRef.current.map((p) => ({ x: p.x / 255, y: 1 - p.y / 255 }));
+        : livePathRef.current;
     roli.sendFrame({
       path: trail,
       cursor: { x: panValue / 255, y: 1 - tiltValue / 255 },
     });
-  }, [roli, panValue, tiltValue, pathSlots]);
+  }, [roli, panValue, tiltValue, pathSlots, livePathVersion]);
 
   // XY Pad handlers
   const handleXYPadMouseDown = (e: React.MouseEvent) => {
@@ -2816,6 +2822,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
 
               <h5 className={styles.xyPadHeading}>XY Pad</h5>
               <ArtbastardXYPad
+                ref={xyPadHandleRef}
                 className={styles.panTiltPad}
                 pan={panValue}
                 tilt={tiltValue}
@@ -2833,6 +2840,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                 onPathSaved={(points) => {
                   setPanTiltAutopilot({ customPath: points, pathType: 'custom' });
                 }}
+                onPathChange={handleXyPadPathChange}
                 onOpenPathEditor={() => setShowPanTiltPathEditor(true)}
                 slots={slotSummaries}
                 activeSlotId={pathSlots.activeSlotId}
@@ -2852,9 +2860,6 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                   setPanTiltXY,
                   togglePanTiltAutopilot,
                   panTiltAutopilotEnabled: panTiltAutopilot.enabled,
-                  onPathSaved: (points) => {
-                    setPanTiltAutopilot({ customPath: points, pathType: 'custom' });
-                  },
                   hasSelection,
                 };
                 return null;
