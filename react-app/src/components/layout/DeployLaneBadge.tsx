@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import styles from './DeployLaneBadge.module.scss';
 
-type DeployLane = 'live' | 'dev' | 'beta' | 'aday';
+type DeployLane = 'live' | 'dev' | 'aday';
 export type DeployLanePlacement = 'corner' | 'topbar' | 'inline';
 
 function readLane(): { lane: DeployLane; label: string } {
@@ -57,7 +57,7 @@ export const DeployLaneBadge: React.FC<DeployLaneBadgeProps> = ({
     pruneLegacyLaneBadges(rootRef.current);
   }, [placement]);
 
-  const ghcrTrack = lane === 'beta' ? 'dev' : lane;
+  const ghcrTrack = lane;
   const title = `Deploy track: ${label} (GHCR :${ghcrTrack} on Linode)`;
 
   if (placement === 'inline') {

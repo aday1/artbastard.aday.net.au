@@ -31,6 +31,36 @@ interface DmxChannelControlPageProps {
   embedded?: boolean;
 }
 
+const readBooleanPreference = (key: string, fallback: boolean): boolean => {
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (raw === 'true') return true;
+    if (raw === 'false') return false;
+  } catch {
+    /* ignore */
+  }
+  return fallback;
+};
+
+const writeBooleanPreference = (key: string, value: boolean) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(key, String(value));
+  } catch {
+    /* ignore */
+  }
+};
+
+const hasCustomChannelName = (channelIndex: number, channelNames: string[]): boolean => {
+  const name = channelNames[channelIndex]?.trim();
+  return Boolean(
+    name &&
+      name !== `CH ${channelIndex + 1}` &&
+      name !== `Channel ${channelIndex + 1}`
+  );
+};
+
 export const DmxChannelControlPage: React.FC<DmxChannelControlPageProps> = ({
   embedded = false,
 }) => {
@@ -58,7 +88,18 @@ export const DmxChannelControlPage: React.FC<DmxChannelControlPageProps> = ({
   const [showSceneControls, setShowSceneControls] = useState(!compactByDefault);
   const [showMidiControls, setShowMidiControls] = useState(false);
   const [showOscControls, setShowOscControls] = useState(!compactByDefault);
-  const [showEnvelopeAutomation, setShowEnvelopeAutomation] = useState(!compactByDefault);
+  const [showEnvelopeAutomation, setShowEnvelopeAutomation] = useState(() =>
+    readBooleanPreference('dmxShowEnvelopeAutomation', !compactByDefault)
+  );
+  const [showTransitionTracker, setShowTransitionTracker] = useState(() =>
+    readBooleanPreference('dmxShowTransitionTracker', !compactByDefault)
+  );
+  const [showActiveChannelTracker, setShowActiveChannelTracker] = useState(() =>
+    readBooleanPreference('dmxShowActiveChannelTracker', false)
+  );
+  const [hideUnusedChannels, setHideUnusedChannels] = useState(() =>
+    readBooleanPreference('dmxHideUnusedChannels', true)
+  );
   const [showGlobalChannelNames, setShowGlobalChannelNames] = useState(false);
   const [editingChannelName, setEditingChannelName] = useState<number | null>(null);
   const [editingChannelNameValue, setEditingChannelNameValue] = useState('');
@@ -151,6 +192,22 @@ export const DmxChannelControlPage: React.FC<DmxChannelControlPageProps> = ({
   } = useStore();
 
   useEffect(() => {
+    writeBooleanPreference('dmxShowEnvelopeAutomation', showEnvelopeAutomation);
+  }, [showEnvelopeAutomation]);
+
+  useEffect(() => {
+    writeBooleanPreference('dmxShowTransitionTracker', showTransitionTracker);
+  }, [showTransitionTracker]);
+
+  useEffect(() => {
+    writeBooleanPreference('dmxShowActiveChannelTracker', showActiveChannelTracker);
+  }, [showActiveChannelTracker]);
+
+  useEffect(() => {
+    writeBooleanPreference('dmxHideUnusedChannels', hideUnusedChannels);
+  }, [hideUnusedChannels]);
+
+  useEffect(() => {
     document.body.classList.toggle('dmx-faders-vertical', faderOrientation === 'vertical');
     return () => document.body.classList.remove('dmx-faders-vertical');
   }, [faderOrientation]);
@@ -192,7 +249,7 @@ export const DmxChannelControlPage: React.FC<DmxChannelControlPageProps> = ({
   } = useGlobalBrowserMidi();
 
 
-  const filteredChannels = useMemo(() => filterDmxChannels({
+  const baseFilteredChannels = useMemo(() => filterDmxChannels({
     filter,
     dmxChannels,
     selectedChannels,
@@ -202,7 +259,52 @@ export const DmxChannelControlPage: React.FC<DmxChannelControlPageProps> = ({
     searchTerm,
     channelNames,
   }), [filter, dmxChannels, selectedChannels, selectedFixtures, fixtures, range, searchTerm, channelNames]);
-  const totalPages = Math.ceil(filteredChannels.length / channelsPerPage);
+
+  const fixtureChannelSet = useMemo(() => {
+    const set = new Set<number>();
+    fixtures.forEach((fixture) => {
+      const startAddress = fixture.startAddress;
+      const channelCount = fixture.channels?.length || 0;
+      for (let i = 0; i < channelCount; i++) {
+        const channelIndex = startAddress - 1 + i;
+        if (channelIndex >= 0 && channelIndex < 512) {
+          set.add(channelIndex);
+        }
+      }
+    });
+    return set;
+  }, [fixtures]);
+
+  const isPossiblyUsedChannel = useCallback(
+    (channelIndex: number) =>
+      fixtureChannelSet.has(channelIndex) ||
+      (dmxChannels[channelIndex] || 0) > 0 ||
+      selectedChannels.includes(channelIndex) ||
+      (pinnedChannels || []).includes(channelIndex) ||
+      Boolean(midiMappings[channelIndex]) ||
+      Boolean(oscAssignments[channelIndex]) ||
+      hasCustomChannelName(channelIndex, channelNames),
+    [
+      fixtureChannelSet,
+      dmxChannels,
+      selectedChannels,
+      pinnedChannels,
+      midiMappings,
+      oscAssignments,
+      channelNames,
+    ]
+  );
+
+  const filteredChannels = useMemo(
+    () =>
+      hideUnusedChannels
+        ? baseFilteredChannels.filter(isPossiblyUsedChannel)
+        : baseFilteredChannels,
+    [baseFilteredChannels, hideUnusedChannels, isPossiblyUsedChannel]
+  );
+
+  const hiddenUnusedCount = baseFilteredChannels.length - filteredChannels.length;
+  const totalPages = Math.max(1, Math.ceil(filteredChannels.length / channelsPerPage));
   const startIndex = currentPage * channelsPerPage;
   const endIndex = Math.min(startIndex + channelsPerPage, filteredChannels.length);
   const displayedChannels = filteredChannels.slice(startIndex, endIndex);
@@ -210,7 +312,13 @@ export const DmxChannelControlPage: React.FC<DmxChannelControlPageProps> = ({
   // Reset page when filter changes
   useEffect(() => {
     setCurrentPage(0);
-  }, [filter, range, searchTerm, selectedFixtures]);
+  }, [filter, range, searchTerm, selectedFixtures, hideUnusedChannels]);
+
+  useEffect(() => {
+    if (currentPage > totalPages - 1) {
+      setCurrentPage(Math.max(0, totalPages - 1));
+    }
+  }, [currentPage, totalPages]);
 
   const filteredFixtures = useMemo(() => filterFixtures({
     fixtures,
@@ -488,6 +596,13 @@ export const DmxChannelControlPage: React.FC<DmxChannelControlPageProps> = ({
             onToggleOscControls={() => setShowOscControls(!showOscControls)}
             showEnvelopeAutomation={showEnvelopeAutomation}
             onToggleEnvelopeAutomation={() => setShowEnvelopeAutomation(!showEnvelopeAutomation)}
+            showTransitionTracker={showTransitionTracker}
+            onToggleTransitionTracker={() => setShowTransitionTracker(!showTransitionTracker)}
+            showActiveChannelTracker={showActiveChannelTracker}
+            onToggleActiveChannelTracker={() => setShowActiveChannelTracker(!showActiveChannelTracker)}
+            hideUnusedChannels={hideUnusedChannels}
+            hiddenUnusedCount={hiddenUnusedCount}
+            onToggleHideUnusedChannels={() => setHideUnusedChannels(!hideUnusedChannels)}
             showGlobalChannelNames={showGlobalChannelNames}
             onToggleGlobalChannelNames={() => setShowGlobalChannelNames(!showGlobalChannelNames)}
           />
@@ -499,10 +614,14 @@ export const DmxChannelControlPage: React.FC<DmxChannelControlPageProps> = ({
             </div>
           )}
 
-          {/* Envelope Automation */}
-          {showEnvelopeAutomation && (
+          {/* Automation workbench */}
+          {(showEnvelopeAutomation || showTransitionTracker) && (
             <div className={styles.envelopeAutomationSection}>
-              <AutomationWorkbench />
+              <AutomationWorkbench
+                showEnvelopes={showEnvelopeAutomation}
+                showTracker={showTransitionTracker}
+                defaultTab={showTransitionTracker ? 'tracker' : 'envelopes'}
+              />
             </div>
           )}
 
@@ -557,14 +676,16 @@ export const DmxChannelControlPage: React.FC<DmxChannelControlPageProps> = ({
             toggleChannelAuxFullFader={toggleChannelAuxFullFader}
           />
 
-          {/* Active DMX Channels Summary - Always Visible */}
-          <DmxActiveChannelsSummary
-            dmxChannels={dmxChannels}
-            channelColors={channelColors}
-            channelNames={channelNames}
-            onScrollToChannel={scrollToChannel}
-            onChannelContextMenu={openChannelMenu}
-          />
+          {/* Active DMX Channels Summary */}
+          {showActiveChannelTracker && (
+            <DmxActiveChannelsSummary
+              dmxChannels={dmxChannels}
+              channelColors={channelColors}
+              channelNames={channelNames}
+              onScrollToChannel={scrollToChannel}
+              onChannelContextMenu={openChannelMenu}
+            />
+          )}
 
           <div className={styles.faderLayoutDock} aria-label="DMX fader layout switch">
             <div className={styles.faderLayoutDockSummary}>
@@ -581,6 +702,16 @@ export const DmxChannelControlPage: React.FC<DmxChannelControlPageProps> = ({
           </div>
 
           {/* DMX Channels Display */}
+          {hideUnusedChannels && hiddenUnusedCount > 0 && (
+            <div className={styles.channelVisibilityNotice}>
+              <span>
+                Compact strip: {hiddenUnusedCount} unused DMX channel{hiddenUnusedCount !== 1 ? 's' : ''} hidden.
+              </span>
+              <button type="button" onClick={() => setHideUnusedChannels(false)}>
+                Open all channels
+              </button>
+            </div>
+          )}
           <DmxChannelsViewport
             viewMode={viewMode}
             faderOrientation={faderOrientation}

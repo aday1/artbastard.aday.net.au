@@ -12,18 +12,22 @@ export interface VersionInfo {
 }
 
 export const CURRENT_VERSION: VersionInfo = {
-  version: '5.1.2.0',
-  buildDate: '2026-05-19',
+  version: '5.2.0.0',
+  buildDate: '2026-06-08',
   releaseType: 'stable',
   features: [
-    'Stable hosted release on dev/live lanes (GHCR + Linode)',
+    'Confirmed ArtBastard line promoted across dev/live lanes (GHCR + Linode)',
     'DMX512 desk: Art-Net, scenes, fixtures, MIDI/OSC, LAN bridge',
     'Reason rack + workbench envelopes + DMX transition tracker',
     'Channel role icons, fixture-aware tracker, live theme tuning',
     'Touch-friendly DMX faders with page-scroll isolation on mobile',
-    'Single main scroll region; resizable panels; Canvas DMX mobile default'
+    'Single main scroll region; resizable panels; Canvas DMX mobile default',
+    'Toggleable activity and pattern trackers; compact DMX strips hide unused channels'
   ],
   changelog: [
+    'v5.2.0.0: Live/dev canonical build; stale beta lane labels retired',
+    'v5.2.0.0: DMX strip compact mode hides unused channels with one-tap full 512 fallback',
+    'v5.2.0.0: Activity tracker and pattern tracker can be toggled independently',
     'v5.1.2.0: Official stable line (DMX512 nod) — consolidates hosted release and UI fixes',
     'v5.1.2.0: Theme preview loop fix; pinned vertical fader sizing',
     'v5.1.2.0: Scroll layout, range sliders, touch-action on faders',
@@ -32,6 +36,13 @@ export const CURRENT_VERSION: VersionInfo = {
 };
 
 export const VERSION_HISTORY: VersionInfo[] = [
+  {
+    version: '5.2.0.0',
+    buildDate: '2026-06-08',
+    releaseType: 'stable',
+    features: CURRENT_VERSION.features,
+    changelog: CURRENT_VERSION.changelog
+  },
   {
     version: '5.1.2.0',
     buildDate: '2026-05-19',

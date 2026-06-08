@@ -4,6 +4,21 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [5.2.0.0] - 2026-06-08 - Confirmed live/dev ArtBastard line
+
+This is the current state-of-the-art ArtBastard build for both live and dev lanes. The separate beta identity is retired; develop on dev, promote to live, and keep both labels visibly tied to the same ArtBastard codebase.
+
+### Added
+
+- Compact DMX strip visibility: unused channels can be hidden while fixture-assigned, selected, pinned, active, named, MIDI, and OSC channels remain available.
+- One-tap fallback to reopen the full 512-channel DMX strip.
+- Independent toggles for the active-channel tracker strip, envelope editor, and DMX transition pattern tracker.
+
+### Fixed
+
+- Refreshed stale deploy wording from Beta/dev to Dev/live.
+- Kept the fixture library and show-map work as the canonical built-in source of truth.
+
 ## [5.1.2.0] - 2026-05-19 — Stable hosted release (DMX512)
 
 First **stable** line under dev / live lanes on Linode (GHCR). Version **5.1.2.0** nods to **DMX512** (5 · 1 · 2). Supersedes interim 5.1.2.x hotfix tags; develop on this line with fewer micro-releases.

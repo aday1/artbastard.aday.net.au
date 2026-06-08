@@ -37,6 +37,13 @@ interface DmxControlsPanelProps {
   onToggleOscControls: () => void;
   showEnvelopeAutomation: boolean;
   onToggleEnvelopeAutomation: () => void;
+  showTransitionTracker: boolean;
+  onToggleTransitionTracker: () => void;
+  showActiveChannelTracker: boolean;
+  onToggleActiveChannelTracker: () => void;
+  hideUnusedChannels: boolean;
+  hiddenUnusedCount: number;
+  onToggleHideUnusedChannels: () => void;
   showGlobalChannelNames: boolean;
   onToggleGlobalChannelNames: () => void;
 }
@@ -72,6 +79,13 @@ export const DmxControlsPanel: React.FC<DmxControlsPanelProps> = ({
   onToggleOscControls,
   showEnvelopeAutomation,
   onToggleEnvelopeAutomation,
+  showTransitionTracker,
+  onToggleTransitionTracker,
+  showActiveChannelTracker,
+  onToggleActiveChannelTracker,
+  hideUnusedChannels,
+  hiddenUnusedCount,
+  onToggleHideUnusedChannels,
   showGlobalChannelNames,
   onToggleGlobalChannelNames,
 }) => {
@@ -190,6 +204,17 @@ export const DmxControlsPanel: React.FC<DmxControlsPanelProps> = ({
             </option>
             <option value="range">Range</option>
           </select>
+
+          <button
+            className={`${styles.activeSelectionsButton} ${hideUnusedChannels ? styles.active : ''}`}
+            onClick={onToggleHideUnusedChannels}
+            title="Keep fixture-assigned, active, selected, pinned, named, MIDI, and OSC channels visible. Toggle off to open the full 512-channel strip."
+          >
+            <LucideIcon name={hideUnusedChannels ? 'EyeOff' : 'Eye'} />
+            {hideUnusedChannels
+              ? `Unused hidden (${hiddenUnusedCount})`
+              : 'All channels open'}
+          </button>
 
           <button
             onClick={onShowSelectedOnly}
@@ -330,10 +355,26 @@ export const DmxControlsPanel: React.FC<DmxControlsPanelProps> = ({
           <button
             className={`${styles.toggleButton} ${showEnvelopeAutomation ? styles.active : ''}`}
             onClick={onToggleEnvelopeAutomation}
-            title="Envelopes + DMX Tracker (pattern grid)"
+            title="Show or hide the envelope editor"
           >
             <LucideIcon name="Activity" />
-            Automation
+            Envelopes
+          </button>
+          <button
+            className={`${styles.toggleButton} ${showTransitionTracker ? styles.active : ''}`}
+            onClick={onToggleTransitionTracker}
+            title="Show or hide the DMX transition pattern tracker"
+          >
+            <LucideIcon name="Grid3X3" />
+            Pattern Tracker
+          </button>
+          <button
+            className={`${styles.toggleButton} ${showActiveChannelTracker ? styles.active : ''}`}
+            onClick={onToggleActiveChannelTracker}
+            title="Show or hide the live active-channel tracker strip"
+          >
+            <LucideIcon name="BarChart3" />
+            Activity Tracker
           </button>
           <button
             className={`${styles.toggleButton} ${showGlobalChannelNames ? styles.active : ''}`}

@@ -1,4 +1,4 @@
-# ArtBastard Features (v5.15.0)
+# ArtBastard Features (v5.2.0.0)
 
 Feature inventory after the rebuild consolidation. Subsystem first, then
 notable shipped features.
@@ -22,6 +22,9 @@ notable shipped features.
 
 - Reason-style rack modules (`reason-rack.scss`, `components/ui/rack/`).
 - DMX page **Automation** workbench: envelopes + **transition tracker**
+- DMX page **Visibility** controls: hide unused channel strips, reopen all 512
+  channels instantly, and toggle the active-channel tracker strip when it gets
+  in the way.
   (pattern lines, scene/FX/easing columns, hex channel values, BPM/LPB play).
 - Fixture-aware tracker lanes (pan/tilt, RGB, color wheel, gobo, dimmer, beam,
   FX, full mover) with scope All / Selected / Moving heads.

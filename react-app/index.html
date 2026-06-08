@@ -368,7 +368,7 @@
           if (siteLc && siteLc.indexOf("artbastard") >= 0) {
             return "ArtBastard DMX512FTW - The Illuminated Canvas";
           }
-          return "Macroverse 42 - The Wired Atelier";
+          return "ArtBastard DMX512";
         }
         function applyDeployLaneUi(lane, siteLc) {
           var k = String(lane || "live").toLowerCase();
@@ -457,7 +457,7 @@
           var r = resolvedSwitcher(ds, siteLc);
           var hostn = typeof location !== "undefined" ? location.hostname : "";
           var cur = switcherLane(hostn, r);
-          var defs = [["live", "Live", "live_url"], ["dev", "Beta", "dev_url"], ["aday", "Aday", "aday_url"]];
+          var defs = [["live", "Live", "live_url"], ["dev", "Dev", "dev_url"], ["aday", "Aday", "aday_url"]];
           var parts = [];
           for (var ix = 0; ix < defs.length; ix++) {
             var k = defs[ix][0];
@@ -535,7 +535,7 @@
           var html =
             '<div style="margin:0 0 10px;padding:10px 12px;border:2px solid rgba(76,255,138,.55);border-radius:4px;background:rgba(76,255,138,.1)">';
           html +=
-            '<div style="font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;color:#efffef">Beta/dev vs live (main)</div>';
+            '<div style="font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;color:#efffef">Dev vs live (main)</div>';
           html +=
             '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:stretch;margin-bottom:6px">';
           html +=
@@ -554,13 +554,13 @@
           } else {
             if (c.ahead > 0 && c.behind === 0) {
               html +=
-                '<div style="font-size:11px">Beta/dev has <strong>' +
+                '<div style="font-size:11px">Dev has <strong>' +
                 c.ahead +
                 "</strong> commit(s) not on live yet.</div>";
             }
             if (c.behind > 0) {
               html +=
-                '<div style="color:#ffb4b4;font-size:11px;margin-top:4px">Beta/dev is missing <strong>' +
+                '<div style="color:#ffb4b4;font-size:11px;margin-top:4px">Dev is missing <strong>' +
                 c.behind +
                 "</strong> commit(s) from live — merge main into dev first.</div>";
             }

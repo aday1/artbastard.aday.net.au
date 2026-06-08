@@ -102,6 +102,22 @@ export const DmxChannelsViewport: React.FC<DmxChannelsViewportProps> = ({
     } as React.CSSProperties;
   })();
 
+  if (displayedChannels.length === 0) {
+    return (
+      <div
+        className={`${styles.dmxChannelsContainer} ${styles[viewMode]} ${
+          faderOrientation === 'vertical' ? styles.channelStrip : ''
+        } ${styles.emptyChannelViewport}`}
+        style={gridColumnStyle}
+        data-channels-per-row={channelsPerRow > 0 ? channelsPerRow : undefined}
+      >
+        <div className={styles.emptyChannelStrip}>
+          No DMX channels match the current visibility and filter controls.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`${styles.dmxChannelsContainer} ${styles[viewMode]} ${

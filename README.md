@@ -3,7 +3,7 @@
 ArtBastard is a TypeScript-based DMX lighting controller with a React
 frontend and Node / Socket.IO backend.
 
-Current package version: 5.1.2.0
+Current package version: 5.2.0.0
 
 ## Showcase
 
@@ -11,7 +11,7 @@ Current package version: 5.1.2.0
 - Full showcase (Photonic Tour + features + docs):
   https://aday1.github.io/artbastard.aday.net.au/
 - Live app: https://artbastard.aday.net.au
-- Beta / dev pre-prod lane (same Docker service `artbastard_test`, image `:dev`):
+- Dev pre-prod lane (same Docker service `artbastard_test`, image `:dev`):
   - https://artbastard-dev.aday.net.au
 
 The showcase page hosts a "Photonic Tour" demo reel: six short WebM
@@ -21,6 +21,15 @@ straight off the running app via `npm run demo:capture-videos`. See
 DOCS/SHOWCASE.md for details.
 
 ## Current status (2026-05)
+
+### Confirmed live/dev line (v5.2.0.0)
+
+- Dev and live now use the same refreshed ArtBastard code line; the retired
+  beta identity is no longer part of the app shell.
+- DMX strips can hide unused anonymous channels while keeping fixture-assigned,
+  active, selected, pinned, named, MIDI, and OSC channels available.
+- The active-channel tracker strip, envelope editor, and DMX transition pattern
+  tracker can be toggled independently to keep the desk clear.
 
 ### Tracker columns and live theme (v5.15.0)
 
