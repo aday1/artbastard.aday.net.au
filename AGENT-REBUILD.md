@@ -11,7 +11,7 @@ This document is a from-scratch rebuild runbook. Follow the phases in order and 
 | Live | https://artbastard.aday.net.au |
 | Dev | https://artbastard-dev.aday.net.au |
 | Retired beta | `artbastard-beta...` redirects to dev; do not recreate a separate beta lane unless asked |
-| Current aligned commit | `58a3401c0a28` on 2026-06-08 |
+| Current aligned commit | `5c7dc6a7e681` on 2026-06-08 (v5.2.3.1) |
 | Live label | `LIVE` |
 | Dev label | `DEV` |
 | Refreshed host class | `ab-refresh-host` |
@@ -107,7 +107,7 @@ Install dependencies using the repo package manifests when available. If startin
 | 10 | Mobile fixture rack and touch UI | `#/mobile` scrolls correctly; monitors do not block controls; controls are touch-sized |
 | 11 | Scenes and SuperControl: grouped fixture driving, pan/tilt, RGB, gobo/effects | selected fixtures/groups can be driven without menu-diving |
 | 12 | Automation envelopes, transition tracker, acts timeline, clip launcher | play/edit flows are scrollable and usable on mobile and desktop |
-| 13 | MIDI Learn, OSC, APC40/X-Touch templates, APC40 workflow hook | APC40 grid can launch/capture scenes and select fixtures/groups |
+| 13 | MIDI Learn, OSC, APC40/X-Touch templates, APC40 live workflow hook + LED feedback, Roli Lightpad XY-pad mirror | APC40 SAVE mode (REC), crossfader scene pickers (PLAY/STOP), Super Control on channel faders, ACTIVATOR/SOLO multi-select all work; Roli Lightpad pad mirrors and edits the React XY-pad path |
 | 14 | Bridge agent and cloud fan-out | `npm run test:bridge-smoke` passes where practical |
 | 15 | ArtSnob layer and docs/site: quotes, help, fixture docs, showcase | docs and app copy match; no stale beta/live labels |
 
@@ -138,7 +138,7 @@ Full parity: phases 10-15 and the file map in `DOCS/AGENT-REBUILD-REFERENCE.md`.
 | Fixture library | Typed source under `react-app/src/fixtures/library`; docs under `DOCS/fixtures`; assets under `react-app/public/fixtures` |
 | Show map | Generate physical DMX address plans, support multiples and grouping |
 | Output | Art-Net via dmxnet; optional Pi LAN bridge via WSS outbound |
-| MIDI | MIDI Learn, OSC, APC40/X-Touch templates, APC40 workflow decoder |
+| MIDI | MIDI Learn, OSC, APC40/X-Touch templates, APC40 live integration (`useApc40Workflow`, `useApc40LedFeedback`) with SAVE/PickA/PickB modes + crossfader blend, Roli Lightpad path mirror |
 | Lane labels | live is `LIVE`; dev is `DEV`; no visible `BETA` in the current app shell |
 | License | MIT under theatrical LICENSE prose |
 | Tone | ArtSnob copy modes; no emoji in source |
@@ -262,4 +262,4 @@ The show builder (`react-app/src/fixtures/showBuilder/showPlan.ts` and `ShowBuil
 
 ## Operator docs
 
-`DOCS/FEATURES.md`, `DOCS/USAGE.md`, `DOCS/BRIDGE.md`, `DOCS/fixtures/README.md`, `AGENTS.md`
+`DOCS/FEATURES.md`, `DOCS/USAGE.md`, `DOCS/BRIDGE.md`, `DOCS/fixtures/README.md`, `DOCS/APC40_CHEATSHEET.md`, `DOCS/MIDI_TEMPLATES.md`, `DOCS/SHORTCUTS.md`, `AGENTS.md`

@@ -214,13 +214,16 @@ Mobile requirements:
 
 | Path | Role |
 | --- | --- |
-| `react-app/src/midi/apc40.ts` | APC40/APC40 mkII source detection and workflow decoder |
-| `react-app/src/hooks/useApc40Workflow.ts` | Scene/fixture workflow actions |
+| `react-app/src/midi/apc40.ts` | APC40 MK1/MK2 source detection + message decoder (notes, CCs, transport, navigation) |
+| `react-app/src/hooks/useApc40Workflow.ts` | Live scene/fixture workflow: SAVE mode (REC), pickA/pickB crossfader pickers (PLAY/STOP), Super Control on channel faders, master fader = global dimmer, ACTIVATOR/SOLO multi-select, nav arrows |
+| `react-app/src/hooks/useApc40LedFeedback.ts` | LED state: scene pads (green=saved, red-blink=active, orange-blink=bound A/B, green-blink=mode armed), ACTIVATOR row, transport REC/PLAY/STOP, SHIFT latch, hot-plug repaint |
 | `react-app/src/components/fixtures/Apc40WorkflowPanel.tsx` | Fixture-page APC40 status/help |
-| `react-app/src/components/midi/midiControllerTemplates.ts` | X-Touch/APC40 templates |
-| `DOCS/MIDI_TEMPLATES.md` | Controller reference |
+| `react-app/src/components/midi/midiControllerTemplates.ts` | X-Touch/APC40 templates (backwards-compatible fallback under the live integration) |
+| `react-app/src/hooks/useRoliLightpadMirror.ts` | Bidirectional XY-pad path mirror to Roli Lightpad Block (touch in, LED out) |
+| `DOCS/APC40_CHEATSHEET.md` | Single-page button/LED/mode reference (linked from `DOCS/MIDI_TEMPLATES.md`, `DOCS/SHORTCUTS.md`, in-app Help "APC40 Live" tab, and the showcase docs grid) |
+| `DOCS/MIDI_TEMPLATES.md` | Template apply flow (POST `/api/midi/controller-template`) |
 
-APC40 must be practical, not decorative: clip grid launches/captures scenes, fixture/group selection works, and MIDI Learn buttons give feedback.
+APC40 must be practical, not decorative: scene pads do SAVE/launch/crossfader-assign via REC/PLAY/STOP mode arming, channel faders walk the current selection through Super Control, ACTIVATOR row is the live "what is selected" indicator, master fader is global dimmer. The Help overlay (Ctrl+H → APC40 Live) and `DOCS/APC40_CHEATSHEET.md` are the operator reference.
 
 ## Show sequencing subsystems
 
