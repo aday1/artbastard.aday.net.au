@@ -995,6 +995,19 @@ export const UnifiedSettings: React.FC = () => {
                   {activeColorTab === 'primary' && (
                     <>
 
+                  {/* Theme presets up-front so users get a good look without dialling sliders */}
+                  <ThemePresetStrip
+                    onPreview={(colors) => {
+                      setPreviewThemeColors(colors);
+                    }}
+                    onPreferDark={(prefer) => {
+                      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                      if (prefer && !isDark) toggleDarkMode();
+                      if (!prefer && isDark) toggleDarkMode();
+                      scheduleSave({ darkMode: prefer });
+                    }}
+                  />
+
                   {/* Live Preview Panel */}
                   <div className={styles.themePreviewPanel}>
                     <h4>Live Preview</h4>
@@ -1201,7 +1214,7 @@ export const UnifiedSettings: React.FC = () => {
                   />
 
                   {/* Custom Saved Themes */}
-                  {savedThemes.length > 0 && (
+                  {savedThemes.length > 0 ? (
                     <div className={styles.colorControlGroup}>
                       <h4>Saved Custom Themes</h4>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
@@ -1225,6 +1238,20 @@ export const UnifiedSettings: React.FC = () => {
                           </div>
                         ))}
                       </div>
+                      <button
+                        className={styles.toolButton}
+                        onClick={handleSaveCustomTheme}
+                        style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem', background: 'var(--success-color)', color: 'white' }}
+                      >
+                        <i className="fas fa-save"></i> Save Current as Custom Theme
+                      </button>
+                    </div>
+                  ) : (
+                    <div className={styles.colorControlGroup}>
+                      <h4>Saved Custom Themes</h4>
+                      <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                        No saved themes yet. Tweak the colors below to your liking, then save the result so you can swap back instantly.
+                      </p>
                       <button
                         className={styles.toolButton}
                         onClick={handleSaveCustomTheme}

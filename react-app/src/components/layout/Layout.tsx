@@ -5,7 +5,6 @@ import { Navbar } from './Navbar'
 import { PinnedChannels } from './PinnedChannels'
 import { ToastContainer } from './ToastContainer'
 import { NetworkStatus } from './NetworkStatus'
-import FancyQuotes from './FancyQuotes'
 import { DmxActivityGlow } from './DmxActivityGlow'
 import BpmIndicator from '../audio/BpmIndicator'
 import SignalFlashIndicator from '../midi/SignalFlashIndicator'
@@ -138,10 +137,9 @@ const LayoutBody: React.FC<LayoutProps> = ({ children }) => {
         {/* On mobile/tablet, the sidebars become drawers spawned by the
             MobileTopBar. On desktop, we render them inline. */}
         {isMobileOrTablet ? (
-          <MobileTopBar leading={<DeployLaneBadge placement="topbar" />} />
+          <MobileTopBar />
         ) : (
           <>
-            <DeployLaneBadge placement="corner" />
             <PinnedChannels />
           </>
         )}
@@ -157,6 +155,7 @@ const LayoutBody: React.FC<LayoutProps> = ({ children }) => {
                   {theme === 'artsnob' && <span>The Luminary Palette</span>}
                   {theme === 'standard' && <span>DMX Controller</span>}
                   {theme === 'minimal' && <span>DMX</span>}
+                  <DeployLaneBadge placement="inline" className={styles.titleLaneBadge} />
                 </h1>
                 <p className={styles.siteCredit}>
                   Part of the{' '}
@@ -165,9 +164,6 @@ const LayoutBody: React.FC<LayoutProps> = ({ children }) => {
                   <SiteBrandingLink brand="artbastard">aday.net.au</SiteBrandingLink>
                 </p>
                 <div className={styles.serverInfo}>{serverAddress}</div>
-                {theme === 'artsnob' && (
-                  <FancyQuotes intervalSeconds={30} animate={true} />
-                )}
               </>
             )}
 

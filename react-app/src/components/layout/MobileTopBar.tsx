@@ -18,9 +18,7 @@ import styles from './MobileTopBar.module.scss'
 
 type DrawerKind = 'pinned' | 'nav' | 'pages' | null
 
-interface MobileTopBarProps {
-  leading?: React.ReactNode
-}
+interface MobileTopBarProps {}
 
 /**
  * Compact responsive chrome that replaces the right sidebar Navbar and
@@ -33,7 +31,7 @@ interface MobileTopBarProps {
  * This component is rendered by Layout when useMobile().isMobileOrTablet
  * is true. It assumes Layout is wrapping it inside RouterProvider.
  */
-export const MobileTopBar: React.FC<MobileTopBarProps> = ({ leading }) => {
+export const MobileTopBar: React.FC<MobileTopBarProps> = () => {
   const { theme, darkMode, toggleDarkMode } = useTheme()
   const { currentView, setCurrentView } = useRouter()
   const { connected } = useSocket()
@@ -72,7 +70,6 @@ export const MobileTopBar: React.FC<MobileTopBarProps> = ({ leading }) => {
     <>
       <header className={styles.topbar} role="banner">
         <div className={styles.left}>
-          {leading}
           {hasPinned ? (
             <button
               type="button"

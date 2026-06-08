@@ -2982,7 +2982,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
             </div>
 
             <div style={{ marginBottom: '12px' }}>
-              <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#ccc' }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: 'var(--text-secondary)' }}>
                 Color Pattern
               </label>
               <select
@@ -2995,9 +2995,10 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                   width: '100%',
                   padding: '6px',
                   borderRadius: '4px',
-                  border: '1px solid #555',
-                  background: colorSliderAutopilot.enabled ? '#2a2a2a' : '#1a1a1a',
-                  color: colorSliderAutopilot.enabled ? '#fff' : '#666',
+                  border: '1px solid var(--color-card-border)',
+                  background: 'var(--input-bg)',
+                  color: colorSliderAutopilot.enabled ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  opacity: colorSliderAutopilot.enabled ? 1 : 0.6,
                   cursor: colorSliderAutopilot.enabled ? 'pointer' : 'not-allowed'
                 }}
               >

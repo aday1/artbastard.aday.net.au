@@ -1,47 +1,91 @@
 .strip {
-  margin-bottom: 1rem;
+  margin: 1rem 0 1.25rem;
+  padding: 0.75rem;
+  border-radius: 6px;
+  background: var(--bg-secondary, var(--color-card-bg));
+  border: 1px solid var(--border-color, var(--color-card-border));
+}
+
+.heading {
+  margin-bottom: 0.6rem;
+}
+
+.headingTitle {
+  margin: 0 0 0.15rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .hint {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--text-secondary, var(--rk-label-dim));
-  margin-bottom: 0.5rem;
+  margin: 0;
+}
+
+.group {
+  margin-top: 0.65rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.groupLabel {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  padding: 0.45rem 0.5rem 0;
+  min-width: 38px;
 }
 
 .chips {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
+  flex: 1;
 }
 
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.35rem 0.65rem;
-  font-family: var(--rk-mono, var(--font-mono));
-  font-size: 0.75rem;
-  letter-spacing: 0.04em;
-  border: 1px solid var(--rk-bevel-lo, var(--border-color));
-  border-radius: 2px;
-  background: var(--rk-surface, var(--bg-secondary));
-  color: var(--rk-label, var(--text-primary));
+  gap: 0.4rem;
+  padding: 0.45rem 0.75rem;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  border: 1px solid var(--border-color, var(--color-card-border));
+  border-radius: 4px;
+  background: var(--input-bg, var(--bg-tertiary));
+  color: var(--text-primary);
   cursor: pointer;
-  box-shadow: inset 0 1px 0 var(--rk-bevel-hi, transparent);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
 }
 
 .chip:hover {
-  border-color: var(--rk-accent, var(--color-primary));
+  border-color: var(--color-primary);
+}
+
+.chip:active {
+  transform: translateY(1px);
 }
 
 .chipActive {
-  border-color: var(--rk-accent, var(--color-accent));
-  box-shadow: 0 0 8px color-mix(in srgb, var(--rk-accent, orange) 40%, transparent);
+  border-color: var(--color-accent, var(--color-primary));
+  box-shadow: 0 0 0 1px var(--color-accent, var(--color-primary)),
+              0 4px 12px color-mix(in srgb, var(--color-accent, orange) 25%, transparent);
+  font-weight: 600;
+}
+
+.chipLabel {
+  white-space: nowrap;
 }
 
 .swatch {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
-  border: 1px solid rgb(0 0 0 / 0.35);
+  border: 1px solid rgb(var(--shadow-rgb, 0 0 0) / 0.35);
+  flex-shrink: 0;
 }

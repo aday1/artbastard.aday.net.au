@@ -45,6 +45,24 @@
   --input-bg: #fffbeb;
   --error-color: var(--color-error);
   --system-sans: var(--font-body);
+
+  /* Theme aliases — many components use these legacy names with hardcoded
+     dark hex fallbacks; defining them here means light/dark theme values
+     always win over the fallback so dark backgrounds stop leaking into
+     light mode. Mirror these in every [data-theme="*"] block below. */
+  --background-color: var(--color-background);
+  --card-background: var(--color-card-bg);
+  --panel-bg: var(--color-card-bg);
+  --panel-background: var(--color-card-bg);
+  --surface-color: var(--color-card-bg);
+  --color-surface: var(--color-card-bg);
+
+  /* Shadow utility — light mode uses very soft shadows; dark mode amps up.
+     Components can write box-shadow: 0 2px 8px rgb(var(--shadow-rgb) / 0.12)
+     for theme-aware depth without hardcoding rgba(0,0,0,...). */
+  --shadow-rgb: 60 72 88;
+  --shadow-strong: 0 4px 14px rgb(var(--shadow-rgb) / 0.10);
+  --shadow-soft: 0 1px 6px rgb(var(--shadow-rgb) / 0.06);
   
   // Fonts with emoji support
   --emoji-fonts: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Segoe UI Symbol";
@@ -109,6 +127,17 @@ html.ab-refresh-host[data-theme="dark"] {
   --rk-grid-line: #1f334b;
   --rk-cell: #101827;
   --rk-cell-active: #173955;
+
+  /* Theme aliases (see :root for rationale) */
+  --background-color: var(--color-background);
+  --card-background: var(--color-card-bg);
+  --panel-bg: var(--color-card-bg);
+  --panel-background: var(--color-card-bg);
+  --surface-color: var(--color-card-bg);
+  --color-surface: var(--color-card-bg);
+  --shadow-rgb: 0 0 0;
+  --shadow-strong: 0 4px 14px rgb(0 0 0 / 0.5);
+  --shadow-soft: 0 1px 6px rgb(0 0 0 / 0.35);
 }
 
 html.ab-refresh-host[data-theme="dark"] body {
@@ -187,6 +216,17 @@ html.ab-refresh-host[data-theme="light"] {
   --rk-grid-line: #c5d0d6;
   --rk-cell: #ffffff;
   --rk-cell-active: #d9edf3;
+
+  /* Theme aliases (see :root for rationale) */
+  --background-color: var(--color-background);
+  --card-background: var(--color-card-bg);
+  --panel-bg: var(--color-card-bg);
+  --panel-background: var(--color-card-bg);
+  --surface-color: var(--color-card-bg);
+  --color-surface: var(--color-card-bg);
+  --shadow-rgb: 60 72 88;
+  --shadow-strong: 0 4px 14px rgb(60 72 88 / 0.14);
+  --shadow-soft: 0 1px 6px rgb(60 72 88 / 0.08);
 }
 
 html.ab-refresh-host[data-theme="light"] body {
@@ -251,6 +291,17 @@ html.ab-refresh-host[data-theme="light"] body::before {
   --header-bg: #241f2e;
   --input-bg: #1f1b26;
   --error-color: var(--color-error);
+
+  /* Theme aliases (see :root for rationale) */
+  --background-color: var(--color-background);
+  --card-background: var(--color-card-bg);
+  --panel-bg: var(--color-card-bg);
+  --panel-background: var(--color-card-bg);
+  --surface-color: var(--color-card-bg);
+  --color-surface: var(--color-card-bg);
+  --shadow-rgb: 0 0 0;
+  --shadow-strong: 0 4px 14px rgb(0 0 0 / 0.5);
+  --shadow-soft: 0 1px 6px rgb(0 0 0 / 0.35);
 }
 
 html.ab-refresh-host[data-theme="dark"] {

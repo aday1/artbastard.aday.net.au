@@ -1,6 +1,5 @@
 import React from 'react';
 import { LucideIcon } from '../ui/LucideIcon';
-import { FaderOrientationSwitch, type FaderOrientation } from './FaderOrientationSwitch';
 import styles from '../pages/DmxChannelControlPage.module.scss';
 
 type ViewMode = 'grid' | 'list' | 'compact';
@@ -9,8 +8,6 @@ type ChannelFilter = 'all' | 'active' | 'selected' | 'range' | 'selectedFixtures
 interface DmxControlsPanelProps {
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
-  faderOrientation: FaderOrientation;
-  onFaderOrientationChange: (orientation: FaderOrientation) => void;
   channelsPerRow: number;
   onChannelsPerRowChange: (count: number) => void;
   filter: ChannelFilter;
@@ -51,8 +48,6 @@ interface DmxControlsPanelProps {
 export const DmxControlsPanel: React.FC<DmxControlsPanelProps> = ({
   viewMode,
   onViewModeChange,
-  faderOrientation,
-  onFaderOrientationChange,
   channelsPerRow,
   onChannelsPerRowChange,
   filter,
@@ -116,15 +111,6 @@ export const DmxControlsPanel: React.FC<DmxControlsPanelProps> = ({
             Compact
           </button>
         </div>
-      </div>
-
-      <div className={`${styles.controlGroup} ${styles.faderLayoutControl}`}>
-        <label className={styles.controlLabel}>Fader layout</label>
-        <FaderOrientationSwitch
-          value={faderOrientation}
-          onChange={onFaderOrientationChange}
-          className={`${styles.orientationSwitch} ab-view-tabs`}
-        />
       </div>
 
       <div className={styles.controlGroup}>

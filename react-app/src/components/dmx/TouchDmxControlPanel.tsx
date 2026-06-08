@@ -475,8 +475,8 @@ export const TouchDmxControlPanel: React.FC<{ touchOptimized?: boolean }> = ({ t
     <div ref={containerRef} style={{
       width: '100%',
       height: isFullscreen ? '100dvh' : '100vh',
-      background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
-      color: '#ffffff',
+      background: 'linear-gradient(135deg, var(--bg-primary, #1a1a1a) 0%, var(--bg-tertiary, #2d2d2d) 100%)',
+      color: 'var(--text-primary, #ffffff)',
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
