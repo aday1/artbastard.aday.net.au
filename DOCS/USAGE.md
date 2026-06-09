@@ -63,6 +63,22 @@ Effects:
 
 Full mapping tables: DOCS/MIDI_TEMPLATES.md.
 
+## Roli Lightpad / Roliblock LED feedback
+
+Super Control can auto-map a Roli Lightpad Block through browser Web MIDI with
+SysEx enabled. Touch input drives the pan/tilt XY pad and the pad LEDs mirror
+the active path:
+
+- The 15x15 LED grid uses top-left origin coordinates, matching the XY pad.
+- Fast drawn strokes are rasterized into continuous grid lines, so loops do
+  not disappear into sparse one-pixel hops.
+- The live cursor has a four-neighbour halo; edge touches stay full brightness
+  instead of being dimmed by clamped halo pixels.
+- The LED encoder uses the BLOCKS BitmapLED BGR565 byte order shared with the
+  Macroverse Roliblock implementation.
+- Larger RGBA/canvas sources can be downsampled to 15x15 before sending, which
+  is the path to shader-style visual LED feeds when needed.
+
 ## OSC tablet workflow
 
 1. Use DOCS/OSC_REFERENCE.md for the current SuperControl, scene, ACT,

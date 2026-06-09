@@ -156,12 +156,86 @@ function sendSysEx(payload: number[]): void {
   }
 }
 
-function rgbaToBgr565(r: number, g: number, b: number, a: number): number {
+type LedRgba = [number, number, number, number];
+
+function clamp01(v: number): number {
+  if (!Number.isFinite(v)) return 0;
+  return Math.max(0, Math.min(1, v));
+}
+
+function clampByte(v: number): number {
+  if (!Number.isFinite(v)) return 0;
+  return Math.max(0, Math.min(255, Math.round(v)));
+}
+
+export function rgbaToBgr565(r: number, g: number, b: number, a: number): number {
   const af = a / 255;
   const r5 = ((r * af) >> 3) & 0x1f;
   const g6 = ((g * af) >> 2) & 0x3f;
   const b5 = ((b * af) >> 3) & 0x1f;
   return (b5 << 11) | (g6 << 5) | r5;
+}
+
+export function rgbaFrameToRoliLedData(pixels: Uint8ClampedArray | Uint8Array): Uint8Array {
+  if (pixels.length < LED_PIXEL_COUNT * 4) {
+    throw new RangeError(`Roli LED frame needs ${LED_PIXEL_COUNT * 4} RGBA bytes`);
+  }
+  const newLed = new Uint8Array(LED_BYTE_COUNT);
+  for (let i = 0; i < LED_PIXEL_COUNT; i++) {
+    const r = pixels[i * 4];
+    const g = pixels[i * 4 + 1];
+    const b = pixels[i * 4 + 2];
+    const a = pixels[i * 4 + 3];
+    const c16 = rgbaToBgr565(r, g, b, a);
+    newLed[i * 2] = c16 & 0xff;
+    newLed[i * 2 + 1] = (c16 >> 8) & 0xff;
+  }
+  return newLed;
+}
+
+export function sampleRgbaToLedFrame(
+  source: Uint8ClampedArray | Uint8Array,
+  width: number,
+  height: number,
+  opts: { flipY?: boolean; exposure?: number } = {}
+): Uint8ClampedArray {
+  const out = new Uint8ClampedArray(LED_PIXEL_COUNT * 4);
+  const w = Math.max(0, Math.floor(width));
+  const h = Math.max(0, Math.floor(height));
+  if (w < 1 || h < 1 || source.length < w * h * 4) return out;
+
+  const exposure = Number.isFinite(opts.exposure) ? opts.exposure ?? 1 : 1;
+  for (let gy = 0; gy < ROLI_GRID_ROWS; gy++) {
+    const y0 = Math.floor((gy * h) / ROLI_GRID_ROWS);
+    const y1 = Math.max(y0 + 1, Math.floor(((gy + 1) * h) / ROLI_GRID_ROWS));
+    for (let gx = 0; gx < ROLI_GRID_COLS; gx++) {
+      const x0 = Math.floor((gx * w) / ROLI_GRID_COLS);
+      const x1 = Math.max(x0 + 1, Math.floor(((gx + 1) * w) / ROLI_GRID_COLS));
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      let a = 0;
+      let count = 0;
+      for (let y = y0; y < Math.min(y1, h); y++) {
+        const sy = opts.flipY ? h - 1 - y : y;
+        for (let x = x0; x < Math.min(x1, w); x++) {
+          const idx = (sy * w + x) * 4;
+          r += source[idx];
+          g += source[idx + 1];
+          b += source[idx + 2];
+          a += source[idx + 3];
+          count++;
+        }
+      }
+      if (count < 1) continue;
+      const outIdx = (gy * ROLI_GRID_COLS + gx) * 4;
+      out[outIdx] = clampByte((r / count) * exposure);
+      out[outIdx + 1] = clampByte((g / count) * exposure);
+      out[outIdx + 2] = clampByte((b / count) * exposure);
+      out[outIdx + 3] = clampByte(a / count);
+    }
+  }
+  return out;
 }
 
 function buildDataChangeMessages(newData: Uint8Array, oldData: Uint8Array): number[][] {
@@ -492,16 +566,7 @@ export function sendLedFrame(pixels: Uint8ClampedArray | Uint8Array): boolean {
   s.lastLedSend = now;
 
   if (pixels.length < LED_PIXEL_COUNT * 4) return false;
-  const newLed = new Uint8Array(LED_BYTE_COUNT);
-  for (let i = 0; i < LED_PIXEL_COUNT; i++) {
-    const r = pixels[i * 4];
-    const g = pixels[i * 4 + 1];
-    const b = pixels[i * 4 + 2];
-    const a = pixels[i * 4 + 3];
-    const c16 = rgbaToBgr565(r, g, b, a);
-    newLed[i * 2] = c16 & 0xff;
-    newLed[i * 2 + 1] = (c16 >> 8) & 0xff;
-  }
+  const newLed = rgbaFrameToRoliLedData(pixels);
 
   // After handshake (or any reconnect) the device's LED state is the dump
   // pattern, not zeros. Force every byte to look different from prev so the
@@ -533,9 +598,9 @@ export function sendLedFrame(pixels: Uint8ClampedArray | Uint8Array): boolean {
 export function composeLedFrame(opts: {
   path?: Array<{ x: number; y: number }>;
   cursor?: { x: number; y: number } | null;
-  trailColor?: [number, number, number, number];
-  cursorColor?: [number, number, number, number];
-  bgColor?: [number, number, number, number];
+  trailColor?: LedRgba;
+  cursorColor?: LedRgba;
+  bgColor?: LedRgba;
 }): Uint8ClampedArray {
   const pixels = new Uint8ClampedArray(LED_PIXEL_COUNT * 4);
   const bg = opts.bgColor ?? [0, 0, 0, 0];
@@ -551,33 +616,68 @@ export function composeLedFrame(opts: {
   const trail = opts.trailColor ?? [110, 40, 210, 255];
   const cursorC = opts.cursorColor ?? [255, 120, 255, 255];
 
-  const plot = (nx: number, ny: number, color: [number, number, number, number]) => {
-    const cx = Math.max(0, Math.min(ROLI_GRID_COLS - 1, Math.round(nx * (ROLI_GRID_COLS - 1))));
-    const cy = Math.max(0, Math.min(ROLI_GRID_ROWS - 1, Math.round(ny * (ROLI_GRID_ROWS - 1))));
-    const idx = (cy * ROLI_GRID_COLS + cx) * 4;
-    pixels[idx] = color[0];
-    pixels[idx + 1] = color[1];
-    pixels[idx + 2] = color[2];
-    pixels[idx + 3] = color[3];
+  const toCell = (nx: number, ny: number) => ({
+    x: Math.round(clamp01(nx) * (ROLI_GRID_COLS - 1)),
+    y: Math.round(clamp01(ny) * (ROLI_GRID_ROWS - 1)),
+  });
+  const putCell = (x: number, y: number, color: LedRgba) => {
+    if (x < 0 || y < 0 || x >= ROLI_GRID_COLS || y >= ROLI_GRID_ROWS) return;
+    const idx = (y * ROLI_GRID_COLS + x) * 4;
+    pixels[idx] = Math.max(pixels[idx], color[0]);
+    pixels[idx + 1] = Math.max(pixels[idx + 1], color[1]);
+    pixels[idx + 2] = Math.max(pixels[idx + 2], color[2]);
+    pixels[idx + 3] = Math.max(pixels[idx + 3], color[3]);
+  };
+  const plot = (nx: number, ny: number, color: LedRgba) => {
+    const cell = toCell(nx, ny);
+    putCell(cell.x, cell.y, color);
+  };
+  const line = (a: { x: number; y: number }, b: { x: number; y: number }, color: LedRgba) => {
+    let { x: x0, y: y0 } = toCell(a.x, a.y);
+    const { x: x1, y: y1 } = toCell(b.x, b.y);
+    const dx = Math.abs(x1 - x0);
+    const sx = x0 < x1 ? 1 : -1;
+    const dy = -Math.abs(y1 - y0);
+    const sy = y0 < y1 ? 1 : -1;
+    let err = dx + dy;
+    while (true) {
+      putCell(x0, y0, color);
+      if (x0 === x1 && y0 === y1) break;
+      const e2 = 2 * err;
+      if (e2 >= dy) {
+        err += dy;
+        x0 += sx;
+      }
+      if (e2 <= dx) {
+        err += dx;
+        y0 += sy;
+      }
+    }
   };
 
   if (opts.path && opts.path.length > 0) {
-    for (const p of opts.path) plot(p.x, p.y, trail);
+    if (opts.path.length === 1) {
+      plot(opts.path[0].x, opts.path[0].y, trail);
+    } else {
+      for (let i = 1; i < opts.path.length; i++) line(opts.path[i - 1], opts.path[i], trail);
+    }
   }
   if (opts.cursor) {
     const { x, y } = opts.cursor;
-    plot(x, y, cursorC);
-    // simple 4-neighbour halo at half brightness
-    const halo: [number, number, number, number] = [
+    const cursorCell = toCell(x, y);
+    // Draw halo first and skip out-of-bounds neighbours. Clamping halo points
+    // into the edge cell makes edge touches dimmer than centre touches.
+    const halo: LedRgba = [
       Math.round(cursorC[0] / 2),
       Math.round(cursorC[1] / 2),
       Math.round(cursorC[2] / 2),
       Math.round(cursorC[3] / 2),
     ];
-    plot(x + 1 / (ROLI_GRID_COLS - 1), y, halo);
-    plot(x - 1 / (ROLI_GRID_COLS - 1), y, halo);
-    plot(x, y + 1 / (ROLI_GRID_ROWS - 1), halo);
-    plot(x, y - 1 / (ROLI_GRID_ROWS - 1), halo);
+    putCell(cursorCell.x + 1, cursorCell.y, halo);
+    putCell(cursorCell.x - 1, cursorCell.y, halo);
+    putCell(cursorCell.x, cursorCell.y + 1, halo);
+    putCell(cursorCell.x, cursorCell.y - 1, halo);
+    putCell(cursorCell.x, cursorCell.y, cursorC);
   }
   return pixels;
 }
