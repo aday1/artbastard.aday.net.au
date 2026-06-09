@@ -43,6 +43,20 @@ Legacy aliases such as `#/external-console` and `#/experimental` currently
 resolve back to `#/dmx-control`; they are not part of the current showcase
 tour.
 
+## Operator how-to videos
+
+The public showcase embeds six current WebM walkthrough clips recorded from
+the running app. Watch order:
+
+1. Fixture Setup and Super Control - patch fixtures, groups, roles, XY pad.
+2. DMX Control Home - channel grid, faders, filters, master, MIDI, OSC.
+3. Scenes and Clip Launcher - scene capture, keyframes, APC40 Deck A/B slots.
+4. Acts Timeline - scene clips, gaps, ACT transport, scheduled MIDI/OSC.
+5. Mobile Control Surface - touch-first phone/tablet operation.
+6. Settings and In-App Help - theme, network, bridge, Help / Ctrl+H.
+
+Public tour: https://aday1.github.io/artbastard.aday.net.au/#tour
+
 ## MIDI controller templates
 
 Apply via UI (Settings > MIDI > Apply Template) or via REST:

@@ -442,9 +442,18 @@ Build / start
 
 ---
 
-## 17. Video Tour
+## 17. Operator Video Tour
 
-Six short WebM clips of the current primary surfaces live at
-`website/videos/`. The showcase page embeds them with poster fallbacks
-and lazy load. Run `npm run demo:capture-videos` to regenerate from the
-running app.
+Six short WebM walkthrough clips of the current primary surfaces live at
+`website/videos/`. The showcase page embeds them with poster fallbacks and
+lazy load. Watch order:
+
+1. Fixture Setup and Super Control - patch fixtures and groups.
+2. DMX Control Home - drive faders, filters, master, MIDI, and OSC.
+3. Scenes and Clip Launcher - capture scenes and launch APC40 Deck A/B slots.
+4. Acts Timeline - build show sequences with clips, gaps, MIDI, and OSC.
+5. Mobile Control Surface - operate from phone/tablet.
+6. Settings and In-App Help - configure network, bridge, theme, and Help.
+
+Run `npm run demo:capture-videos` to regenerate the clips from the running
+app.

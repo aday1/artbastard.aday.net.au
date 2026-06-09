@@ -219,7 +219,7 @@ Mobile requirements:
 | `react-app/src/hooks/useApc40LedFeedback.ts` | LED state: deck grid saved/active/armed slots, ACT launch state, record arm columns, group auto row, selected groups, FULL ON latch, STOP ALL, SHIFT held deck mode, hot-plug repaint |
 | `react-app/src/components/fixtures/Apc40WorkflowPanel.tsx` | Fixture-page APC40 status/help |
 | `react-app/src/components/midi/midiControllerTemplates.ts` | X-Touch/APC40 templates (backwards-compatible fallback under the live integration) |
-| `react-app/src/hooks/useRoliLightpadMirror.ts` | Bidirectional XY-pad path mirror to Roli Lightpad Block (touch in, LED out) |
+| `react-app/src/hooks/useRoliLightpad.ts` + `react-app/src/engines/roliLightpad.ts` | Bidirectional XY-pad path mirror to Roli Lightpad Block (touch in, LED out, continuous 15x15 LED paths) |
 | `DOCS/APC40_CHEATSHEET.md` | Single-page button/LED/mode reference (linked from `DOCS/MIDI_TEMPLATES.md`, `DOCS/SHORTCUTS.md`, in-app Help "APC40 Live" tab, and the showcase docs grid) |
 | `DOCS/MIDI_TEMPLATES.md` | Template apply flow (POST `/api/midi/controller-template`) |
 
@@ -264,6 +264,7 @@ APC40 must be practical, not decorative: Clip Launch / Session View is the 40-sl
 | `npm run demo:capture-screenshots` | PNGs across routes |
 | `npm run demo:capture-videos` | WebM in `website/videos/` |
 | `npm run demo:evidence` | smoke + screenshots |
+| `npm run demo:evidence-full` | smoke + screenshots + videos |
 
 ## Deployment
 

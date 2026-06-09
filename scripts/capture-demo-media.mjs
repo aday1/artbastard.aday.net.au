@@ -351,6 +351,21 @@ async function seedCapturePreferences(cdp) {
     source: `
       localStorage.setItem('midiMonitorDismissed', 'true');
       localStorage.setItem('oscMonitorDismissed', 'true');
+      ['127.0.0.1', 'localhost', location.hostname].forEach((host) => {
+        if (host) localStorage.setItem('deployMetaDock:' + host, 'hidden');
+      });
+      (function hideCaptureChrome() {
+        var css = '#deployMetaDock{display:none!important}';
+        function apply() {
+          if (document.getElementById('artbastard-capture-style')) return;
+          var style = document.createElement('style');
+          style.id = 'artbastard-capture-style';
+          style.textContent = css;
+          (document.head || document.documentElement).appendChild(style);
+        }
+        apply();
+        document.addEventListener('DOMContentLoaded', apply, { once: true });
+      })();
     `,
   }).catch(() => undefined);
 }
@@ -379,6 +394,18 @@ async function settlePage(cdp) {
   await cdp.send('Runtime.evaluate', {
     expression: `document.fonts && document.fonts.ready ? document.fonts.ready.then(() => true) : true`,
     awaitPromise: true,
+  }).catch(() => undefined);
+  await cdp.send('Runtime.evaluate', {
+    expression: `
+      (() => {
+        const dock = document.getElementById('deployMetaDock');
+        if (dock) dock.remove();
+        const style = document.getElementById('artbastard-capture-style') || document.createElement('style');
+        style.id = 'artbastard-capture-style';
+        style.textContent = '#deployMetaDock{display:none!important}';
+        if (!style.parentElement) (document.head || document.documentElement).appendChild(style);
+      })()
+    `,
   }).catch(() => undefined);
   await cdp.send('Runtime.evaluate', { expression: 'window.scrollTo(0, 0)' }).catch(() => undefined);
   await sleep(1500);

@@ -1,8 +1,8 @@
 # ArtBastard Documentation Index
 
 Reference set for v5.2.4.0 - APC40 Deck A/B Edition. Reflects the
-state of the system after the APC40 scene deck refactor and showcase
-refresh on 2026-06-09.
+state of the system after the APC40 scene deck refactor, Roli Lightpad LED
+drawing fix, and showcase video refresh on 2026-06-09.
 
 ## Start here
 
@@ -26,22 +26,22 @@ refresh on 2026-06-09.
 
 ## Showcase and demos
 
-- SHOWCASE.md       - how the public showcase + demo reel are produced.
+- SHOWCASE.md       - how the public showcase + how-to videos are produced.
 - DEMO_RECORDING.txt - capturing screenshots and videos.
 - UI_UX_TOUR.txt    - per-screen action notes for the recorded tour.
-- ../website/videos/ - six WebM demo clips + JPG posters.
+- ../website/videos/ - six WebM operator clips + JPG posters.
 
-## Release walkthrough
+## Operator video walkthrough
 
-The ordered demo reel is also embedded on the public showcase site.
-Tour order:
+The ordered how-to video set is embedded on the public showcase site.
+Watch order:
 
-1. DMX Control Home
-2. Fixture Setup and Super Control
-3. Scenes and Clip Launcher
-4. Acts Timeline
-5. Mobile Control Surface
-6. Settings and In-App Help
+1. Fixture Setup and Super Control - patch fixtures, build groups, drive roles.
+2. DMX Control Home - use channel faders, filters, master, MIDI, and OSC.
+3. Scenes and Clip Launcher - capture scenes and launch APC40 Deck A/B slots.
+4. Acts Timeline - build show sequences with scene clips, gaps, MIDI, and OSC.
+5. Mobile Control Surface - operate the touch-first remote surface.
+6. Settings and In-App Help - configure network/theme/bridge and find help.
 
 Release page:
 https://github.com/aday1/artbastard.aday.net.au/releases/latest

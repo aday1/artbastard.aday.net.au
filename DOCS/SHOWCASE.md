@@ -1,12 +1,13 @@
 # ArtBastard Showcase Notes
 
 How the public showcase page is built, recorded, and deployed. Useful if you
-want to rebuild it locally, change the demo reel, or audit the deploy path.
+want to rebuild it locally, change the operator videos, or audit the deploy
+path.
 
 Last content refresh: 2026-06-09 (v5.2.4.0 APC40 Deck A/B workflow,
-Record Arm scene saves, Device Control gobo roles, and six-clip Photonic
-Tour). Website feature grid mentions LAN / Pi bridge for cloud-hosted
-Art-Net on home LANs.
+Record Arm scene saves, Device Control gobo roles, Roli Lightpad LED drawing,
+and six-clip operator how-to tour). Website feature grid mentions LAN / Pi
+bridge for cloud-hosted Art-Net on home LANs.
 
 Act timeline docs (transport vs BPM vs Link, gaps, editing): DOCS/ACT_TIMELINE.md
 and in-app Help → Act Timeline tab (mirrored in DOCS/HELP.md §8b).
@@ -22,7 +23,7 @@ and in-app Help → Act Timeline tab (mirrored in DOCS/HELP.md §8b).
   `api.github.com/repos/aday1/artbastard.aday.net.au/releases/latest`.
 - `/workspace/website/videos/*.webm` + `.jpg` - demo clips and posters.
 - `/workspace/index.html` - tiny GitHub Pages entrypoint that links the
-  showcase, the live app, and the demo reel.
+  showcase, the live app, and the operator video tour.
 - `/workspace/DOCS/index.html` - documentation index page (themed like the public showcase; embeds the same Luminary quote list as the ArtSnob `FancyQuotes` component).
 - `/workspace/DOCS/showcase-quotes-data.js` - generated JavaScript bundle of `luxuryQuotes` from `react-app/src/components/layout/FancyQuotes.tsx`. Regenerate after editing quotes in the app:
 
@@ -36,6 +37,11 @@ node scripts/sync-docs-quotes.mjs
 DevTools protocol, renders each route against the live backend, captures
 JPEG frame sequences, and uses `ffmpeg` to encode VP9 WebM clips. Posters
 are copied from the first captured frame.
+
+The committed videos are silent operator walkthroughs. The showcase captions
+explain the lesson for each clip: patch fixtures, drive DMX/Super Control,
+capture scenes and APC40 deck slots, sequence ACTs, operate mobile, and
+configure settings/help.
 
 The script:
 
@@ -77,7 +83,7 @@ deploy. `/DOCS/` is served alongside.
 Canonical URL:
 
 - `https://aday1.github.io/artbastard.aday.net.au/` - full showcase
-  (hero, demo reel, feature cards, install steps, doc grid, Luminary wall).
+  (hero, how-to videos, feature cards, install steps, doc grid, Luminary wall).
 - `https://aday1.github.io/artbastard.aday.net.au/DOCS/` - documentation hub.
 - `/website/` on the deployed site redirects to `/` for old bookmarks.
 
@@ -104,7 +110,7 @@ HTML entity for the icon (`&#127916;` etc.) instead of literal emoji so the
 file is reliable to commit and edit on every editor / OS combination.
 Drop a new `<div class="feature-card">` in the grid to add a feature.
 
-## Updating the demo reel
+## Updating the operator videos
 
 The video tiles are in `<section id="tour">`. Add a new `<figure
 class="video-tile">` (or `.video-tile.mobile` for portrait) referencing

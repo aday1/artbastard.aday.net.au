@@ -8,21 +8,21 @@ Current package version: 5.2.4.0
 ## Showcase
 
 - Quick-jump hub: https://aday1.github.io/artbastard.aday.net.au/
-- Full showcase (Photonic Tour + features + docs):
+- Full showcase (operator videos + features + docs):
   https://aday1.github.io/artbastard.aday.net.au/
 - Live app: https://artbastard.aday.net.au
 - Dev pre-prod lane (same Docker service `artbastard_test`, image `:dev`):
   - https://artbastard-dev.aday.net.au
 
-The showcase page hosts a "Photonic Tour" demo reel: six short WebM
-clips of every current primary surface (DMX Control, Fixture Setup,
-Scenes and Clip Launcher, Acts Timeline, Mobile, Settings and In-App Help). Recorded
-straight off the running app via `npm run demo:capture-videos`. See
-DOCS/SHOWCASE.md for details.
+The showcase page hosts an operator how-to video set: six short WebM
+clips covering the current workflow (patch fixtures, drive DMX/Super Control,
+capture scenes and APC40 deck slots, sequence ACTs, use mobile, configure
+settings/help). They are recorded straight off the running app via
+`npm run demo:capture-videos`. See DOCS/SHOWCASE.md for details.
 
 ## Current status (2026-06)
 
-### Confirmed live/dev line (v5.2.0.0)
+### Confirmed live/dev line (v5.2.4.0)
 
 - Dev and live now use the same refreshed ArtBastard code line; the retired
   beta identity is no longer part of the app shell.
@@ -123,14 +123,14 @@ The system rebuild is complete and production paths are consolidated:
 
 ## UI/UX tour screens (release assets)
 
-Ordered walkthrough labels:
+Operator video watch order:
 
-1. DMX Control Home
-2. Fixture Setup and Super Control
-3. Scenes and Clip Launcher
-4. Acts Timeline
-5. Mobile Control Surface
-6. Settings and In-App Help
+1. Fixture Setup and Super Control - patch fixtures, groups, and roles.
+2. DMX Control Home - drive the channel grid, filters, faders, MIDI, and OSC.
+3. Scenes and Clip Launcher - save scenes and use APC40 Deck A/B slots.
+4. Acts Timeline - sequence scene clips, gaps, transport, MIDI, and OSC.
+5. Mobile Control Surface - run the touch-first phone/tablet surface.
+6. Settings and In-App Help - configure theme, network, bridge, and help.
 
 Release page:
 https://github.com/aday1/artbastard.aday.net.au/releases/latest
@@ -186,5 +186,5 @@ PDF address sheet. Offline mirror lives at DOCS/HELP.md.
 - DOCS/MIDI_TEMPLATES.md    - X-Touch + APC40 mappings
 - DOCS/APC40_CHEATSHEET.md  - APC40 Deck A/B live controller reference
 - DOCS/OSC_REFERENCE.md     - SuperControl OSC address grid
-- DOCS/SHOWCASE.md          - how the showcase + demo reel are built
+- DOCS/SHOWCASE.md          - how the showcase + operator videos are built
 - DOCS/HISTORY.md           - theatrical project history

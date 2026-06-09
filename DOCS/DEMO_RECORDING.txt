@@ -1,8 +1,8 @@
 ArtBastard Demo Recording Guide
 ================================
 
-How to capture screenshots and demo videos for the showcase page,
-release notes, and bug reports.
+How to capture screenshots and operator how-to videos for the showcase page,
+release notes, onboarding, and bug reports.
 
 ------------------------------------------------------------------
 1. Prerequisites
@@ -35,22 +35,22 @@ Routes captured:
 3. Videos
 ------------------------------------------------------------------
 
-Capture six short WebM clips for the showcase demo reel:
+Capture six short WebM clips for the showcase operator tour:
 
     npm run demo:capture-videos
 
 Output: website/videos/<name>.webm + <name>.jpg poster.
 
 Clip matrix:
-    dmx-control       1280x720  ~12s
-    fixture-page      1280x720  ~12s
-    scenes-acts       1280x720  ~12s
-    acts-page         1280x720  ~12s
-    mobile             430x932  ~10s
-    settings-help     1280x720  ~12s
+    fixture-page      1280x720  ~12s  patch fixtures and drive Super Control
+    dmx-control       1280x720  ~12s  use faders, filters, master, MIDI, OSC
+    scenes-acts       1280x720  ~12s  save scenes and launch APC40 deck slots
+    acts-page         1280x720  ~12s  sequence ACT clips and scheduled events
+    mobile             430x932  ~10s  operate the touch-first remote surface
+    settings-help     1280x720  ~12s  configure network/theme/help/bridge
 
 Tweak via environment variables (see DOCS/SHOWCASE.md):
-    CAPTURE_FRAMERATE        default 24
+    CAPTURE_FRAMERATE        default 12
     CAPTURE_VBITRATE         default 800k
     CAPTURE_DURATION_SEC     override per-clip
     CAPTURE_CLIP_LIST        comma list, e.g. dmx-control,mobile
