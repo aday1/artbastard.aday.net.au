@@ -298,7 +298,7 @@ Apply factory-tuned MIDI mappings in one click. Two templates ship today:
 
 - Behringer X-Touch (Mackie mode) - faders, pan, encoders, scribble strip
   SysEx labelling.
-- Akai APC40 MK1 - pad grid for scenes, knobs for SuperControl axes.
+- Akai APC40 MK1 - Deck A/B scene grid, ACT launch buttons, Record Arm scene saves, Device Control gobo/effects roles.
 
 Apply via UI (Settings > MIDI > Apply Template) or via REST:
 

@@ -86,24 +86,29 @@ Full reference: [APC40_CHEATSHEET.md](APC40_CHEATSHEET.md). Quick gestures:
 
 | Button                 | Action                                              |
 | ---------------------- | --------------------------------------------------- |
-| Scene 1-5              | Launch saved scene (or fill empty slot)             |
-| REC (transport)        | Toggle SAVE mode → next scene-pad tap overwrites it |
-| PLAY (transport)       | Toggle pick-A mode → next scene-pad tap = scene A   |
-| STOP (transport)       | Toggle pick-B mode → next scene-pad tap = scene B   |
-| Crossfader             | Blend between scene A and B                         |
-| Channel faders 1-8     | Super Control: dim / pan / tilt / R / G / B / gobo / strobe |
-| Master fader           | Global dimmer across every fixture                  |
-| TRACK SELECT 1-8       | Pick fixture (or group) N                           |
-| ACTIVATOR 1-8          | Toggle fixture N in multi-selection                 |
-| SOLO 1-8               | Collapse selection to just fixture N                |
+| Clip grid 8x5          | Launch 40 Deck A scene slots                        |
+| SHIFT + clip grid      | Launch/save 40 Deck B scene slots                   |
+| Record Arm 1-8         | Arm column; next grid pad saves current deck slot   |
+| Scene Launch 1-5       | Launch ACT 1-5                                      |
+| Stop All Clips         | Stop Deck A/B scenes and ACT playback               |
+| Clip Stop row          | Stop/unselect current deck scene                    |
+| Crossfader             | Blend active Deck A scene with active Deck B scene  |
+| Channel faders 1-8     | Super Control: selected fixture slot dimmers        |
+| Master fader           | Super Control: selected DIMMER/masterDimmer         |
+| Master Select          | FULL ON latch; press again restores previous DMX    |
+| Device Control 1-8     | Dynamic gobo/effects/DMX roles for selection        |
+| Cue Level              | Page Device Control role banks                      |
+| TRACK SELECT 1-8       | Pick fixture group N                                |
+| ACTIVATOR 1-8          | Toggle APC40 auto mode for group N                  |
+| SOLO/CUE 1-8           | Solo fixture N inside the selected group            |
 | PAN                    | Select all fixtures                                 |
 | Nav ↑ / ↓              | Cycle fixtures                                      |
 | Nav ← / →              | Cycle scenes                                        |
-| SHIFT                  | Cancel any active mode                              |
+| SHIFT                  | Hold for Deck B                                     |
 
-LED meanings: scene pads green = saved, red-blink = active, orange-blink
-= bound to crossfader A/B, green-blink = mode armed. Transport row LED
-lights up to confirm which mode you're in (REC=save, PLAY=pickA, STOP=pickB).
+LED meanings: grid pads green = saved, orange-blink = active deck scene,
+red/green blink = record-armed column. Scene Launch pads green = ACT exists,
+orange-blink = ACT playing. Activator orange-blink = group auto active.
 
 ## Notes
 

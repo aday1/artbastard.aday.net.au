@@ -4,7 +4,7 @@ import { CURRENT_VERSION, getVersionDisplay, getBuildInfo } from '../utils/versi
 describe('Version Utils', () => {
   it('should have current version defined', () => {
     expect(CURRENT_VERSION).toBeDefined()
-    expect(CURRENT_VERSION.version).toBe('5.2.0.1')
+    expect(CURRENT_VERSION.version).toBe('5.2.4.0')
   })
 
   it('should format version display correctly', () => {

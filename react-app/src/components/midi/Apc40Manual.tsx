@@ -8,6 +8,11 @@ type SectionKey =
   | 'sceneLaunch'
   | 'trackSelect'
   | 'trackStop'
+  | 'recordArm'
+  | 'activator'
+  | 'soloCue'
+  | 'stopAll'
+  | 'masterButton'
   | 'transport'
   | 'trackFader'
   | 'masterFader'
@@ -28,11 +33,16 @@ interface HardwireSpec {
 }
 
 const HARDWIRED: HardwireSpec[] = [
-  { key: 'clipGrid',    label: 'Clip Grid (8×5)',     description: 'Toggle fixture selection by slot; empty slot prompts to add a fixture template.', category: 'selection' },
-  { key: 'sceneLaunch', label: 'Scene Launch (1–5)',  description: 'Load saved scene; LED green = saved/available, orange = active, off = empty (press to capture current state).', category: 'scene' },
+  { key: 'clipGrid',    label: 'Clip Grid / Session View (8×5)', description: 'Launch 40 Deck A scene slots. Hold SHIFT to launch/save the matching 40 Deck B scene slots.', category: 'scene' },
+  { key: 'sceneLaunch', label: 'Scene Launch (1–5)',  description: 'Launch ACT 1-5. Stop All Clips stops any currently playing ACT.', category: 'scene' },
+  { key: 'recordArm',   label: 'Record Arm (1–8)',    description: 'Arm that grid column. The next grid pad in the current deck saves current DMX into that Deck A/B scene slot.', category: 'transport' },
   { key: 'trackSelect', label: 'Track Select (1–8)',  description: 'Select fixture group by index; falls back to single fixture in that column.', category: 'selection' },
-  { key: 'trackStop',   label: 'Track Stop',          description: 'Stops/clears the per-column group binding.', category: 'utility' },
-  { key: 'transport',   label: 'Play / Stop / Record', description: 'Play = create show; Stop = deselect all; Record = quick-capture scene.', category: 'scene' },
+  { key: 'activator',   label: 'Activator (1–8)',     description: 'Toggle APC40 auto control for fixture group 1-8.', category: 'transport' },
+  { key: 'soloCue',     label: 'Solo/Cue (1–8)',      description: 'Solo a fixture inside the currently selected group; press the same solo again to restore selection.', category: 'selection' },
+  { key: 'trackStop',   label: 'Clip Stop row',       description: 'Stop/unselect the active scene in that column for the current deck.', category: 'utility' },
+  { key: 'stopAll',     label: 'Stop All Clips',      description: 'Stop all Deck A/B scenes and ACT playback.', category: 'utility' },
+  { key: 'masterButton', label: 'Master Select',      description: 'FULL ON latch: sends 255 to fixture output channels, press again to restore previous DMX values.', category: 'utility' },
+  { key: 'transport',   label: 'Transport REC/STOP',  description: 'REC arms/clears all record columns; STOP mirrors Stop All Clips.', category: 'scene' },
   { key: 'navFixture',  label: 'Up / Down arrows',    description: 'Cycle through fixtures: Up = previous, Down = next.', category: 'nav' },
   { key: 'navScene',    label: 'Left / Right arrows', description: 'Cycle through scenes: Left = previous, Right = next.', category: 'nav' },
   { key: 'selectAll',   label: 'Pan button',           description: 'Select all fixtures at once.', category: 'selection' },
@@ -81,6 +91,9 @@ export const Apc40Manual: React.FC = () => {
   const selectedFixtures = useStore(s => s.selectedFixtures);
   const scenes = useStore(s => s.scenes);
   const activeSceneName = useStore(s => s.activeSceneName);
+  const acts = useStore(s => s.acts);
+  const currentActId = useStore(s => s.actPlaybackState.currentActId);
+  const apc40State = useStore(s => s.apc40CrossfaderState);
   const superControlLearnTarget = useStore(s => s.superControlLearnTarget);
   const startSuperControlLearn = useStore(s => s.startSuperControlLearn);
 
@@ -155,8 +168,8 @@ export const Apc40Manual: React.FC = () => {
   const trackFaderBinding = (trackIndex: number) => bindingByControl.get(`dimmer:${trackIndex}`);
   const masterFaderBinding = bindingByControl.get('masterDimmer:-');
   const knobBindingByCc = (cc: number) => bindingByKey.get(`cc:0:${cc}`);
-  const cueBinding = bindingByControl.get('fine_pan:-');
-  const crossfaderBinding = bindingByControl.get('fine_tilt:-');
+  const cueBinding = bindingByKey.get('cc:0:47');
+  const crossfaderBinding = bindingByKey.get('cc:0:15');
 
   const templateApplied = superControlMidiMappings.length > 0;
   const template = getTemplateById('apc40_mk1');
@@ -200,11 +213,11 @@ export const Apc40Manual: React.FC = () => {
     return 100 - (v / 127) * 100;
   };
 
-  // Scene LED status for the visual scene column (mirrors what useApc40LedFeedback pushes).
-  const sceneStatus = (idx: number): 'empty' | 'saved' | 'active' => {
-    const s = scenes?.[idx];
-    if (!s) return 'empty';
-    return s.name === activeSceneName ? 'active' : 'saved';
+  // ACT LED status for the visual Scene Launch column.
+  const actStatus = (idx: number): 'empty' | 'saved' | 'active' => {
+    const act = acts?.[idx];
+    if (!act) return 'empty';
+    return act.id === currentActId ? 'active' : 'saved';
   };
 
   return (
@@ -212,14 +225,17 @@ export const Apc40Manual: React.FC = () => {
       <div className={styles.intro}>
         <p>
           Visual reference for the AKAI APC40 MK1. Controls light up and animate as MIDI arrives —
-          click any knob, fader, master, cue or crossfader to <b>re-learn</b> its SuperControl binding.
-          Scene LEDs reflect status: <b style={{color:'#22c55e'}}>green</b> = saved, <b style={{color:'#f59e0b'}}>orange</b> = active, off = empty.
+          click any SuperControl fader or fallback knob to <b>re-learn</b> its binding.
+          The grid is <b>Deck A</b>; hold <b>SHIFT</b> for <b>Deck B</b>. Scene Launch buttons are ACT 1-5.
         </p>
         <div className={styles.statusRow}>
           <span className={`${styles.status} ${templateApplied ? styles.statusOn : styles.statusOff}`}>
             {templateApplied ? '● APC40 template applied' : '○ APC40 template not applied'}
           </span>
           <span className={styles.statusMeta}>Selected fixtures: <b>{selectedFixtures.length}</b></span>
+          <span className={styles.statusMeta}>Deck: <b>{apc40State.activeDeck}</b></span>
+          <span className={styles.statusMeta}>A: <b>{apc40State.sceneAName ?? '—'}</b></span>
+          <span className={styles.statusMeta}>B: <b>{apc40State.sceneBName ?? '—'}</b></span>
           <span className={styles.statusMeta}>Active scene: <b>{activeSceneName ?? '—'}</b></span>
         </div>
         {template && (
@@ -252,11 +268,12 @@ export const Apc40Manual: React.FC = () => {
         <div className={styles.layout}>
           {/* Device knobs (CC16-23) */}
           <div className={`${styles.cluster} ${styles.deviceKnobs}`}>
-            <div className={styles.clusterLabel}>Device Knobs (CC16–23) — rotate with MIDI · click to re-learn</div>
+            <div className={styles.clusterLabel}>Device Control (CC16–23) — selected fixture DMX roles · Cue Level pages banks</div>
             <div className={styles.knobRow}>
               {[16, 17, 18, 19, 20, 21, 22, 23].map((cc) => {
                 const key = `cc:0:${cc}`;
                 const b = knobBindingByCc(cc);
+                const roleLabel = apc40State.deviceRoleLabels[cc - 16] ?? b?.label?.replace(/^Device Knob \d+\s*→\s*/, '') ?? `CC${cc}`;
                 const controlName = b?.controlName ?? '';
                 const slot = b?.slotIndex;
                 const learning = controlName && isLearningKey(controlName, slot);
@@ -266,14 +283,14 @@ export const Apc40Manual: React.FC = () => {
                     <div
                       className={`${styles.knob} ${activeKey === key ? styles.active : ''} ${learning ? styles.learning : ''}`}
                       style={{ borderColor: learning ? '#3b82f6' : categoryColor.superControl }}
-                      title={`${b?.label ?? `CC${cc}`} — click to re-learn`}
+                      title={`${roleLabel} — live APC40 role for selected fixtures`}
                       onClick={() => b && beginLearn(controlName, slot)}
                       role="button"
                       tabIndex={0}
                     >
                       <div className={styles.knobDot} style={{ transform: `translateX(-50%) rotate(${angle}deg)`, transformOrigin: '50% 200%' }} />
                     </div>
-                    <div className={styles.controlBlockLabel}>{b?.label?.replace(/^Device Knob \d+\s*→\s*/, '') ?? `CC${cc}`}</div>
+                    <div className={styles.controlBlockLabel}>{roleLabel}</div>
                     <div className={styles.controlBlockSig}>{sigForBinding(b)}</div>
                   </div>
                 );
@@ -283,7 +300,7 @@ export const Apc40Manual: React.FC = () => {
 
           {/* Clip grid + scene launch column */}
           <div className={`${styles.cluster} ${styles.clipGrid}`}>
-            <div className={styles.clusterLabel}>Clip Grid 8×5 → fixture select · Scene LEDs reflect saved/active</div>
+            <div className={styles.clusterLabel}>Clip Grid 8×5 → Deck {apc40State.activeDeck} scene slots · Record Arm saves current DMX</div>
             <div className={styles.gridAndScenes}>
               <div className={styles.grid}>
                 {Array.from({ length: 5 }).map((_, row) => (
@@ -291,12 +308,17 @@ export const Apc40Manual: React.FC = () => {
                     {Array.from({ length: 8 }).map((_, col) => {
                       const note = 0x35 + row;
                       const key = `note:${col}:${note}`;
+                      const index = row * 8 + col;
+                      const name = `APC40 Deck ${apc40State.activeDeck} ${String(index + 1).padStart(2, '0')}`;
+                      const saved = scenes.some((scene) => scene.name === name);
+                      const active = name === (apc40State.activeDeck === 'A' ? apc40State.sceneAName : apc40State.sceneBName);
+                      const armed = apc40State.armedColumns.includes(col);
                       return (
                         <div
                           key={col}
                           className={`${styles.pad} ${activeKey === key ? styles.active : ''}`}
-                          style={{ background: categoryColor.selection }}
-                          title={`Row ${row + 1}, Track ${col + 1} → Toggle fixture slot ${row * 8 + col + 1}`}
+                          style={{ background: armed ? '#ef4444' : active ? '#f59e0b' : saved ? '#22c55e' : '#334155' }}
+                          title={`${name}${armed ? ' · column armed: press to save' : saved ? ' · press to launch' : ' · empty'}`}
                         />
                       );
                     })}
@@ -306,7 +328,7 @@ export const Apc40Manual: React.FC = () => {
               <div className={styles.sceneColumn}>
                 {[0x52, 0x53, 0x54, 0x55, 0x56].map((note, idx) => {
                   const key = `note:0:${note}`;
-                  const status = sceneStatus(idx);
+                  const status = actStatus(idx);
                   const bg = status === 'active' ? '#f59e0b'
                     : status === 'saved' ? '#22c55e'
                     : '#334155';
@@ -315,9 +337,9 @@ export const Apc40Manual: React.FC = () => {
                       key={note}
                       className={`${styles.scenePad} ${activeKey === key ? styles.active : ''}`}
                       style={{ background: bg, color: status === 'empty' ? '#94a3b8' : '#0f172a' }}
-                      title={`Scene ${idx + 1}: ${status === 'empty' ? 'empty (press to capture)' : status === 'active' ? 'currently active' : 'saved'}`}
+                      title={`ACT ${idx + 1}: ${status === 'empty' ? 'empty' : status === 'active' ? 'currently playing' : 'saved'}`}
                     >
-                      Scene {idx + 1}
+                      ACT {idx + 1}
                     </div>
                   );
                 })}
@@ -327,9 +349,12 @@ export const Apc40Manual: React.FC = () => {
 
           {/* Tracks 1-8 + master */}
           <div className={`${styles.cluster} ${styles.tracks}`}>
-            <div className={styles.clusterLabel}>Tracks 1–8: fader → slot dimmer · click fader to re-learn</div>
+            <div className={styles.clusterLabel}>Tracks 1–8: group select, auto, fixture solo, record-arm, and slot dimmer</div>
             <div className={styles.trackRow}>
               {Array.from({ length: 8 }).map((_, trackIdx) => {
+                const armKey = `note:${trackIdx}:48`;
+                const soloKey = `note:${trackIdx}:49`;
+                const autoKey = `note:${trackIdx}:50`;
                 const selectKey = `note:${trackIdx}:51`;
                 const stopKey = `note:${trackIdx}:52`;
                 const b = trackFaderBinding(trackIdx);
@@ -342,6 +367,21 @@ export const Apc40Manual: React.FC = () => {
                 return (
                   <div key={trackIdx} className={styles.track}>
                     <div
+                      className={`${styles.trackButton} ${activeKey === armKey ? styles.active : ''}`}
+                      style={{ background: apc40State.armedColumns.includes(trackIdx) ? '#ef4444' : categoryColor.transport }}
+                      title={`Record Arm ${trackIdx + 1} → arm grid column ${trackIdx + 1} for Deck ${apc40State.activeDeck}`}
+                    >ARM</div>
+                    <div
+                      className={`${styles.trackButton} ${activeKey === autoKey ? styles.active : ''}`}
+                      style={{ background: apc40State.autoGroups.includes(trackIdx) ? '#f59e0b' : categoryColor.transport }}
+                      title={`Activator ${trackIdx + 1} → toggle auto control for fixture group ${trackIdx + 1}`}
+                    >AUTO</div>
+                    <div
+                      className={`${styles.trackButton} ${activeKey === soloKey ? styles.active : ''}`}
+                      style={{ background: categoryColor.selection }}
+                      title={`Solo/Cue ${trackIdx + 1} → solo fixture ${trackIdx + 1} inside selected group`}
+                    >SOLO</div>
+                    <div
                       className={`${styles.trackButton} ${activeKey === selectKey ? styles.active : ''}`}
                       style={{ background: slotInUse ? categoryColor.selection : '#475569' }}
                       title={`Track ${trackIdx + 1} Select → group/fixture index ${trackIdx + 1}`}
@@ -349,7 +389,7 @@ export const Apc40Manual: React.FC = () => {
                     <div
                       className={`${styles.trackButton} ${activeKey === stopKey ? styles.active : ''}`}
                       style={{ background: categoryColor.utility }}
-                      title="Track Stop"
+                      title={`Clip Stop ${trackIdx + 1} → stop/unselect current Deck ${apc40State.activeDeck} scene`}
                     >STOP</div>
                     <div
                       className={`${styles.fader} ${activeKey === faderKey ? styles.active : ''} ${slotInUse ? styles.faderLive : styles.faderIdle} ${learning ? styles.learning : ''}`}
@@ -369,8 +409,14 @@ export const Apc40Manual: React.FC = () => {
               })}
 
               <div className={styles.track}>
-                <div className={styles.trackButton} style={{ background: categoryColor.utility, visibility: 'hidden' }}>·</div>
-                <div className={styles.trackButton} style={{ background: categoryColor.utility, visibility: 'hidden' }}>·</div>
+                {Array.from({ length: 4 }).map((_, idx) => (
+                  <div key={idx} className={styles.trackButton} style={{ background: categoryColor.utility, visibility: 'hidden' }}>·</div>
+                ))}
+                <div
+                  className={styles.trackButton}
+                  style={{ background: apc40State.fullOn ? '#ef4444' : categoryColor.utility }}
+                  title="Master Select → FULL ON latch; press again to restore previous DMX"
+                >FULL</div>
                 <div
                   className={`${styles.fader} ${styles.masterFader} ${activeKey === `cc:${masterFaderBinding?.channel ?? 0}:${masterFaderBinding?.controller ?? 14}` ? styles.active : ''} ${isLearningKey('masterDimmer') ? styles.learning : ''}`}
                   title={`${masterFaderBinding?.label ?? 'Master Fader → Master Dimmer'} — click to re-learn`}
@@ -392,11 +438,11 @@ export const Apc40Manual: React.FC = () => {
           <div className={`${styles.cluster} ${styles.transport}`}>
             <div className={styles.clusterLabel}>Transport / Nav — Up/Down cycles fixtures, Left/Right cycles scenes</div>
             <div className={styles.transportRow}>
-              <div className={styles.transportButton} style={{ background: categoryColor.scene }} title="Play → dispatch 'create show' event">▶ PLAY</div>
-              <div className={styles.transportButton} style={{ background: categoryColor.utility }} title="Stop → deselect all fixtures">■ STOP</div>
-              <div className={styles.transportButton} style={{ background: categoryColor.transport }} title="Record → quick-capture current state into the next free scene slot">● REC</div>
+              <div className={styles.transportButton} style={{ background: categoryColor.scene }} title="Play is free for future transport behavior; ACT launch lives on Scene Launch 1-5">▶ PLAY</div>
+              <div className={styles.transportButton} style={{ background: categoryColor.utility }} title="Stop → stop all Deck A/B scenes and ACT playback">■ STOP</div>
+              <div className={styles.transportButton} style={{ background: apc40State.armedColumns.length > 0 ? '#ef4444' : categoryColor.transport }} title="Record → arm or clear all record columns">● REC</div>
               <div className={styles.transportButton} style={{ background: categoryColor.utility }} title="Clear Selection">CLEAR</div>
-              <div className={styles.transportButton} style={{ background: categoryColor.utility }} title="Shift modifier">SHIFT</div>
+              <div className={styles.transportButton} style={{ background: apc40State.shiftLatched ? '#f59e0b' : categoryColor.utility }} title="Hold SHIFT → Deck B grid mode">SHIFT</div>
               <div className={styles.transportButton} style={{ background: categoryColor.selection }} title="Pan button → Select All fixtures">SEL ALL</div>
 
               {/* Nav arrows */}
@@ -409,23 +455,21 @@ export const Apc40Manual: React.FC = () => {
 
               <div className={styles.knobBlock}>
                 <div
-                  className={`${styles.knob} ${activeKey === `cc:${cueBinding?.channel ?? 0}:${cueBinding?.controller ?? 47}` ? styles.active : ''} ${isLearningKey('fine_pan') ? styles.learning : ''}`}
+                  className={`${styles.knob} ${activeKey === `cc:${cueBinding?.channel ?? 0}:${cueBinding?.controller ?? 47}` ? styles.active : ''}`}
                   style={{ borderColor: categoryColor.superControl }}
-                  title={`${cueBinding?.label ?? 'Cue Level → Fine Pan'} — click to re-learn`}
-                  onClick={() => beginLearn('fine_pan')}
+                  title="Cue Level → page Device Control role banks for the selected fixture/group"
                   role="button"
                   tabIndex={0}
                 >
                   <div className={styles.knobDot} />
                 </div>
-                <div className={styles.controlBlockLabel}>Cue</div>
-                <div className={styles.controlBlockSig}>{sigForBinding(cueBinding)}</div>
+                <div className={styles.controlBlockLabel}>Role Bank</div>
+                <div className={styles.controlBlockSig}>CC47</div>
               </div>
               <div className={styles.knobBlock}>
                 <div
-                  className={`${styles.crossfader} ${activeKey === `cc:${crossfaderBinding?.channel ?? 0}:${crossfaderBinding?.controller ?? 15}` ? styles.active : ''} ${isLearningKey('fine_tilt') ? styles.learning : ''}`}
-                  title={`${crossfaderBinding?.label ?? 'Crossfader → Fine Tilt'} — click to re-learn`}
-                  onClick={() => beginLearn('fine_tilt')}
+                  className={`${styles.crossfader} ${activeKey === `cc:${crossfaderBinding?.channel ?? 0}:${crossfaderBinding?.controller ?? 15}` ? styles.active : ''}`}
+                  title="Crossfader → blend active Deck A scene with active Deck B scene"
                   role="button"
                   tabIndex={0}
                 >
@@ -433,8 +477,8 @@ export const Apc40Manual: React.FC = () => {
                     <div className={styles.crossfaderCap} />
                   </div>
                 </div>
-                <div className={styles.controlBlockLabel}>Crossfader</div>
-                <div className={styles.controlBlockSig}>{sigForBinding(crossfaderBinding)}</div>
+                <div className={styles.controlBlockLabel}>A/B Blend</div>
+                <div className={styles.controlBlockSig}>CC15</div>
               </div>
             </div>
           </div>
@@ -498,7 +542,7 @@ export const Apc40Manual: React.FC = () => {
           ))}
         </ul>
         <p className={styles.legendNote}>
-          Knobs rotate and faders track live with incoming MIDI values. Scene pads show real status: green = saved, orange = active.
+          Knobs rotate and faders track live with incoming MIDI values. Grid pads show Deck A/B slots; Scene Launch pads show ACT availability/playback.
         </p>
       </div>
 

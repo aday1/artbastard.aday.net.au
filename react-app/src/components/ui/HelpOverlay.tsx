@@ -884,13 +884,13 @@ export const HelpOverlay: React.FC<HelpOverlayProps> = ({ embedded = false }) =>
 
             <div className={styles.section}>
               <h5>Akai APC40 MK1</h5>
-              <p><strong>The APC40 has a dedicated live integration that runs without applying any template — see the <em>APC40 Live</em> tab.</strong> Plug the device in and you get SAVE mode (REC), crossfader scene pickers (PLAY/STOP), Super Control on the channel faders, ACTIVATOR/SOLO multi-select, etc. The template entries below remain as a fallback for any control the live hook doesn't claim.</p>
+              <p><strong>The APC40 has a dedicated live integration that runs without applying any template — see the <em>APC40 Live</em> tab.</strong> Plug the device in and you get Deck A/B scene grids, ACT launch buttons, Record Arm scene saves, Super Control dimmers, Device Control gobo/effects roles, group auto, Solo/Cue, FULL ON, and crossfader scene blending. The template entries below remain as fallback SuperControl bindings.</p>
               <ul>
-                <li><strong>Pad grid (8×5):</strong> trigger the matching clip launcher cells.</li>
-                <li><strong>Track buttons:</strong> SuperControl axis selection (R/G/B/W/Pan/Tilt/Dimmer/Strobe).</li>
-                <li><strong>Cue level knob:</strong> fine-adjust the active SuperControl axis.</li>
-                <li><strong>Crossfader:</strong> master brightness (template fallback).</li>
-                <li><strong>Scene buttons:</strong> trigger the corresponding scene rows.</li>
+                <li><strong>Track faders 1-8:</strong> SuperControl dimmer for selected fixture slots 1-8.</li>
+                <li><strong>Master fader:</strong> SuperControl masterDimmer for the current selection.</li>
+                <li><strong>Device Control CC16-23:</strong> fallback roles for gobo, gobo rotation, color wheel, prism, iris, focus, zoom, and strobe/shutter.</li>
+                <li><strong>Cue Level:</strong> reserved for Device Control role-bank paging in live mode.</li>
+                <li><strong>Crossfader:</strong> reserved for Deck A/B scene blending in live mode.</li>
               </ul>
             </div>
 
@@ -905,7 +905,7 @@ Content-Type: application/json
 
             <div className={styles.section}>
               <h5>Pitch-bend</h5>
-              <p>Pitch-bend mappings are supported in both directions. The X-Touch template wires master and per-channel faders to pitch-bend by default; APC40 wires the crossfader to pitch-bend channel 1 as a fallback.</p>
+              <p>Pitch-bend mappings are supported in both directions. The X-Touch template wires master and per-channel faders to pitch-bend by default. APC40 live mode uses CC messages for its deck, fader, Device Control, Cue Level, and crossfader workflow.</p>
             </div>
           </div>
         );
@@ -914,7 +914,7 @@ Content-Type: application/json
         return (
           <div className={styles.tabContent}>
             <h4>🎛️ APC40 MK1 Live Integration</h4>
-            <p>The APC40 MK1 binds to ArtBastard automatically — no template apply required. SAVE mode (REC), crossfader pickers (PLAY/STOP), Super Control on every channel fader, ACTIVATOR/SOLO multi-select. Full button-by-button reference: <code>DOCS/APC40_CHEATSHEET.md</code>.</p>
+            <p>The APC40 MK1 binds to ArtBastard automatically — no template apply required. Clip Launch / Session View is Deck A, hold SHIFT for Deck B, Scene Launch fires ACTS, Record Arm saves scene slots, Device Control follows selected fixture roles, and the crossfader blends active Deck A/B scenes. Full button-by-button reference: <code>DOCS/APC40_CHEATSHEET.md</code>.</p>
 
             <div className={styles.section}>
               <h5>At a glance</h5>
@@ -923,88 +923,75 @@ Content-Type: application/json
                   <tr><th>Button</th><th>Function</th><th>LED</th></tr>
                 </thead>
                 <tbody>
-                  <tr><td><strong>Scene 1–5</strong></td><td>Launch scene (load DMX)</td><td>green = saved, red-blink = active, orange-blink = bound A/B</td></tr>
-                  <tr><td><strong>REC</strong></td><td>Toggle SAVE mode</td><td>red while armed</td></tr>
-                  <tr><td><strong>PLAY</strong></td><td>Toggle pick-Scene-A</td><td>green while armed</td></tr>
-                  <tr><td><strong>STOP</strong></td><td>Toggle pick-Scene-B</td><td>red while armed</td></tr>
-                  <tr><td><strong>SHIFT</strong></td><td>Cancel any active mode</td><td>orange while latched</td></tr>
-                  <tr><td><strong>TRACK SELECT 1–8</strong></td><td>Select fixture (or group) N</td><td>green when selected</td></tr>
-                  <tr><td><strong>ACTIVATOR 1–8</strong></td><td>Toggle fixture N in selection</td><td>red = selected, green = available</td></tr>
-                  <tr><td><strong>SOLO 1–8</strong></td><td>Collapse selection to fixture N</td><td>momentary</td></tr>
-                  <tr><td><strong>TRACK STOP / CLEAR</strong></td><td>Deselect all fixtures</td><td>n/a</td></tr>
+                  <tr><td><strong>Clip Grid 8x5</strong></td><td>Launch 40 Deck A scene slots</td><td>green = saved, orange-blink = active</td></tr>
+                  <tr><td><strong>SHIFT + Grid</strong></td><td>Launch/save 40 Deck B scene slots</td><td>SHIFT orange while held</td></tr>
+                  <tr><td><strong>Record Arm 1-8</strong></td><td>Arm column; next grid pad saves current deck slot</td><td>red on armed columns</td></tr>
+                  <tr><td><strong>Scene Launch 1-5</strong></td><td>Launch ACT 1-5</td><td>green = ACT exists, orange-blink = playing</td></tr>
+                  <tr><td><strong>Clip Stop row</strong></td><td>Stop/unselect the active scene for the current deck</td><td>red while deck scene active</td></tr>
+                  <tr><td><strong>Stop All Clips</strong></td><td>Stop Deck A/B scenes and ACT playback</td><td>red while active</td></tr>
+                  <tr><td><strong>TRACK SELECT 1-8</strong></td><td>Select fixture group N</td><td>green when selected</td></tr>
+                  <tr><td><strong>ACTIVATOR 1-8</strong></td><td>Toggle group auto control</td><td>orange-blink while active</td></tr>
+                  <tr><td><strong>SOLO/CUE 1-8</strong></td><td>Solo fixture N inside selected group</td><td>momentary</td></tr>
+                  <tr><td><strong>Master Select</strong></td><td>FULL ON latch; press again restores previous DMX</td><td>red while latched</td></tr>
                   <tr><td><strong>PAN</strong></td><td>Select all fixtures</td><td>n/a</td></tr>
                   <tr><td><strong>Nav ↑/↓</strong></td><td>Cycle fixtures</td><td>n/a</td></tr>
                   <tr><td><strong>Nav ←/→</strong></td><td>Cycle scenes</td><td>n/a</td></tr>
-                  <tr><td><strong>Crossfader</strong></td><td>Blend scene A ↔ scene B</td><td>n/a</td></tr>
-                  <tr><td><strong>Master fader</strong></td><td>Global dimmer over every fixture</td><td>n/a</td></tr>
+                  <tr><td><strong>Crossfader</strong></td><td>Blend active Deck A scene with active Deck B scene</td><td>n/a</td></tr>
+                  <tr><td><strong>Master fader</strong></td><td>SuperControl DIMMER/masterDimmer for selection</td><td>n/a</td></tr>
                 </tbody>
               </table>
             </div>
 
             <div className={styles.section}>
-              <h5>Workflow modes</h5>
-              <p>Arm a mode on REC / PLAY / STOP, then the next scene-pad tap consumes it. All five scene pads <strong>green-blink</strong> while a mode is armed.</p>
+              <h5>Deck save and launch</h5>
+              <p>Scene slot names are stable: <code>APC40 Deck A 01</code> through <code>APC40 Deck A 40</code>, and <code>APC40 Deck B 01</code> through <code>APC40 Deck B 40</code>.</p>
               <ul>
-                <li><strong>SAVE (REC):</strong> tap a pad to overwrite that slot (or fill it with <code>APC40 Scene N</code> if empty). Auto-exits after save.</li>
-                <li><strong>Pick A (PLAY):</strong> tap a saved scene pad → that scene becomes crossfader A. Empty pad → warning, mode stays armed.</li>
-                <li><strong>Pick B (STOP):</strong> same as pick-A but assigns crossfader B.</li>
-                <li>Tap the same transport button again — or hit SHIFT — to cancel without doing anything.</li>
+                <li>Leave SHIFT released for Deck A, or hold SHIFT for Deck B.</li>
+                <li>Press Record Arm for a column, then press a grid pad in that column to save current DMX into that deck slot.</li>
+                <li>Press a saved grid pad to launch it. Empty pads warn instead of capturing accidentally.</li>
               </ul>
             </div>
 
             <div className={styles.section}>
               <h5>Crossfade</h5>
-              <p>Once A and B are assigned (bound pads show orange-blink), move the crossfader: 0 = full A, 127 = full B. The blend writes directly to DMX channel-by-channel — it does not load either scene, so the active-scene indicator (red-blink) is untouched.</p>
+              <p>Launch one Deck A scene, then hold SHIFT and launch one Deck B scene. Crossfader 0 = full Deck A, 127 = full Deck B, and middle values blend DMX channel values linearly.</p>
             </div>
 
             <div className={styles.section}>
-              <h5>Multi-selection</h5>
+              <h5>Fixture groups and auto</h5>
               <ul>
-                <li><strong>TRACK SELECT</strong> column N — replace selection with fixture/group N.</li>
-                <li><strong>ACTIVATOR</strong> column N — toggle fixture N in/out of selection. The row's LEDs are the live "what is selected" indicator.</li>
-                <li><strong>SOLO</strong> column N — collapse selection to just fixture N.</li>
-                <li><strong>TRACK STOP</strong> / <strong>CLEAR</strong> — deselect all. <strong>PAN</strong> — select all.</li>
+                <li><strong>TRACK SELECT</strong> column N selects fixture group N.</li>
+                <li><strong>SOLO/CUE</strong> column N solos fixture N inside the selected group, and pressing it again restores the previous selection.</li>
+                <li><strong>ACTIVATOR</strong> column N toggles APC40 auto control for group N. It prefers gobo/effect/color-wheel/prism/strobe roles and falls back to dimmer breathe.</li>
               </ul>
             </div>
 
             <div className={styles.section}>
               <h5>Faders → Super Control</h5>
-              <p>Channel faders walk the current selection via <code>applySuperControlMidi</code>. Master fader writes every fixture's first dimmer/intensity/master channel directly — it ignores selection.</p>
+              <p>Channel faders walk the current selection via <code>applySuperControlMidi('dimmer', value, slotIndex)</code>. Master fader drives <code>masterDimmer</code> for the current selection.</p>
               <table>
-                <thead><tr><th>Fader</th><th>Control</th><th>Channel-type aliases</th></tr></thead>
+                <thead><tr><th>Fader</th><th>Control</th><th>Target</th></tr></thead>
                 <tbody>
-                  <tr><td>1</td><td>dimmer</td><td>dimmer, intensity, master</td></tr>
-                  <tr><td>2</td><td>pan</td><td>pan, p</td></tr>
-                  <tr><td>3</td><td>tilt</td><td>tilt, t</td></tr>
-                  <tr><td>4</td><td>red</td><td>red, r</td></tr>
-                  <tr><td>5</td><td>green</td><td>green, g</td></tr>
-                  <tr><td>6</td><td>blue</td><td>blue, b</td></tr>
-                  <tr><td>7</td><td>gobo</td><td>gobo, gobowheel, gobo_wheel</td></tr>
-                  <tr><td>8</td><td>strobe</td><td>strobe, shutter</td></tr>
+                  <tr><td>1-8</td><td>dimmer</td><td>Selected fixture slot 1-8</td></tr>
+                  <tr><td>Master</td><td>masterDimmer</td><td>Current selection DIMMER/intensity/master</td></tr>
                 </tbody>
               </table>
             </div>
 
             <div className={styles.section}>
-              <h5>LED legend (scene pads)</h5>
-              <ul>
-                <li><strong>off</strong> — empty slot</li>
-                <li><strong>green</strong> — saved scene</li>
-                <li><strong>green-blink</strong> — mode armed, tap me</li>
-                <li><strong>red-blink</strong> — scene is currently active (last loaded)</li>
-                <li><strong>orange-blink</strong> — scene is bound to crossfader A or B</li>
-              </ul>
-              <p>Active + bound shows red-blink (the load is the more recent state). Hot-plug is supported: the surface repaints in a single sweep.</p>
+              <h5>Device Control</h5>
+              <p>Device Control knobs resolve roles from the selected fixture/group, with gobo and visual-effect controls first: gobo, gobo rotation, color wheel, prism, iris, focus, zoom, strobe, macro, speed, then fine pan/tilt and color channels. Cue Level pages through extra role banks.</p>
             </div>
 
             <div className={styles.section}>
-              <h5>Things that <em>no longer</em> happen</h5>
+              <h5>LED legend</h5>
               <ul>
-                <li>Per-channel REC ARM (note 0x30) does <em>not</em> quick-capture a scene anymore — use transport REC + scene-pad tap.</li>
-                <li>PLAY no longer dispatches <code>artbastard:apc40-create-show</code>.</li>
-                <li>STOP no longer deselects all fixtures (use CLEAR or TRACK STOP).</li>
-                <li>SHIFT + scene-pad no longer assigns crossfader A/B (use PLAY / STOP modes).</li>
+                <li><strong>green</strong> — saved deck slot, saved ACT, or group exists</li>
+                <li><strong>green/red blink</strong> — record-armed grid column</li>
+                <li><strong>orange-blink</strong> — active deck scene, playing ACT, or active group auto</li>
+                <li><strong>red</strong> — Record Arm, Stop All, or FULL ON active</li>
               </ul>
+              <p>Hot-plug is supported: the surface repaints in a single sweep when an APC40 output appears.</p>
             </div>
           </div>
         );

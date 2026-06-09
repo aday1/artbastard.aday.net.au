@@ -5,16 +5,22 @@ export type Apc40Action =
   | { type: 'scene-launch'; model: Apc40Model; sceneIndex: number }
   | { type: 'track-select'; model: Apc40Model; trackIndex: number }
   | { type: 'track-stop'; model: Apc40Model; trackIndex: number }
-  | { type: 'multi-select-add'; model: Apc40Model; trackIndex: number }
-  | { type: 'multi-select-solo'; model: Apc40Model; trackIndex: number }
+  | { type: 'activator'; model: Apc40Model; trackIndex: number }
+  | { type: 'solo-cue'; model: Apc40Model; trackIndex: number }
+  | { type: 'record-arm'; model: Apc40Model; trackIndex: number }
   | { type: 'channel-fader'; model: Apc40Model; trackIndex: number; value: number }
   | { type: 'master-fader'; model: Apc40Model; value: number }
   | { type: 'crossfader'; model: Apc40Model; value: number }
+  | { type: 'device-control'; model: Apc40Model; slotIndex: number; value: number }
+  | { type: 'track-control'; model: Apc40Model; slotIndex: number; value: number }
+  | { type: 'cue-level'; model: Apc40Model; value: number }
+  | { type: 'master-button'; model: Apc40Model }
+  | { type: 'stop-all-clips'; model: Apc40Model }
   | { type: 'record'; model: Apc40Model }
   | { type: 'play'; model: Apc40Model }
   | { type: 'stop'; model: Apc40Model }
   | { type: 'clear-selection'; model: Apc40Model }
-  | { type: 'shift'; model: Apc40Model }
+  | { type: 'shift'; model: Apc40Model; pressed: boolean }
   | { type: 'nav-fixture'; model: Apc40Model; direction: 'next' | 'prev' }
   | { type: 'nav-scene'; model: Apc40Model; direction: 'next' | 'prev' }
   | { type: 'select-all'; model: Apc40Model };
@@ -24,6 +30,7 @@ export interface MidiLikeMessage {
   note?: number;
   velocity?: number;
   value?: number;
+  controller?: number;
   type?: string;
   _type?: string;
   source?: string;
@@ -41,6 +48,11 @@ function isButtonPress(message: MidiLikeMessage): boolean {
   return type === 'noteon' && (message.velocity ?? message.value ?? 0) > 0;
 }
 
+function isButtonRelease(message: MidiLikeMessage): boolean {
+  const type = message.type || message._type;
+  return type === 'noteoff' || (type === 'noteon' && (message.velocity ?? message.value ?? 0) === 0);
+}
+
 function isCcMessage(message: MidiLikeMessage): boolean {
   const type = message.type || message._type;
   return type === 'cc' || type === 'controlchange';
@@ -49,7 +61,7 @@ function isCcMessage(message: MidiLikeMessage): boolean {
 function getController(message: MidiLikeMessage): number | undefined {
   // Project uses `controller` (see useBrowserMidi.ts:155, MidiVisualizer.tsx:12);
   // fall back to `note`/`value` defensively.
-  const raw = (message as { controller?: number }).controller;
+  const raw = message.controller;
   if (raw !== undefined) return raw;
   return message.note;
 }
@@ -77,6 +89,15 @@ export function decodeApc40Message(message: MidiLikeMessage): Apc40Action | null
     if (controller === 0x07) {
       return { type: 'channel-fader', model, trackIndex, value };
     }
+    if (controller >= 0x10 && controller <= 0x17 && (message.channel ?? 0) === 0) {
+      return { type: 'device-control', model, slotIndex: controller - 0x10, value };
+    }
+    if (controller >= 0x30 && controller <= 0x37 && (message.channel ?? 0) === 0) {
+      return { type: 'track-control', model, slotIndex: controller - 0x30, value };
+    }
+    if (controller === 0x2f && (message.channel ?? 0) === 0) {
+      return { type: 'cue-level', model, value };
+    }
     if (controller === 0x0e && (message.channel ?? 0) === 0) {
       return { type: 'master-fader', model, value };
     }
@@ -86,22 +107,28 @@ export function decodeApc40Message(message: MidiLikeMessage): Apc40Action | null
     return null;
   }
 
-  if (!isButtonPress(message)) return null;
   const note = message.note;
   if (note === undefined) return null;
+
+  if (note === 0x62 && (isButtonPress(message) || isButtonRelease(message))) {
+    return { type: 'shift', model, pressed: isButtonPress(message) };
+  }
+
+  if (!isButtonPress(message)) return null;
 
   const scene = sceneLaunch(model, note);
   if (scene) return scene;
 
-  if (note === 0x31) return { type: 'multi-select-solo', model, trackIndex };
-  if (note === 0x32) return { type: 'multi-select-add', model, trackIndex };
+  if (note === 0x30) return { type: 'record-arm', model, trackIndex };
+  if (note === 0x31) return { type: 'solo-cue', model, trackIndex };
+  if (note === 0x32) return { type: 'activator', model, trackIndex };
+  if (note === 0x33 && (message.channel ?? 0) === 8) return { type: 'master-button', model };
   if (note === 0x33) return { type: 'track-select', model, trackIndex };
   if (note === 0x34) return { type: 'track-stop', model, trackIndex };
-  if (note === 0x51) return { type: 'clear-selection', model };
+  if (note === 0x51) return { type: 'stop-all-clips', model };
   if (note === 0x5b) return { type: 'play', model };
   if (note === 0x5c) return { type: 'stop', model };
   if (note === 0x5d || note === 0x66) return { type: 'record', model };
-  if (note === 0x62) return { type: 'shift', model };
   // Navigation cluster (Up / Down arrows → cycle fixtures,
   // Left / Right arrows → cycle scenes). Note numbers match APC40 MK1
   // hardware: Up=0x5E, Down=0x5F, Left=0x60, Right=0x61.

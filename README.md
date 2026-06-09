@@ -3,7 +3,7 @@
 ArtBastard is a TypeScript-based DMX lighting controller with a React
 frontend and Node / Socket.IO backend.
 
-Current package version: 5.2.0.0
+Current package version: 5.2.4.0
 
 ## Showcase
 
@@ -30,6 +30,16 @@ DOCS/SHOWCASE.md for details.
   active, selected, pinned, named, MIDI, and OSC channels available.
 - The active-channel tracker strip, envelope editor, and DMX transition pattern
   tracker can be toggled independently to keep the desk clear.
+
+### APC40 live controller refactor (v5.2.4.0)
+
+- APC40 Clip Launch / Session View is now Deck A scene slots 1-40; hold SHIFT
+  for independent Deck B slots 1-40.
+- Scene Launch buttons fire ACTS 1-5; Record Arm saves the next grid pad into
+  the current deck.
+- Device Control knobs follow selected fixture/group gobo, wheel, prism, focus,
+  zoom, strobe, and other DMX roles; Cue Level pages role banks.
+- Crossfader blends active Deck A and Deck B scenes; Master Select is FULL ON.
 
 ### Tracker columns and live theme (v5.15.0)
 

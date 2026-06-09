@@ -24,7 +24,7 @@ export const Apc40WorkflowPanel: React.FC = () => {
         <div>
           <span className={styles.stepKicker}>Remote control</span>
           <h3>Akai APC40 / APC40 mkII</h3>
-          <p>Plug it in, enable the MIDI input, then seed shows, select fixtures, and launch scenes without leaving the desk.</p>
+          <p>Plug it in, enable the MIDI input, then run Deck A/B scenes, ACTS, fixture groups, Super Control, and full-on from the surface.</p>
         </div>
         <div className={lastApcSource ? styles.apcStatusReady : styles.apcStatusIdle}>
           <LucideIcon name={lastApcSource ? 'Cable' : 'Unplug'} size={16} />
@@ -33,21 +33,21 @@ export const Apc40WorkflowPanel: React.FC = () => {
       </div>
 
       <div className={styles.apcMapGrid}>
-        <div title="Before a show exists, grid pads select fixture profile cards for the show map. After fixtures exist, grid pads toggle physical fixture selection.">
+        <div title="Clip Launch / Session View is the scene grid. Default is Deck A; hold SHIFT for Deck B.">
           <strong>Clip grid</strong>
-          <span>Select profiles before patching, then select fixtures 1-40</span>
+          <span>40 scene slots for Deck A, SHIFT for Deck B</span>
         </div>
         <div title="These buttons select group 1-8 when groups exist, otherwise fixture 1-8.">
           <strong>Track Select</strong>
-          <span>Select groups or the first eight fixtures</span>
+          <span>Select fixture groups 1-8</span>
         </div>
-        <div title="Scene launch buttons load scenes 1-5. Empty slots capture the current DMX state into that slot.">
+        <div title="Scene Launch buttons are ACT launchers. Stop All Clips stops scenes and ACT playback.">
           <strong>Scene Launch</strong>
-          <span>Load or capture scenes 1-5</span>
+          <span>Launch ACTS 1-5</span>
         </div>
-        <div title="Play commits the current show map. Record captures the current DMX state as a new scene. Stop clears fixture selection.">
-          <strong>Play / Record / Stop</strong>
-          <span>Create show, capture scene, clear selection</span>
+        <div title="Record Arm saves the next grid press into the current deck; faders and Device Control drive Super Control roles.">
+          <strong>Record / Super Control</strong>
+          <span>Record-arm deck slots, dimmers, gobo/effects</span>
         </div>
       </div>
 

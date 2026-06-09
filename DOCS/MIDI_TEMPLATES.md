@@ -54,23 +54,25 @@ channel name changes (rename, fixture template apply, scene capture).
 
 > **The APC40 has a dedicated live integration that runs without applying any
 > template — see [APC40_CHEATSHEET.md](APC40_CHEATSHEET.md) for the full
-> button-by-button reference (REC=SAVE mode, PLAY/STOP=crossfader pickers,
-> faders → Super Control, ACTIVATOR/SOLO multi-select, etc.).** The template
-> below remains available for backwards-compatible mappings.
+> button-by-button reference (grid=Deck A scenes, SHIFT+grid=Deck B scenes,
+> Scene Launch=ACTS, Record Arm=saves deck slots, crossfader=Deck A/B blend,
+> Device Control=gobo/effects roles).** The template below remains available
+> for backwards-compatible SuperControl mappings.
 
-The APC40 template assumes the device is in mode 0 (factory). Template mappings:
+The APC40 template assumes the device is in mode 0 (factory). Live APC40 mode
+intercepts the surface first; template mappings are fallback SuperControl
+bindings:
 
-- Pad grid (8x5): cells trigger the corresponding clip launcher cells.
-- Track buttons (8): SuperControl axis selection (R / G / B / W / Pan /
-  Tilt / Dimmer / Strobe).
-- Cue level knobs: SuperControl axis fine adjust.
-- Device knobs: master pan / tilt and master colour.
-- Crossfader: master brightness (alternative to MIDI Learn).
-- Scene buttons (5): trigger scene rows.
-- Stop / Play / Record: ACT triggers.
-
-Pitch-bend on MIDI channel 1 is also wired to master brightness for
-controllers that send pitch-bend on the crossfader.
+- Track faders 1-8: CC7 on MIDI channels 1-8 -> SuperControl dimmer for
+  selected fixture slot 1-8.
+- Master fader: CC14 on channel 1 -> SuperControl `masterDimmer`.
+- Device Control knobs CC16-23: fallback roles for gobo, gobo rotation,
+  color wheel, prism, iris, focus, zoom, and strobe/shutter.
+- Cue Level CC47 is reserved by live APC40 mode to page Device Control role
+  banks; it is not bound to gobo or fine pan.
+- Crossfader CC15 is reserved by live APC40 mode to blend Deck A and Deck B
+  scenes; it is not a SuperControl trim.
+- Scene Launch buttons are ACT launchers in live mode.
 
 When the live integration is active (default since v5.2.x), it intercepts
 the same notes/CCs **before** the template-mapped behavior runs, so the

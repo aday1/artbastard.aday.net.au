@@ -53,7 +53,116 @@ describe('APC40 workflow decoder', () => {
     });
   });
 
-  it('decodes transport play as the show-commit control', () => {
+  it('decodes record-arm, activator, solo, stop-all, and master-button rows', () => {
+    expect(decodeApc40Message({
+      _type: 'noteon',
+      source: 'Akai APC40',
+      channel: 4,
+      note: 0x30,
+      velocity: 127,
+    })).toEqual({
+      type: 'record-arm',
+      model: 'apc40-mk1',
+      trackIndex: 4,
+    });
+
+    expect(decodeApc40Message({
+      _type: 'noteon',
+      source: 'Akai APC40',
+      channel: 2,
+      note: 0x32,
+      velocity: 127,
+    })).toEqual({
+      type: 'activator',
+      model: 'apc40-mk1',
+      trackIndex: 2,
+    });
+
+    expect(decodeApc40Message({
+      _type: 'noteon',
+      source: 'Akai APC40',
+      channel: 1,
+      note: 0x31,
+      velocity: 127,
+    })).toEqual({
+      type: 'solo-cue',
+      model: 'apc40-mk1',
+      trackIndex: 1,
+    });
+
+    expect(decodeApc40Message({
+      _type: 'noteon',
+      source: 'Akai APC40',
+      channel: 0,
+      note: 0x51,
+      velocity: 127,
+    })).toEqual({
+      type: 'stop-all-clips',
+      model: 'apc40-mk1',
+    });
+
+    expect(decodeApc40Message({
+      _type: 'noteon',
+      source: 'Akai APC40',
+      channel: 8,
+      note: 0x33,
+      velocity: 127,
+    })).toEqual({
+      type: 'master-button',
+      model: 'apc40-mk1',
+    });
+  });
+
+  it('decodes device control, cue level, and shift press/release', () => {
+    expect(decodeApc40Message({
+      _type: 'cc',
+      source: 'Akai APC40',
+      channel: 0,
+      controller: 0x12,
+      value: 64,
+    })).toEqual({
+      type: 'device-control',
+      model: 'apc40-mk1',
+      slotIndex: 2,
+      value: 64,
+    });
+
+    expect(decodeApc40Message({
+      _type: 'cc',
+      source: 'Akai APC40',
+      channel: 0,
+      controller: 0x2f,
+      value: 32,
+    })).toEqual({
+      type: 'cue-level',
+      model: 'apc40-mk1',
+      value: 32,
+    });
+
+    expect(decodeApc40Message({
+      _type: 'noteon',
+      source: 'Akai APC40',
+      note: 0x62,
+      velocity: 127,
+    })).toEqual({
+      type: 'shift',
+      model: 'apc40-mk1',
+      pressed: true,
+    });
+
+    expect(decodeApc40Message({
+      _type: 'noteoff',
+      source: 'Akai APC40',
+      note: 0x62,
+      velocity: 0,
+    })).toEqual({
+      type: 'shift',
+      model: 'apc40-mk1',
+      pressed: false,
+    });
+  });
+
+  it('decodes transport play as a reserved transport control', () => {
     expect(decodeApc40Message({
       _type: 'noteon',
       source: 'Akai APC40',

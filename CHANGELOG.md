@@ -4,6 +4,23 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [5.2.4.0] - 2026-06-09 - APC40 Deck A/B live controller refactor
+
+### Added
+
+- APC40 Clip Launch / Session View is now a 40-slot Deck A scene grid.
+- Holding SHIFT switches the grid to an independent 40-slot Deck B scene grid.
+- APC40 Record Arm buttons arm columns; the next grid pad saves current DMX into the current Deck A/B scene slot.
+- APC40 Scene Launch buttons now launch ACTS 1-5.
+- APC40 crossfader blends the active Deck A scene with the active Deck B scene.
+- APC40 Device Control knobs resolve selected fixture/group DMX roles with gobo/effects priority; Cue Level pages role banks.
+- APC40 Activator buttons toggle per-group auto control, Solo/Cue isolates fixtures inside selected groups, and Master Select is a FULL ON latch.
+
+### Changed
+
+- Updated APC40 LED feedback, in-app graphical manual, fixture setup help, MIDI template docs, shortcuts, and rebuild references for the new surface layout.
+- APC40 fallback template no longer maps Cue Level or crossfader to SuperControl fine-pan/fine-tilt roles.
+
 ## [5.2.0.2] - 2026-06-08 - Gold standard release with improved discoverability
 
 ### Added

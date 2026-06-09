@@ -17,6 +17,17 @@ export interface SuperControlBinding extends MidiMapping {
     | 'green'
     | 'blue'
     | 'gobo'
+    | 'gobo_rotation'
+    | 'color_wheel'
+    | 'prism'
+    | 'iris'
+    | 'focus'
+    | 'zoom'
+    | 'macro'
+    | 'speed'
+    | 'white'
+    | 'amber'
+    | 'uv'
     | 'shutter'
     | 'strobe'
     | 'lamp'
@@ -70,24 +81,22 @@ const buildApc40SuperControlMappings = (): SuperControlBinding[] => {
     label: 'Master Fader → Master Dimmer',
   });
 
-  // Device knobs (top-right cluster, CC16-23 on ch0) → SuperControl params
+  // Device knobs (bottom-right Device Control cluster, CC16-23 on ch0)
+  // prefer visual fixture roles. The live APC40 hook can rotate these
+  // dynamically per selected fixture/group; these bindings are the fallback.
   const knobMap: Array<{ cc: number; controlName: SuperControlBinding['controlName']; label: string }> = [
-    { cc: 16, controlName: 'pan',     label: 'Device Knob 1 → Pan' },
-    { cc: 17, controlName: 'tilt',    label: 'Device Knob 2 → Tilt' },
-    { cc: 18, controlName: 'red',     label: 'Device Knob 3 → Red' },
-    { cc: 19, controlName: 'green',   label: 'Device Knob 4 → Green' },
-    { cc: 20, controlName: 'blue',    label: 'Device Knob 5 → Blue' },
-    { cc: 21, controlName: 'gobo',    label: 'Device Knob 6 → Gobo' },
-    { cc: 22, controlName: 'shutter', label: 'Device Knob 7 → Shutter' },
-    { cc: 23, controlName: 'strobe',  label: 'Device Knob 8 → Strobe' },
+    { cc: 16, controlName: 'gobo',          label: 'Device Knob 1 → Gobo' },
+    { cc: 17, controlName: 'gobo_rotation', label: 'Device Knob 2 → Gobo Rotate' },
+    { cc: 18, controlName: 'color_wheel',   label: 'Device Knob 3 → Color Wheel' },
+    { cc: 19, controlName: 'prism',         label: 'Device Knob 4 → Prism' },
+    { cc: 20, controlName: 'iris',          label: 'Device Knob 5 → Iris' },
+    { cc: 21, controlName: 'focus',         label: 'Device Knob 6 → Focus' },
+    { cc: 22, controlName: 'zoom',          label: 'Device Knob 7 → Zoom' },
+    { cc: 23, controlName: 'strobe',        label: 'Device Knob 8 → Strobe/Shutter' },
   ];
   knobMap.forEach(({ cc, controlName, label }) => {
     bindings.push({ controlName, channel: 0, controller: cc, label });
   });
-
-  // Crossfader → fine tilt; cue level → fine pan (handy for trim)
-  bindings.push({ controlName: 'fine_tilt', channel: 0, controller: 15, label: 'Crossfader → Fine Tilt' });
-  bindings.push({ controlName: 'fine_pan',  channel: 0, controller: 47, label: 'Cue Level Knob → Fine Pan' });
 
   return bindings;
 };
@@ -103,8 +112,8 @@ export const MIDI_CONTROLLER_TEMPLATES: MidiControllerTemplateDefinition[] = [
   {
     id: 'apc40_mk1',
     title: 'Akai APC40 MK1',
-    description: 'Drives SuperControl from the APC40: faders → per-fixture dimmer, knobs → pan/tilt/colour/gobo/shutter/strobe.',
-    details: 'Track faders 1-8 control the Nth selected fixture\'s dimmer. Master fader is master dimmer. Device knobs drive pan/tilt/RGB/gobo/shutter/strobe across the selection. Grid/scenes/transport keep their existing roles.',
+    description: 'Drives SuperControl from the APC40: faders → selected fixture dimmers, Device Control → gobo/effects/DMX roles.',
+    details: 'Live APC40 mode: grid = Deck A scenes, SHIFT+grid = Deck B scenes, Scene Launch = ACTS, Record Arm saves grid slots, crossfader blends Deck A/B, Device Control follows selected fixture roles. Template mappings are only the SuperControl fallback.',
     mappings: {},
     superControlMappings: buildApc40SuperControlMappings(),
   },

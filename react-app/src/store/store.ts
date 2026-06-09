@@ -625,12 +625,28 @@ interface State extends AutomationState, TransitionTrackerSlice {
     sceneAName: string | null;
     sceneBName: string | null;
     shiftLatched: boolean;
-    mode: 'save' | 'pickA' | 'pickB' | null;
+    mode: 'save' | null;
+    activeDeck: 'A' | 'B';
+    armedColumns: number[];
+    fullOn: boolean;
+    autoGroups: number[];
+    deviceRoleLabels: string[];
   };
   setApc40SceneA: (name: string | null) => void;
   setApc40SceneB: (name: string | null) => void;
   setApc40Shift: (latched: boolean) => void;
-  setApc40Mode: (mode: 'save' | 'pickA' | 'pickB' | null) => void;
+  setApc40Mode: (mode: 'save' | null) => void;
+  setApc40StatePatch: (patch: Partial<{
+    sceneAName: string | null;
+    sceneBName: string | null;
+    shiftLatched: boolean;
+    mode: 'save' | null;
+    activeDeck: 'A' | 'B';
+    armedColumns: number[];
+    fullOn: boolean;
+    autoGroups: number[];
+    deviceRoleLabels: string[];
+  }>) => void;
 
   // Audio/BPM State
   bpm: number // Current BPM value
@@ -1611,6 +1627,11 @@ export const useStore = create<State>()(
         sceneBName: null,
         shiftLatched: false,
         mode: null,
+        activeDeck: 'A',
+        armedColumns: [],
+        fullOn: false,
+        autoGroups: [],
+        deviceRoleLabels: [],
       },
       setApc40SceneA: (name) => set((state) => ({
         apc40CrossfaderState: { ...state.apc40CrossfaderState, sceneAName: name },
@@ -1623,6 +1644,9 @@ export const useStore = create<State>()(
       })),
       setApc40Mode: (mode) => set((state) => ({
         apc40CrossfaderState: { ...state.apc40CrossfaderState, mode },
+      })),
+      setApc40StatePatch: (patch) => set((state) => ({
+        apc40CrossfaderState: { ...state.apc40CrossfaderState, ...patch },
       })),
 
       // Audio/BPM State defaults
@@ -3412,8 +3436,19 @@ export const useStore = create<State>()(
           green: ['green', 'g'],
           blue: ['blue', 'b'],
           gobo: ['gobo', 'gobowheel', 'gobo_wheel'],
+          gobo_rotation: ['gobo_rotation', 'goborotation', 'gobo_rotate', 'gobo_spin'],
+          color_wheel: ['color_wheel', 'colour_wheel', 'colorwheel', 'colourwheel'],
+          prism: ['prism', 'prism_rotate', 'prism_rotation'],
+          iris: ['iris'],
+          focus: ['focus'],
+          zoom: ['zoom'],
+          macro: ['macro', 'program', 'pattern', 'effect', 'effects'],
+          speed: ['speed', 'rate', 'movement_speed', 'effect_speed'],
+          white: ['white', 'w'],
+          amber: ['amber', 'a'],
+          uv: ['uv', 'ultraviolet'],
           shutter: ['shutter'],
-          strobe: ['strobe'],
+          strobe: ['strobe', 'shutter'],
           lamp: ['lamp', 'lamp_on', 'lamp_control'],
           reset: ['reset', 'reset_control', 'function'],
         };
