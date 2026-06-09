@@ -1,4 +1,4 @@
-# ArtBastard Features (v5.2.0.0)
+# ArtBastard Features (v5.2.4.0)
 
 Feature inventory after the rebuild consolidation. Subsystem first, then
 notable shipped features.
@@ -8,7 +8,7 @@ notable shipped features.
 - 512-channel DMX universe control with fixture / group abstractions.
 - Art-Net output across multiple universes.
 - Real-time socket state synchronisation between backend and every
-  connected client (main app, external console, mobile surface). Multiple
+  connected client (desktop app and mobile surface). Multiple
   operators can work concurrently; one shared DMX universe is broadcast to
   all clients and to the active LAN bridge when connected.
 - LAN / Pi bridge (`bridge-agent/`): outbound WSS from a home-network host
@@ -102,20 +102,22 @@ ranges where low traffic warrants it.
 - ACT triggers: play, pause, stop, next, previous, toggle (act transport).
 - Ableton Link (via Pi bridge): shared BPM with Link peers; not Live transport.
 
-## Touch and external surfaces
+## Mobile and legacy surface aliases
 
-- External Console route (`#/external-console`).
 - Mobile Control Surface route (`#/mobile`).
 - Hash-based deep linking everywhere.
-- Experimental page tab deep-linking, including
-  `#/experimental?tab=touchosc`.
+- Current primary routes: `#/dmx-control`, `#/fixture`, `#/scenes-acts`,
+  `#/acts`, `#/mobile`, and `#/settings`.
+- Legacy aliases (`#/external-console`, `#/experimental`) resolve back to
+  `#/dmx-control` for compatibility and are not part of the current tour.
 
-## TouchOSC
+## OSC tablet workflows
 
-- Canonical TouchOSC XML generation path.
-- Export and upload workflow with upload status feedback.
-- Runtime endpoint for TouchOSC layout download.
-- TouchOSC workflow smoke test (`test:touchosc-workflow`).
+- OSC clients can drive SuperControl, scenes, ACT triggers, master controls,
+  fixtures, and direct DMX channels; see DOCS/OSC_REFERENCE.md.
+- Legacy TouchOSC XML generator code remains test-covered by
+  `test:touchosc-workflow`, but it is not a primary routed surface in
+  v5.2.4.0.
 
 ## MIDI and OSC
 

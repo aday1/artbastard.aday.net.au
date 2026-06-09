@@ -89,12 +89,16 @@ ensure_server
 capture_page "dmx-control" "${BASE_URL}/" "1600,1200"
 capture_page "fixture-page" "${BASE_URL}/#/fixture" "1600,1200"
 capture_page "scenes-acts-page" "${BASE_URL}/#/scenes-acts" "1600,1200"
+capture_page "acts-page" "${BASE_URL}/#/acts" "1600,1200"
 capture_page "mobile" "${BASE_URL}/#/mobile" "430,932"
+capture_page "settings-page" "${BASE_URL}/#/settings" "1600,1200"
 
 file \
   "${OUT_DIR}/dmx-control.png" \
   "${OUT_DIR}/fixture-page.png" \
   "${OUT_DIR}/scenes-acts-page.png" \
+  "${OUT_DIR}/acts-page.png" \
+  "${OUT_DIR}/settings-page.png" \
   "${OUT_DIR}/mobile.png" > "${OUT_DIR}/file-types.txt"
 
 echo "capture_output_dir:${OUT_DIR}"

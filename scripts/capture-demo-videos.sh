@@ -328,6 +328,7 @@ CLIPS=(
   "dmx-control|/|1280x720|12|sleep:2|pgdn:3|sleep:2|pgup:2"
   "fixture-page|/#/fixture|1280x720|12|sleep:3|pgdn:3|sleep:2|pgup:2"
   "scenes-acts|/#/scenes-acts|1280x720|12|sleep:3|pgdn:3|sleep:2|pgup:2"
+  "acts-page|/#/acts|1280x720|12|sleep:3|pgdn:3|sleep:2|pgup:2"
   "mobile|/#/mobile|430x932|10|sleep:3|pgdn:2|sleep:2"
   "settings-help|/#/settings|1280x720|12|sleep:3|pgdn:3|sleep:2|pgup:2"
 )

@@ -1,8 +1,8 @@
 # ArtBastard Documentation Index
 
-Reference set for v5.15.0 - Tracker Columns Edition. Reflects the
-state of the system after the rebuild consolidation (2026-02-27 onward)
-and the operator UI remaster (2026-05-16).
+Reference set for v5.2.4.0 - APC40 Deck A/B Edition. Reflects the
+state of the system after the APC40 scene deck refactor and showcase
+refresh on 2026-06-09.
 
 ## Start here
 
@@ -19,6 +19,7 @@ and the operator UI remaster (2026-05-16).
 ## Reference
 
 - MIDI_TEMPLATES.md - X-Touch Mackie + APC40 MK1 mapping reference.
+- APC40_CHEATSHEET.md - APC40 Deck A/B live controller reference.
 - OSC_REFERENCE.md  - SuperControl OSC address grid.
 - HISTORY.md        - theatrical project history.
 - ../AGENTS.md      - cloud-agent / dev-environment crib sheet.
@@ -28,21 +29,22 @@ and the operator UI remaster (2026-05-16).
 - SHOWCASE.md       - how the public showcase + demo reel are produced.
 - DEMO_RECORDING.txt - capturing screenshots and videos.
 - UI_UX_TOUR.txt    - per-screen action notes for the recorded tour.
-- ../website/videos/ - five WebM demo clips + JPG posters.
+- ../website/videos/ - six WebM demo clips + JPG posters.
 
 ## Release walkthrough
 
-The ordered demo reel is also embedded on the public showcase site and
-hosted with the v5.15.0 release. Tour order:
+The ordered demo reel is also embedded on the public showcase site.
+Tour order:
 
 1. DMX Control Home
 2. Fixture Setup and Super Control
-3. Scenes and Acts
-4. Mobile Control Surface
-5. Settings and In-App Help
+3. Scenes and Clip Launcher
+4. Acts Timeline
+5. Mobile Control Surface
+6. Settings and In-App Help
 
 Release page:
-https://github.com/aday1/artbastard.aday.net.au/releases/tag/v5.15.0
+https://github.com/aday1/artbastard.aday.net.au/releases/latest
 
 Public showcase:
 - Quick-jump hub: https://aday1.github.io/artbastard.aday.net.au/
@@ -68,7 +70,7 @@ preparing release artefacts.
 ## In-app help
 
 Inside the running app, open Settings > Help or press `Ctrl+H` from any
-page. The help overlay covers DMX basics, MIDI, OSC, TouchOSC, scenes,
-timeline, clip launcher, ACT triggers, controller templates, factory
-reset, mobile / external console, troubleshooting, keyboard shortcuts,
-and the printable PDF address sheet.
+page. The help overlay covers DMX basics, MIDI, OSC, APC40 live mode,
+scenes, timeline, clip launcher, ACT triggers, controller templates,
+factory reset, mobile surface, troubleshooting, keyboard shortcuts, and
+the printable PDF address sheet.

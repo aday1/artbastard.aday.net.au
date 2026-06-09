@@ -78,8 +78,9 @@ the server can reach Art-Net directly.
 
 ## Capture demo evidence (optional)
 
-The demo capture pipeline requires `Xvfb`, `ffmpeg`, `xdotool` and
-`google-chrome` on the host. The repo's CI / dev container ships them.
+The demo capture pipeline requires Chrome or Edge. Video capture also
+requires `ffmpeg`; set `CAPTURE_CHROME` or `CAPTURE_FFMPEG` if either
+binary is installed outside PATH.
 
 ```
 npm run demo:capture-screenshots
@@ -92,8 +93,8 @@ Outputs:
 - Screenshots: `/tmp/artbastard-demo-screenshots-<timestamp>/`
 - Videos: `website/videos/<name>.{webm,jpg}`
 
-The capture-videos pipeline launches the running backend (or starts one if
-none is reachable on `BASE_URL`), renders the routes in headed Chrome on a
-virtual X display, and encodes WebM clips with VP9. Adjust framerate /
-bitrate / clip list with the environment variables described in
+The capture pipeline launches the running backend (or starts one if none is
+reachable on `BASE_URL`), renders routes in headless Chrome/Edge through
+DevTools, and encodes WebM clips with VP9. Adjust framerate, bitrate, clip
+list, and tool paths with the environment variables described in
 DOCS/SHOWCASE.md.

@@ -26,7 +26,7 @@ Recommended order for a new session:
 3. Save baseline scenes from SuperControl.
 4. Open Scenes and Acts for timeline or clip workflows.
 5. Configure MIDI / OSC mappings or apply a controller template.
-6. Validate TouchOSC export / upload if you use a tablet desk.
+6. Validate tablet OSC mappings if you use a remote desk.
 
 ## Routes
 
@@ -35,16 +35,13 @@ Hash-based deep linking - bookmark any of these:
 - `#/dmx-control`
 - `#/fixture`
 - `#/scenes-acts`
-- `#/experimental`
-- `#/external-console`
+- `#/acts`
 - `#/mobile`
 - `#/settings`
 
-Experimental tab deep-link examples:
-
-- `#/experimental?tab=opencv`
-- `#/experimental?tab=osc`
-- `#/experimental?tab=touchosc`
+Legacy aliases such as `#/external-console` and `#/experimental` currently
+resolve back to `#/dmx-control`; they are not part of the current showcase
+tour.
 
 ## MIDI controller templates
 
@@ -66,16 +63,17 @@ Effects:
 
 Full mapping tables: DOCS/MIDI_TEMPLATES.md.
 
-## TouchOSC workflow
+## OSC tablet workflow
 
-1. Open `#/experimental?tab=touchosc`.
-2. Choose layout and channel count.
-3. Click Generate to produce the `.tosc` file.
-4. Click Upload to push it to the tablet over the network.
-5. Confirm the upload status badge.
-6. Download a copy from the runtime endpoint if needed.
+1. Use DOCS/OSC_REFERENCE.md for the current SuperControl, scene, ACT,
+   master, fixture, and channel addresses.
+2. Build the tablet surface in your OSC client of choice.
+3. Send test messages and watch the in-app OSC Monitor.
+4. Keep the tablet and ArtBastard host on the same reachable network.
 
-Smoke test: `npm run test:touchosc-workflow`.
+The legacy TouchOSC generator remains test-covered by
+`npm run test:touchosc-workflow`, but it is not a primary routed showcase
+surface in v5.2.4.0.
 
 ## Scene workflow
 
@@ -181,13 +179,14 @@ Build / start
 
 - Run `./start.sh --reset` or `.\start.ps1 -Reset` for a clean rebuild.
 - If `dist/server.js` is missing, run `npm run build` first.
-- Demo capture requires Xvfb + ffmpeg + xdotool + google-chrome.
+- Demo screenshots require Chrome or Edge; videos also require ffmpeg.
+  Use `CAPTURE_CHROME` / `CAPTURE_FFMPEG` when the tools are outside PATH.
 
 ## Producing demo artefacts
 
 ```
-npm run demo:capture-screenshots   # 7 PNGs of every major route
-npm run demo:capture-videos        # 8 WebM clips + JPG posters
+npm run demo:capture-screenshots   # 6 PNGs of every current primary route
+npm run demo:capture-videos        # 6 WebM clips + JPG posters
 npm run demo:evidence              # smoke tests + screenshots
 npm run demo:evidence-full         # smoke tests + screenshots + videos
 ```

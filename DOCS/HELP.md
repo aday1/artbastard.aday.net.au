@@ -30,8 +30,6 @@ Routes (hash-based, deep-linkable):
 - `#/fixture` - Fixture Setup + Advanced Fixture Control (SuperControl)
 - `#/scenes-acts` - Scenes and scene timelines
 - `#/acts` - Act timeline builder and ACT triggers
-- `#/experimental` - OpenCV tracker, OSC placeholder, TouchOSC export
-- `#/external-console` - Dedicated operator route
 - `#/mobile` - Touch-first phone surface
 - `#/settings` - Settings, including embedded Help
 
@@ -40,9 +38,9 @@ System requirements:
 - Node.js 20+
 - Modern browser (Chrome, Firefox, Edge, Safari)
 - USB DMX interface or Art-Net compatible device
-- Optional: MIDI controller, OSC client, TouchOSC tablet
+- Optional: MIDI controller, OSC client, tablet controller
 - Cloud + LAN: Raspberry Pi running `artbastard-bridge` if fixtures are on a
-  private network (see section 17)
+  private network (see section 15)
 
 ---
 
@@ -165,21 +163,17 @@ Address patterns:
 - `/fixture/[id]/brightness` - per-fixture brightness
 - `/fixture/[id]/color/[r,g,b]` - per-fixture RGB
 
-The full SuperControl OSC reference lives in DOCS/OSC_REFERENCE.md (also
-discoverable in-app via Experimental > OSC Placeholder).
+The full SuperControl OSC reference lives in DOCS/OSC_REFERENCE.md.
 
 ---
 
-## 6. TouchOSC Workflow
+## 6. OSC Tablet Workflow
 
-1. Open the Experimental page, TouchOSC tab
-   (`#/experimental?tab=touchosc`).
-2. Choose the layout style and channel count.
-3. Click Generate to produce the `.tosc` file.
-4. Click Upload to push it to your tablet over the network. Status
-   feedback appears next to the upload button.
-5. If you want a copy, hit Download or fetch it from the runtime endpoint.
-6. Smoke covered by `npm run test:touchosc-workflow`.
+1. Use the OSC address reference in DOCS/OSC_REFERENCE.md.
+2. Build the tablet layout in your OSC client of choice.
+3. Map SuperControl, scene, ACT, master, fixture, or direct channel addresses.
+4. Watch the in-app OSC Monitor while sending test messages.
+5. Keep the tablet and ArtBastard host on the same reachable network.
 
 ---
 
@@ -315,7 +309,7 @@ Full mapping tables live in DOCS/MIDI_TEMPLATES.md.
 
 ---
 
-## 12. Mobile & External Console
+## 12. Mobile Surface
 
 `#/mobile`:
 
@@ -323,14 +317,8 @@ Full mapping tables live in DOCS/MIDI_TEMPLATES.md.
 - Larger tap targets, one-thumb friendly chrome.
 - Disables the floating monitors by default to keep the surface clean.
 
-`#/external-console`:
-
-- Dedicated operator route for a second screen / lighting desk.
-- Uses the same scene and channel state as the main app.
-- Hash-based deep linking lets you bookmark a known good layout.
-
-Both routes share the canonical state, so changes in one reflect
-immediately in the other and in the main browser.
+The mobile route shares the canonical state, so changes on the phone
+reflect immediately in the desktop browser.
 
 ---
 
@@ -439,11 +427,6 @@ OSC
 - Messages not received: check the listening port, verify the firewall,
   use the OSC Monitor to confirm packets are arriving.
 
-TouchOSC
-
-- Upload fails: confirm the tablet IP is reachable, then try the runtime
-  endpoint download as a fallback.
-
 LAN / Pi Bridge
 
 - Bridge disconnected: token, Pi online, outbound HTTPS.
@@ -454,14 +437,14 @@ Build / start
 
 - `./start.sh --reset` for a clean rebuild.
 - If `dist/server.js` is missing, run `npm run build` first.
-- Demo capture requires Xvfb + ffmpeg + xdotool + google-chrome (already
-  installed in the project's dev container).
+- Demo screenshots require Chrome or Edge; videos also require ffmpeg.
+  Use `CAPTURE_CHROME` / `CAPTURE_FFMPEG` when the tools are outside PATH.
 
 ---
 
 ## 17. Video Tour
 
-Eight short WebM clips of every major surface live at
+Six short WebM clips of the current primary surfaces live at
 `website/videos/`. The showcase page embeds them with poster fallbacks
 and lazy load. Run `npm run demo:capture-videos` to regenerate from the
 running app.

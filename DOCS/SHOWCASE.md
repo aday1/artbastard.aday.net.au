@@ -3,9 +3,10 @@
 How the public showcase page is built, recorded, and deployed. Useful if you
 want to rebuild it locally, change the demo reel, or audit the deploy path.
 
-Last content refresh: 2026-05-19 (v5.15.0 feature grid: fixture-aware tracker,
-tracker channel columns, live theme tuning; six-clip Photonic Tour). Website
-feature grid mentions LAN / Pi bridge for cloud-hosted Art-Net on home LANs.
+Last content refresh: 2026-06-09 (v5.2.4.0 APC40 Deck A/B workflow,
+Record Arm scene saves, Device Control gobo roles, and six-clip Photonic
+Tour). Website feature grid mentions LAN / Pi bridge for cloud-hosted
+Art-Net on home LANs.
 
 Act timeline docs (transport vs BPM vs Link, gaps, editing): DOCS/ACT_TIMELINE.md
 and in-app Help → Act Timeline tab (mirrored in DOCS/HELP.md §8b).
@@ -31,16 +32,14 @@ node scripts/sync-docs-quotes.mjs
 
 ## How videos are produced
 
-`scripts/capture-demo-videos.sh` runs an Xvfb display, launches
-`google-chrome` against the live backend, and uses `ffmpeg`'s `x11grab`
-to record each route into VP9 WebM. Posters are extracted with
-`ffmpeg -vframes 1`.
+`scripts/capture-demo-media.mjs` launches Chrome or Edge through the
+DevTools protocol, renders each route against the live backend, captures
+JPEG frame sequences, and uses `ffmpeg` to encode VP9 WebM clips. Posters
+are copied from the first captured frame.
 
 The script:
 
-1. Pre-seeds a Chrome `Default/Preferences` JSON in a temporary user-data
-   dir granting `midi_sysex: 1` for the app origin so the consent popup
-   never appears.
+1. Starts `dist/server.js` if `BASE_URL` is not already healthy.
 2. Records each clip in the matrix (route, viewport, duration,
    interactions). Mobile clip uses 430x932; everything else 1280x720.
 3. Writes results to `website/videos/capture-results.txt` (gitignored).
@@ -55,15 +54,15 @@ Override behaviour with environment variables:
 
 | Variable                | Default       | Effect                                          |
 | ----------------------- | ------------- | ----------------------------------------------- |
-| `CAPTURE_FRAMERATE`     | 24            | Recording framerate                             |
+| `CAPTURE_FRAMERATE`     | 12            | Recording framerate                             |
 | `CAPTURE_VBITRATE`      | 800k          | VP9 target bitrate                              |
 | `CAPTURE_DURATION_SEC`  | per-clip      | Override every clip's duration                  |
 | `CAPTURE_CLIP_LIST`     | (empty)       | Comma list of clip names to render              |
-| `CAPTURE_DISPLAY_NUM`   | 99            | Xvfb display number                             |
-| `CAPTURE_KEEP_SERVER`   | 0             | If 1, do not start the backend, just expect it  |
+| `CAPTURE_CHROME`        | auto-detect   | Chrome/Edge executable path                     |
+| `CAPTURE_FFMPEG`        | auto-detect   | ffmpeg executable path                          |
+| `CAPTURE_BASE_URL`      | 127.0.0.1:3030| Backend URL                                     |
 
-The script requires `Xvfb`, `ffmpeg`, `xdotool`, `google-chrome`, and
-`curl` on PATH.
+Screenshots require Chrome/Edge. Videos require Chrome/Edge plus ffmpeg.
 
 ## Deploy path
 
@@ -115,9 +114,9 @@ URL goes in both `poster` neighbour and the `data-src` attribute that
 
 ## Notes
 
-- Total committed media in `website/videos/` is around 6 MB (six
-  clips). VP9 keeps it small enough that the GitHub Pages tarball
-  remains under the per-deploy quota.
+- Current committed tour media in `website/videos/` is about 3.5 MB
+  for six VP9 clips plus JPG posters. VP9 keeps it small enough that
+  the GitHub Pages tarball remains under the per-deploy quota.
 - The showcase should never link to GitHub raw URLs for the videos; the
   whole point of `website/videos/` is that the deployed site serves them
   directly with proper caching.

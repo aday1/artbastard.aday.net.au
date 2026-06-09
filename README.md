@@ -15,12 +15,12 @@ Current package version: 5.2.4.0
   - https://artbastard-dev.aday.net.au
 
 The showcase page hosts a "Photonic Tour" demo reel: six short WebM
-clips of every major surface (DMX Control, Fixture Setup, Scenes and
-Acts, Mobile, Settings and In-App Help). Recorded
+clips of every current primary surface (DMX Control, Fixture Setup,
+Scenes and Clip Launcher, Acts Timeline, Mobile, Settings and In-App Help). Recorded
 straight off the running app via `npm run demo:capture-videos`. See
 DOCS/SHOWCASE.md for details.
 
-## Current status (2026-05)
+## Current status (2026-06)
 
 ### Confirmed live/dev line (v5.2.0.0)
 
@@ -127,12 +127,13 @@ Ordered walkthrough labels:
 
 1. DMX Control Home
 2. Fixture Setup and Super Control
-3. Scenes and Acts
-4. Mobile Control Surface
-5. Settings and In-App Help
+3. Scenes and Clip Launcher
+4. Acts Timeline
+5. Mobile Control Surface
+6. Settings and In-App Help
 
 Release page:
-https://github.com/aday1/artbastard.aday.net.au/releases/tag/v5.15.0
+https://github.com/aday1/artbastard.aday.net.au/releases/latest
 
 ## Quick start
 
@@ -157,9 +158,9 @@ App URL: http://localhost:3030
 ## In-app help
 
 Press `Ctrl+H` from any page, or open Settings > Help. Covers DMX
-basics, MIDI / OSC setup, TouchOSC, scenes, timeline, clip launcher,
-ACT triggers, controller templates, factory reset, mobile / external
-console, troubleshooting, keyboard shortcuts, and the printable
+basics, MIDI / OSC setup, scenes, timeline, clip launcher,
+ACT triggers, controller templates, factory reset, mobile surface,
+troubleshooting, keyboard shortcuts, and the printable
 PDF address sheet. Offline mirror lives at DOCS/HELP.md.
 
 ## Useful scripts
@@ -183,6 +184,7 @@ PDF address sheet. Offline mirror lives at DOCS/HELP.md.
 - DOCS/HELP.md              - offline mirror of in-app help
 - DOCS/SHORTCUTS.md         - master keyboard shortcut reference
 - DOCS/MIDI_TEMPLATES.md    - X-Touch + APC40 mappings
+- DOCS/APC40_CHEATSHEET.md  - APC40 Deck A/B live controller reference
 - DOCS/OSC_REFERENCE.md     - SuperControl OSC address grid
 - DOCS/SHOWCASE.md          - how the showcase + demo reel are built
 - DOCS/HISTORY.md           - theatrical project history

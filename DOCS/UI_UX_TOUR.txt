@@ -19,38 +19,29 @@ Screen 02: Fixture Setup  (#/fixture)
   Advanced Fixture Control tab to drive SuperControl.
   Demo actions: switch tab, scroll fixture list.
 
-Screen 03: Scenes and Acts  (#/scenes-acts)
-  Focus: scene library, ACT triggers, scene timeline keyframes (DMX values),
-  optional act timeline (scene clips, gaps, playhead).
-  Demo actions: scroll, scrub scene timeline drag preview; if act editor open,
-  show clip drag, +2s gap, Sync to BPM hint (transport vs Link — see ACT_TIMELINE.md).
+Screen 03: Scenes and Clip Launcher  (#/scenes-acts)
+  Focus: scene library, clip launcher, APC40 scene slots, and scene
+  timeline keyframes (DMX values).
+  Demo actions: scroll and scrub the scene timeline drag preview.
 
-Screen 04: Experimental Lab  (#/experimental)
-  Focus: tab navigation between OpenCV, OSC placeholder, and
-  TouchOSC layouts.
-  Demo actions: cycle tabs.
+Screen 04: Acts Timeline  (#/acts)
+  Focus: dedicated act editor, scene clips, gaps, playhead, ACT transport,
+  Sync to BPM hints, and scheduled MIDI/OSC events.
+  Demo actions: scroll the act lanes and show gap / transport controls.
 
-Screen 05: TouchOSC Workflow  (#/experimental?tab=touchosc)
-  Focus: layout generator, upload pipeline, runtime download.
-  Demo actions: scroll the controls, hover the upload status badge.
-
-Screen 06: External Console  (#/external-console)
-  Focus: dedicated operator route, second-screen layout.
-  Demo actions: passive view; state mirrors the main app.
-
-Screen 07: Mobile Control Surface  (#/mobile)
+Screen 05: Mobile Control Surface  (#/mobile)
   Focus: touch-first 430x932 surface, simplified chrome, no floating
   monitors by default.
   Demo actions: scroll once or twice to show the layout adapting.
 
-Screen 08: Settings and In-App Help  (#/settings)
+Screen 06: Settings and In-App Help  (#/settings)
   Focus: theme system, network detection, embedded HelpOverlay tabs.
   Demo actions: scroll, switch help tabs (Overview, Timeline, MIDI,
   OSC, Shortcuts, Address Sheet).
 
 Release page:
-  https://github.com/aday1/ArtBastard-DMX512/releases/tag/v5.12.0
+  https://github.com/aday1/artbastard.aday.net.au/releases/latest
 Public showcase (quick-jump hub):
   https://aday1.github.io/artbastard.aday.net.au/
 Public showcase (full Photonic Tour):
-  https://aday1.github.io/artbastard.aday.net.au/website/
+  https://aday1.github.io/artbastard.aday.net.au/

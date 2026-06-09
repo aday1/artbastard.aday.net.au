@@ -64,8 +64,8 @@
     "test:api-contract": "npm run build-backend-fast && node scripts/api-contract-smoke.js",
     "test:bridge-smoke": "npm run build-backend-fast && node scripts/bridge-smoke.js",
     "build:bridge": "cd bridge-agent && npm ci && npm run build",
-    "demo:capture-screenshots": "bash scripts/capture-demo-screenshots.sh",
-    "demo:capture-videos": "bash scripts/capture-demo-videos.sh",
+    "demo:capture-screenshots": "node scripts/capture-demo-media.mjs screenshots",
+    "demo:capture-videos": "node scripts/capture-demo-media.mjs videos",
     "demo:evidence": "npm run test:api-contract && npm run demo:capture-screenshots",
     "demo:evidence-full": "npm run demo:evidence && npm run demo:capture-videos",
     "test:coverage": "cd react-app && npm run test:coverage"

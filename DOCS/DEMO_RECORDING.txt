@@ -12,18 +12,16 @@ release notes, and bug reports.
 - Start the backend (or let the capture scripts start it):
     node dist/server.js
   Server runs at http://localhost:3030 (or your configured port).
-- Required tools (already present in the project's dev container):
-    google-chrome        (or chromium)
-    Xvfb                 (X virtual framebuffer)
-    ffmpeg               (recording / encoding)
-    xdotool              (synthetic input for video interactions)
-    curl, jq, file       (helpers)
+- Required tools:
+    Chrome or Edge       (screenshots and videos)
+    ffmpeg               (videos only)
+  Set CAPTURE_CHROME or CAPTURE_FFMPEG when those binaries are not on PATH.
 
 ------------------------------------------------------------------
 2. Screenshots
 ------------------------------------------------------------------
 
-Capture seven still frames of every major route:
+Capture six still frames of every current primary route:
 
     npm run demo:capture-screenshots
 
@@ -31,13 +29,13 @@ Output: /tmp/artbastard-demo-screenshots-YYYYMMDD-HHMMSS/
 
 Routes captured:
     dmx-control, fixture-page, scenes-acts-page,
-    experimental-page, touchosc-page, external-console, mobile
+    acts-page, mobile, settings-page
 
 ------------------------------------------------------------------
 3. Videos
 ------------------------------------------------------------------
 
-Capture eight short WebM clips for the showcase demo reel:
+Capture six short WebM clips for the showcase demo reel:
 
     npm run demo:capture-videos
 
@@ -47,9 +45,7 @@ Clip matrix:
     dmx-control       1280x720  ~12s
     fixture-page      1280x720  ~12s
     scenes-acts       1280x720  ~12s
-    experimental      1280x720  ~10s
-    touchosc          1280x720  ~10s
-    external-console  1280x720  ~10s
+    acts-page         1280x720  ~12s
     mobile             430x932  ~10s
     settings-help     1280x720  ~12s
 
@@ -58,8 +54,9 @@ Tweak via environment variables (see DOCS/SHOWCASE.md):
     CAPTURE_VBITRATE         default 800k
     CAPTURE_DURATION_SEC     override per-clip
     CAPTURE_CLIP_LIST        comma list, e.g. dmx-control,mobile
-    CAPTURE_DISPLAY_NUM      default 99
-    CAPTURE_KEEP_SERVER      1 to skip auto-start of the backend
+    CAPTURE_CHROME           Chrome/Edge executable override
+    CAPTURE_FFMPEG           ffmpeg executable override
+    CAPTURE_BASE_URL         backend URL override
 
 ------------------------------------------------------------------
 4. Combined evidence

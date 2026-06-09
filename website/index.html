@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ArtBastard DMX512 v5.2.3.1 - Surface Symphony Edition</title>
-    <meta name="description" content="ArtBastard DMX512 v5.2.3.1 - APC40 deep integration, Roli Lightpad XY-pad path memory, fixture-aware transition tracker, live theme tuning, Super Control, scene timelines, MIDI templates, Art-Net, OSC, LAN bridge, mobile surface. Open source.">
+    <title>ArtBastard DMX512 v5.2.4.0 - APC40 Deck A/B Edition</title>
+    <meta name="description" content="ArtBastard DMX512 v5.2.4.0 - APC40 Deck A/B scene workflow, Record Arm scene saves, Device Control gobo roles, Roli Lightpad XY-pad path memory, fixture-aware transition tracker, live theme tuning, Super Control, scene timelines, MIDI templates, Art-Net, OSC, LAN bridge, mobile surface. Open source.">
     <link rel="stylesheet" href="theatrical.css">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="showcase-shell.css">
@@ -80,7 +80,7 @@
                     <span class="showcase-banner-sub">Academie des Illuminations Pretentieuses</span>
                     <h1 class="hero-title marquee-title">
                         <span class="gradient-text">ArtBastard</span>
-                        <span class="hero-subtitle">DMX512 v5.2.3.1 - Surface Symphony Edition</span>
+                        <span class="hero-subtitle">DMX512 v5.2.4.0 - APC40 Deck A/B Edition</span>
                     </h1>
                     <p class="tagline">Breath of Light Manuscripts // Photonic Supremacy</p>
                     <span class="tagline-secondary">Theatre des Photons // ruelle parisienne</span>
@@ -135,12 +135,12 @@
                             <span class="stat-label">DMX Channels</span>
                         </div>
                         <div class="stat">
-                            <span class="stat-number">8</span>
+                            <span class="stat-number">6</span>
                             <span class="stat-label">Demo Clips</span>
                         </div>
                         <div class="stat">
-                            <span class="stat-number">5.16</span>
-                            <span class="stat-label">Rack Doctrine</span>
+                            <span class="stat-number">5.2.4</span>
+                            <span class="stat-label">APC40 Decks</span>
                         </div>
                         <div class="stat">
                             <span class="stat-number">100%</span>
@@ -190,7 +190,7 @@
                         <div class="rack-module-header">
                             <span class="rack-screw rack-screw-tl" aria-hidden="true"></span>
                             <span class="rack-screw rack-screw-tr" aria-hidden="true"></span>
-                            <span class="rack-module-title">RACK DOCTRINE v5.2.3</span>
+                            <span class="rack-module-title">RACK DOCTRINE v5.2.4</span>
                         </div>
                         <div class="rack-module-body">
                             <p>
@@ -251,7 +251,7 @@
                 <h2 class="section-title">Photonic Tour - The Demo Reel</h2>
                 <p class="section-voice">Reel de demonstration // enregistre sans philistines</p>
                 <p class="section-subtitle">
-                    Short clips of every major surface in ArtBastard, recorded straight off the
+                    Six current clips of every major surface in ArtBastard, recorded straight off the
                     running app. Click any tile to play. Tiles load on demand, no autoplay.
                 </p>
                 <div class="video-grid">
@@ -278,8 +278,17 @@
                                poster="videos/scenes-acts.jpg" data-src="videos/scenes-acts.webm">
                         </video>
                         <figcaption>
-                            <strong>Scenes &amp; Acts</strong>
-                            <span>Scene capture, ACT triggers, timeline keyframes with DMX values.</span>
+                            <strong>Scenes &amp; Clip Launcher</strong>
+                            <span>Scene capture, timeline keyframes, clip launcher state, and APC40 scene slots.</span>
+                        </figcaption>
+                    </figure>
+                    <figure class="video-tile" data-video="videos/acts-page.webm" data-exhibit="Exhibit // ACT">
+                        <video controls preload="none" playsinline muted
+                               poster="videos/acts-page.jpg" data-src="videos/acts-page.webm">
+                        </video>
+                        <figcaption>
+                            <strong>Acts Timeline</strong>
+                            <span>ACT transport, scene clips, gaps, scheduled MIDI/OSC events, and show sequencing.</span>
                         </figcaption>
                     </figure>
                     <figure class="video-tile mobile" data-video="videos/mobile.webm" data-exhibit="Exhibit // TACTILE">
@@ -298,33 +307,6 @@
                         <figcaption>
                             <strong>Settings &amp; In-App Help</strong>
                             <span>Theme system, network detection, help overlay (also Ctrl+H).</span>
-                        </figcaption>
-                    </figure>
-                    <figure class="video-tile" data-video="videos/touchosc.webm" data-exhibit="Exhibit // OSC">
-                        <video controls preload="none" playsinline muted
-                               poster="videos/touchosc.jpg" data-src="videos/touchosc.webm">
-                        </video>
-                        <figcaption>
-                            <strong>TouchOSC Workflow</strong>
-                            <span>Export, map, and drive Super Control from a tablet OSC surface.</span>
-                        </figcaption>
-                    </figure>
-                    <figure class="video-tile" data-video="videos/external-console.webm" data-exhibit="Exhibit // CONSOLE">
-                        <video controls preload="none" playsinline muted
-                               poster="videos/external-console.jpg" data-src="videos/external-console.webm">
-                        </video>
-                        <figcaption>
-                            <strong>External Console</strong>
-                            <span>Second-screen operator layout for dedicated control stations.</span>
-                        </figcaption>
-                    </figure>
-                    <figure class="video-tile" data-video="videos/experimental.webm" data-exhibit="Exhibit // LAB">
-                        <video controls preload="none" playsinline muted
-                               poster="videos/experimental.jpg" data-src="videos/experimental.webm">
-                        </video>
-                        <figcaption>
-                            <strong>Experimental Surfaces</strong>
-                            <span>Prototype routes and experimental UI panels under active development.</span>
                         </figcaption>
                     </figure>
                 </div>
@@ -412,15 +394,14 @@
                     <div class="feature-card">
                         <div class="feature-icon">APC40</div>
                         <h3>APC40 MK1 Deep Integration</h3>
-                        <p>The full surface, alive. Launched scene <strong>red-blinks</strong>
-                            so you spot it across the room. <strong>ACTIVATOR</strong> row
-                            adds/removes fixtures from selection; <strong>SOLO</strong> collapses
-                            to one. Eight channel faders drive Super Control
-                            (dim, pan, tilt, R, G, B, gobo, strobe); master fader = global
-                            dimmer. Hold <strong>SHIFT</strong> + tap two scene pads to bind
-                            them to crossfader A/B, then the crossfader blends between the two
-                            scenes' DMX state. Track-select picks fixture groups; nav arrows
-                            cycle fixtures and scenes; PAN = select-all.</p>
+                        <p>The full surface, alive. Clip Launch / Session View is Deck A
+                            scene slots 1-40; hold <strong>SHIFT</strong> for Deck B.
+                            <strong>Record Arm</strong> saves the next grid pad into the
+                            current deck. Scene Launch fires ACTS 1-5, Clip Stop unselects
+                            scenes, and Stop All clears scenes and acts. Channel faders drive
+                            Super Control, Device Control follows selected fixture gobo/effect
+                            roles, Master Select toggles FULL ON, and the crossfader blends
+                            the active Deck A/B scenes.</p>
                     </div>
                     <div class="feature-card">
                         <div class="feature-icon">ROLI</div>
@@ -508,14 +489,14 @@
                             <code>http://localhost:3030</code>.</p>
                         <div class="download-buttons">
                             <a href="https://github.com/aday1/artbastard.aday.net.au/releases/latest" class="btn btn-primary btn-large">
-                                Download v5.2.3.1
+                                Download v5.2.4.0
                             </a>
                             <a href="https://github.com/aday1/artbastard.aday.net.au" target="_blank" rel="noopener" class="btn btn-secondary btn-large">
                                 View Source
                             </a>
                         </div>
                         <div class="version-info">
-                            <p>Latest Version: <span id="latest-version">v5.2.3.1</span> - Surface Symphony Edition</p>
+                            <p>Latest Version: <span id="latest-version">v5.2.4.0</span> - APC40 Deck A/B Edition</p>
                         </div>
                     </div>
                     <div class="install-steps">
@@ -562,7 +543,7 @@
                     </a>
                     <a href="DOCS/FEATURES.md" class="doc-card">
                         <h3>Features Guide</h3>
-                        <p>Full feature inventory by subsystem after the v5.2.3.1 release.</p>
+                        <p>Full feature inventory by subsystem after the v5.2.4.0 release.</p>
                     </a>
                     <a href="DOCS/FIXTURES.md" class="doc-card">
                         <h3>Fixture Setup</h3>
@@ -582,7 +563,7 @@
                     </a>
                     <a href="DOCS/APC40_CHEATSHEET.md" class="doc-card">
                         <h3>APC40 MK1 Cheatsheet</h3>
-                        <p>Live integration: SAVE mode, A/B crossfader pickers, Super Control faders, multi-select, LED legend.</p>
+                        <p>Live integration: Deck A/B grids, Record Arm scene saves, Device Control roles, FULL ON, LED legend.</p>
                     </a>
                     <a href="DOCS/OSC_REFERENCE.md" class="doc-card">
                         <h3>OSC Reference</h3>
@@ -632,7 +613,7 @@
                     "Light is not merely illumination &mdash; it is emotion made visible, dreams given form."
                 </p>
                 <p>
-                    &copy; 2026 ArtBastard DMX512 v5.2.3.1 - Surface Symphony Edition. MIT licensed.
+                    &copy; 2026 ArtBastard DMX512 v5.2.4.0 - APC40 Deck A/B Edition. MIT licensed.
                     <a href="DOCS/HISTORY.md">Chronicles</a>
                 </p>
             </div>

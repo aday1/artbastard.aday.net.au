@@ -1184,7 +1184,7 @@ GET    /api/factory-reset-check    # returns true once reset has occurred`}</cod
               <ul>
                 <li>Run <code>./start.sh --reset</code> or <code>.\start.ps1 -Reset</code> for a clean rebuild.</li>
                 <li>If <code>dist/server.js</code> is missing, run <code>npm run build</code> first.</li>
-                <li>Demo capture requires <code>Xvfb</code>, <code>ffmpeg</code>, <code>xdotool</code>, and <code>google-chrome</code>.</li>
+                <li>Demo screenshots require Chrome or Edge; videos also require <code>ffmpeg</code>. Use <code>CAPTURE_CHROME</code> / <code>CAPTURE_FFMPEG</code> when tools are outside PATH.</li>
               </ul>
             </div>
           </div>
@@ -1194,7 +1194,7 @@ GET    /api/factory-reset-check    # returns true once reset has occurred`}</cod
         return (
           <div className={styles.tabContent}>
             <h4>🎥 Video Tour</h4>
-            <p>Five short WebM clips of every major surface ship with the public showcase page. Embed them locally or stream from the live site.</p>
+            <p>Six short WebM clips of the current primary surfaces ship with the public showcase page. Embed them locally or stream from the live site.</p>
 
             <div className={styles.section}>
               <h5>Where</h5>
@@ -1210,7 +1210,8 @@ GET    /api/factory-reset-check    # returns true once reset has occurred`}</cod
               <ul>
                 <li>DMX Control Home</li>
                 <li>Fixture Setup &amp; SuperControl</li>
-                <li>Scenes &amp; Acts</li>
+                <li>Scenes &amp; Clip Launcher</li>
+                <li>Acts Timeline</li>
                 <li>Mobile Control Surface (430x932)</li>
                 <li>Settings &amp; In-App Help</li>
               </ul>
@@ -1218,7 +1219,7 @@ GET    /api/factory-reset-check    # returns true once reset has occurred`}</cod
 
             <div className={styles.section}>
               <h5>Regenerate</h5>
-              <p>Run <code>npm run demo:capture-videos</code> from the repo root. The pipeline uses Xvfb + ffmpeg + xdotool + google-chrome and writes WebM + JPG poster pairs into <code>website/videos/</code>. See <code>DOCS/SHOWCASE.md</code> for tunable env vars.</p>
+              <p>Run <code>npm run demo:capture-videos</code> from the repo root. The pipeline drives Chrome/Edge through DevTools, uses ffmpeg for WebM encoding, and writes WebM + JPG poster pairs into <code>website/videos/</code>. See <code>DOCS/SHOWCASE.md</code> for tunable env vars.</p>
             </div>
           </div>
         );
