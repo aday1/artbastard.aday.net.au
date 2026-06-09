@@ -35,6 +35,10 @@
     box-sizing: border-box;
 }
 
+html {
+    overflow-x: hidden;
+}
+
 body {
     font-family: 'JetBrains Mono', 'Share Tech Mono', monospace;
     background: var(--bg-primary);
@@ -42,6 +46,11 @@ body {
     line-height: 1.6;
     overflow-x: hidden;
     position: relative;
+}
+
+img,
+video {
+    max-width: 100%;
 }
 
 .particles {
@@ -319,7 +328,7 @@ body {
 
 .features-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
     gap: 2rem;
 }
 
@@ -531,6 +540,16 @@ body {
     align-items: start;
 }
 
+.download-content > *,
+.features-grid > *,
+.docs-grid > *,
+.tour-path > *,
+.video-grid > *,
+.reviews-grid > *,
+.quote-wall > * {
+    min-width: 0;
+}
+
 .download-info h3 {
     font-size: 2rem;
     margin-bottom: 1rem;
@@ -579,6 +598,7 @@ body {
     padding-left: 2.5rem;
     position: relative;
     color: var(--text-secondary);
+    overflow-wrap: anywhere;
 }
 
 .install-steps li::before {
@@ -605,7 +625,7 @@ body {
 
 .docs-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
     gap: 2rem;
 }
 
@@ -718,7 +738,7 @@ body {
 .tour-path {
     list-style: none;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
     gap: 0.75rem;
     margin: -1rem auto 2rem;
     max-width: 980px;
@@ -753,7 +773,7 @@ body {
 
 .video-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
     gap: 1.5rem;
 }
 
@@ -832,13 +852,17 @@ body {
 }
 
 .feature-card code,
-.docs-grid code {
+.docs-grid code,
+.download-info code,
+.install-steps code {
     background: var(--bg-secondary);
     padding: 0.1rem 0.4rem;
     border-radius: 4px;
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.9em;
     color: var(--accent);
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 /* Luminary aristocracy section */
@@ -1097,7 +1121,7 @@ body {
 
 .reviews-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
     gap: 1.25rem;
     margin-bottom: 2rem;
 }
@@ -1157,7 +1181,7 @@ body {
 
 .quote-wall {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
     gap: 1rem;
 }
 
@@ -1244,6 +1268,139 @@ body {
 
     .tour {
         padding: 4rem 0;
+    }
+}
+
+@media (max-width: 640px) {
+    .container {
+        width: 100%;
+        padding: 0 1rem;
+    }
+
+    .hero {
+        min-height: auto;
+        padding: 3rem 0 4rem;
+    }
+
+    .hero-description {
+        font-size: 1rem;
+        margin: 1.5rem 0 2rem;
+    }
+
+    .hero-actions {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 0.75rem;
+        margin-bottom: 2rem;
+    }
+
+    .btn,
+    .hero-actions .btn {
+        display: flex;
+        justify-content: center;
+        max-width: none;
+        width: 100%;
+        padding: 0.85rem 1rem;
+        text-align: center;
+        overflow-wrap: anywhere;
+    }
+
+    .hero-stats {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .stat-number {
+        font-size: 2rem;
+    }
+
+    .features,
+    .download,
+    .docs,
+    .luminary {
+        padding: 4rem 0;
+    }
+
+    .section-title {
+        margin-bottom: 2rem;
+    }
+
+    .section-subtitle {
+        margin: -1rem auto 2rem;
+    }
+
+    .feature-card,
+    .doc-card,
+    .install-steps,
+    .video-tile {
+        padding: 1rem;
+    }
+
+    .deploy-panel {
+        margin-top: 2rem;
+        padding: 1rem;
+        overflow-wrap: anywhere;
+    }
+
+    .deploy-row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .deploy-key {
+        margin-top: 0.35rem;
+    }
+
+    .hero-ticker,
+    .luminary-stage,
+    .breath-panel,
+    .rack-doctrine-panel,
+    .tour-note,
+    .feature-card,
+    .doc-card {
+        overflow-wrap: anywhere;
+    }
+
+    .luminary-toolbar {
+        align-items: stretch;
+    }
+
+    .luminary-toolbar button {
+        flex: 1 1 100%;
+    }
+
+    .luminary-meta {
+        margin-left: 0;
+        width: 100%;
+        text-align: center;
+    }
+
+    .video-tile.mobile video {
+        max-width: min(100%, 240px);
+    }
+
+    .footer-links {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.75rem 1rem;
+    }
+}
+
+@media (max-width: 380px) {
+    .container {
+        padding: 0 0.75rem;
+    }
+
+    .showcase-banner,
+    .tagline,
+    .tagline-secondary {
+        max-width: 100%;
+        white-space: normal;
+    }
+
+    .hero-stats {
+        grid-template-columns: 1fr;
     }
 }
 

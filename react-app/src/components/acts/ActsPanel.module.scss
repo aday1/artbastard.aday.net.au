@@ -103,8 +103,16 @@
     border-radius: 12px;
     padding: 20px;
 
+    .sectionTitleRow {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 15px;
+    }
+
     h3 {
-      margin: 0 0 15px 0;
+      margin: 0;
       font-size: 1.2rem;
       color: var(--text-color);
     }
@@ -232,6 +240,24 @@
           font-size: 1.2rem;
           color: var(--text-color);
           flex: 1;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .seedBadge {
+          display: inline-flex;
+          align-items: center;
+          min-height: 22px;
+          padding: 2px 8px;
+          border-radius: 999px;
+          background: rgba(245, 158, 11, 0.15);
+          color: var(--accent-color);
+          font-size: 0.68rem;
+          font-weight: 800;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
         }
 
         .actActions {
@@ -508,6 +534,13 @@
     .workflowStrip {
       grid-template-columns: repeat(2, minmax(0, 1fr));
       margin-bottom: 16px;
+    }
+
+    .createSection {
+      .sectionTitleRow {
+        align-items: stretch;
+        flex-direction: column;
+      }
     }
 
     .actsList {

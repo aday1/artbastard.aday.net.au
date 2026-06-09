@@ -491,6 +491,19 @@ export const HelpOverlay: React.FC<HelpOverlayProps> = ({ embedded = false }) =>
             </div>
 
             <div className={styles.section}>
+              <h5>✨ Smart Scene / ACT Seeds</h5>
+              <ul>
+                <li><strong>Seed Scenes:</strong> Available in Fixture Setup and Scenes &amp; Acts once fixtures exist</li>
+                <li><strong>Smart Starter 40:</strong> Fills one APC40 deck with color, wash, movement, gobo, strobe, and combo looks</li>
+                <li><strong>Smart A+B 80:</strong> Fills both APC40 decks with crossfader-friendly variants</li>
+                <li><strong>Automation:</strong> Optional timelines add slow/fast dimmer, color, movement, gobo, and strobe patterns when fixture roles support them</li>
+                <li><strong>Safety:</strong> Reseeding updates generated scenes only and never drives lamp, reset, function, mode, sound, or auto channels</li>
+                <li><strong>Seed ACTS:</strong> Available on the Acts page after scenes exist. Starter ACTS 5 fills the APC40 Scene Launch row; Performance ACTS 8 adds longer show sections.</li>
+                <li><strong>Scratch builds:</strong> Scene seeds and ACT seeds are optional. Handmade scenes and ACTS are preserved when reseeding.</li>
+              </ul>
+            </div>
+
+            <div className={styles.section}>
               <h5>🔄 Scene Recall</h5>
               <ul>
                 <li><strong>Manual Trigger:</strong> Click scene buttons in the interface</li>
@@ -767,6 +780,7 @@ export const HelpOverlay: React.FC<HelpOverlayProps> = ({ embedded = false }) =>
             <div className={styles.section}>
               <h5>Editing</h5>
               <ul>
+                <li><strong>Seed ACTS</strong> is optional and appears beside Create New Act after scenes exist. Generated ACTS can be edited, deleted, or ignored.</li>
                 <li><strong>Drag clips</strong> horizontally to set start time (not list order).</li>
                 <li><strong>Resize</strong> the right edge to change clip duration.</li>
                 <li><strong>Playhead:</strong> click the ruler or drag the red line to seek.</li>
@@ -804,6 +818,7 @@ export const HelpOverlay: React.FC<HelpOverlayProps> = ({ embedded = false }) =>
               <h5>Recommendations</h5>
               <ul>
                 <li>Build scene looks first; use acts to order scenes.</li>
+                <li>Use Starter ACTS 5 when you want quick APC40 Scene Launch 1-5 show sections.</li>
                 <li>Map spare pads to ACT triggers for the current show act.</li>
                 <li>Use OSC timeline events to start Live on a beat if needed.</li>
                 <li>Leave 1–3 s gaps between clips for fades.</li>
@@ -914,7 +929,7 @@ Content-Type: application/json
         return (
           <div className={styles.tabContent}>
             <h4>🎛️ APC40 MK1 Live Integration</h4>
-            <p>The APC40 MK1 binds to ArtBastard automatically — no template apply required. Clip Launch / Session View is Deck A, hold SHIFT for Deck B, Scene Launch fires ACTS, Record Arm saves scene slots, Device Control follows selected fixture roles, and the crossfader blends active Deck A/B scenes. Full button-by-button reference: <code>DOCS/APC40_CHEATSHEET.md</code>.</p>
+            <p>The APC40 MK1 binds to ArtBastard automatically — no template apply required. Clip Launch / Session View is Deck A, hold SHIFT for Deck B, Scene Launch fires ACTS, Record Arm saves scene slots, Device Control follows selected fixture roles, and the crossfader blends active Deck A/B scenes. Optional ACT seeds can fill Scene Launch 1-5 after scenes exist. Full button-by-button reference: <code>DOCS/APC40_CHEATSHEET.md</code>.</p>
 
             <div className={styles.section}>
               <h5>At a glance</h5>
@@ -950,6 +965,11 @@ Content-Type: application/json
                 <li>Press Record Arm for a column, then press a grid pad in that column to save current DMX into that deck slot.</li>
                 <li>Press a saved grid pad to launch it. Empty pads warn instead of capturing accidentally.</li>
               </ul>
+            </div>
+
+            <div className={styles.section}>
+              <h5>ACT seeds</h5>
+              <p>On the Acts page, Seed ACTS is optional and uses existing saved scenes. Starter ACTS 5 creates Color Warmup, Red Slow, Wash Fast, Gobo Texture, and Strobe Move 90 for Scene Launch 1-5. Performance ACTS 8 adds longer show-section templates. Reseeding refreshes generated ACTS only; handmade ACTS stay untouched.</p>
             </div>
 
             <div className={styles.section}>

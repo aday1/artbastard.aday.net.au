@@ -3,6 +3,7 @@ import { useStore, Act, ActStep } from '../../store';
 import { ActEditor } from './ActEditor';
 import { TimelineActEditor } from './TimelineActEditor';
 import { ActPlayer } from './ActPlayer';
+import { ActSeedButton } from './ActSeedButton';
 import { LucideIcon } from '../ui/LucideIcon';
 import styles from './ActsPanel.module.scss';
 
@@ -111,7 +112,10 @@ export const ActsPanel: React.FC = () => {
       <div className={styles.content}>
         {/* Create New Act */}
         <div className={styles.createSection}>
-          <h3>Create New Act</h3>
+          <div className={styles.sectionTitleRow}>
+            <h3>Create New Act</h3>
+            <ActSeedButton />
+          </div>
           <div className={styles.createForm}>
             <input
               type="text"
@@ -159,7 +163,12 @@ export const ActsPanel: React.FC = () => {
                   }}
                 >
                   <div className={styles.actHeader}>
-                    <h4>{act.name}</h4>
+                    <h4>
+                      {act.name}
+                      {act.seed?.generatedBy === 'artbastard-act-seeder' && (
+                        <span className={styles.seedBadge}>Seeded</span>
+                      )}
+                    </h4>
                     <div className={styles.actActions}>
                       <button
                         className={styles.editButton}

@@ -64,6 +64,26 @@ Deck scene names are stable and explicit:
 - Deck B slot 1: `APC40 Deck B 01`
 - Deck B slot 40: `APC40 Deck B 40`
 
+Use **Seed Scenes** after patching fixtures to fill these slots quickly:
+
+- **Smart Starter 40** fills one deck with fixture-aware looks like `Red Slow`,
+  `Wash Fast`, `Gobo Texture`, and `Strobe All Move 90`.
+- **Smart A+B 80** fills both decks with crossfader-friendly variants.
+- **Compact Starter 16** fills the first 16 slots only.
+- Optional automated timelines use safe fixture roles for dimmer pulses,
+  movement, color cycling, gobo rotation, and strobe movement.
+
+Generated scenes keep the APC40 slot names for live-mode compatibility, while
+the Scene Gallery displays the readable template label. Reseeding replaces only
+generated scenes; handmade slot scenes are skipped and kept.
+
+After scenes exist, use **Seed ACTS** in `#/acts` if you want optional ACTS for
+the APC40 Scene Launch row. **Starter ACTS 5** creates five ready-made ACTS
+mapped naturally to Scene Launch 1-5: Color Warmup, Red Slow, Wash Fast, Gobo
+Texture, and Strobe Move 90. **Performance ACTS 8** adds longer show-section
+ACTS. Reseeding refreshes generated ACTS only; handmade ACTS are kept. You can
+ignore ACT seeds completely when building a show from scratch.
+
 To save a scene:
 
 1. Choose the deck: leave SHIFT released for Deck A, hold SHIFT for Deck B.

@@ -192,6 +192,22 @@ Recall:
 - Trigger by OSC `/scene/trigger/<name>`
 - Set fade times if you want a soft transition
 
+Seed:
+
+- Add fixtures first, then use **Seed Scenes** in Fixture Setup or Scenes &
+  Acts.
+- **Smart Starter 40** fills Deck A or Deck B with ready-made looks such as
+  `Red Slow`, `Wash Fast`, `Gobo Texture`, and `Strobe All Move 90`.
+- **Smart A+B 80** fills both APC40 decks with crossfader-friendly variants.
+- **Compact Starter 16** creates a smaller set of essential scene slots.
+- Optional automated timelines add slow/fast dimmer, color, movement, gobo,
+  and strobe patterns when matching fixture roles exist.
+- Reseeding updates generated scenes only; handmade scenes are preserved.
+- After scenes exist, **Seed ACTS** can optionally create Starter ACTS 5 or
+  Performance ACTS 8 from those scenes. Reseeding updates generated ACTS only;
+  handmade ACTS are preserved.
+- Skip scene seeds, ACT seeds, or both whenever you want to build from scratch.
+
 Organise:
 
 - Use prefixes like `Verse_`, `Chorus_`, `Bridge_` for live shows.
@@ -230,6 +246,9 @@ gaps, MIDI/OSC lanes). Full reference: DOCS/ACT_TIMELINE.md.
 
 Editing:
 
+- **Seed ACTS** beside Create New Act is optional. Starter ACTS 5 creates five
+  ACTS for APC40 Scene Launch 1-5; Performance ACTS 8 adds longer show-section
+  templates. Generated ACTS can be edited, deleted, or ignored.
 - Drag a **clip** horizontally to change its **start time** (not list order).
 - Resize the right edge to change clip duration.
 - **+2s gap** (clip selected) shifts that clip and later clips later.
@@ -282,7 +301,8 @@ OSC examples: `/act/play`, `/act/pause`, `/act/stop`, `/act/next`,
 Pause + play resumes from the same offset. For bar-aligned act length, use
 **Sync to BPM** on the act plus app BPM or Ableton Link (DOCS/ACT_TIMELINE.md).
 
-ACTs work alongside scene timelines, act timelines, and the clip launcher.
+ACTs work alongside scene timelines, act timelines, optional ACT seeds, and the
+clip launcher.
 
 ---
 
@@ -292,7 +312,7 @@ Apply factory-tuned MIDI mappings in one click. Two templates ship today:
 
 - Behringer X-Touch (Mackie mode) - faders, pan, encoders, scribble strip
   SysEx labelling.
-- Akai APC40 MK1 - Deck A/B scene grid, ACT launch buttons, Record Arm scene saves, Device Control gobo/effects roles.
+- Akai APC40 MK1 - Deck A/B scene grid, ACT launch buttons, optional ACT seeds for Scene Launch 1-5, Record Arm scene saves, Device Control gobo/effects roles.
 
 Apply via UI (Settings > MIDI > Apply Template) or via REST:
 

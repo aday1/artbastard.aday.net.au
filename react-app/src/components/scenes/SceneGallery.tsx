@@ -11,6 +11,7 @@ import { HorizontalFader } from '../ui/controls';
 import { SceneChannelValueEditor } from './SceneChannelValueEditor';
 import styles from './SceneGallery.module.scss'
 import { useSceneCapture } from '../../hooks/useSceneCapture'
+import { SceneSeedButton } from './SceneSeedButton'
 
 export const SceneGallery: React.FC = () => {
   const { theme } = useTheme()
@@ -345,6 +346,8 @@ export const SceneGallery: React.FC = () => {
               {theme === 'standard' && 'Quick Save'}
               {theme === 'minimal' && 'Quick Save'}
             </button>
+
+            <SceneSeedButton className={styles.seedAction} />
           </div>
         </div>
       </div>
@@ -534,7 +537,14 @@ export const SceneGallery: React.FC = () => {
                 </div>
               ) : (
                 <>
-                  <h4>{scene.name}</h4>
+                  <div className={styles.sceneTitleBlock}>
+                    <h4>{scene.seed?.label || scene.name}</h4>
+                    {scene.seed && (
+                      <span className={styles.seedSlotLabel}>
+                        {scene.name}{scene.seed.automated ? ' · automated' : ''}
+                      </span>
+                    )}
+                  </div>
                   <div className={styles.sceneControls}>
                     <button
                       className={`${styles.autoToggleButton} ${isSceneInAutoList(scene.name) ? styles.inAutoPlay : ''}`}

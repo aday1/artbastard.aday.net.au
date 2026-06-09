@@ -657,7 +657,7 @@
     min-height: 46px;
   }
 
-  .showPlanActions button {
+  .showPlanActions > button {
     flex: 1 1 96px;
     justify-content: center;
     min-height: 44px;
@@ -701,7 +701,7 @@
   flex-wrap: wrap;
   gap: 0.45rem;
 
-  button {
+  > button {
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
@@ -718,6 +718,10 @@
       cursor: not-allowed;
     }
   }
+}
+
+.showSeedButton {
+  align-self: stretch;
 }
 
 .createShowButton {

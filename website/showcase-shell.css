@@ -176,7 +176,7 @@
 
 .docs-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
     gap: 1rem;
     margin-top: 0.75rem;
 }
@@ -231,5 +231,38 @@
     .showcase-nav .nav-links a,
 .showcase-nav-links a {
         font-size: 0.65rem;
+    }
+}
+
+@media (max-width: 640px) {
+    .showcase-nav,
+    .navbar.theatre-nav {
+        position: sticky;
+        padding: 0.55rem 0;
+    }
+
+    .showcase-nav .container,
+    .showcase-nav-inner {
+        justify-content: center;
+        padding: 0 0.75rem;
+    }
+
+    .showcase-nav-brand {
+        justify-content: center;
+        width: 100%;
+        font-size: 1.1rem;
+    }
+
+    .showcase-nav-links {
+        justify-content: center;
+        gap: 0.3rem 0.55rem;
+        width: 100%;
+    }
+
+    .showcase-nav .nav-links a,
+    .showcase-nav-links a {
+        font-size: 0.58rem;
+        line-height: 1.25;
+        padding: 0.15rem 0.2rem;
     }
 }

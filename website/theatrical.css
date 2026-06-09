@@ -503,6 +503,15 @@ body.theatre-body .hero-title {
     .curtain-label {
         display: none;
     }
+
+    .footlights-label {
+        left: 0.75rem;
+        right: 0.75rem;
+        max-width: calc(100vw - 1.5rem);
+        transform: none;
+        text-align: center;
+        white-space: normal;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ArtBastard DMX512 v5.2.4.0 - APC40 Deck A/B Edition</title>
-    <meta name="description" content="ArtBastard DMX512 v5.2.4.0 - APC40 Deck A/B scene workflow, Record Arm scene saves, Device Control gobo roles, Roli Lightpad XY-pad path memory, fixture-aware transition tracker, live theme tuning, Super Control, scene timelines, MIDI templates, Art-Net, OSC, LAN bridge, mobile surface. Open source.">
-    <link rel="stylesheet" href="theatrical.css">
-    <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="showcase-shell.css">
+    <meta name="description" content="ArtBastard DMX512 v5.2.4.0 - APC40 Deck A/B scene workflow, optional fixture-aware scene and ACT seed templates, Record Arm scene saves, Device Control gobo roles, Roli Lightpad XY-pad path memory, fixture-aware transition tracker, live theme tuning, Super Control, scene timelines, MIDI templates, Art-Net, OSC, LAN bridge, mobile surface. Open source.">
+    <link rel="stylesheet" href="theatrical.css?v=20260609-mobile">
+    <link rel="stylesheet" href="styles.css?v=20260609-mobile">
+    <link rel="stylesheet" href="showcase-shell.css?v=20260609-mobile">
     <style>
         .theatre:not(.is-open) .curtain-l,
         .theatre:not(.is-open) .curtain-r { width: calc(50% + 1px); }
@@ -100,9 +100,10 @@
                     <p class="hero-description">
                         <em>Elite illumination control for the discerning luminaire artist.</em><br>
                         512 channels per universe, Art-Net output, MIDI Learn with controller templates,
-                        two-way OSC, scene timelines, a clip launcher, and one Super Control engine
-                        across desktop and mobile. Cloud hosting with an optional Raspberry Pi LAN bridge
-                        for home Art-Net and Ableton Link. Open source, MIT.
+                        two-way OSC, scene timelines, a clip launcher, optional fixture-aware scene
+                        and ACT seed templates, and one Super Control engine across desktop and mobile.
+                        Cloud hosting with an optional Raspberry Pi LAN bridge for home Art-Net and
+                        Ableton Link. Open source, MIT.
                     </p>
                     <div class="hero-actions">
                         <a href="https://artbastard.aday.net.au/" class="btn btn-live">Try it live</a>
@@ -377,6 +378,16 @@
                         <p>Save and recall scenes; sequence them in the <strong>act timeline</strong>
                             (clips, gaps, scheduled MIDI/OSC). ACT triggers start/stop acts via
                             MIDI or OSC — separate from Ableton Link tempo sync.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">SEED</div>
+                        <h3>Optional Show Starters</h3>
+                        <p>After fixtures are patched, Seed Scenes can fill APC40 Deck A/B slots with
+                            fixture-aware looks such as red slow, wash fast, gobo texture, dimmer pulse,
+                            color cycles, strobe, and movement. Seed ACTS can then build Starter ACTS 5
+                            or Performance ACTS 8 from those scenes. Generated content is tagged so
+                            reseeding refreshes only ArtBastard-made scenes and ACTS; handmade show work
+                            stays untouched.</p>
                     </div>
                     <div class="feature-card">
                         <div class="feature-icon">SCENE</div>

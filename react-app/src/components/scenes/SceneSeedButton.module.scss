@@ -1,0 +1,131 @@
+.seedRoot {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+}
+
+.seedButton,
+.applyButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 44px;
+  padding: 0.7rem 0.9rem;
+  border: 0;
+  border-radius: var(--border-radius);
+  background: var(--color-primary);
+  color: #f8fafc;
+  cursor: pointer;
+  font-weight: 700;
+
+  &:hover:not(:disabled) {
+    filter: brightness(1.06);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+}
+
+.seedPanel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.5rem);
+  z-index: 40;
+  display: grid;
+  gap: 0.75rem;
+  width: min(22rem, calc(100vw - 2rem));
+  padding: 1rem;
+  border: 1px solid var(--color-card-border);
+  border-radius: var(--border-radius);
+  background: var(--color-card-bg);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.32);
+
+  label {
+    display: grid;
+    gap: 0.35rem;
+    font-weight: 700;
+  }
+
+  select {
+    min-height: 40px;
+    padding: 0.45rem 0.55rem;
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--border-radius);
+    background: var(--color-card-bg);
+    color: var(--color-text);
+  }
+
+  p {
+    margin: 0;
+    color: var(--color-secondary);
+    font-size: 0.9rem;
+    line-height: 1.45;
+  }
+}
+
+.seedHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--border-radius);
+    background: transparent;
+    color: var(--color-text);
+    cursor: pointer;
+  }
+}
+
+.checkRow {
+  display: flex !important;
+  grid-template-columns: none !important;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.55rem !important;
+
+  input {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.applyButton {
+  width: 100%;
+  background: var(--color-secondary);
+}
+
+.seedSummary {
+  color: var(--color-secondary);
+  font-size: 0.85rem;
+}
+
+.compact {
+  .seedButton {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .seedRoot {
+    width: 100%;
+  }
+
+  .seedButton {
+    width: 100%;
+  }
+
+  .seedPanel {
+    left: 0;
+    right: auto;
+  }
+}

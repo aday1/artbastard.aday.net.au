@@ -5,9 +5,10 @@ want to rebuild it locally, change the operator videos, or audit the deploy
 path.
 
 Last content refresh: 2026-06-09 (v5.2.4.0 APC40 Deck A/B workflow,
-Record Arm scene saves, Device Control gobo roles, Roli Lightpad LED drawing,
-and six-clip operator how-to tour). Website feature grid mentions LAN / Pi
-bridge for cloud-hosted Art-Net on home LANs.
+optional fixture-aware scene and ACT seed templates, Record Arm scene saves,
+Device Control gobo roles, Roli Lightpad LED drawing, mobile showcase layout,
+and six-clip operator how-to tour). Website feature grid mentions the seed
+workflow plus LAN / Pi bridge for cloud-hosted Art-Net on home LANs.
 
 Act timeline docs (transport vs BPM vs Link, gaps, editing): DOCS/ACT_TIMELINE.md
 and in-app Help → Act Timeline tab (mirrored in DOCS/HELP.md §8b).

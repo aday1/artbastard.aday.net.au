@@ -3,6 +3,7 @@ import axios from 'axios';
 import { type Group, useStore } from '../../store';
 import useStoreUtils from '../../store/storeUtils';
 import { LucideIcon } from '../ui/LucideIcon';
+import { SceneSeedButton } from '../scenes/SceneSeedButton';
 import {
   buildShowPatchPlan,
   formatPatchCsv,
@@ -605,6 +606,7 @@ export const ShowBuilderPanel: React.FC = () => {
               <LucideIcon name="Wand2" size={16} />
               {isCreating ? 'Creating...' : 'Create Show'}
             </button>
+            <SceneSeedButton className={styles.showSeedButton} />
           </div>
         </div>
 

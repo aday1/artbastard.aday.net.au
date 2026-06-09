@@ -135,6 +135,10 @@
   }
 }
 
+.seedAction {
+  flex: 1;
+}
+
 .quickSaveButton {
   display: flex;
   align-items: center;
@@ -284,6 +288,18 @@
     font-size: 1.1rem;
     font-weight: 600;
   }
+}
+
+.sceneTitleBlock {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.seedSlotLabel {
+  color: var(--color-secondary);
+  font-size: 0.78rem;
+  line-height: 1.25;
 }
 
 .sceneControls {

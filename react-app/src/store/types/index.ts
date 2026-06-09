@@ -96,6 +96,16 @@ export interface Scene {
   channelValues: number[];
   oscAddress: string;
   timeline?: SceneTimeline;
+  seed?: {
+    generatedBy: 'artbastard-scene-seeder';
+    generatorVersion: number;
+    packId: 'compact-starter' | 'smart-starter-40' | 'smart-ab-80';
+    templateId: string;
+    deck: 'A' | 'B';
+    slot: number;
+    label: string;
+    automated: boolean;
+  };
 }
 
 export interface SceneTimelineKeyframe {
@@ -245,6 +255,14 @@ export interface Act {
   createdAt: number;
   updatedAt: number;
   channelLanes?: Record<number, { muted: boolean; soloed: boolean }>;
+  seed?: {
+    generatedBy: 'artbastard-act-seeder';
+    generatorVersion: number;
+    packId: 'starter-acts' | 'performance-acts';
+    templateId: string;
+    slot: number;
+    label: string;
+  };
 }
 
 export interface ActPlaybackState {

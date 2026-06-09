@@ -36,6 +36,16 @@ import { sceneNameToOscPath } from '../utils/sceneCapture'
 import { debugLog } from '../utils/debugLog'
 import { shouldUseTouchOptimizedChrome } from '../utils/deviceSurface'
 import {
+  generateSeededSceneList,
+  type SceneSeedOptions,
+  type SceneSeedSummary,
+} from '../scenes/sceneSeedGenerator'
+import {
+  generateSeededActList,
+  type ActSeedOptions,
+  type ActSeedSummary,
+} from '../acts/actSeedGenerator'
+import {
   getTemplateById,
   type SuperControlBinding,
 } from '../components/midi/midiControllerTemplates'
@@ -276,6 +286,16 @@ export interface Scene {
   modularAutomation?: ModularAutomationState;
   // New: Optional timeline for animated scenes
   timeline?: SceneTimeline;
+  seed?: {
+    generatedBy: 'artbastard-scene-seeder';
+    generatorVersion: number;
+    packId: 'compact-starter' | 'smart-starter-40' | 'smart-ab-80';
+    templateId: string;
+    deck: 'A' | 'B';
+    slot: number;
+    label: string;
+    automated: boolean;
+  };
 }
 
 export interface ArtNetConfig {
@@ -462,6 +482,14 @@ export interface Act {
   }>;
   // Timeline markers/cues for navigation
   markers?: TimelineMarker[];
+  seed?: {
+    generatedBy: 'artbastard-act-seeder';
+    generatorVersion: number;
+    packId: 'starter-acts' | 'performance-acts';
+    templateId: string;
+    slot: number;
+    label: string;
+  };
 }
 
 export interface ActPlaybackState {
@@ -976,11 +1004,13 @@ interface State extends AutomationState, TransitionTrackerSlice {
   updateScene: (originalName: string, updates: Partial<Scene>) => void; // New action for updating scenes
   setTuningScene: (name: string | null) => void;
   updateActiveScene: () => void; // Save current DMX values to the active scene
+  seedScenesFromFixtures: (options?: Partial<SceneSeedOptions>) => Promise<SceneSeedSummary>;
 
   // ACTS Actions
   createAct: (name: string, description?: string) => void
   updateAct: (actId: string, updates: Partial<Act>) => void
   deleteAct: (actId: string) => void
+  seedActsFromScenes: (options?: Partial<ActSeedOptions>) => Promise<ActSeedSummary>;
   addActStep: (actId: string, step: Omit<ActStep, 'id'>) => void
   updateActStep: (actId: string, stepId: string, updates: Partial<ActStep>) => void
   removeActStep: (actId: string, stepId: string) => void
@@ -3971,7 +4001,85 @@ export const useStore = create<State>()(
           })
       },
 
+      seedScenesFromFixtures: async (options = {}) => {
+        const { fixtures, scenes } = get();
+        const result = generateSeededSceneList(fixtures, scenes, options);
+
+        if (result.disabledReason) {
+          get().addNotification({
+            message: result.disabledReason,
+            type: 'info',
+            priority: 'normal',
+          });
+          return result;
+        }
+
+        set({ scenes: result.scenes });
+
+        try {
+          await axios.post('/api/scenes', result.scenes);
+          const capabilityText = result.capabilities.length
+            ? ` using ${result.capabilities.join(', ')}`
+            : '';
+          get().addNotification({
+            message: `Seeded ${result.generatedScenes.length} scene slots${capabilityText}`,
+            type: 'success',
+            priority: 'normal',
+          });
+        } catch (error) {
+          console.error('Failed to save seeded scenes:', error);
+          get().addNotification({
+            message: 'Seeded scenes locally, but server save failed',
+            type: 'warning',
+            priority: 'high',
+          });
+        }
+
+        if (result.skipped > 0) {
+          get().addNotification({
+            message: `${result.skipped} APC40 slot${result.skipped === 1 ? '' : 's'} kept because handmade scenes already use them`,
+            type: 'warning',
+            priority: 'normal',
+          });
+        }
+
+        return result;
+      },
+
       // ACTS Actions
+      seedActsFromScenes: async (options = {}) => {
+        const { scenes, acts } = get();
+        const result = generateSeededActList(scenes, acts, options);
+
+        if (result.disabledReason) {
+          get().addNotification({
+            message: result.disabledReason,
+            type: 'info',
+            priority: 'normal',
+          });
+          return result;
+        }
+
+        set({ acts: result.acts });
+        get().saveActsToBackend();
+
+        get().addNotification({
+          message: `Seeded ${result.generatedActs.length} optional ACT${result.generatedActs.length === 1 ? '' : 'S'} from ${result.sceneCount} scene${result.sceneCount === 1 ? '' : 's'}`,
+          type: 'success',
+          priority: 'normal',
+        });
+
+        if (result.skipped > 0) {
+          get().addNotification({
+            message: `${result.skipped} ACT seed${result.skipped === 1 ? '' : 's'} skipped because handmade ACTS already use those names`,
+            type: 'warning',
+            priority: 'normal',
+          });
+        }
+
+        return result;
+      },
+
       createAct: (name, description) => {
         const newAct: Act = {
           id: Math.random().toString(36).substr(2, 9),
