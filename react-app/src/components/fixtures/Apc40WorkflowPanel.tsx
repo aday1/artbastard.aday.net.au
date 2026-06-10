@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
 import { useStore } from '../../store';
-import { isApc40Source } from '../../midi/apc40';
+import { decodeApc40Message, isApc40Source } from '../../midi/apc40';
 import { LucideIcon } from '../ui/LucideIcon';
+import { StageMapDashboard } from './StageMapDashboard';
 import styles from './FixtureSetup.module.scss';
 
 export const Apc40WorkflowPanel: React.FC = () => {
@@ -18,6 +19,23 @@ export const Apc40WorkflowPanel: React.FC = () => {
     return recent?.source;
   }, [midiMessages]);
 
+  const lastTrackSelectIndex = useMemo(() => {
+    for (let i = midiMessages.length - 1; i >= 0; i--) {
+      const action = decodeApc40Message(midiMessages[i] as any);
+      if (action?.type === 'track-select') return action.trackIndex;
+    }
+    return null;
+  }, [midiMessages]);
+
+  const highlightedGroupId = useMemo(() => {
+    if (lastTrackSelectIndex == null) return null;
+    return groups[lastTrackSelectIndex]?.id ?? null;
+  }, [groups, lastTrackSelectIndex]);
+
+  const highlightedGroup = highlightedGroupId
+    ? groups.find((group) => group.id === highlightedGroupId)
+    : null;
+
   return (
     <section className={styles.apcPanel} aria-label="Akai APC40 remote workflow">
       <div className={styles.apcHeader}>
@@ -31,6 +49,16 @@ export const Apc40WorkflowPanel: React.FC = () => {
           {lastApcSource || 'Waiting for APC40 MIDI'}
         </div>
       </div>
+
+      <StageMapDashboard
+        title="APC40 live stage map"
+        subtitle={
+          highlightedGroup
+            ? `APC track ${(lastTrackSelectIndex ?? 0) + 1} → ${highlightedGroup.name} (${highlightedGroup.fixtureIndices.length} fixtures)`
+            : `${fixtures.length} fixtures · ${groups.length} groups · tap to target the surface`
+        }
+        highlightGroupId={highlightedGroupId}
+      />
 
       <div className={styles.apcMapGrid}>
         <div title="Clip Launch / Session View is the scene grid. Default is Deck A; hold SHIFT for Deck B.">

@@ -916,22 +916,30 @@ export const StageMapFixtureSetup: React.FC = () => {
             </div>
           </section>
 
-          <section className={styles.inspectorSection}>
-            <button type="button" className={styles.drawerToggle} onClick={() => setShowBatchPlanner((value) => !value)}>
-              <LucideIcon name="Rows3" size={15} />
-              {showBatchPlanner ? 'Hide' : 'Show'} batch show builder
-            </button>
-            {showBatchPlanner && <ShowBuilderPanel />}
-          </section>
-
-          <section className={styles.inspectorSection}>
-            <button type="button" className={styles.drawerToggle} onClick={() => setShowApc40((value) => !value)}>
-              <LucideIcon name="Cable" size={15} />
-              {showApc40 ? 'Hide' : 'Show'} APC40 workflow
-            </button>
-            {showApc40 && <Apc40WorkflowPanel />}
-          </section>
         </aside>
+      </div>
+
+      <div className={styles.drawerStack}>
+        <div className={styles.drawerToggles}>
+          <button
+            type="button"
+            className={`${styles.drawerToggle} ${showBatchPlanner ? styles.drawerToggleActive : ''}`}
+            onClick={() => setShowBatchPlanner((value) => !value)}
+          >
+            <LucideIcon name="Rows3" size={15} />
+            {showBatchPlanner ? 'Hide' : 'Show'} batch show builder
+          </button>
+          <button
+            type="button"
+            className={`${styles.drawerToggle} ${showApc40 ? styles.drawerToggleActive : ''}`}
+            onClick={() => setShowApc40((value) => !value)}
+          >
+            <LucideIcon name="Cable" size={15} />
+            {showApc40 ? 'Hide' : 'Show'} APC40 workflow
+          </button>
+        </div>
+        {showBatchPlanner && <ShowBuilderPanel />}
+        {showApc40 && <Apc40WorkflowPanel />}
       </div>
     </section>
   );
