@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useState } from 'react'
+import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
 import axios from 'axios'
 import { useStore, SceneTimeline } from '../../store'
 import { useTheme } from '../../context/ThemeContext'
@@ -10,6 +10,8 @@ import { LucideIcon } from '../ui/LucideIcon'
 import { HorizontalFader } from '../ui/controls';
 import { SceneChannelValueEditor } from './SceneChannelValueEditor';
 import { SceneCardMap } from './SceneCardMap';
+import { SceneDiffBadge } from './SceneDiffBadge';
+import { computeSceneDiff } from '../../selectors/sceneDiff';
 import styles from './SceneGallery.module.scss'
 import { useSceneCapture } from '../../hooks/useSceneCapture'
 import { SceneSeedButton } from './SceneSeedButton'
@@ -20,6 +22,7 @@ export const SceneGallery: React.FC = () => {
     scenes,
     dmxChannels,
     channelNames,
+    fixtures,
     loadScene,
     deleteScene,
     updateScene,
@@ -32,6 +35,7 @@ export const SceneGallery: React.FC = () => {
     scenes: state.scenes,
     dmxChannels: state.dmxChannels,
     channelNames: state.channelNames,
+    fixtures: state.fixtures,
     loadScene: state.loadScene,
     deleteScene: state.deleteScene,
     updateScene: state.updateScene,
@@ -52,6 +56,27 @@ export const SceneGallery: React.FC = () => {
   const [channelValues, setChannelValues] = useState<number[]>([])
   const [editingTimelineScene, setEditingTimelineScene] = useState<string | null>(null)
   const { captureScene, quickCapture, sceneNameToOscPath } = useSceneCapture()
+
+  // Track the prior active scene name so we can diff the current active card
+  // against it. Updates whenever activeSceneId changes (not on every render).
+  const previousActiveSceneRef = useRef<string | null>(null)
+  const lastSeenActiveRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (activeSceneId !== lastSeenActiveRef.current) {
+      previousActiveSceneRef.current = lastSeenActiveRef.current
+      lastSeenActiveRef.current = activeSceneId
+    }
+  }, [activeSceneId])
+
+  const activeSceneDiff = useMemo(() => {
+    if (!activeSceneId) return null
+    const previousName = previousActiveSceneRef.current
+    if (!previousName) return null
+    const prev = scenes.find((s) => s.name === previousName) || null
+    const next = scenes.find((s) => s.name === activeSceneId) || null
+    if (!prev || !next) return null
+    return { diff: computeSceneDiff(prev, next, fixtures), previousName }
+  }, [activeSceneId, scenes, fixtures])
 
   const handleSaveNewScene = () => {
     if (!newSceneName.trim()) {
@@ -635,6 +660,13 @@ export const SceneGallery: React.FC = () => {
               channelValues={scene.channelValues}
               activeChannelCount={getActiveChannelCount(scene.channelValues)}
             />
+
+            {activeSceneId === scene.name && activeSceneDiff && (
+              <SceneDiffBadge
+                diff={activeSceneDiff.diff}
+                previousSceneName={activeSceneDiff.previousName}
+              />
+            )}
 
             <div className={styles.sceneMidiMapping}>
               <MidiLearnButton
