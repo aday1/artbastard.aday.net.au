@@ -622,7 +622,13 @@ export const StageMapFixtureSetup: React.FC = () => {
           </button>
           <SceneSeedButton compact />
           <ActSeedButton />
-          <button type="button" className={styles.giddyButton} onClick={runGiddyUp} disabled={!fixtures.length || isGiddyUp}>
+          <button
+            type="button"
+            className={styles.giddyButton}
+            onClick={runGiddyUp}
+            disabled={!fixtures.length || isGiddyUp}
+            title="One-shot starter: auto-builds smart fixture groups from the stage layout, seeds the smart-starter-40 scene pack on Deck A (with automation), and seeds the starter-acts ACT pack (with triggers). Requires fixtures already placed on the stage."
+          >
             <LucideIcon name="Rocket" size={16} />
             {isGiddyUp ? 'Working...' : 'Giddy Up'}
           </button>
