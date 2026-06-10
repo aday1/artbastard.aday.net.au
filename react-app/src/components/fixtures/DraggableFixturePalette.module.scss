@@ -140,12 +140,13 @@
 }
 
 .fixtureName {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-primary, #ffffff);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.15;
 }
 
 .fixtureType {

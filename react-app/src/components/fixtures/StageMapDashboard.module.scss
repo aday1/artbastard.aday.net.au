@@ -129,11 +129,13 @@
 }
 
 .nodeName {
-  max-width: 60px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  max-width: 72px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
+  line-height: 1.05;
   font-weight: 800;
+  font-size: 0.55rem;
 }
 
 .nodeAddr {
