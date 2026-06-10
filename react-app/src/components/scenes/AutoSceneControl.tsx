@@ -206,19 +206,66 @@ export const AutoSceneControl: React.FC<AutoSceneControlProps> = ({
     // Flash briefly to indicate reset using shared state
     triggerAutoSceneFlash();
   };const isPlaying = autoSceneTempoSource === 'internal_clock' ? midiClockIsPlaying : isLocalClockPlaying;
+
+  const effectiveBpm =
+    autoSceneTempoSource === 'internal_clock' ? midiClockBpm :
+    autoSceneTempoSource === 'manual_bpm'     ? autoSceneManualBpm :
+                                                autoSceneTapTempoBpm;
+  const beatsToNext = autoSceneEnabled && isPlaying && autoSceneList.length > 0
+    ? Math.max(autoSceneBeatDivision - localBeatCounter, 0)
+    : null;
+  const tempoLabel =
+    autoSceneTempoSource === 'internal_clock' ? 'Master' :
+    autoSceneTempoSource === 'manual_bpm'     ? 'Manual' :
+                                                'Tap';
+  const currentSceneName = autoSceneList[autoSceneCurrentIndex] || null;
+
   return (
     <div className={`${styles.autoSceneControl} ${autoSceneIsFlashing ? styles.flashing : ''}`}>
       <div className={styles.header}>
-        <h2>Auto-Scene Control</h2>
+        <div className={styles.headerTitle}>
+          <h2>Auto-Scene</h2>
+          <label className={styles.enableToggle} title="Enable Auto-Scene">
+            <input
+              type="checkbox"
+              checked={autoSceneEnabled}
+              onChange={(e) => setAutoSceneEnabled(e.target.checked)}
+            />
+            <span>{autoSceneEnabled ? 'ON' : 'OFF'}</span>
+          </label>
+        </div>
+        <div className={styles.summaryChips}>
+          <span className={`${styles.summaryChip} ${autoSceneEnabled && isPlaying ? styles.summaryRunning : ''}`}>
+            <span className={`${styles.statusDot} ${autoSceneEnabled && isPlaying ? styles.active : ''}`} />
+            {!autoSceneEnabled ? 'DISABLED' : !isPlaying ? 'STOPPED' : 'RUNNING'}
+          </span>
+          <span className={styles.summaryChip} title="Sequencing mode">{autoSceneMode}</span>
+          <span className={styles.summaryChip} title="Beats per scene">{autoSceneBeatDivision}b</span>
+          <span className={styles.summaryChip} title={`${tempoLabel} clock`}>{effectiveBpm.toFixed(1)} bpm</span>
+          {beatsToNext !== null && (
+            <span className={styles.summaryChip} title="Beats until next scene change">→ {beatsToNext}b</span>
+          )}
+          {currentSceneName && (
+            <span className={`${styles.summaryChip} ${styles.summarySceneChip}`} title="Current scene">{currentSceneName}</span>
+          )}
+        </div>
         <div className={styles.headerControls}>
-          <div className={styles.statusIndicator}>
-            <span className={`${styles.statusDot} ${autoSceneEnabled && isPlaying ? styles.active : ''}`}></span>
-            <span className={styles.statusText}>
-              {!autoSceneEnabled ? 'DISABLED' : 
-               !isPlaying ? 'STOPPED' : 
-               'RUNNING'}
-            </span>
-          </div>
+          <button
+            className={styles.transportButton}
+            onClick={handlePlayPauseToggle}
+            disabled={!autoSceneEnabled || autoSceneList.length === 0}
+            title={isPlaying ? 'Pause' : 'Play'}
+          >
+            <i className={isPlaying ? 'fas fa-pause' : 'fas fa-play'} />
+          </button>
+          <button
+            className={styles.transportButton}
+            onClick={handleResetDownbeat}
+            disabled={!autoSceneEnabled}
+            title="Reset downbeat"
+          >
+            <i className="fas fa-undo" />
+          </button>
           <button
             className={styles.minimizeButton}
             onClick={() => onMinimizedChange?.(!isMinimized)}
@@ -231,141 +278,112 @@ export const AutoSceneControl: React.FC<AutoSceneControlProps> = ({
 
       {!isMinimized && (
         <div className={styles.content}>
-          {/* Enable/Disable Section */}
-          <div className={styles.section}>
-            <h3 className={styles.sectionTitle}>Enable</h3>
-            <div className={styles.controlGroup}>
-              <label htmlFor="autoSceneEnableCheckbox">Enable Auto-Scene:</label>
-              <input
-                type="checkbox"
-                id="autoSceneEnableCheckbox"
-                checked={autoSceneEnabled}
-                onChange={(e) => setAutoSceneEnabled(e.target.checked)}
-              />
-            </div>
-          </div>
-
-
-          {/* Scene Selection Section */}
-          <div className={styles.section}>
-            <h3 className={styles.sectionTitle}>Scene Sequence</h3>
-            <p>Select scenes to include in the sequence (order matters for 'Forward' and 'Ping-Pong' modes):</p>
-            <div className={styles.sceneListContainer}>
-              {allScenes.length > 0 ? allScenes.map(scene => (
-                <div
-                  key={scene.name}
-                  className={`${styles.sceneSelectItem} ${selectedScenesForList.includes(scene.name) ? styles.selected : ''}`}
-                  onClick={() => handleToggleSceneInList(scene.name)}
-                >
-                  {scene.name}
+          <div className={styles.compactGrid}>
+            <section className={styles.sequencePanel}>
+              <div className={styles.panelHead}>
+                <h3>Sequence</h3>
+                <span className={styles.panelHint}>{selectedScenesForList.length}/{allScenes.length} selected · click to toggle</span>
+              </div>
+              {allScenes.length === 0 ? (
+                <p className={styles.emptyHint}>No scenes available. Create some scenes first.</p>
+              ) : (
+                <div className={styles.sceneChipList}>
+                  {allScenes.map((scene) => {
+                    const idx = selectedScenesForList.indexOf(scene.name);
+                    const selected = idx >= 0;
+                    return (
+                      <button
+                        type="button"
+                        key={scene.name}
+                        className={`${styles.sceneChip} ${selected ? styles.sceneChipSelected : ''} ${currentSceneName === scene.name ? styles.sceneChipCurrent : ''}`}
+                        onClick={() => handleToggleSceneInList(scene.name)}
+                        title={selected ? `Position ${idx + 1} in sequence — click to remove` : 'Click to add to sequence'}
+                      >
+                        {selected && <span className={styles.sceneChipIndex}>{idx + 1}</span>}
+                        <span className={styles.sceneChipName}>{scene.name}</span>
+                      </button>
+                    );
+                  })}
                 </div>
-              )) : <p>No scenes available. Create some scenes first!</p>}
-            </div>
-            <small>Selected: {selectedScenesForList.join(', ') || 'None'}</small>
-          </div>
+              )}
+            </section>
 
-          {/* Mode Selection */}
-          <div className={styles.section}>
-            <h3 className={styles.sectionTitle}>Mode</h3>
-            <div className={styles.controlGroup}>
-              <label htmlFor="autoSceneModeSelect">Mode:</label>
-              <select
-                id="autoSceneModeSelect"
-                value={autoSceneMode}
-                onChange={(e) => setAutoSceneMode(e.target.value as 'forward' | 'ping-pong' | 'random')}
-                disabled={!autoSceneEnabled}
-              >
-                <option value="forward">Forward</option>
-                <option value="ping-pong">Ping-Pong</option>
-                <option value="random">Random</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Beat Division Selection */}
-          <div className={styles.section}>
-            <h3 className={styles.sectionTitle}>Timing</h3>
-            <div className={styles.controlGroup}>
-              <label htmlFor="autoSceneBeatDivisionInput">Change Scene Every (beats):</label>
-              <input
-                type="number"
-                id="autoSceneBeatDivisionInput"
-                value={autoSceneBeatDivision}
-                onChange={(e) => setAutoSceneBeatDivision(parseInt(e.target.value, 10))}
-                min="1"
-                disabled={!autoSceneEnabled}
-              />
-            </div>
-          </div>
-
-          {/* Tempo Source Selection */}
-          <div className={styles.section}>
-            <h3 className={styles.sectionTitle}>Tempo Source</h3>
-            <div className={styles.controlGroup}>
-              <label htmlFor="autoSceneTempoSourceSelect">Source:</label>
-              <select
-                id="autoSceneTempoSourceSelect"
-                value={autoSceneTempoSource}
-                onChange={(e) => setAutoSceneTempoSource(e.target.value as 'internal_clock' | 'manual_bpm' | 'tap_tempo')}
-                disabled={!autoSceneEnabled}
-              >
-                <option value="internal_clock">Internal Clock (from Master)</option>
-                <option value="manual_bpm">Manual BPM</option>
-                <option value="tap_tempo">Tap Tempo</option>
-              </select>
-            </div>
-
-            {/* Manual BPM Input (shown if tempo source is 'manual_bpm') */}
-            {autoSceneTempoSource === 'manual_bpm' && (
-              <div className={styles.controlGroup}>
-                <label htmlFor="autoSceneManualBpmInput">Manual BPM:</label>
+            <section className={styles.optionsPanel}>
+              <div className={styles.panelHead}>
+                <h3>Playback</h3>
+              </div>
+              <div className={styles.controlRow}>
+                <label htmlFor="autoSceneModeSelect">Mode</label>
+                <select
+                  id="autoSceneModeSelect"
+                  value={autoSceneMode}
+                  onChange={(e) => setAutoSceneMode(e.target.value as 'forward' | 'ping-pong' | 'random')}
+                  disabled={!autoSceneEnabled}
+                >
+                  <option value="forward">Forward</option>
+                  <option value="ping-pong">Ping-Pong</option>
+                  <option value="random">Random</option>
+                </select>
+              </div>
+              <div className={styles.controlRow}>
+                <label htmlFor="autoSceneBeatDivisionInput">Beats / scene</label>
                 <input
                   type="number"
-                  id="autoSceneManualBpmInput"
-                  value={autoSceneManualBpm}
-                  onChange={(e) => setManualBpm(parseInt(e.target.value, 10))}
-                  min="20"
-                  max="300"
+                  id="autoSceneBeatDivisionInput"
+                  value={autoSceneBeatDivision}
+                  onChange={(e) => setAutoSceneBeatDivision(parseInt(e.target.value, 10))}
+                  min="1"
                   disabled={!autoSceneEnabled}
                 />
               </div>
-            )}
-
-            {/* Tap Tempo Button (shown if tempo source is 'tap_tempo') */}
-            {autoSceneTempoSource === 'tap_tempo' && (
-              <div className={styles.controlGroup}>
-                <button onClick={() => recordTapTempo()} disabled={!autoSceneEnabled}>Tap</button>
-                <span>Detected BPM: {autoSceneTapTempoBpm.toFixed(2)}</span>
+              <div className={styles.controlRow}>
+                <label htmlFor="autoSceneTempoSourceSelect">Tempo</label>
+                <select
+                  id="autoSceneTempoSourceSelect"
+                  value={autoSceneTempoSource}
+                  onChange={(e) => setAutoSceneTempoSource(e.target.value as 'internal_clock' | 'manual_bpm' | 'tap_tempo')}
+                  disabled={!autoSceneEnabled}
+                >
+                  <option value="internal_clock">Master clock</option>
+                  <option value="manual_bpm">Manual BPM</option>
+                  <option value="tap_tempo">Tap tempo</option>
+                </select>
               </div>
-            )}
-          </div>
-
-          {/* Status Display Section */}
-          <div className={styles.section}>
-            <h3 className={styles.sectionTitle}>Status</h3>
-            <div className={styles.statusDisplay}>
-              <div className={styles.statusItem}>Enabled: {autoSceneEnabled ? 'Yes' : 'No'}</div>
-              <div className={styles.statusItem}>Mode: {autoSceneMode}</div>
-              <div className={styles.statusItem}>Current Scene Index: {autoSceneCurrentIndex === -1 ? "N/A" : autoSceneCurrentIndex} ({autoSceneList[autoSceneCurrentIndex] || 'None'})</div>
-              <div className={styles.statusItem}>Beat Division: {autoSceneBeatDivision}</div>
-              <div className={styles.statusItem}>Tempo Source: {autoSceneTempoSource.replace('_', ' ')}</div>
-              <div className={styles.statusItem}>
-                Effective BPM:
-                {autoSceneTempoSource === 'internal_clock' ? ` ${midiClockBpm.toFixed(2)} (Master Clock)` :
-                 autoSceneTempoSource === 'manual_bpm' ? ` ${autoSceneManualBpm.toFixed(2)} (Manual)` :
-                 ` ${autoSceneTapTempoBpm.toFixed(2)} (Tap)`}
+              {autoSceneTempoSource === 'manual_bpm' && (
+                <div className={styles.controlRow}>
+                  <label htmlFor="autoSceneManualBpmInput">Manual BPM</label>
+                  <input
+                    type="number"
+                    id="autoSceneManualBpmInput"
+                    value={autoSceneManualBpm}
+                    onChange={(e) => setManualBpm(parseInt(e.target.value, 10))}
+                    min="20"
+                    max="300"
+                    disabled={!autoSceneEnabled}
+                  />
+                </div>
+              )}
+              {autoSceneTempoSource === 'tap_tempo' && (
+                <div className={styles.controlRow}>
+                  <label>Tap tempo</label>
+                  <div className={styles.tapTempoRow}>
+                    <button
+                      type="button"
+                      className={styles.tapButton}
+                      onClick={() => recordTapTempo()}
+                      disabled={!autoSceneEnabled}
+                    >
+                      Tap
+                    </button>
+                    <span className={styles.tapReadout}>{autoSceneTapTempoBpm.toFixed(2)} bpm</span>
+                  </div>
+                </div>
+              )}
+              <div className={styles.metaRow}>
+                <span>Source: {selectedMidiClockHostId || '—'}</span>
+                <span>Beat: {localBeatCounter}</span>
               </div>
-              <div className={styles.statusItem}>Master Clock Source: {selectedMidiClockHostId}</div>
-              <div className={styles.statusItem}>
-                Auto-Scene Playing: {isPlaying ? 'Yes' : 'No'}
-                {autoSceneTempoSource === 'internal_clock' && ` (Master Clock: ${midiClockIsPlaying ? 'Playing' : 'Stopped'})`}
-              </div>
-              <div className={styles.statusItem}>Local Beat Counter: {localBeatCounter}</div>
-              <div className={styles.statusItem}>
-                Next Scene Change: {autoSceneEnabled && isPlaying && autoSceneList.length > 0 ? 
-                  `${autoSceneBeatDivision - localBeatCounter} beats` : 'Waiting...'}
-              </div>
-            </div>
+            </section>
           </div>
         </div>
       )}
