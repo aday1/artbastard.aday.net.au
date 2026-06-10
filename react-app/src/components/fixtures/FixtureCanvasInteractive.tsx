@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import Draggable from 'react-draggable';
 import { Fixture, PlacedFixture, PlacedControl, useStore } from '../../store';
 import { useSocket } from '../../context/SocketContext';
@@ -57,6 +57,23 @@ export const FixtureCanvasInteractive: React.FC<FixtureCanvasInteractiveProps> =
 
   const getFixtureColor = getFixtureTypeColor;
   const getFixtureIcon = getFixtureTypeIcon;
+
+  // Resolve a fixture definition (real fixture or template) once per render.
+  // Eliminates the duplicate Array.find pairs in the fixture-node and controls maps.
+  const fixtureDefMap = useMemo(() => {
+    const map = new Map<string, Fixture>();
+    placedFixturesData.forEach((pf) => {
+      if (map.has(pf.fixtureStoreId)) return;
+      const real = fixtures.find((f) => f.id === pf.fixtureStoreId);
+      if (real) {
+        map.set(pf.fixtureStoreId, real);
+        return;
+      }
+      const template = fixtureTemplates.find((t) => t.id === pf.fixtureStoreId);
+      if (template) map.set(pf.fixtureStoreId, template as any);
+    });
+    return map;
+  }, [placedFixturesData, fixtures]);
 
   const snapToGridPosition = (x: number, y: number) => {
     if (!snapToGrid) return { x, y };
@@ -627,17 +644,7 @@ export const FixtureCanvasInteractive: React.FC<FixtureCanvasInteractiveProps> =
 
         {/* Draggable Fixtures */}
         {placedFixturesData.map(placedFixture => {
-          // First try to find existing fixture
-          let fixtureDef = fixtures.find(f => f.id === placedFixture.fixtureStoreId);
-          
-          // If not found, look in templates
-          if (!fixtureDef) {
-            const template = fixtureTemplates.find(t => t.id === placedFixture.fixtureStoreId);
-            if (template) {
-              fixtureDef = template as any; // Cast template to fixture format
-            }
-          }
-          
+          const fixtureDef = fixtureDefMap.get(placedFixture.fixtureStoreId);
           if (!fixtureDef) return null;
 
           return (
@@ -710,191 +717,200 @@ export const FixtureCanvasInteractive: React.FC<FixtureCanvasInteractiveProps> =
           );
         })}
 
-        {/* Render Controls for Fixtures */}
-        {placedFixturesData.map(placedFixture => {
-          if (!placedFixture.controls || placedFixture.controls.length === 0) return null;
+        {/* Render Controls for Fixtures — only for the currently selected fixture.
+            Idle fixtures keep their controls in state but skip render to avoid
+            mounting every slider/XY-pad/connection-line on every DMX tick. */}
+        {(() => {
+          const visibleFixtures = placedFixturesData.filter(
+            (pf) =>
+              selectedFixture === pf.id &&
+              pf.controls &&
+              pf.controls.length > 0 &&
+              fixtureDefMap.has(pf.fixtureStoreId)
+          );
 
-          // First try to find existing fixture
-          let fixtureDef = fixtures.find(f => f.id === placedFixture.fixtureStoreId);
-          
-          // If not found, look in templates
-          if (!fixtureDef) {
-            const template = fixtureTemplates.find(t => t.id === placedFixture.fixtureStoreId);
-            if (template) {
-              fixtureDef = template as any; // Cast template to fixture format
-            }
-          }
-          
-          if (!fixtureDef) return null;
+          if (visibleFixtures.length === 0) return null;
+
+          // One canvas-spanning SVG with all visible connection lines as children,
+          // rather than one full-canvas SVG per control. Eliminates mount churn on drag.
+          const connectionLines = visibleFixtures.flatMap((placedFixture) =>
+            (placedFixture.controls || []).map((control) => (
+              <line
+                key={`line-${placedFixture.id}-${control.id}`}
+                x1={placedFixture.x + 20}
+                y1={placedFixture.y + 20}
+                x2={placedFixture.x + control.xOffset + (control.type === 'xypad' ? 50 : 30)}
+                y2={placedFixture.y + control.yOffset + (control.type === 'xypad' ? 50 : 30)}
+                stroke="rgba(0, 212, 255, 0.3)"
+                strokeWidth="1"
+                strokeDasharray="4,4"
+              />
+            ))
+          );
 
           return (
-            <React.Fragment key={`${placedFixture.id}-controls`}>
-              {/* Connection Lines */}
-              {placedFixture.controls.map(control => (
-                <svg
-                  key={`line-${control.id}`}
-                  className={styles.connectionLine}
-                  style={{
-                    position: 'absolute',
-                    left: 0,
-                    top: 0,
-                    width: CANVAS_WIDTH,
-                    height: CANVAS_HEIGHT,
-                    pointerEvents: 'none',
-                    zIndex: 10,
-                  }}
-                >
-                  <line
-                    x1={placedFixture.x + 20} // Center of fixture icon
-                    y1={placedFixture.y + 20}
-                    x2={placedFixture.x + control.xOffset + (control.type === 'xypad' ? 50 : 30)} // Center of control
-                    y2={placedFixture.y + control.yOffset + (control.type === 'xypad' ? 50 : 30)}
-                    stroke="rgba(0, 212, 255, 0.3)"
-                    strokeWidth="1"
-                    strokeDasharray="4,4"
-                  />
-                </svg>
-              ))}
-              
-              {/* Controls */}
-              {placedFixture.controls.map(control => (
-                (() => {
-                  const controlOrientation = control.type === 'slider' ? dmxFaderOrientation : control.orientation;
-                  return (
-                <Draggable
-                  key={control.id}
-                  position={{ 
-                    x: placedFixture.x + control.xOffset, 
-                    y: placedFixture.y + control.yOffset 
-                  }}
-                  grid={snapToGrid ? [GRID_SIZE, GRID_SIZE] : undefined}
-                  onStop={(e, data) => handleControlDrag(placedFixture.id, control.id, {
-                    x: data.x - placedFixture.x,
-                    y: data.y - placedFixture.y
-                  })}
-                  disabled={selectedTool !== 'select'}
-                >
-                  <div 
-                    className={`${styles.controlWrapper} ${
-                      selectedFixture === placedFixture.id ? styles.highlighted : ''
-                    }`}
-                  >
-                    {control.type === 'slider' ? (
-                      <div 
-                        className={`${styles.canvasSlider} ${controlOrientation === 'horizontal' ? styles.horizontal : styles.vertical}`}
-                        onClick={(e) => e.stopPropagation()}
+            <>
+              <svg
+                className={styles.connectionLine}
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  width: CANVAS_WIDTH,
+                  height: CANVAS_HEIGHT,
+                  pointerEvents: 'none',
+                  zIndex: 10,
+                }}
+              >
+                {connectionLines}
+              </svg>
+
+              {visibleFixtures.map((placedFixture) => {
+                const fixtureDef = fixtureDefMap.get(placedFixture.fixtureStoreId)!;
+                return (
+                  <React.Fragment key={`${placedFixture.id}-controls`}>
+                    {/* Controls */}
+                    {placedFixture.controls!.map(control => (
+                      (() => {
+                        const controlOrientation = control.type === 'slider' ? dmxFaderOrientation : control.orientation;
+                        return (
+                      <Draggable
+                        key={control.id}
+                        position={{
+                          x: placedFixture.x + control.xOffset,
+                          y: placedFixture.y + control.yOffset
+                        }}
+                        grid={snapToGrid ? [GRID_SIZE, GRID_SIZE] : undefined}
+                        onStop={(e, data) => handleControlDrag(placedFixture.id, control.id, {
+                          x: data.x - placedFixture.x,
+                          y: data.y - placedFixture.y
+                        })}
+                        disabled={selectedTool !== 'select'}
                       >
-                        <DmxFaderRow
-                          compact
-                          layout={controlOrientation === 'vertical' ? 'vertical' : 'horizontal'}
-                          label={control.label}
-                          controlName={`canvas-ctrl-${control.id}`}
-                          value={control.currentValue}
-                          showOsc={false}
-                          showMidi={false}
-                          onChange={(v) =>
-                            handleControlValueChange(placedFixture.id, control.id, Math.round(v))
-                          }
-                        />
-                        <div className={styles.sliderValue}>{control.currentValue}</div>
-                        <div className={styles.controlActions}>
-                          <button
-                            className={`${styles.miniButton} ${
-                              midiLearnTarget?.type === 'placedControl' &&
-                              midiLearnTarget.fixtureId === placedFixture.id &&
-                              midiLearnTarget.controlId === `fixture-${placedFixture.id}-control-${control.id}`
-                                ? styles.learning
-                                : ''
-                            }`}
-                            onClick={() => startMidiLearnForControl(placedFixture.id, control.id)}
-                            title="MIDI Learn"
-                          >
-                            M
-                          </button>
-                          <button
-                            className={styles.miniButton}
-                            onClick={() => copyOscAddressForControl(placedFixture.id, control.id)}
-                            title="Copy OSC"
-                          >
-                            O
-                          </button>
-                          {getMidiMappingForControl(placedFixture.id, control.id) && (
-                            <button
-                              className={styles.miniButton}
-                              onClick={() => forgetMidiMappingForControl(placedFixture.id, control.id)}
-                              title="Forget MIDI"
+                        <div
+                          className={`${styles.controlWrapper} ${
+                            selectedFixture === placedFixture.id ? styles.highlighted : ''
+                          }`}
+                        >
+                          {control.type === 'slider' ? (
+                            <div
+                              className={`${styles.canvasSlider} ${controlOrientation === 'horizontal' ? styles.horizontal : styles.vertical}`}
+                              onClick={(e) => e.stopPropagation()}
                             >
-                              F
-                            </button>
-                          )}
-                        </div>
-                        <div className={styles.oscAddress}>
-                          {getOscAddressForControl(placedFixture.id, control.id)}
-                        </div>
-                      </div>
-                    ) : control.type === 'xypad' ? (
-                      <div 
-                        className={styles.canvasXYPad}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <label className={styles.controlLabel}>{control.label}</label>
-                        <ArtbastardXYPad
-                          size={200}
-                          pan={control.panValue || 127}
-                          tilt={control.tiltValue || 127}
-                          onPanTiltChange={(p, t) => {
-                            handleControlValueChange(placedFixture.id, control.id, p, 'pan');
-                            handleControlValueChange(placedFixture.id, control.id, t, 'tilt');
-                          }}
-                        />
-                        <div className={styles.xyValues}>
-                          <span>Pan: {control.panValue || 127}</span>
-                          <span>Tilt: {control.tiltValue || 127}</span>
-                        </div>
-                        <div className={styles.controlActions}>
-                          <button
-                            className={`${styles.miniButton} ${
-                              midiLearnTarget?.type === 'placedControl' &&
-                              midiLearnTarget.fixtureId === placedFixture.id &&
-                              midiLearnTarget.controlId === `fixture-${placedFixture.id}-control-${control.id}`
-                                ? styles.learning
-                                : ''
-                            }`}
-                            onClick={() => startMidiLearnForControl(placedFixture.id, control.id)}
-                            title="MIDI Learn Pan"
-                          >
-                            M
-                          </button>
-                          <button
-                            className={styles.miniButton}
-                            onClick={() => copyOscAddressForControl(placedFixture.id, control.id)}
-                            title="Copy OSC"
-                          >
-                            O
-                          </button>
-                          {getMidiMappingForControl(placedFixture.id, control.id) && (
-                            <button
-                              className={styles.miniButton}
-                              onClick={() => forgetMidiMappingForControl(placedFixture.id, control.id)}
-                              title="Forget MIDI"
+                              <DmxFaderRow
+                                compact
+                                layout={controlOrientation === 'vertical' ? 'vertical' : 'horizontal'}
+                                label={control.label}
+                                controlName={`canvas-ctrl-${control.id}`}
+                                value={control.currentValue}
+                                showOsc={false}
+                                showMidi={false}
+                                onChange={(v) =>
+                                  handleControlValueChange(placedFixture.id, control.id, Math.round(v))
+                                }
+                              />
+                              <div className={styles.sliderValue}>{control.currentValue}</div>
+                              <div className={styles.controlActions}>
+                                <button
+                                  className={`${styles.miniButton} ${
+                                    midiLearnTarget?.type === 'placedControl' &&
+                                    midiLearnTarget.fixtureId === placedFixture.id &&
+                                    midiLearnTarget.controlId === `fixture-${placedFixture.id}-control-${control.id}`
+                                      ? styles.learning
+                                      : ''
+                                  }`}
+                                  onClick={() => startMidiLearnForControl(placedFixture.id, control.id)}
+                                  title="MIDI Learn"
+                                >
+                                  M
+                                </button>
+                                <button
+                                  className={styles.miniButton}
+                                  onClick={() => copyOscAddressForControl(placedFixture.id, control.id)}
+                                  title="Copy OSC"
+                                >
+                                  O
+                                </button>
+                                {getMidiMappingForControl(placedFixture.id, control.id) && (
+                                  <button
+                                    className={styles.miniButton}
+                                    onClick={() => forgetMidiMappingForControl(placedFixture.id, control.id)}
+                                    title="Forget MIDI"
+                                  >
+                                    F
+                                  </button>
+                                )}
+                              </div>
+                              <div className={styles.oscAddress}>
+                                {getOscAddressForControl(placedFixture.id, control.id)}
+                              </div>
+                            </div>
+                          ) : control.type === 'xypad' ? (
+                            <div
+                              className={styles.canvasXYPad}
+                              onClick={(e) => e.stopPropagation()}
                             >
-                              F
-                            </button>
-                          )}
+                              <label className={styles.controlLabel}>{control.label}</label>
+                              <ArtbastardXYPad
+                                size={200}
+                                pan={control.panValue || 127}
+                                tilt={control.tiltValue || 127}
+                                onPanTiltChange={(p, t) => {
+                                  handleControlValueChange(placedFixture.id, control.id, p, 'pan');
+                                  handleControlValueChange(placedFixture.id, control.id, t, 'tilt');
+                                }}
+                              />
+                              <div className={styles.xyValues}>
+                                <span>Pan: {control.panValue || 127}</span>
+                                <span>Tilt: {control.tiltValue || 127}</span>
+                              </div>
+                              <div className={styles.controlActions}>
+                                <button
+                                  className={`${styles.miniButton} ${
+                                    midiLearnTarget?.type === 'placedControl' &&
+                                    midiLearnTarget.fixtureId === placedFixture.id &&
+                                    midiLearnTarget.controlId === `fixture-${placedFixture.id}-control-${control.id}`
+                                      ? styles.learning
+                                      : ''
+                                  }`}
+                                  onClick={() => startMidiLearnForControl(placedFixture.id, control.id)}
+                                  title="MIDI Learn Pan"
+                                >
+                                  M
+                                </button>
+                                <button
+                                  className={styles.miniButton}
+                                  onClick={() => copyOscAddressForControl(placedFixture.id, control.id)}
+                                  title="Copy OSC"
+                                >
+                                  O
+                                </button>
+                                {getMidiMappingForControl(placedFixture.id, control.id) && (
+                                  <button
+                                    className={styles.miniButton}
+                                    onClick={() => forgetMidiMappingForControl(placedFixture.id, control.id)}
+                                    title="Forget MIDI"
+                                  >
+                                    F
+                                  </button>
+                                )}
+                              </div>
+                              <div className={styles.oscAddress}>
+                                {getOscAddressForControl(placedFixture.id, control.id)}
+                              </div>
+                            </div>
+                          ) : null}
                         </div>
-                        <div className={styles.oscAddress}>
-                          {getOscAddressForControl(placedFixture.id, control.id)}
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                </Draggable>
-                  );
-                })()
-              ))}
-            </React.Fragment>
+                      </Draggable>
+                        );
+                      })()
+                    ))}
+                  </React.Fragment>
+                );
+              })}
+            </>
           );
-        })}
+        })()}
 
         {/* Canvas Instructions */}
         {placedFixturesData.length === 0 && (
