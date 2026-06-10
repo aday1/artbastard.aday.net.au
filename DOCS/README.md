@@ -1,8 +1,9 @@
 # ArtBastard Documentation Index
 
 Reference set for v5.2.4.0 - APC40 Deck A/B Edition. Reflects the
-state of the system after the APC40 scene deck refactor, Roli Lightpad LED
-drawing fix, and showcase video refresh on 2026-06-09.
+state of the system after the APC40 scene deck refactor, canvas-first fixture
+setup, Roli Lightpad LED drawing fix, and showcase video refresh on
+2026-06-10.
 
 ## Start here
 
@@ -13,6 +14,8 @@ drawing fix, and showcase video refresh on 2026-06-09.
 - FEATURES.md     - feature inventory by subsystem.
 - BRIDGE.md       - LAN / Pi bridge (cloud UI to home Art-Net + Link).
 - FIXTURES.md     - fixture profiles, addressing, multi-universe planning.
+- STAGE_CANVAS_TUTORIAL.md - map-first show creation from fixture placement
+                    through groups, seeds, Super Control, APC40, and debugging.
 - HELP.md         - offline mirror of the in-app HelpOverlay.
 - SHORTCUTS.md    - master keyboard shortcut reference.
 
@@ -36,7 +39,7 @@ drawing fix, and showcase video refresh on 2026-06-09.
 The ordered how-to video set is embedded on the public showcase site.
 Watch order:
 
-1. Fixture Setup and Super Control - patch fixtures, build groups, drive roles.
+1. Stage Canvas and Super Control - place fixtures, build groups, drive roles.
 2. DMX Control Home - use channel faders, filters, master, MIDI, and OSC.
 3. Scenes and Clip Launcher - capture scenes and launch APC40 Deck A/B slots.
 4. Acts Timeline - build show sequences with scene clips, gaps, MIDI, and OSC.
@@ -70,7 +73,7 @@ preparing release artefacts.
 ## In-app help
 
 Inside the running app, open Settings > Help or press `Ctrl+H` from any
-page. The help overlay covers DMX basics, MIDI, OSC, APC40 live mode,
-scenes, timeline, clip launcher, ACT triggers, controller templates,
-factory reset, mobile surface, troubleshooting, keyboard shortcuts, and
-the printable PDF address sheet.
+page. The help overlay covers the canvas-first fixture workflow, DMX basics,
+MIDI, OSC, APC40 live mode, scenes, timeline, clip launcher, ACT triggers,
+controller templates, factory reset, mobile surface, troubleshooting, keyboard
+shortcuts, and the printable PDF address sheet.

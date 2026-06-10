@@ -184,10 +184,91 @@ Content-Type: application/json
 }
 ```
 
+#### Save Fixture List
+```http
+POST /api/fixtures
+Content-Type: application/json
+
+{
+  "fixtures": [...],
+  "fixtureLayout": [...],
+  "groups": [...],
+  "masterSliders": [...]
+}
+```
+
+`fixtures` is required. `fixtureLayout`, `groups`, and `masterSliders` are
+optional and are preserved from the current server state when omitted. The
+stage canvas uses the optional `fixtureLayout` field when a dropped library
+profile creates a real fixture so the fixture and its map position are saved
+together.
+
 #### Delete Fixture
 ```http
 DELETE /api/fixtures/:id
 ```
+
+#### Save Fixture List
+```http
+POST /api/fixtures
+Content-Type: application/json
+
+{
+  "fixtures": [...],
+  "fixtureLayout": [...],
+  "groups": [...],
+  "masterSliders": [...]
+}
+```
+
+`fixtures` is required. `fixtureLayout`, `groups`, and `masterSliders` are
+optional and are preserved from the current server state when omitted. The
+stage canvas uses the optional `fixtureLayout` field when a dropped library
+profile creates a real fixture so the fixture and its map position are saved
+together.
+
+#### Save Fixture Groups
+```http
+POST /api/groups
+Content-Type: application/json
+
+{
+  "groups": [
+    {
+      "id": "group-stage-left",
+      "name": "Stage Left",
+      "fixtureIndices": [0, 2],
+      "masterValue": 255
+    }
+  ]
+}
+```
+
+#### Save Fixture Stage Map
+```http
+POST /api/fixture-layout
+Content-Type: application/json
+
+{
+  "fixtureLayout": [
+    {
+      "id": "layout-fixture-1",
+      "fixtureId": "fixture-1",
+      "x": 120,
+      "y": 260,
+      "rotation": 0,
+      "scale": 1,
+      "startAddress": 1,
+      "dmxAddress": 1,
+      "type": "RGB Wash"
+    }
+  ]
+}
+```
+
+`fixtureLayout` is the canvas-first Fixture Setup placement layer. Coordinates
+use the shared 1000x600 stage space for both Top and Side view. The `fixtures`
+array remains the source of truth for channel definitions and DMX patch data.
 
 ### Configuration
 

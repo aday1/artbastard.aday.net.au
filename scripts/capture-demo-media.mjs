@@ -38,7 +38,7 @@ const screenshotSpecs = [
 
 const videoSpecs = [
   ['dmx-control', '/', 1280, 720, 12, 'sleep:2|pgdn:3|sleep:2|pgup:2'],
-  ['fixture-page', '/#/fixture', 1280, 720, 12, 'sleep:3|pgdn:3|sleep:2|pgup:2'],
+  ['fixture-page', '/#/fixture', 1280, 720, 14, 'sleep:3|pgdn:2|sleep:2|pgup:2'],
   ['scenes-acts', '/#/scenes-acts', 1280, 720, 12, 'sleep:3|pgdn:3|sleep:2|pgup:2'],
   ['acts-page', '/#/acts', 1280, 720, 12, 'sleep:3|pgdn:3|sleep:2|pgup:2'],
   ['mobile', '/#/mobile', 430, 932, 10, 'sleep:3|pgdn:2|sleep:2'],
@@ -207,10 +207,19 @@ async function captureVideos(chromePath, ffmpegPath) {
     const posterPath = path.join(videoDir, `${name}.jpg`);
 
     log(`clip ${name}: ${width}x${height} ${duration}s -> ${url}`);
-    await withPage(chromePath, url, width, height, async (cdp) => {
-      await settlePage(cdp);
-      await captureFrameLoop(cdp, frameDir, duration, recipe);
-    });
+    const restoreCaptureData = name === 'fixture-page'
+      ? await seedFixturePageCaptureData()
+      : null;
+    try {
+      await withPage(chromePath, url, width, height, async (cdp) => {
+        await settlePage(cdp);
+        await captureFrameLoop(cdp, frameDir, duration, recipe);
+      });
+    } finally {
+      if (restoreCaptureData) {
+        await restoreCaptureData();
+      }
+    }
 
     const firstFrame = path.join(frameDir, 'frame-00001.jpg');
     if (!existsSync(firstFrame)) {
@@ -227,6 +236,148 @@ async function captureVideos(chromePath, ffmpegPath) {
 
   await writeFile(path.join(videoDir, 'capture-results.txt'), `${results.join('\n')}\n`);
   log(`done. results in ${path.join(videoDir, 'capture-results.txt')}`);
+}
+
+async function seedFixturePageCaptureData() {
+  const snapshotResponse = await fetch(`${baseUrl}/api/state`, {
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!snapshotResponse.ok) {
+    throw new Error(`Unable to snapshot fixture state: HTTP ${snapshotResponse.status}`);
+  }
+  const snapshot = await snapshotResponse.json();
+  const previous = {
+    fixtures: Array.isArray(snapshot.fixtures) ? snapshot.fixtures : [],
+    groups: Array.isArray(snapshot.groups) ? snapshot.groups : [],
+    fixtureLayout: Array.isArray(snapshot.fixtureLayout) ? snapshot.fixtureLayout : [],
+    masterSliders: Array.isArray(snapshot.masterSliders) ? snapshot.masterSliders : [],
+  };
+
+  const fixtures = [
+    makeCaptureFixture({
+      id: 'capture-front-wash-1',
+      name: 'Capture Front Wash 1',
+      type: 'RGB Wash',
+      startAddress: 1,
+      channels: ['dimmer', 'red', 'green', 'blue'],
+    }),
+    makeCaptureFixture({
+      id: 'capture-mover-center-1',
+      name: 'Capture Mover Center 1',
+      type: 'Moving Head Spot',
+      startAddress: 21,
+      channels: ['pan', 'tilt', 'dimmer', 'red', 'green', 'blue', 'gobo_wheel', 'strobe', 'zoom'],
+    }),
+    makeCaptureFixture({
+      id: 'capture-back-wash-1',
+      name: 'Capture Back Wash 1',
+      type: 'RGBW Wash',
+      startAddress: 41,
+      channels: ['dimmer', 'red', 'green', 'blue', 'white'],
+    }),
+  ];
+  const fixtureLayout = [
+    makeCaptureLayout(fixtures[0], 210, 460, -8, 1),
+    makeCaptureLayout(fixtures[1], 500, 190, 0, 1.08),
+    makeCaptureLayout(fixtures[2], 790, 130, 8, 1),
+  ];
+  const groups = [
+    {
+      id: 'capture-group-wash',
+      name: 'Capture Washes',
+      fixtureIndices: [0, 2],
+      lastStates: new Array(512).fill(0),
+      isMuted: false,
+      isSolo: false,
+      masterValue: 255,
+    },
+    {
+      id: 'capture-group-movers',
+      name: 'Capture Movers',
+      fixtureIndices: [1],
+      lastStates: new Array(512).fill(0),
+      isMuted: false,
+      isSolo: false,
+      masterValue: 255,
+    },
+  ];
+
+  await postFixtureBundle({ fixtures, groups, fixtureLayout, masterSliders: [] });
+  const seededResponse = await fetch(`${baseUrl}/api/state`, {
+    signal: AbortSignal.timeout(10000),
+  });
+  if (seededResponse.ok) {
+    const seededState = await seededResponse.json();
+    log(`fixture-page seed: ${seededState.fixtures?.length || 0} fixtures, ${seededState.fixtureLayout?.length || 0} layout items, ${seededState.groups?.length || 0} groups`);
+  }
+  return async () => {
+    await postFixtureBundle(previous).catch((error) => {
+      log(`WARN fixture capture state restore failed: ${error.message}`);
+    });
+  };
+}
+
+function makeCaptureFixture({ id, name, type, startAddress, channels }) {
+  return {
+    id,
+    name,
+    type,
+    manufacturer: 'Capture Demo',
+    model: `${channels.length}-channel tutorial profile`,
+    mode: `${channels.length}-channel mode`,
+    startAddress,
+    channels: channels.map((channelType) => ({
+      name: captureChannelName(channelType),
+      type: channelType,
+      ranges: [{ min: 0, max: 255, description: `${captureChannelName(channelType)} 0-255` }],
+    })),
+    notes: 'Temporary fixture used only by scripts/capture-demo-media.mjs while recording the stage canvas tutorial.',
+    tags: ['CAPTURE', 'DEMO'],
+  };
+}
+
+function makeCaptureLayout(fixture, x, y, rotation, scale) {
+  return {
+    id: `layout-${fixture.id}`,
+    fixtureId: fixture.id,
+    x,
+    y,
+    rotation,
+    scale,
+    name: fixture.name,
+    type: fixture.type,
+    startAddress: fixture.startAddress,
+    dmxAddress: fixture.startAddress,
+  };
+}
+
+function captureChannelName(channelType) {
+  const names = {
+    blue: 'Blue',
+    dimmer: 'Dimmer',
+    gobo_wheel: 'Gobo Wheel',
+    green: 'Green',
+    pan: 'Pan',
+    red: 'Red',
+    strobe: 'Strobe',
+    tilt: 'Tilt',
+    white: 'White',
+    zoom: 'Zoom',
+  };
+  return names[channelType] || channelType;
+}
+
+async function postFixtureBundle(bundle) {
+  const response = await fetch(`${baseUrl}/api/fixtures`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(bundle),
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(`Unable to save fixture capture bundle: HTTP ${response.status} ${text}`.trim());
+  }
 }
 
 async function captureFrameLoop(cdp, frameDir, duration, recipe) {
@@ -271,6 +422,49 @@ async function runInteractions(cdp, recipe) {
       for (let i = 0; i < count; i += 1) {
         await cdp.send('Runtime.evaluate', {
           expression: `window.scrollBy({ top: Math.round(window.innerHeight * 0.82 * ${direction}), behavior: 'smooth' });`,
+        });
+        await sleep(650);
+      }
+    } else if (kind === 'click') {
+      const [x, y] = String(rawValue || '')
+        .split(',')
+        .map((value) => Number(value.trim()));
+      if (Number.isFinite(x) && Number.isFinite(y)) {
+        await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y, button: 'none' });
+        await cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 });
+        await cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
+        await sleep(650);
+      }
+    } else if (kind === 'stage') {
+      const [xRatio, yRatio] = String(rawValue || '')
+        .split(',')
+        .map((value) => Number(value.trim()));
+      if (Number.isFinite(xRatio) && Number.isFinite(yRatio)) {
+        await cdp.send('Runtime.evaluate', {
+          expression: `
+            (() => {
+              const stage = document.querySelector('[aria-label="Canvas-first fixture stage map"]');
+              if (!stage) return false;
+              const rect = stage.getBoundingClientRect();
+              const x = rect.left + rect.width * ${Math.max(0, Math.min(1, xRatio))};
+              const y = rect.top + rect.height * ${Math.max(0, Math.min(1, yRatio))};
+              const common = {
+                bubbles: true,
+                cancelable: true,
+                composed: true,
+                clientX: x,
+                clientY: y,
+                pointerId: 1,
+                pointerType: 'mouse',
+                isPrimary: true,
+                button: 0
+              };
+              stage.dispatchEvent(new PointerEvent('pointerdown', { ...common, buttons: 1 }));
+              stage.dispatchEvent(new PointerEvent('pointerup', { ...common, buttons: 0 }));
+              stage.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0 }));
+              return true;
+            })()
+          `,
         });
         await sleep(650);
       }

@@ -858,7 +858,7 @@ apiRouter.post('/config/artnet', (req, res) => {
 // POST /api/fixtures - Save all fixtures (for bulk operations, still supported)
 apiRouter.post('/fixtures', (req, res) => {
   try {
-    const { fixtures } = req.body;
+    const { fixtures, fixtureLayout, groups, masterSliders } = req.body;
     if (!Array.isArray(fixtures)) {
       res.status(400).json({ error: 'Fixtures must be an array' });
       return;
@@ -871,10 +871,21 @@ apiRouter.post('/fixtures', (req, res) => {
     const addedCount = newCount > previousCount ? newCount - previousCount : 0;
     const removedCount = previousCount > newCount ? previousCount - newCount : 0;
 
-    saveFixturesData({
+    const nextFixturesData = {
       ...currentData,
       fixtures
-    });
+    };
+    if (Array.isArray(fixtureLayout)) {
+      nextFixturesData.fixtureLayout = fixtureLayout;
+    }
+    if (Array.isArray(groups)) {
+      nextFixturesData.groups = groups;
+    }
+    if (Array.isArray(masterSliders)) {
+      nextFixturesData.masterSliders = masterSliders;
+    }
+
+    saveFixturesData(nextFixturesData);
 
     // Update server's in-memory fixtures to keep them in sync
     try {
@@ -909,6 +920,12 @@ apiRouter.post('/fixtures', (req, res) => {
     // Notify all clients of the fixtures update (emit both for compatibility)
     global.io.emit('fixturesUpdate', fixtures);
     global.io.emit('fixturesUpdated', fixtures);
+    if (Array.isArray(fixtureLayout)) {
+      global.io.emit('fixtureLayoutUpdate', fixtureLayout);
+    }
+    if (Array.isArray(groups)) {
+      global.io.emit('groupsUpdate', groups);
+    }
     res.json({ success: true });
   } catch (error) {
     log('Error saving fixtures', 'ERROR', { error, body: req.body });

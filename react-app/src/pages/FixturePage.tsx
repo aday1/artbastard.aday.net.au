@@ -7,7 +7,7 @@ import { TabPanel } from '../components/ui/TabPanel'
 import styles from './Pages.module.scss'
 
 const FixturePage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<string>('control')
+  const [activeTab, setActiveTab] = useState<string>('setup')
 
   const tabs = [
     {

@@ -64,7 +64,8 @@ Deck scene names are stable and explicit:
 - Deck B slot 1: `APC40 Deck B 01`
 - Deck B slot 40: `APC40 Deck B 40`
 
-Use **Seed Scenes** after patching fixtures to fill these slots quickly:
+Use **Seed Scenes** after placing fixtures on the stage canvas to fill these
+slots quickly:
 
 - **Smart Starter 40** fills one deck with fixture-aware looks like `Red Slow`,
   `Wash Fast`, `Gobo Texture`, and `Strobe All Move 90`.

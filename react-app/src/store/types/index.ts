@@ -159,6 +159,8 @@ export interface OscMessage {
 export interface PlacedFixture {
   id: string;
   fixtureId: string;
+  fixtureStoreId?: string;
+  name?: string;
   x: number;
   y: number;
   rotation: number;
@@ -166,6 +168,9 @@ export interface PlacedFixture {
   dmxAddress: number;
   startAddress: number;
   type: string;
+  color?: string;
+  radius?: number;
+  controls?: PlacedControl[];
 }
 
 export interface PlacedControl {

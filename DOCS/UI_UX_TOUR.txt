@@ -17,11 +17,14 @@ Screen 01: DMX Control Home  (#/)
   Demo actions: scroll the channel grid; pinned channels highlight.
 
 Screen 02: Fixture Setup  (#/fixture)
-  Focus: fixture definitions, addressing, groups; switching to the
-  Advanced Fixture Control tab to drive SuperControl.
-  Operator lesson: patch fixtures, select groups, and use Super Control
-  roles such as dimmer, gobo, pan/tilt, color, and scene capture.
-  Demo actions: switch tab, scroll fixture list.
+  Focus: canvas-first stage map, fixture library, inspector, Smart Groups,
+  Seed Scenes, Seed ACTS, Giddy Up, and the SuperControl handoff.
+  Operator lesson: place fixtures onto the map to patch them, select fixtures
+  spatially, create groups, then drive the same global selection through
+  Super Control roles such as dimmer, gobo, pan/tilt, color, movement, strobe,
+  and scene capture.
+  Demo actions: select a library fixture, place it on the map, show the
+  inspector, scroll to SuperControl, then return to the map.
 
 Screen 03: Scenes and Clip Launcher  (#/scenes-acts)
   Focus: scene library, clip launcher, APC40 scene slots, and scene

@@ -3,6 +3,7 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Grid, PerspectiveCamera } from '@react-three/drei';
 import * as THREE from 'three';
 import { useStore } from '../../store';
+import { STAGE_MAP_HEIGHT, STAGE_MAP_WIDTH } from '../../fixtures/stageMap';
 import styles from './Stage3DVisualizer.module.scss';
 
 interface Stage3DVisualizerProps {
@@ -126,9 +127,14 @@ export const Stage3DVisualizer: React.FC<Stage3DVisualizerProps> = ({
       
       if (placedFixture) {
         // Convert 2D canvas position to 3D stage position
-        // Assuming canvas is normalized 0-1, map to stage coordinates
-        const stageX = (placedFixture.x - 0.5) * 10; // -5 to 5 meters
-        const stageZ = (placedFixture.y - 0.5) * 10; // -5 to 5 meters
+        const normalizedX = placedFixture.x >= 0 && placedFixture.x <= 1
+          ? placedFixture.x
+          : placedFixture.x / STAGE_MAP_WIDTH;
+        const normalizedY = placedFixture.y >= 0 && placedFixture.y <= 1
+          ? placedFixture.y
+          : placedFixture.y / STAGE_MAP_HEIGHT;
+        const stageX = (normalizedX - 0.5) * 10; // -5 to 5 meters
+        const stageZ = (normalizedY - 0.5) * 10; // -5 to 5 meters
         const stageY = 2.5; // Mount height in meters
         return [stageX, stageY, stageZ] as [number, number, number];
       }

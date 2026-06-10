@@ -21,14 +21,58 @@ shared universe per server instance.
 
 Recommended order for a new session:
 
-1. Configure fixtures and groups in Fixture Setup.
-2. Open DMX Control and verify channel response.
-3. Optionally use **Seed Scenes** to generate starter APC40 slots from those fixtures.
-4. Save or fine-tune baseline scenes from SuperControl.
-5. Optionally use **Seed ACTS** after scenes exist to create ready-made show sections.
-6. Open Scenes and Acts for timeline or clip workflows.
-7. Configure MIDI / OSC mappings or apply a controller template.
-8. Validate tablet OSC mappings if you use a remote desk.
+1. Open Fixture Setup and place fixtures on the stage map from the library.
+2. Select fixtures on the map, create or apply smart groups, then verify the shared selection in SuperControl.
+3. Open DMX Control and verify channel response.
+4. Optionally use **Seed Scenes** to generate starter APC40 slots from those fixtures.
+5. Save or fine-tune baseline scenes from SuperControl.
+6. Optionally use **Seed ACTS** after scenes exist to create ready-made show sections.
+7. Open Scenes and Acts for timeline or clip workflows.
+8. Configure MIDI / OSC mappings or apply a controller template.
+9. Validate tablet OSC mappings if you use a remote desk.
+
+## Canvas-first fixture setup
+
+Fixture Setup opens as a flat stage map. Drag a fixture profile from the
+library onto the map, or tap a profile and then tap the stage on mobile. The
+drop creates a real patched fixture with the next available DMX address, saves
+its map position, selects it, and opens the inspector.
+
+Map selection is global. Fixtures selected on the map are the same selected
+fixtures used by SuperControl and the APC40 workflow, so you can patch a rig,
+select a group, and immediately drive dimmer, gobo, color, movement, or other
+roles without hunting through another menu.
+
+Use **Smart Groups** to generate capability groups plus map-aware groups such
+as Stage Left, Stage Center, Stage Right, Upstage, and Downstage. **Giddy Up**
+applies smart groups, seeds Deck A starter scenes, and seeds Starter ACTS when
+fixtures are already defined. Seeds remain optional and handmade scenes/ACTS
+are preserved.
+
+Full tutorial: [STAGE_CANVAS_TUTORIAL.md](STAGE_CANVAS_TUTORIAL.md).
+
+## Stage canvas first-show tutorial
+
+1. Open `#/fixture`.
+2. Drag or tap-place fixture profiles onto the stage map until the screen
+   matches the physical rig.
+3. Use the inspector to rename fixtures, correct addresses, rotate icons, and
+   resolve conflict warnings.
+4. Select fixtures spatially with click, shift-click, or box select.
+5. Create groups from the selected fixtures, or run Smart Groups to add
+   capability and map-aware groups.
+6. Open Super Control from the same page and drive the selected fixtures by
+   role: dimmer, color, pan/tilt, gobo, strobe, movement, or whatever the
+   profile exposes.
+7. Save a baseline scene once the physical fixtures match the intended look.
+8. Optionally use Seed Scenes, Seed ACTS, or Giddy Up to fill starter slots.
+9. Move to Scenes and Acts to refine scene timelines, APC40 Deck A/B slots, and
+   ACT playback.
+10. Export the Address Sheet PDF before touching hardware addresses again.
+
+When debugging, trust the chain in this order: physical address, fixture mode,
+profile channel roles, group membership, selected fixtures, then controller
+mapping.
 
 ## Routes
 
@@ -50,7 +94,7 @@ tour.
 The public showcase embeds six current WebM walkthrough clips recorded from
 the running app. Watch order:
 
-1. Fixture Setup and Super Control - patch fixtures, groups, roles, XY pad.
+1. Stage Canvas and Super Control - placement, groups, roles, XY pad.
 2. DMX Control Home - channel grid, faders, filters, master, MIDI, OSC.
 3. Scenes and Clip Launcher - scene capture, keyframes, APC40 Deck A/B slots.
 4. Acts Timeline - scene clips, gaps, ACT transport, scheduled MIDI/OSC.
@@ -109,7 +153,7 @@ surface in v5.2.4.0.
 
 ## Scene workflow
 
-1. Define fixtures first; the seed generator is fixture-role aware.
+1. Define fixtures first on the Fixture Setup stage map; the seed generator is fixture-role aware.
 2. Click **Seed Scenes** in Fixture Setup or Scenes and Acts.
 3. Choose a pack:
    - **Smart Starter 40** fills one APC40 deck with color, wash, movement,

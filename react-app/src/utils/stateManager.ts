@@ -400,6 +400,7 @@ export class StateManager {
           if (storeState.oscAssignments) updates.oscAssignments = storeState.oscAssignments;
           if (storeState.channelNames) updates.channelNames = storeState.channelNames;
           if (storeState.masterSliders) updates.masterSliders = storeState.masterSliders;
+          if (storeState.fixtureLayout) updates.fixtureLayout = storeState.fixtureLayout;
           
           // Apply all updates at once
           if (Object.keys(updates).length > 0) {

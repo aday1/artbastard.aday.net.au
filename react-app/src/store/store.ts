@@ -340,6 +340,7 @@ export interface PlacedFixture {
   type: string; // Fixture type (spotlight, wash, beam, etc.)
   x: number;
   y: number;
+  rotation?: number;
   color: string;
   radius: number;
   scale?: number; // Scale for 2D canvas display

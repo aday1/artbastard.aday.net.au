@@ -18,8 +18,8 @@ Quick start:
 
 1. Launch the system (`./start.sh` or `.\start.ps1`).
 2. Connect your DMX interface (USB or Art-Net node).
-3. Open Fixture Setup to define fixtures and groups.
-4. Save a baseline scene from SuperControl.
+3. Open Fixture Setup, place fixtures on the stage map, and create or apply groups.
+4. Select fixtures on the map and save a baseline scene from SuperControl.
 5. Configure MIDI controllers or OSC clients in Settings.
 6. Open Acts for act timelines, or Scenes for scene capture / clip launcher work. Run the show
    from the DMX Control page.
@@ -116,6 +116,28 @@ DMX address (1-512). The simulator shows the binary pattern alongside a
 visual representation of a fixture's switch block, and updates in real time
 as you change the address.
 
+Fixture Setup now opens as a canvas-first stage map. Drag a library profile
+onto the map, or tap a profile and then tap the stage on mobile. The fixture is
+patched immediately with the next available DMX address, selected globally, and
+available to SuperControl and APC40 fixture selection. Top and Side view use
+the same saved coordinates. Use Smart Groups for capability groups and
+map-aware Stage Left, Center, Right, Upstage, and Downstage groups.
+
+Stage canvas tutorial:
+
+1. Place fixture profiles on the map until the screen matches the physical rig.
+2. Use the inspector to rename fixtures, correct addresses, rotate icons, and
+   clear conflict warnings.
+3. Click, shift-click, or box-select fixtures to build the global selection.
+4. Create groups from the selection or run Smart Groups for capability and
+   position-based groups.
+5. Open SuperControl and drive the selected fixtures by detected roles such as
+   dimmer, color, pan/tilt, gobo, movement, and strobe.
+6. Save baseline scenes, or optionally use Seed Scenes, Seed ACTS, or Giddy Up
+   after fixture output is proven.
+
+The full written tutorial is DOCS/STAGE_CANVAS_TUTORIAL.md.
+
 ---
 
 ## 4. MIDI Setup
@@ -194,7 +216,7 @@ Recall:
 
 Seed:
 
-- Add fixtures first, then use **Seed Scenes** in Fixture Setup or Scenes &
+- Add fixtures first on the Fixture Setup stage map, then use **Seed Scenes** in Fixture Setup or Scenes &
   Acts.
 - **Smart Starter 40** fills Deck A or Deck B with ready-made looks such as
   `Red Slow`, `Wash Fast`, `Gobo Texture`, and `Strobe All Move 90`.
@@ -468,7 +490,7 @@ Six short WebM walkthrough clips of the current primary surfaces live at
 `website/videos/`. The showcase page embeds them with poster fallbacks and
 lazy load. Watch order:
 
-1. Fixture Setup and Super Control - patch fixtures and groups.
+1. Stage Canvas and Super Control - place fixtures, build groups, drive roles.
 2. DMX Control Home - drive faders, filters, master, MIDI, and OSC.
 3. Scenes and Clip Launcher - capture scenes and launch APC40 Deck A/B slots.
 4. Acts Timeline - build show sequences with clips, gaps, MIDI, and OSC.

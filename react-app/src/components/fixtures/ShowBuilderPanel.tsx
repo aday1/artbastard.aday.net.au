@@ -1,9 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
-import { type Group, useStore } from '../../store';
+import { type Fixture, type Group, useStore } from '../../store';
 import useStoreUtils from '../../store/storeUtils';
 import { LucideIcon } from '../ui/LucideIcon';
+import { ActSeedButton } from '../acts/ActSeedButton';
 import { SceneSeedButton } from '../scenes/SceneSeedButton';
+import { mergeSmartFixtureGroups, suggestFixtureGroups } from '../../fixtures/autoGroups';
 import {
   buildShowPatchPlan,
   formatPatchCsv,
@@ -24,6 +26,13 @@ interface ShowBuilderRow {
   startAddress: number;
   gapChannels: number;
   labelPrefix: string;
+}
+
+interface ShowCreateResult {
+  fixtures: Fixture[];
+  groups: Group[];
+  createdFixtures: number;
+  createdGroups: number;
 }
 
 const clampQuantity = (value: number) => Math.max(0, Math.min(32, Math.floor(value || 0)));
@@ -130,10 +139,21 @@ function labelWithHint(label: string, hint: string) {
 }
 
 export const ShowBuilderPanel: React.FC = () => {
-  const { fixtures, groups, fixtureTemplates, setFixtures, setGroups, setSelectedFixtures } = useStore((state) => ({
+  const {
+    fixtures,
+    groups,
+    fixtureTemplates,
+    seedActsFromScenes,
+    seedScenesFromFixtures,
+    setFixtures,
+    setGroups,
+    setSelectedFixtures,
+  } = useStore((state) => ({
     fixtures: state.fixtures,
     groups: state.groups,
     fixtureTemplates: state.fixtureTemplates,
+    seedActsFromScenes: state.seedActsFromScenes,
+    seedScenesFromFixtures: state.seedScenesFromFixtures,
     setFixtures: state.setFixtures,
     setGroups: state.setGroups,
     setSelectedFixtures: state.setSelectedFixtures,
@@ -143,6 +163,7 @@ export const ShowBuilderPanel: React.FC = () => {
   const [rows, setRows] = useState<ShowBuilderRow[]>([]);
   const [selectedTemplateIds, setSelectedTemplateIds] = useState<string[]>([]);
   const [isCreating, setIsCreating] = useState(false);
+  const [isGiddyUp, setIsGiddyUp] = useState(false);
 
   const sortedTemplates = useMemo(() => {
     return [...fixtureTemplates]
@@ -279,6 +300,52 @@ export const ShowBuilderPanel: React.FC = () => {
     );
   }, [activeSelections, avoidExisting, fixtures, highestFixtureAddress, showName, sortedTemplates]);
 
+  const smartGroupSuggestions = useMemo(
+    () => suggestFixtureGroups(fixtures, { showName }),
+    [fixtures, showName]
+  );
+
+  const applySuggestedGroups = useCallback(async (
+    sourceFixtures: Fixture[] = fixtures,
+    sourceGroups: Group[] = groups,
+    notify = true
+  ) => {
+    const suggestions = suggestFixtureGroups(sourceFixtures, { showName });
+    if (!suggestions.length) {
+      if (notify) {
+        useStoreUtils.getState().addNotification({
+          message: 'Add fixtures before applying smart groups',
+          type: 'info',
+          priority: 'normal',
+        });
+      }
+      return sourceGroups;
+    }
+
+    const result = mergeSmartFixtureGroups(sourceGroups, suggestions);
+    setGroups(result.groups);
+
+    try {
+      await axios.post('/api/groups', { groups: result.groups });
+      if (notify) {
+        useStoreUtils.getState().addNotification({
+          message: `Applied ${suggestions.length} smart groups (${result.created} new, ${result.refreshed} refreshed)`,
+          type: 'success',
+          priority: 'normal',
+        });
+      }
+    } catch (error) {
+      console.error('Failed to save smart groups:', error);
+      useStoreUtils.getState().addNotification({
+        message: 'Smart groups applied locally, but server save failed',
+        type: 'warning',
+        priority: 'high',
+      });
+    }
+
+    return result.groups;
+  }, [fixtures, groups, setGroups, showName]);
+
   const copyPatchSheet = async () => {
     const text = formatPatchSheet(plan);
     if (!text) return;
@@ -310,7 +377,7 @@ export const ShowBuilderPanel: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  const createShowFixtures = useCallback(async () => {
+  const createShowFixtures = useCallback(async (): Promise<ShowCreateResult | undefined> => {
     if (!plan.fixtures.length || plan.errors.length || isCreating) {
       useStoreUtils.getState().addNotification({
         message: plan.errors.length
@@ -351,6 +418,12 @@ export const ShowBuilderPanel: React.FC = () => {
     setSelectedFixtures(newFixtures.map((fixture) => fixture.id));
     setRows([]);
     setSelectedTemplateIds([]);
+    const createdState = {
+      fixtures: updatedFixtures,
+      groups: updatedGroups,
+      createdFixtures: newFixtures.length,
+      createdGroups: groupIndexes.size,
+    };
 
     try {
       await Promise.all([
@@ -372,7 +445,66 @@ export const ShowBuilderPanel: React.FC = () => {
     } finally {
       setIsCreating(false);
     }
+    return createdState;
   }, [fixtures, groups, isCreating, plan, setFixtures, setGroups, setSelectedFixtures]);
+
+  const runGiddyUpSetup = useCallback(async () => {
+    if (!fixtures.length && !plan.fixtures.length) {
+      useStoreUtils.getState().addNotification({
+        message: 'Select fixture profiles first, then Giddy Up can create the show',
+        type: 'info',
+        priority: 'normal',
+      });
+      return;
+    }
+
+    setIsGiddyUp(true);
+    try {
+      let sourceFixtures = fixtures;
+      let sourceGroups = groups;
+
+      if (plan.fixtures.length) {
+        const created = await createShowFixtures();
+        if (created) {
+          sourceFixtures = created.fixtures;
+          sourceGroups = created.groups;
+        }
+      }
+
+      if (sourceFixtures.length) {
+        sourceGroups = await applySuggestedGroups(sourceFixtures, sourceGroups, false);
+      }
+
+      const sceneSeed = await seedScenesFromFixtures({
+        packId: 'smart-starter-40',
+        target: 'deck-a',
+        includeAutomation: true,
+      });
+
+      if (!sceneSeed.disabledReason) {
+        await seedActsFromScenes({
+          packId: 'starter-acts',
+          includeTriggers: true,
+        });
+      }
+
+      useStoreUtils.getState().addNotification({
+        message: `Giddy Up complete: ${sourceFixtures.length} fixtures, ${sourceGroups.length} groups, optional scene/ACT seeds ready`,
+        type: 'success',
+        priority: 'normal',
+      });
+    } finally {
+      setIsGiddyUp(false);
+    }
+  }, [
+    applySuggestedGroups,
+    createShowFixtures,
+    fixtures,
+    groups,
+    plan.fixtures.length,
+    seedActsFromScenes,
+    seedScenesFromFixtures,
+  ]);
 
   useEffect(() => {
     const handleApcCreateShow = () => {
@@ -429,6 +561,47 @@ export const ShowBuilderPanel: React.FC = () => {
         <span><strong>3</strong> Create Show</span>
         <span title="APC40 Play/Launch can commit the same generated show map."><strong>APC40</strong> Clip grid selects, Play creates</span>
       </div>
+
+      <div className={styles.showBuilderGuide}>
+        <div>
+          <strong>Fast path for a new show</strong>
+          <span>Create fixtures, apply smart groups, seed Deck A scenes, then seed ACTS. Every step is optional and editable.</span>
+        </div>
+        <div className={styles.showBuilderGuideActions}>
+          <button
+            type="button"
+            onClick={() => void applySuggestedGroups()}
+            disabled={!smartGroupSuggestions.length}
+            title="Create or refresh fixture groups from channel roles."
+          >
+            <LucideIcon name="FolderSymlink" size={16} />
+            Smart Groups
+          </button>
+          <SceneSeedButton className={styles.showSeedButton} compact />
+          <ActSeedButton className={styles.showSeedButton} />
+          <button
+            type="button"
+            className={styles.giddyUpButton}
+            onClick={() => void runGiddyUpSetup()}
+            disabled={isGiddyUp || (!fixtures.length && !plan.fixtures.length)}
+            title="Create the current show map if needed, apply smart groups, seed scenes, and seed ACTS."
+          >
+            <LucideIcon name="Rocket" size={16} />
+            {isGiddyUp ? 'Setting up...' : 'Giddy Up Setup'}
+          </button>
+        </div>
+      </div>
+
+      {smartGroupSuggestions.length > 0 && (
+        <div className={styles.smartGroupPreview} aria-label="Suggested fixture groups">
+          {smartGroupSuggestions.map((suggestion) => (
+            <span key={suggestion.key} title={suggestion.reason}>
+              <strong>{suggestion.name}</strong>
+              {suggestion.fixtureIndices.length}
+            </span>
+          ))}
+        </div>
+      )}
 
       <div className={styles.showBuilderBulk}>
         <span>
@@ -600,13 +773,14 @@ export const ShowBuilderPanel: React.FC = () => {
             <button
               type="button"
               className={styles.createShowButton}
-              onClick={createShowFixtures}
+              onClick={() => { void createShowFixtures(); }}
               disabled={!plan.fixtures.length || plan.errors.length > 0 || isCreating}
             >
               <LucideIcon name="Wand2" size={16} />
               {isCreating ? 'Creating...' : 'Create Show'}
             </button>
             <SceneSeedButton className={styles.showSeedButton} />
+            <ActSeedButton className={styles.showSeedButton} />
           </div>
         </div>
 

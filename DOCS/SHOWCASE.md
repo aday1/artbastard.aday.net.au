@@ -4,11 +4,12 @@ How the public showcase page is built, recorded, and deployed. Useful if you
 want to rebuild it locally, change the operator videos, or audit the deploy
 path.
 
-Last content refresh: 2026-06-09 (v5.2.4.0 APC40 Deck A/B workflow,
-optional fixture-aware scene and ACT seed templates, Record Arm scene saves,
-Device Control gobo roles, Roli Lightpad LED drawing, mobile showcase layout,
-and six-clip operator how-to tour). Website feature grid mentions the seed
-workflow plus LAN / Pi bridge for cloud-hosted Art-Net on home LANs.
+Last content refresh: 2026-06-10 (v5.2.4.0 APC40 Deck A/B workflow,
+canvas-first stage fixture setup, optional fixture-aware scene and ACT seed
+templates, Record Arm scene saves, Device Control gobo roles, Roli Lightpad
+LED drawing, mobile showcase layout, and six-clip operator how-to tour).
+Website feature grid mentions the stage canvas, seed workflow, and LAN / Pi
+bridge for cloud-hosted Art-Net on home LANs.
 
 Act timeline docs (transport vs BPM vs Link, gaps, editing): DOCS/ACT_TIMELINE.md
 and in-app Help → Act Timeline tab (mirrored in DOCS/HELP.md §8b).
@@ -40,9 +41,9 @@ JPEG frame sequences, and uses `ffmpeg` to encode VP9 WebM clips. Posters
 are copied from the first captured frame.
 
 The committed videos are silent operator walkthroughs. The showcase captions
-explain the lesson for each clip: patch fixtures, drive DMX/Super Control,
-capture scenes and APC40 deck slots, sequence ACTs, operate mobile, and
-configure settings/help.
+explain the lesson for each clip: place fixtures on the stage canvas, drive
+DMX/Super Control, capture scenes and APC40 deck slots, sequence ACTs,
+operate mobile, and configure settings/help.
 
 The script:
 

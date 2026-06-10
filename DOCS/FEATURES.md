@@ -61,10 +61,25 @@ Shared controls in `react-app/src/components/ui/controls/`:
 - `RemasterPanel` - glass panel shell for automation surfaces
 - Envelope engine with anime.js `outExpo` (`utils/envelopeEngine.ts`)
 
-Surfaces using the kit: DmxChannelCard grid, Super Control, fixture canvas,
+Surfaces using the kit: DmxChannelCard grid, Super Control, stage canvas,
 Chromatic Energy manipulator, scenes, mobile/touch, BPM dashboard, envelope
 and modular automation. Settings and face-tracker debug still use native
 ranges where low traffic warrants it.
+
+## Canvas-first fixture setup
+
+- Fixture Setup opens on a 1000x600 stage map instead of a menu-first form.
+- Drag or tap a fixture library profile onto the map to create a real patched
+  fixture with the next safe DMX start address.
+- The inspector handles exact address edits, naming, rotation, scale, group
+  membership, conflict warnings, and advanced batch tools.
+- Top and Side view share the same saved `fixtureLayout` coordinates.
+- Map selection is global: Super Control, APC40 fixture/group selection, and
+  Fixture Setup all use the same selected fixtures.
+- Smart Groups adds capability groups plus map-aware Stage Left, Center,
+  Stage Right, Upstage, and Downstage groups.
+- Seed Scenes, Seed ACTS, and Giddy Up are available from the fixture workflow
+  once fixtures exist, but all generated material remains optional.
 
 ## DMX workflow and UX
 

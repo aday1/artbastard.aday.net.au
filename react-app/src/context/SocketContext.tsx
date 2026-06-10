@@ -290,6 +290,9 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (state.groups && Array.isArray(state.groups)) {
           store.setGroups(state.groups);
         }
+        if (state.fixtureLayout && Array.isArray(state.fixtureLayout)) {
+          store.setFixtureLayout(state.fixtureLayout);
+        }
         // Sync custom profile copies from server while keeping the canonical catalog protected.
         if (state.fixtureTemplates && Array.isArray(state.fixtureTemplates)) {
           const currentTemplates = store.fixtureTemplates;
@@ -433,6 +436,14 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         store.setGroups(groupsData);
       });
 
+      socketInstance.on('fixtureLayoutUpdate', (layoutData: any[]) => {
+        debugLog.log('[SocketContext] Received fixture layout update from backend:', layoutData.length, 'items');
+        const store = useStore.getState();
+        if (Array.isArray(layoutData)) {
+          store.setFixtureLayout(layoutData);
+        }
+      });
+
       // Listen for quick scene save/load events
       socketInstance.on('quickSceneSaved', (data: { name: string; slot?: number; timestamp: number }) => {
         debugLog.log('[SocketContext] Quick scene saved:', data.name);
@@ -553,6 +564,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           socketInstance.off('fixturesLoaded');
           socketInstance.off('groupsUpdated');
           socketInstance.off('groupsLoaded');
+          socketInstance.off('fixtureLayoutUpdate');
           socketInstance.off('quickSceneSaved');
           socketInstance.off('quickSceneLoaded');
           socketInstance.off('quickSceneLoadError');

@@ -122,11 +122,34 @@ export const HelpOverlay: React.FC<HelpOverlayProps> = ({ embedded = false }) =>
               <ol className={styles.stepList}>
                 <li><strong>Launch System:</strong> Run <code>.\start.ps1</code> for instant startup</li>
                 <li><strong>Connect Hardware:</strong> Connect your DMX interface to your lighting fixtures</li>
-                <li><strong>Configure Fixtures:</strong> Go to Fixture Setup to define your lighting fixtures</li>
-                <li><strong>Create Scenes:</strong> Set up lighting scenes and save them for later use</li>
+                <li><strong>Configure Fixtures:</strong> Place fixtures from the library onto the Fixture Setup stage map</li>
+                <li><strong>Create Scenes:</strong> Select fixtures on the map or in SuperControl, then save scenes for later use</li>
                 <li><strong>Setup Control:</strong> Configure MIDI controllers or OSC devices for hands-free control</li>
                 <li><strong>Perform:</strong> Use the interface to control your lights in real-time</li>
               </ol>
+            </div>
+
+            <div className={styles.section}>
+              <h5>🗺️ Canvas-first Fixture Setup</h5>
+              <ul>
+                <li><strong>Patch by placing:</strong> Drag a library profile onto the stage map, or tap a profile and then tap the map on mobile.</li>
+                <li><strong>Immediate fixture:</strong> Dropping creates a real patched fixture with the next available DMX address.</li>
+                <li><strong>Shared selection:</strong> Map selections are the same selected fixtures used by SuperControl and APC40 fixture/group control.</li>
+                <li><strong>Smart Groups:</strong> Generate capability groups plus Stage Left, Center, Right, Upstage, and Downstage groups from map positions.</li>
+              </ul>
+            </div>
+
+            <div className={styles.section}>
+              <h5>🧭 Stage Canvas Tutorial</h5>
+              <ol className={styles.stepList}>
+                <li><strong>Place fixtures:</strong> Drag or tap-place library profiles onto the map until it matches the real rig.</li>
+                <li><strong>Inspect patching:</strong> Rename fixtures, correct addresses, rotate icons, and clear conflict warnings in the inspector.</li>
+                <li><strong>Select spatially:</strong> Click, shift-click, or box-select fixtures to build the global selection.</li>
+                <li><strong>Group:</strong> Create groups from the selection or use Smart Groups for capability and stage-position groups.</li>
+                <li><strong>Drive:</strong> Use SuperControl to test dimmer, color, pan/tilt, gobo, movement, strobe, and other detected roles.</li>
+                <li><strong>Build show:</strong> Save baseline scenes, or optionally use Seed Scenes, Seed ACTS, or Giddy Up once output is proven.</li>
+              </ol>
+              <p>The full written version is in <code>DOCS/STAGE_CANVAS_TUTORIAL.md</code>.</p>
             </div>
 
             <div className={styles.section}>
@@ -493,7 +516,7 @@ export const HelpOverlay: React.FC<HelpOverlayProps> = ({ embedded = false }) =>
             <div className={styles.section}>
               <h5>✨ Smart Scene / ACT Seeds</h5>
               <ul>
-                <li><strong>Seed Scenes:</strong> Available in Fixture Setup and Scenes &amp; Acts once fixtures exist</li>
+                <li><strong>Seed Scenes:</strong> Available in Fixture Setup and Scenes &amp; Acts once fixtures exist on the stage map</li>
                 <li><strong>Smart Starter 40:</strong> Fills one APC40 deck with color, wash, movement, gobo, strobe, and combo looks</li>
                 <li><strong>Smart A+B 80:</strong> Fills both APC40 decks with crossfader-friendly variants</li>
                 <li><strong>Automation:</strong> Optional timelines add slow/fast dimmer, color, movement, gobo, and strobe patterns when fixture roles support them</li>
@@ -1229,7 +1252,7 @@ GET    /api/factory-reset-check    # returns true once reset has occurred`}</cod
               <h5>Clips</h5>
               <ul>
                 <li>DMX Control Home</li>
-                <li>Fixture Setup &amp; SuperControl</li>
+                <li>Stage Canvas &amp; SuperControl</li>
                 <li>Scenes &amp; Clip Launcher</li>
                 <li>Acts Timeline</li>
                 <li>Mobile Control Surface (430x932)</li>

@@ -257,7 +257,7 @@
                     Click any tile to play. Tiles load on demand, no autoplay.
                 </p>
                 <ol class="tour-path" aria-label="Recommended video watch order">
-                    <li><strong>Patch</strong><span>Fixture Setup</span></li>
+                    <li><strong>Map</strong><span>Stage Canvas</span></li>
                     <li><strong>Drive</strong><span>DMX + Super Control</span></li>
                     <li><strong>Capture</strong><span>Scenes and APC40 slots</span></li>
                     <li><strong>Sequence</strong><span>Acts timeline</span></li>
@@ -279,8 +279,8 @@
                                poster="videos/fixture-page.jpg" data-src="videos/fixture-page.webm">
                         </video>
                         <figcaption>
-                            <strong>How to patch fixtures and use Super Control</strong>
-                            <span>Fixture canvas, groups, unified Super Control, MIDI learn, XY pad, and scene capture.</span>
+                            <strong>How to build a show from the stage canvas</strong>
+                            <span>Place fixtures, inspect DMX addresses, build groups, use optional seeds, then drive the same selection from Super Control.</span>
                         </figcaption>
                     </figure>
                     <figure class="video-tile" data-video="videos/scenes-acts.webm" data-exhibit="Exhibit // SCENE">
@@ -371,6 +371,16 @@
                             fixture selector, channels viewport, scene controls and a footer
                             status row. Styled faders on every channel card; filtering and pinned-channel
                             logic is unit tested.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">MAP</div>
+                        <h3>Canvas-First Fixture Setup</h3>
+                        <p>Fixture Setup opens on a 1000x600 stage map. Drag or tap a library
+                            profile onto the map to create a real patched fixture, assign the next
+                            safe DMX start address, save its layout, select it globally, and open
+                            the inspector. Top and Side view share coordinates; map selections feed
+                            Super Control, APC40 fixture/group selection, Smart Groups, scene seeds,
+                            ACT seeds, and Giddy Up.</p>
                     </div>
                     <div class="feature-card">
                         <div class="feature-icon">SCENE</div>
@@ -567,7 +577,11 @@
                     </a>
                     <a href="DOCS/FIXTURES.md" class="doc-card">
                         <h3>Fixture Setup</h3>
-                        <p>Profiles, addressing, multi-universe planning, PDF address sheet.</p>
+                        <p>Profiles, canvas placement, addressing, groups, PDF address sheet.</p>
+                    </a>
+                    <a href="DOCS/STAGE_CANVAS_TUTORIAL.md" class="doc-card">
+                        <h3>Stage Canvas Tutorial</h3>
+                        <p>Build a show from fixture placement through groups, seeds, Super Control, APC40, and debugging.</p>
                     </a>
                     <a href="DOCS/HELP.md" class="doc-card">
                         <h3>Help (Offline Mirror)</h3>
