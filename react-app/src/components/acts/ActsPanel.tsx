@@ -5,6 +5,7 @@ import { TimelineActEditor } from './TimelineActEditor';
 import { ActPlayer } from './ActPlayer';
 import { ActSeedButton } from './ActSeedButton';
 import { LucideIcon } from '../ui/LucideIcon';
+import { Apc40SceneLaunchStrip } from '../midi/Apc40SceneLaunchStrip';
 import styles from './ActsPanel.module.scss';
 
 export const ActsPanel: React.FC = () => {
@@ -89,6 +90,8 @@ export const ActsPanel: React.FC = () => {
           </button>
         </div>
       </div>
+
+      <Apc40SceneLaunchStrip />
 
       <div className={styles.workflowStrip} aria-label="Acts workflow model">
         <div className={styles.workflowItem}>

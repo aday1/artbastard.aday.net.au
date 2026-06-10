@@ -1,0 +1,56 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.22rem 0.5rem;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.78);
+  border: 1px solid rgba(78, 205, 196, 0.45);
+  color: #ccfbf1;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.compact {
+  padding: 0.15rem 0.35rem;
+  font-size: 0.62rem;
+  gap: 0.25rem;
+}
+
+.active {
+  border-color: rgba(251, 191, 36, 0.85);
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.45);
+  color: #fde68a;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.18rem;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(148, 163, 184, 0.3);
+  border: 1px solid rgba(148, 163, 184, 0.45);
+}
+
+.dotActive {
+  background: #2dd4bf;
+  border-color: #2dd4bf;
+  box-shadow: 0 0 5px rgba(45, 212, 191, 0.85);
+}
+
+.label {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(251, 191, 36, 0.35); }
+  50%      { box-shadow: 0 0 12px rgba(251, 191, 36, 0.75); }
+}

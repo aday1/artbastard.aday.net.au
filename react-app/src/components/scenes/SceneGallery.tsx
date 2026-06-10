@@ -12,6 +12,7 @@ import { SceneChannelValueEditor } from './SceneChannelValueEditor';
 import { SceneCardMap } from './SceneCardMap';
 import { SceneDiffBadge } from './SceneDiffBadge';
 import { computeSceneDiff } from '../../selectors/sceneDiff';
+import { Apc40SceneLaunchStrip } from '../midi/Apc40SceneLaunchStrip';
 import styles from './SceneGallery.module.scss'
 import { useSceneCapture } from '../../hooks/useSceneCapture'
 import { SceneSeedButton } from './SceneSeedButton'
@@ -287,6 +288,8 @@ export const SceneGallery: React.FC = () => {
         {theme === 'standard' && 'Scenes'}
         {theme === 'minimal' && 'Scenes'}
       </h2>
+
+      <Apc40SceneLaunchStrip />
 
       {/* Scene creation form */}
       <div className={styles.card}>
