@@ -19,8 +19,14 @@ The installer:
 - clones the repo if it is not already present
 - checks for Node.js 20+ and can use Volta if installed
 - installs root and React dependencies
-- writes `ops\windows\launcher\Launch-ArtBastardLocal.ps1`
+- installs the bundled `ops\windows\launcher\Launch-ArtBastardLocal.ps1`
 - creates `ArtBastard Launcher.lnk` on the Desktop
+
+The bundled launcher can also be run directly:
+
+```powershell
+.\ops\windows\launcher\Launch-ArtBastardLocal.ps1
+```
 
 ## What The Launcher Reports
 
@@ -57,6 +63,7 @@ internet:
 - the repo is already cloned
 - Node dependencies are already installed
 - the launcher skips GitHub when it cannot reach it
+- dependency checks use the existing install and prefer cached npm data
 - local Art-Net, OSC, MIDI, and localhost HTTP do not need internet
 
 Internet is still required when:
@@ -65,3 +72,11 @@ Internet is still required when:
 - first installing missing npm packages
 - fetching the latest LIVE/DEV commits
 - dependencies were deleted or a clean reinstall is requested
+
+## Relaunch Behavior
+
+The launcher shows a short countdown before handing off to `start.ps1`.
+
+When no new code is found, it uses the fast local start path. When Git pulls new
+code or switching LIVE/DEV changes the checkout, it starts ArtBastard with
+`-Clear` so the updated code gets a clean rebuild from source.

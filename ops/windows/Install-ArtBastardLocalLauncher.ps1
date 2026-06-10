@@ -81,6 +81,25 @@ function Ensure-Dependencies {
 function Write-Launcher {
     New-Item -ItemType Directory -Force -Path $launcherDir | Out-Null
 
+    $bundledLauncherDir = Join-Path $PSScriptRoot "launcher"
+    $bundledLauncherPath = Join-Path $bundledLauncherDir "Launch-ArtBastardLocal.ps1"
+    if (Test-Path $bundledLauncherPath) {
+        $sourceResolved = (Resolve-Path -LiteralPath $bundledLauncherPath).Path
+        $targetResolved = if (Test-Path $launcherPath) { (Resolve-Path -LiteralPath $launcherPath).Path } else { $launcherPath }
+
+        if ($sourceResolved -ne $targetResolved) {
+            Copy-Item -LiteralPath $bundledLauncherPath -Destination $launcherPath -Force
+        }
+
+        $assetSource = Join-Path $bundledLauncherDir "assets"
+        if (Test-Path $assetSource) {
+            Copy-Item -LiteralPath $assetSource -Destination $launcherDir -Recurse -Force
+        }
+
+        Write-Host "Launcher installed from bundled ops\windows\launcher files." -ForegroundColor Green
+        return
+    }
+
     $launcher = @'
 param(
     [ValidateSet("ask", "main", "dev")]
@@ -371,7 +390,12 @@ function New-Shortcut {
     $shortcut.TargetPath = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
     $shortcut.Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$launcherPath`""
     $shortcut.WorkingDirectory = $launcherDir
-    $shortcut.IconLocation = "$env:SystemRoot\System32\shell32.dll,220"
+    $launcherIcon = Join-Path $launcherDir "assets\artbastard-launcher.ico"
+    if (Test-Path $launcherIcon) {
+        $shortcut.IconLocation = $launcherIcon
+    } else {
+        $shortcut.IconLocation = "$env:SystemRoot\System32\shell32.dll,220"
+    }
     $shortcut.Description = "Choose LIVE/main or DEV/dev, update ArtBastard, check Art-Net/MIDI/OSC, then launch locally."
     $shortcut.Save()
     Write-Host "Shortcut ready: $desktopShortcut" -ForegroundColor Green
