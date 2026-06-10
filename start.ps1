@@ -324,6 +324,17 @@ function Get-SophisticatedETA {
     }
 }
 
+function Show-RelaunchCountdown {
+    param([int]$Seconds = 5)
+
+    Write-Host ""
+    for ($remaining = $Seconds; $remaining -gt 0; $remaining--) {
+        Write-Host "Relaunching ArtBastard in $remaining..." -ForegroundColor Yellow
+        Start-Sleep -Seconds 1
+    }
+    Write-Host ""
+}
+
 # Function to check if rebuild is needed (including major code changes)
 function Test-NeedsRebuild {
     $rebuildNeeded = $false
@@ -623,6 +634,7 @@ if ($Clear) {
     Write-Host ""
     try {
         $env:PORT = $Port
+        Show-RelaunchCountdown
         npm start
     } catch {
         Write-Host "[X] Server deployment encountered complications!" -ForegroundColor Red
@@ -872,6 +884,7 @@ if (-not $Clear) {
     # Deploy the server with sophistication
     try {
         $env:PORT = $Port
+        Show-RelaunchCountdown
         npm start
     } catch {
         Write-Host "[X] Server deployment encountered complications!" -ForegroundColor Red
@@ -1339,6 +1352,7 @@ Update-ETAMetrics $totalTime
 try {
     Write-Host "Initiating ArtBastard DMX512 server deployment on port $Port..." -ForegroundColor Green
     $env:PORT = $Port
+    Show-RelaunchCountdown
     npm start
 } catch {
     Write-Host "Server deployment encountered architectural complications!" -ForegroundColor Red
