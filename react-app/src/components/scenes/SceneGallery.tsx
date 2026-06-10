@@ -9,6 +9,7 @@ const SceneTimelineEditor = lazy(() =>
 import { LucideIcon } from '../ui/LucideIcon'
 import { HorizontalFader } from '../ui/controls';
 import { SceneChannelValueEditor } from './SceneChannelValueEditor';
+import { SceneCardMap } from './SceneCardMap';
 import styles from './SceneGallery.module.scss'
 import { useSceneCapture } from '../../hooks/useSceneCapture'
 import { SceneSeedButton } from './SceneSeedButton'
@@ -628,6 +629,12 @@ export const SceneGallery: React.FC = () => {
                 </span>
               </div>
             </div>
+
+            <SceneCardMap
+              sceneName={scene.seed?.label || scene.name}
+              channelValues={scene.channelValues}
+              activeChannelCount={getActiveChannelCount(scene.channelValues)}
+            />
 
             <div className={styles.sceneMidiMapping}>
               <MidiLearnButton
