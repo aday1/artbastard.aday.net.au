@@ -12,6 +12,12 @@ interface StageMapDashboardProps {
   onSelectGroup?: (groupId: string) => void;
   showGroupPicker?: boolean;
   maxGroupChips?: number;
+  /**
+   * Optional DMX snapshot to render instead of the live channel feed.
+   * Use for scene previews and act-timeline hover previews so the
+   * miniature reflects the scene's stored values, not the current bus.
+   */
+  dmxOverride?: number[];
 }
 
 export const StageMapDashboard: React.FC<StageMapDashboardProps> = ({
@@ -21,8 +27,9 @@ export const StageMapDashboard: React.FC<StageMapDashboardProps> = ({
   onSelectGroup,
   showGroupPicker = true,
   maxGroupChips = 8,
+  dmxOverride,
 }) => {
-  const { fixtures, fixtureLayout, groups, selectedFixtures, dmxChannels, setSelectedFixtures } = useStore(
+  const { fixtures, fixtureLayout, groups, selectedFixtures, dmxChannels: liveDmxChannels, setSelectedFixtures } = useStore(
     (s) => ({
       fixtures: s.fixtures,
       fixtureLayout: s.fixtureLayout,
@@ -32,6 +39,8 @@ export const StageMapDashboard: React.FC<StageMapDashboardProps> = ({
       setSelectedFixtures: s.setSelectedFixtures,
     })
   );
+
+  const dmxChannels = dmxOverride ?? liveDmxChannels;
 
   const layout = useMemo(
     () => normalizeFixtureLayout(fixtures, fixtureLayout),
