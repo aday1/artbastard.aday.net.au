@@ -95,7 +95,6 @@ export const ComponentToolbar: React.FC<ComponentToolbarProps> = ({
     'dmx-control-panel',
     'dmx-channels',
     'dmx-visualizer',
-    'face-tracker',
     'scene-quick-launch',
     'chromatic-energy-manipulator'
   ];
