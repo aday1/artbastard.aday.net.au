@@ -206,7 +206,7 @@ export const DmxFaderRow: React.FC<DmxFaderRowProps> = ({
               aria-pressed={isMidiLearning}
             >
               <LucideIcon name={isMidiLearning ? 'Radio' : isMidiMapped ? 'Link' : 'Music2'} />
-              <span>{isMidiLearning ? 'Listening' : isMidiMapped ? 'Mapped' : 'MIDI'}</span>
+              <span>{isMidiLearning ? 'Listening' : isMidiMapped ? (midiMappingLabel ?? 'Mapped') : 'MIDI'}</span>
             </button>
           ) : null}
           <input

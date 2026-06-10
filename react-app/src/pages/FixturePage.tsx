@@ -4,6 +4,7 @@ import SuperControl from '../components/dmx/SuperControl'
 import { PageHeader } from '../components/ui/PageHeader'
 import { TabNavigation } from '../components/ui/TabNavigation'
 import { TabPanel } from '../components/ui/TabPanel'
+import { Apc40SceneLaunchStrip } from '../components/midi/Apc40SceneLaunchStrip'
 import styles from './Pages.module.scss'
 
 const FixturePage: React.FC = () => {
@@ -57,6 +58,7 @@ const FixturePage: React.FC = () => {
       </PageHeader>
       
       <div className={styles.pageContent}>
+        <Apc40SceneLaunchStrip />
         <TabPanel id="control" isActive={activeTab === 'control'}>
           <div className={`${styles.controlSection} ${styles.fixtureController}`}>
             <SuperControl isDockable={false} />

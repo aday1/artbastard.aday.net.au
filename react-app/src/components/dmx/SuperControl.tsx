@@ -22,6 +22,7 @@ import { useRoliLightpad } from '../../hooks/useRoliLightpad';
 import { SkeuoButton } from '../ui/SkeuoButton';
 import { ChannelMonitorDock } from '../ui/ChannelMonitorDock';
 import { SelectedChannelsFaderStrip } from './SelectedChannelsFaderStrip';
+import { SuperControlMidiBindingsBar } from './SuperControlMidiBindingsBar';
 import { debugLog } from '../../utils/debugLog';
 import { rangesToTickSteps } from '../../utils/fixtureChannelTicks';
 import type { FixtureChannelRange } from '../../store/types';
@@ -2160,6 +2161,8 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
           </div>
         </div>
       </div>
+
+      <SuperControlMidiBindingsBar />
 
       {touchLayout && selectionMode === 'channels' && (
         <SelectedChannelsFaderStrip maxVisible={10} />
