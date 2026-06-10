@@ -781,6 +781,110 @@ apiRouter.delete('/config', (req, res) => {
   }
 });
 
+// Full factory reset: wipe every user-state JSON file under data/, reset the
+// in-memory DMX/MIDI state, and notify all connected clients. Logs and bridge
+// auth tokens are intentionally preserved (logs aren't user state; revoked
+// tokens must stay revoked).
+apiRouter.post('/factory-reset', (_req, res) => {
+  const deleted: string[] = [];
+  const failed: { file: string; error: string }[] = [];
+
+  const safeUnlink = (filename: string) => {
+    const target = path.join(DATA_DIR, filename);
+    try {
+      if (fs.existsSync(target)) {
+        fs.unlinkSync(target);
+        deleted.push(filename);
+      }
+    } catch (error) {
+      failed.push({ file: filename, error: error instanceof Error ? error.message : String(error) });
+    }
+  };
+
+  try {
+    [
+      'config.json',
+      'scenes.json',
+      'acts.json',
+      'fixture-data.json',
+      'fixtures.json',
+      'fixtures.json.backup',
+      'fixture-templates.json',
+      'last-state.json',
+      'appearance.json',
+      'all_settings.json',
+      'export_config.json',
+      'FIXTURE_DATA.json',
+    ].forEach(safeUnlink);
+
+    // Wipe any custom fixture templates in data/fixtures/templates/
+    const templatesDir = path.join(DATA_DIR, 'fixtures', 'templates');
+    try {
+      if (fs.existsSync(templatesDir)) {
+        for (const entry of fs.readdirSync(templatesDir)) {
+          if (entry.endsWith('.json')) {
+            try {
+              fs.unlinkSync(path.join(templatesDir, entry));
+              deleted.push(`fixtures/templates/${entry}`);
+            } catch (error) {
+              failed.push({
+                file: `fixtures/templates/${entry}`,
+                error: error instanceof Error ? error.message : String(error),
+              });
+            }
+          }
+        }
+      }
+    } catch (error) {
+      failed.push({
+        file: 'fixtures/templates/',
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    // Reset in-memory state so live clients don't keep stale values
+    const emptyDmx = new Array(512).fill(0);
+    setDmxChannels(emptyDmx);
+    clearMidiMappings();
+
+    // Reload config + scenes + acts from disk (now empty), then notify clients
+    const resetConfig = loadConfig();
+    const resetScenes = loadScenes();
+    const resetActs = loadActs();
+
+    writeFactoryResetMarker('factory-reset');
+
+    global.io?.emit('configUpdated', resetConfig);
+    global.io?.emit('sceneList', resetScenes);
+    global.io?.emit('actsUpdated', resetActs);
+    global.io?.emit('dmxStateRestored', { dmxChannels: emptyDmx });
+    global.io?.emit('fixturesLoaded', []);
+    global.io?.emit('fixturesUpdated', []);
+    global.io?.emit('appearanceUpdated', null);
+    global.io?.emit('factoryReset', { timestamp: Date.now() });
+
+    log('Factory reset completed', 'INFO', {
+      deletedCount: deleted.length,
+      failedCount: failed.length,
+    });
+
+    res.json({
+      success: true,
+      message: 'Factory reset complete',
+      deleted,
+      failed,
+    });
+  } catch (error) {
+    log('Error during factory reset', 'ERROR', { error });
+    res.status(500).json({
+      success: false,
+      error: `Factory reset failed: ${error instanceof Error ? error.message : String(error)}`,
+      deleted,
+      failed,
+    });
+  }
+});
+
 apiRouter.post('/state', (req, res) => {
   try {
     const stateData = req.body;

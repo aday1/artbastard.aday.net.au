@@ -384,146 +384,146 @@ export const UnifiedSettings: React.FC = () => {
 
   // Factory reset handler
   const handleFactoryReset = async () => {
-    if (window.confirm('Are you sure you want to reset all settings to factory defaults? This cannot be undone.')) {
+    if (!window.confirm('Are you sure you want to reset all settings to factory defaults? This cannot be undone.')) {
+      return;
+    }
+
+    try {
+      // 1. Full backend wipe — deletes scenes, config, fixtures, acts, templates,
+      // appearance, last DMX state, export archives. Logs and bridge revocations
+      // stay intact.
       try {
-        // Clear ALL localStorage keys explicitly
-        const keysToRemove = [
-          'artbastard-fixtures',
-          'dmxChannelNames',
-          'dmxChannelRanges',
-          'dmxChannelColors',
-          'pinnedChannels',
-          'pinnedChannelsWidth',
-          'superControlOscAddresses',
-          'envelopeSpeedMidiMapping',
-          'tempoPlayPauseMidiMapping',
-          'tempoPlayPauseOscAddress',
-          'tapTempoMidiMapping',
-          'tapTempoOscAddress',
-          'envelopeAutomation',
-          'artbastard-auto-scene-settings',
-          'fixtureTemplates',
-          'theme',
-          'darkMode',
-          'uiSettings',
-          'themeColors',
-          'artbastard-default-config',
-          'superControlLayouts',
-          'midiMonitorDismissed',
-          'oscMonitorDismissed',
-          'fancyQuotesDismissed',
-          'midiMonitorPositionX',
-          'midiMonitorPositionY',
-          'oscMonitorPositionX',
-          'oscMonitorPositionY'
-        ];
-        
-        // Remove all known keys
-        keysToRemove.forEach(key => localStorage.removeItem(key));
-        
-        // Also clear everything else
-        localStorage.clear();
-        
-        // Clear server-side data
-        await fetch('/api/scenes', { method: 'DELETE' })
-        
-        // Reset ALL store state including channel names, colors, ranges, fixtures, etc.
-        useStoreUtils.setState({
-          artNetConfig: { ip: '192.168.1.199', subnet: 0, universe: 0, net: 0, port: 6454, base_refresh_interval: 1000 },
-          fixtures: [],
-          scenes: [],
-          masterSliders: [],
-          midiMappings: {},
-          superControlMidiMappings: [],
-          superControlLearnTarget: null,
-          selectedFixtures: [],
-          channelNames: new Array(512).fill('').map((_, i) => `CH ${i + 1}`),
-          channelRanges: new Array(512).fill(null).map(() => ({ min: 0, max: 255 })),
-          channelColors: new Array(512).fill(''),
-          pinnedChannels: [],
-          selectedChannels: [],
-          oscAssignments: new Array(512).fill('').map((_, i) => `/1/fader${i + 1}`),
-          superControlOscAddresses: {},
-          theme: 'standard',
-          darkMode: true,
-          debugModules: { midi: false, osc: false, artnet: false, button: true },
-          autoSceneTempo: 120,
-          autoSceneEnabled: false,
-          autoSceneTapTimes: [],
-          autoSceneTempoSource: 'internal_clock',
-          autoSceneIsFlashing: false,
-          navVisibility: {
-            main: true,
-            midiOsc: true,
-            fixture: true,
-            scenes: true,
-            misc: true
-          },
-          debugTools: {
-            debugButton: true,
-            midiMonitor: true,
-            oscMonitor: true
-          },
-          envelopeSpeedMidiMapping: null,
-          tempoPlayPauseMidiMapping: null,
-          tempoPlayPauseOscAddress: '/tempo/playpause',
-          tapTempoMidiMapping: null,
-          tapTempoOscAddress: '/tempo/tap',
-          envelopeAutomation: {
-            enabled: false,
-            envelopes: []
-          },
-          uiSettings: {
-            dmxVisualEffects: 'medium'
-          },
-          themeColors: {
-            primaryHue: 220,
-            primarySaturation: 70,
-            primaryBrightness: 50,
-            secondaryHue: 280,
-            secondarySaturation: 60,
-            secondaryBrightness: 45,
-            accentHue: 340,
-            accentSaturation: 80,
-            accentBrightness: 60
-          }
-        })
-        
-        setDebugModules({ midi: false, osc: false, artnet: false, button: true });
-        setLocalNavVisibility({
-          main: true, midiOsc: true, fixture: true, scenes: true,
-          misc: true
-        });
-        setLocalDebugTools({ debugButton: true, midiMonitor: true, oscMonitor: true });
-        updateChromaticSettings({
-          enableKeyboardShortcuts: true,
-          autoSelectFirstFixture: true,
-          showQuickActions: true,
-          defaultColorPresets: ['red', 'green', 'blue', 'white'],
-          enableErrorMessages: true,
-          autoUpdateRate: 100,
-          enableAnimations: true,
-          compactMode: false
-        });
-
-        addNotification({
-          message: 'Settings reset to factory defaults. Reloading...',
-          type: 'success'
-        });
-
-        // Reload after a short delay to ensure everything is cleared
-        setTimeout(() => {
-          // Clear localStorage one more time before reload
-          localStorage.clear();
-          window.location.reload();
-        }, 500);
-      } catch (error) {
-        console.error('Factory reset error:', error);
-        addNotification({
-          message: 'Error during factory reset',
-          type: 'error'
-        });
+        const response = await fetch('/api/factory-reset', { method: 'POST' });
+        if (!response.ok) {
+          console.warn('Factory reset endpoint returned', response.status);
+        }
+      } catch (err) {
+        console.warn('Factory reset endpoint unreachable, falling back to scenes-only', err);
+        // Best-effort fallback to the legacy endpoint
+        await fetch('/api/scenes', { method: 'DELETE' }).catch(() => {});
       }
+
+      // 2. Clear every browser-side storage layer
+      try { localStorage.clear(); } catch (err) { console.warn('localStorage.clear failed', err); }
+      try { sessionStorage.clear(); } catch (err) { console.warn('sessionStorage.clear failed', err); }
+
+      // Drop any Cache Storage (service workers, fetch caches)
+      if (typeof caches !== 'undefined' && caches?.keys) {
+        try {
+          const names = await caches.keys();
+          await Promise.all(names.map((n) => caches.delete(n)));
+        } catch (err) {
+          console.warn('Cache Storage clear failed', err);
+        }
+      }
+
+      // Drop every IndexedDB database
+      if (typeof indexedDB !== 'undefined' && (indexedDB as any).databases) {
+        try {
+          const dbs: { name?: string }[] = await (indexedDB as any).databases();
+          await Promise.all(
+            dbs
+              .map((d) => d?.name)
+              .filter((name): name is string => !!name)
+              .map(
+                (name) =>
+                  new Promise<void>((resolve) => {
+                    const req = indexedDB.deleteDatabase(name);
+                    req.onsuccess = () => resolve();
+                    req.onerror = () => resolve();
+                    req.onblocked = () => resolve();
+                  })
+              )
+          );
+        } catch (err) {
+          console.warn('IndexedDB clear failed', err);
+        }
+      }
+
+      // 3. Reset the in-memory zustand store so the UI doesn't flash old state
+      // before the reload completes.
+      useStoreUtils.setState({
+        artNetConfig: { ip: '192.168.1.199', subnet: 0, universe: 0, net: 0, port: 6454, base_refresh_interval: 1000 },
+        fixtures: [],
+        scenes: [],
+        acts: [],
+        masterSliders: [],
+        fixtureLayout: [],
+        placedFixtures: [],
+        groups: [],
+        fixtureTemplates: [],
+        midiMappings: {},
+        superControlMidiMappings: [],
+        superControlLearnTarget: null,
+        selectedFixtures: [],
+        channelNames: new Array(512).fill('').map((_, i) => `CH ${i + 1}`),
+        channelRanges: new Array(512).fill(null).map(() => ({ min: 0, max: 255 })),
+        channelColors: new Array(512).fill(''),
+        pinnedChannels: [],
+        selectedChannels: [],
+        dmxChannels: new Array(512).fill(0),
+        oscAssignments: new Array(512).fill('').map((_, i) => `/1/fader${i + 1}`),
+        superControlOscAddresses: {},
+        theme: 'standard',
+        darkMode: true,
+        debugModules: { midi: false, osc: false, artnet: false, button: true },
+        autoSceneTempo: 120,
+        autoSceneEnabled: false,
+        autoSceneTapTimes: [],
+        autoSceneTempoSource: 'internal_clock',
+        autoSceneIsFlashing: false,
+        navVisibility: { main: true, midiOsc: true, fixture: true, scenes: true, misc: true },
+        debugTools: { debugButton: true, midiMonitor: true, oscMonitor: true },
+        envelopeSpeedMidiMapping: null,
+        tempoPlayPauseMidiMapping: null,
+        tempoPlayPauseOscAddress: '/tempo/playpause',
+        tapTempoMidiMapping: null,
+        tapTempoOscAddress: '/tempo/tap',
+        envelopeAutomation: { enabled: false, envelopes: [] },
+        uiSettings: { dmxVisualEffects: 'medium' },
+        themeColors: {
+          primaryHue: 220,
+          primarySaturation: 70,
+          primaryBrightness: 50,
+          secondaryHue: 280,
+          secondarySaturation: 60,
+          secondaryBrightness: 45,
+          accentHue: 340,
+          accentSaturation: 80,
+          accentBrightness: 60,
+        },
+      });
+
+      setDebugModules({ midi: false, osc: false, artnet: false, button: true });
+      setLocalNavVisibility({ main: true, midiOsc: true, fixture: true, scenes: true, misc: true });
+      setLocalDebugTools({ debugButton: true, midiMonitor: true, oscMonitor: true });
+      updateChromaticSettings({
+        enableKeyboardShortcuts: true,
+        autoSelectFirstFixture: true,
+        showQuickActions: true,
+        defaultColorPresets: ['red', 'green', 'blue', 'white'],
+        enableErrorMessages: true,
+        autoUpdateRate: 100,
+        enableAnimations: true,
+        compactMode: false,
+      });
+
+      addNotification({
+        message: 'Factory reset complete. Reloading…',
+        type: 'success',
+      });
+
+      setTimeout(() => {
+        try { localStorage.clear(); } catch { /* noop */ }
+        try { sessionStorage.clear(); } catch { /* noop */ }
+        window.location.reload();
+      }, 500);
+    } catch (error) {
+      console.error('Factory reset error:', error);
+      addNotification({
+        message: 'Error during factory reset',
+        type: 'error',
+      });
     }
   }
 
