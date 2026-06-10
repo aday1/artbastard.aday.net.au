@@ -16,6 +16,7 @@ import {
   suggestStageMapGroups,
   type StageMapViewMode,
 } from '../../fixtures/stageMap';
+import { STAGE_RIG_PRESETS, buildRigFromPreset, type StageRigPreset } from '../../fixtures/stageRigPresets';
 import { SceneSeedButton } from '../scenes/SceneSeedButton';
 import { ActSeedButton } from '../acts/ActSeedButton';
 import { ShowBuilderPanel } from './ShowBuilderPanel';
@@ -112,6 +113,8 @@ export const StageMapFixtureSetup: React.FC = () => {
   const [isGiddyUp, setIsGiddyUp] = useState(false);
   const [showBatchPlanner, setShowBatchPlanner] = useState(false);
   const [showApc40, setShowApc40] = useState(false);
+  const [showAutoAdd, setShowAutoAdd] = useState(false);
+  const [autoAddBusy, setAutoAddBusy] = useState<string | null>(null);
 
   const layout = useMemo(() => normalizeFixtureLayout(fixtures, fixtureLayout), [fixtures, fixtureLayout]);
   const layoutByFixtureId = useMemo(() => new Map(layout.map((item) => [item.fixtureId, item])), [layout]);
@@ -396,6 +399,39 @@ export const StageMapFixtureSetup: React.FC = () => {
     }
   };
 
+  const runAutoAddPreset = async (preset: StageRigPreset) => {
+    if (autoAddBusy) return;
+    setAutoAddBusy(preset.id);
+    try {
+      const { fixtures: nextFixtures, layout: nextLayout, unmatched } = buildRigFromPreset(
+        preset,
+        fixtures,
+        fixtureTemplates
+      );
+      const added = nextFixtures.length - fixtures.length;
+      if (added <= 0) {
+        notify(`No fixture templates available for "${preset.name}"`, 'warning');
+        return;
+      }
+      const mergedLayout = [
+        ...layout.filter((item) => !nextLayout.some((entry) => entry.fixtureId === item.fixtureId)),
+        ...nextLayout,
+      ];
+      setFixtureLayout(mergedLayout);
+      await persistFixtures(nextFixtures, mergedLayout);
+      await axios.post('/api/fixture-layout', { fixtureLayout: mergedLayout });
+      setSelectedFixtures(nextLayout.map((item) => item.fixtureId));
+      const tail = unmatched.length ? ` (${unmatched.length} slot${unmatched.length === 1 ? '' : 's'} skipped)` : '';
+      notify(`Auto-added ${added} fixtures from "${preset.name}"${tail}`, 'success');
+      setShowAutoAdd(false);
+    } catch (error) {
+      console.error('Auto-add preset failed:', error);
+      notify('Auto-add was applied locally, but server save failed', 'warning');
+    } finally {
+      setAutoAddBusy(null);
+    }
+  };
+
   const handleStagePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (event.target !== event.currentTarget) return;
     const point = stagePointFromEvent(event);
@@ -545,6 +581,41 @@ export const StageMapFixtureSetup: React.FC = () => {
           </button>
         </div>
         <div className={styles.toolbarGroup}>
+          <div className={styles.autoAddWrapper}>
+            <button
+              type="button"
+              className={showAutoAdd ? styles.active : ''}
+              onClick={() => setShowAutoAdd((value) => !value)}
+              title="Auto-add a preset rig"
+            >
+              <LucideIcon name="Wand2" size={16} />
+              Auto-Add
+            </button>
+            {showAutoAdd && (
+              <div className={styles.autoAddMenu} role="menu">
+                <div className={styles.autoAddHeader}>
+                  <strong>Quick Rig Presets</strong>
+                  <span>Build a stage in one click</span>
+                </div>
+                {STAGE_RIG_PRESETS.map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    className={styles.autoAddItem}
+                    onClick={() => runAutoAddPreset(preset)}
+                    disabled={autoAddBusy !== null}
+                  >
+                    <LucideIcon name={preset.icon as any} size={18} />
+                    <span>
+                      <strong>{preset.name}</strong>
+                      <small>{preset.description}</small>
+                    </span>
+                    {autoAddBusy === preset.id && <em>Adding...</em>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <button type="button" onClick={applySmartGroups} disabled={!fixtures.length}>
             <LucideIcon name="Sparkles" size={16} />
             Smart Groups

@@ -3642,6 +3642,10 @@ export const useStore = create<State>()(
         set({ groups });
       },
 
+      setFixtureLayout: (layout) => {
+        set({ fixtureLayout: layout });
+      },
+
       // Template Management Actions
       addFixtureTemplate: (template) => {
         // Ensure channels array exists and is valid
