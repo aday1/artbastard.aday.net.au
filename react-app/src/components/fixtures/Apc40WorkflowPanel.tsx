@@ -3,6 +3,7 @@ import { useStore } from '../../store';
 import { decodeApc40Message, isApc40Source } from '../../midi/apc40';
 import { LucideIcon } from '../ui/LucideIcon';
 import { StageMapDashboard } from './StageMapDashboard';
+import { Apc40SurfaceDiagram } from '../midi/Apc40SurfaceDiagram';
 import styles from './FixtureSetup.module.scss';
 
 export const Apc40WorkflowPanel: React.FC = () => {
@@ -59,6 +60,8 @@ export const Apc40WorkflowPanel: React.FC = () => {
         }
         highlightGroupId={highlightedGroupId}
       />
+
+      <Apc40SurfaceDiagram mode="fixtures" compact title="track select → groups" />
 
       <div className={styles.apcMapGrid}>
         <div title="Clip Launch / Session View is the scene grid. Default is Deck A; hold SHIFT for Deck B.">

@@ -23,6 +23,7 @@ import { SkeuoButton } from '../ui/SkeuoButton';
 import { ChannelMonitorDock } from '../ui/ChannelMonitorDock';
 import { SelectedChannelsFaderStrip } from './SelectedChannelsFaderStrip';
 import { SuperControlMidiBindingsBar } from './SuperControlMidiBindingsBar';
+import { Apc40SurfaceDiagram } from '../midi/Apc40SurfaceDiagram';
 import { debugLog } from '../../utils/debugLog';
 import { rangesToTickSteps } from '../../utils/fixtureChannelTicks';
 import type { FixtureChannelRange } from '../../store/types';
@@ -2163,6 +2164,8 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
       </div>
 
       <SuperControlMidiBindingsBar />
+
+      <Apc40SurfaceDiagram mode="superControl" compact title="SuperControl bindings" />
 
       {touchLayout && selectionMode === 'channels' && (
         <SelectedChannelsFaderStrip maxVisible={10} />

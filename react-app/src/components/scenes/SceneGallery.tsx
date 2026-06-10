@@ -13,6 +13,7 @@ import { SceneCardMap } from './SceneCardMap';
 import { SceneDiffBadge } from './SceneDiffBadge';
 import { computeSceneDiff } from '../../selectors/sceneDiff';
 import { Apc40SceneLaunchStrip } from '../midi/Apc40SceneLaunchStrip';
+import { Apc40SurfaceDiagram } from '../midi/Apc40SurfaceDiagram';
 import styles from './SceneGallery.module.scss'
 import { useSceneCapture } from '../../hooks/useSceneCapture'
 import { SceneSeedButton } from './SceneSeedButton'
@@ -297,6 +298,8 @@ export const SceneGallery: React.FC = () => {
       </h2>
 
       <Apc40SceneLaunchStrip />
+
+      <Apc40SurfaceDiagram mode="scenes" compact title="clip grid → scenes" />
 
       {/* Scene creation form */}
       <div className={styles.card}>
