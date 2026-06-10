@@ -33,6 +33,16 @@ const defaultSnapshot = (): AbletonLinkSnapshot => ({
 
 let latestSnapshot: AbletonLinkSnapshot = defaultSnapshot();
 
+function isMissingAbletonLinkModule(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false;
+  const maybeNodeError = err as { code?: string; message?: string };
+  return (
+    maybeNodeError.code === 'MODULE_NOT_FOUND' &&
+    typeof maybeNodeError.message === 'string' &&
+    maybeNodeError.message.includes("'abletonlink'")
+  );
+}
+
 export function getAbletonLinkSnapshot(): AbletonLinkSnapshot {
   return latestSnapshot;
 }
@@ -62,12 +72,20 @@ export async function initAbletonLinkBridge(initialBpm = 120): Promise<boolean> 
     };
     return true;
   } catch (err) {
-    console.warn(
-      'Ableton Link module not available. Install optional dependency "abletonlink" and rebuild native addons.',
-      err
-    );
     moduleAvailable = false;
     latestSnapshot = defaultSnapshot();
+
+    if (isMissingAbletonLinkModule(err)) {
+      console.info(
+        'Ableton Link native module is not installed; continuing with internal/MIDI clock sources.'
+      );
+      return false;
+    }
+
+    console.warn(
+      'Ableton Link native module failed to initialize. Install optional dependency "abletonlink" and rebuild native addons.',
+      err
+    );
     return false;
   }
 }
