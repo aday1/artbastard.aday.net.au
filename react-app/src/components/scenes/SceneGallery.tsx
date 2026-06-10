@@ -56,6 +56,13 @@ export const SceneGallery: React.FC = () => {
   const [editingChannelValues, setEditingChannelValues] = useState<string | null>(null)
   const [channelValues, setChannelValues] = useState<number[]>([])
   const [editingTimelineScene, setEditingTimelineScene] = useState<string | null>(null)
+  const [openMenuScene, setOpenMenuScene] = useState<string | null>(null)
+  const [expandedTables, setExpandedTables] = useState<Set<string>>(() => new Set())
+  const toggleTableExpansion = (name: string) => setExpandedTables((prev) => {
+    const next = new Set(prev)
+    if (next.has(name)) next.delete(name); else next.add(name)
+    return next
+  })
   const { captureScene, quickCapture, sceneNameToOscPath } = useSceneCapture()
 
   // Track the prior active scene name so we can diff the current active card
@@ -576,35 +583,11 @@ export const SceneGallery: React.FC = () => {
                   </div>
                   <div className={styles.sceneControls}>
                     <button
-                      className={`${styles.autoToggleButton} ${isSceneInAutoList(scene.name) ? styles.inAutoPlay : ''}`}
-                      onClick={() => toggleSceneInAutoList(scene.name)}
-                      title={isSceneInAutoList(scene.name) ? 'Remove from auto-play' : 'Add to auto-play'}
-                    >
-                      <i className="fas fa-magic"></i>
-                    </button>
-                    <button
-                      className={styles.timelineButton}
-                      onClick={() => setEditingTimelineScene(scene.name)}
-                      title="Edit Timeline"
-                    >
-                      <LucideIcon name="Clock" />
-                    </button>
-                    <button
                       className={styles.editButton}
                       onClick={() => startEditingScene(scene)}
                       title="Edit Scene Name & OSC"
                     >
                       <i className="fas fa-edit"></i>
-                    </button>
-                    <button
-                      className={styles.editValuesButton}
-                      onClick={() => editingChannelValues === scene.name ? cancelChannelEditing() : startEditingChannelValues(scene.name)}
-                      title={editingChannelValues === scene.name ? "Cancel editing values" : "Edit Channel Values"}
-                      style={{
-                        backgroundColor: editingChannelValues === scene.name ? '#ef4444' : undefined
-                      }}
-                    >
-                      <i className={editingChannelValues === scene.name ? "fas fa-times" : "fas fa-sliders-h"}></i>
                     </button>
                     <button
                       className={styles.loadButton}
@@ -630,6 +613,63 @@ export const SceneGallery: React.FC = () => {
                     >
                       <i className="fas fa-trash-alt"></i>
                     </button>
+                    <div className={styles.kebabWrap}>
+                      <button
+                        className={styles.kebabButton}
+                        onClick={() => setOpenMenuScene((cur) => (cur === scene.name ? null : scene.name))}
+                        onBlur={(e) => {
+                          if (!e.currentTarget.parentElement?.contains(e.relatedTarget as Node)) {
+                            setOpenMenuScene((cur) => (cur === scene.name ? null : cur))
+                          }
+                        }}
+                        title="More actions"
+                        aria-haspopup="menu"
+                        aria-expanded={openMenuScene === scene.name}
+                      >
+                        <i className="fas fa-ellipsis-v"></i>
+                      </button>
+                      {openMenuScene === scene.name && (
+                        <div className={styles.kebabMenu} role="menu">
+                          <button
+                            role="menuitem"
+                            className={`${styles.kebabItem} ${isSceneInAutoList(scene.name) ? styles.kebabItemActive : ''}`}
+                            onMouseDown={(e) => { e.preventDefault(); toggleSceneInAutoList(scene.name); setOpenMenuScene(null) }}
+                          >
+                            <i className="fas fa-magic"></i>
+                            <span>{isSceneInAutoList(scene.name) ? 'Remove from auto-play' : 'Add to auto-play'}</span>
+                          </button>
+                          <button
+                            role="menuitem"
+                            className={styles.kebabItem}
+                            onMouseDown={(e) => { e.preventDefault(); setEditingTimelineScene(scene.name); setOpenMenuScene(null) }}
+                          >
+                            <LucideIcon name="Clock" />
+                            <span>Edit timeline</span>
+                          </button>
+                          <button
+                            role="menuitem"
+                            className={styles.kebabItem}
+                            onMouseDown={(e) => {
+                              e.preventDefault()
+                              if (editingChannelValues === scene.name) cancelChannelEditing()
+                              else startEditingChannelValues(scene.name)
+                              setOpenMenuScene(null)
+                            }}
+                          >
+                            <i className={editingChannelValues === scene.name ? 'fas fa-times' : 'fas fa-sliders-h'}></i>
+                            <span>{editingChannelValues === scene.name ? 'Cancel value edit' : 'Edit channel values'}</span>
+                          </button>
+                          <button
+                            role="menuitem"
+                            className={styles.kebabItem}
+                            onMouseDown={(e) => { e.preventDefault(); toggleTableExpansion(scene.name); setOpenMenuScene(null) }}
+                          >
+                            <i className={expandedTables.has(scene.name) ? 'fas fa-eye-slash' : 'fas fa-eye'}></i>
+                            <span>{expandedTables.has(scene.name) ? 'Hide channel data' : 'Show channel data'}</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </>
               )}
@@ -678,24 +718,8 @@ export const SceneGallery: React.FC = () => {
               />
             </div>
 
-            <div className={styles.sceneVisualizer}>
-              {scene.channelValues.map((value, chIndex) =>
-                value > 0 ? (
-                  <div
-                    key={chIndex}
-                    className={styles.channelIndicator}
-                    style={{
-                      opacity: value / 255,
-                      backgroundColor: getChannelColor(chIndex, value)
-                    }}
-                    title={`Channel ${chIndex + 1}: ${value}`}
-                  />
-                ) : null
-              )}
-            </div>
-            
-            {/* Channel Values Table */}
-            {scene.channelValues && scene.channelValues.filter(v => v > 0).length > 0 && (
+            {/* Channel Values Table — hidden by default; opened via kebab menu */}
+            {expandedTables.has(scene.name) && scene.channelValues && scene.channelValues.filter(v => v > 0).length > 0 && (
               <div className={styles.channelValuesTable}>
                 <div className={styles.tableHeader}>
                   <span>Channel</span>
