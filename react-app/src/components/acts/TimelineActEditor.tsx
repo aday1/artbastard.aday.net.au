@@ -11,6 +11,8 @@ import {
   getActLayoutDurationMs,
   type ActStepBlock,
 } from '../../utils/actTimelineLayout';
+import { Apc40LaunchBadge } from '../midi/Apc40LaunchBadge';
+import { StageMapDashboard } from '../fixtures/StageMapDashboard';
 import styles from './TimelineActEditor.module.scss';
 
 interface TimelineActEditorProps {
@@ -27,6 +29,7 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
     scenes,
     fixtures,
     groups,
+    acts,
     updateAct,
     addActStep,
     updateActStep,
@@ -72,6 +75,7 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
   const [eventDragOffset, setEventDragOffset] = useState(0);
   const [dragOffset, setDragOffset] = useState(0);
   const [resizeStartWidth, setResizeStartWidth] = useState(0);
+  const [hoveredStepId, setHoveredStepId] = useState<string | null>(null);
   const [resizeStartX, setResizeStartX] = useState(0);
   const resizeStartDurationRef = useRef(0);
   const [scrubbingPlayhead, setScrubbingPlayhead] = useState(false);
@@ -1057,6 +1061,12 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
           <h3>
             <LucideIcon name="Clock" />
             Act Timeline: {act.name}
+            <Apc40LaunchBadge
+              actIndex={acts.findIndex((a) => a.id === act.id)}
+              actName={act.name}
+              active={actPlaybackState.isPlaying && actPlaybackState.currentActId === act.id}
+              compact
+            />
           </h3>
           <div className={styles.actModelPills} aria-label="Act timeline model">
             <span><strong>Act</strong> {act.name}</span>
@@ -2062,6 +2072,9 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
                   }}
                   onMouseDown={(e) => handleStepMouseDown(e, step.id, block.startTime)}
                   onClick={() => setSelectedStepId(step.id)}
+                  onMouseEnter={() => setHoveredStepId(step.id)}
+                  onMouseLeave={() => setHoveredStepId((cur) => (cur === step.id ? null : cur))}
+                  title={scene ? `${step.sceneName} · ${formatTime(step.duration)}` : `${step.sceneName} (scene not found)`}
                 >
                   <div className={styles.stepBlockContent}>
                     <div className={styles.stepBlockHeader}>
@@ -2073,7 +2086,19 @@ export const TimelineActEditor: React.FC<TimelineActEditorProps> = ({ act, onClo
                       <div className={styles.stepNotes}>{step.notes}</div>
                     )}
                   </div>
-                  
+
+                  {hoveredStepId === step.id && scene && scene.channelValues && !isDragging && !isResizing && (
+                    <div className={styles.stepHoverPreview}>
+                      <StageMapDashboard
+                        title={scene.name}
+                        subtitle={`step ${index + 1} · ${formatTime(step.duration)}`}
+                        showGroupPicker={false}
+                        maxGroupChips={0}
+                        dmxOverride={scene.channelValues}
+                      />
+                    </div>
+                  )}
+
                   {/* Resize Handle */}
                   <div
                     className={styles.resizeHandle}
