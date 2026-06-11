@@ -53,6 +53,21 @@ describe('APC40 workflow decoder', () => {
     });
   });
 
+  it('maps all Scene Launch buttons to ACT indexes 1-5', () => {
+    for (let sceneIndex = 0; sceneIndex < 5; sceneIndex += 1) {
+      expect(decodeApc40Message({
+        _type: 'noteon',
+        source: 'Akai APC40',
+        note: 0x52 + sceneIndex,
+        velocity: 127,
+      })).toEqual({
+        type: 'scene-launch',
+        model: 'apc40-mk1',
+        sceneIndex,
+      });
+    }
+  });
+
   it('decodes record-arm, activator, solo, stop-all, and master-button rows', () => {
     expect(decodeApc40Message({
       _type: 'noteon',
@@ -123,6 +138,22 @@ describe('APC40 workflow decoder', () => {
       type: 'master-button',
       model: 'apc40-mk1',
     });
+  });
+
+  it('maps every Record Arm button to its matching save column', () => {
+    for (let channel = 0; channel < 8; channel += 1) {
+      expect(decodeApc40Message({
+        _type: 'noteon',
+        source: 'Akai APC40',
+        channel,
+        note: 0x30,
+        velocity: 127,
+      })).toEqual({
+        type: 'record-arm',
+        model: 'apc40-mk1',
+        trackIndex: channel,
+      });
+    }
   });
 
   it('decodes device control, cue level, and shift press/release', () => {
