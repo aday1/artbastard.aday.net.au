@@ -3,6 +3,13 @@ import { useStore } from '../store';
 import { detectTemplateForMidiInterface, getTemplateById } from '../components/midi/midiControllerTemplates';
 import { debugLog } from '../utils/debugLog';
 import { recordBrowserMidiMessage } from '../midi/midiTransportDedupe';
+import {
+  DetectedMidiController,
+  MIDI_CONNECT_BROWSER_EVENT,
+  describeDetectedMidiController,
+  dispatchConnectedMidiController,
+  dispatchDetectedMidiController,
+} from '../midi/detectedMidiController';
 
 export const useGlobalBrowserMidi = () => {
   const [midiAccess, setMidiAccess] = useState<WebMidi.MIDIAccess | null>(null);
@@ -300,17 +307,30 @@ export const useGlobalBrowserMidi = () => {
     if (!midiAccess) return;
 
     inputs.forEach((input) => {
-      const deviceName = input.name || '';
-      const templateId = detectTemplateForMidiInterface(deviceName);
-      if (!templateId || input.state === 'disconnected') return;
-
-      void maybeAutoApplyTemplate(deviceName);
-      if (!activeInputs.has(input.id)) {
-        connectBrowserInput(input.id);
+      if (input.state === 'disconnected') return;
+      const controller = describeDetectedMidiController(input.name || '', 'browser', input.id);
+      if (!controller) return;
+      if (activeInputs.has(input.id)) {
+        dispatchConnectedMidiController(controller);
+        return;
       }
+      dispatchDetectedMidiController(controller);
     });
-  }, [midiAccess, inputs, activeInputs, connectBrowserInput, maybeAutoApplyTemplate]);
+  }, [midiAccess, inputs, activeInputs]);
 
+  useEffect(() => {
+    const handleConnectBrowser = (event: Event) => {
+      const controller = (event as CustomEvent<DetectedMidiController>).detail;
+      if (!midiAccess || !controller || controller.transport !== 'browser') return;
+      if (!midiAccess.inputs.has(controller.id)) return;
+      if (controller.templateId) void maybeAutoApplyTemplate(controller.name);
+      connectBrowserInput(controller.id);
+      dispatchConnectedMidiController(controller);
+    };
+
+    window.addEventListener(MIDI_CONNECT_BROWSER_EVENT, handleConnectBrowser);
+    return () => window.removeEventListener(MIDI_CONNECT_BROWSER_EVENT, handleConnectBrowser);
+  }, [midiAccess, connectBrowserInput, maybeAutoApplyTemplate]);
   // Disconnect from a browser MIDI input
   const disconnectBrowserInput = useCallback((inputId: string) => {
     if (!midiAccess) return;

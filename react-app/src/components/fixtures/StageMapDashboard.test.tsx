@@ -89,6 +89,19 @@ describe('StageMapDashboard', () => {
     expect(nodeB.className).not.toMatch(/lit/);
   });
 
+
+  it('marks APC-targeted fixtures separately from normal selection', () => {
+    const { getByTitle, getByText } = render(
+      <StageMapDashboard
+        showGroupPicker={false}
+        highlightFixtureIds={['fixture-b']}
+        highlightLabel="Track 2: Wash B"
+      />
+    );
+
+    expect(getByText('APC target: Track 2: Wash B')).toBeDefined();
+    expect(getByTitle(/^Wash B · DMX 5/).className).toMatch(/apcHighlight/);
+  });
   it('honours dmxOverride for static scene previews instead of live channels', () => {
     // Live channels are all zero — overrideprovides the scene snapshot.
     const override = new Array(512).fill(0);
@@ -102,3 +115,4 @@ describe('StageMapDashboard', () => {
     expect(nodeA.className).toMatch(/lit/);
   });
 });
+

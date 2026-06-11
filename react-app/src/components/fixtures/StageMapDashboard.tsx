@@ -9,6 +9,8 @@ interface StageMapDashboardProps {
   title?: string;
   subtitle?: string;
   highlightGroupId?: string | null;
+  highlightFixtureIds?: string[];
+  highlightLabel?: string | null;
   onSelectGroup?: (groupId: string) => void;
   showGroupPicker?: boolean;
   maxGroupChips?: number;
@@ -24,6 +26,8 @@ export const StageMapDashboard: React.FC<StageMapDashboardProps> = ({
   title = 'Live Stage Map',
   subtitle,
   highlightGroupId = null,
+  highlightFixtureIds = [],
+  highlightLabel = null,
   onSelectGroup,
   showGroupPicker = true,
   maxGroupChips = 8,
@@ -49,10 +53,17 @@ export const StageMapDashboard: React.FC<StageMapDashboardProps> = ({
   const selectedIdSet = useMemo(() => new Set(selectedFixtures), [selectedFixtures]);
 
   const highlightedIndices = useMemo(() => {
-    if (!highlightGroupId) return new Set<number>();
-    const g = groups.find((group) => group.id === highlightGroupId);
-    return new Set(g?.fixtureIndices || []);
-  }, [groups, highlightGroupId]);
+    const indices = new Set<number>();
+    if (highlightGroupId) {
+      const g = groups.find((group) => group.id === highlightGroupId);
+      (g?.fixtureIndices || []).forEach((idx) => indices.add(idx));
+    }
+    highlightFixtureIds.forEach((fixtureId) => {
+      const idx = fixtures.findIndex((fixture) => fixture.id === fixtureId);
+      if (idx >= 0) indices.add(idx);
+    });
+    return indices;
+  }, [fixtures, groups, highlightFixtureIds, highlightGroupId]);
 
   const activeCount = useMemo(() => {
     if (!dmxChannels?.length) return 0;
@@ -84,6 +95,7 @@ export const StageMapDashboard: React.FC<StageMapDashboardProps> = ({
 
   const subtitleText =
     subtitle ?? `${fixtures.length} fixtures · ${selectedFixtures.length} selected · ${activeCount} lit`;
+  const apcHighlightText = highlightLabel || (highlightedIndices.size > 0 ? `${highlightedIndices.size} APC-targeted` : null);
 
   return (
     <div className={styles.dashboard}>
@@ -91,6 +103,7 @@ export const StageMapDashboard: React.FC<StageMapDashboardProps> = ({
         <div className={styles.headerText}>
           <strong>{title}</strong>
           <span>{subtitleText}</span>
+          {apcHighlightText && <em className={styles.apcTargetLabel}>APC target: {apcHighlightText}</em>}
         </div>
         {selectedFixtures.length > 0 && (
           <button
@@ -192,7 +205,7 @@ export const StageMapDashboard: React.FC<StageMapDashboardProps> = ({
       <div className={styles.legend}>
         <span><i className={styles.legendDotSelected} /> Selected</span>
         <span><i className={styles.legendDotLit} /> Live DMX</span>
-        {highlightGroupId && <span><i className={styles.legendDotApc} /> APC group</span>}
+        {highlightedIndices.size > 0 && <span><i className={styles.legendDotApc} /> APC target</span>}
       </div>
     </div>
   );

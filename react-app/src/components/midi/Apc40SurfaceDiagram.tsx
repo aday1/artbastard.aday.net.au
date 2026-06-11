@@ -570,6 +570,7 @@ export const Apc40SurfaceDiagram: React.FC<Props> = ({
                 const isAutoArmed = rowName === 'AUTO' && apc40State?.autoGroups?.includes(col);
                 const isArmed = rowName === 'ARM' && apc40State?.armedColumns?.includes(col);
                 const group = groups[col];
+                const isApcTrackSelected = isSel && apc40State?.activeTrackIndex === col;
                 const isGroupSelected = isSel && group && selectedGroupIdx === col;
                 const flashKey =
                   rowName === 'ARM'
@@ -587,10 +588,10 @@ export const Apc40SurfaceDiagram: React.FC<Props> = ({
                   <button
                     key={`${rowName}-${col}`}
                     type="button"
-                    className={`${styles.stripBtn} ${styles[`row_${rowName}`]} ${isGroupSelected || isArmed || isAutoArmed ? styles.active : ''} ${isArmed ? styles.saveArmed : ''} ${isFlashing ? styles.flash : ''} ${isSel && group ? styles.bound : styles.unbound} ${lastTouched?.key === flashKey ? styles.lastTouched : ''}`}
+                    className={`${styles.stripBtn} ${styles[`row_${rowName}`]} ${isGroupSelected || isApcTrackSelected || isArmed || isAutoArmed ? styles.active : ''} ${isApcTrackSelected ? styles.apcSelected : ''} ${isArmed ? styles.saveArmed : ''} ${isFlashing ? styles.flash : ''} ${isSel && group ? styles.bound : styles.unbound} ${lastTouched?.key === flashKey ? styles.lastTouched : ''}`}
                     onClick={() => isSel && onTrackSelectClick(col)}
                     disabled={!isSel || (mode !== 'fixtures' && mode !== 'view')}
-                    title={isSel && group ? `Select group "${group.name}"` : `${rowName} col ${col + 1}`}
+                    title={isSel ? (apc40State?.activeTargetLabel && apc40State.activeTrackIndex === col ? `APC selected: ${apc40State.activeTargetLabel}` : group ? `Select group "${group.name}"` : `Track Select ${col + 1}`) : `${rowName} col ${col + 1}`}
                   >
                     <span className={styles.cellLabel}>{label}</span>
                   </button>

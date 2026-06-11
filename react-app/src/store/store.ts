@@ -715,6 +715,10 @@ interface State extends AutomationState, TransitionTrackerSlice {
     fullOn: boolean;
     autoGroups: number[];
     deviceRoleLabels: string[];
+    activeTrackIndex: number | null;
+    activeGroupId: string | null;
+    activeFixtureIds: string[];
+    activeTargetLabel: string | null;
     lastChange: Apc40LastChange | null;
   };
   setApc40SceneA: (name: string | null) => void;
@@ -731,6 +735,10 @@ interface State extends AutomationState, TransitionTrackerSlice {
     fullOn: boolean;
     autoGroups: number[];
     deviceRoleLabels: string[];
+    activeTrackIndex: number | null;
+    activeGroupId: string | null;
+    activeFixtureIds: string[];
+    activeTargetLabel: string | null;
     lastChange: Apc40LastChange | null;
   }>) => void;
   superControlExternalUpdate: SuperControlExternalUpdate | null;
@@ -1722,6 +1730,10 @@ export const useStore = create<State>()(
         fullOn: false,
         autoGroups: [],
         deviceRoleLabels: [],
+        activeTrackIndex: null,
+        activeGroupId: null,
+        activeFixtureIds: [],
+        activeTargetLabel: null,
         lastChange: null,
       },
       setApc40SceneA: (name) => set((state) => ({

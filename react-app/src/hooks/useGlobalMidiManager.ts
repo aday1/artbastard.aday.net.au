@@ -3,13 +3,19 @@ import { useStore } from '../store';
 import { useSocket } from '../context/SocketContext';
 import { detectTemplateForMidiInterface, getTemplateById } from '../components/midi/midiControllerTemplates';
 import { debugLog } from '../utils/debugLog';
+import {
+  DetectedMidiController,
+  MIDI_CONNECT_SERVER_EVENT,
+  describeDetectedMidiController,
+  dispatchConnectedMidiController,
+  dispatchDetectedMidiController,
+} from '../midi/detectedMidiController';
 
 export const useGlobalMidiManager = () => {
   const { socket, connected } = useSocket();
   const [midiInterfaces, setMidiInterfaces] = useState<string[]>([]);
   const [activeInterfaces, setActiveInterfaces] = useState<string[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
-  const autoConnectedInterfacesRef = useRef<Set<string>>(new Set());
   const templateApplyInFlightRef = useRef<Set<string>>(new Set());
   
   const {
@@ -54,16 +60,25 @@ export const useGlobalMidiManager = () => {
     }
   };
 
-  const maybeAutoConnectInterface = (interfaceName: string) => {
-    if (!socket || !connected) return;
-    if (!detectTemplateForMidiInterface(interfaceName)) return;
-    if (autoConnectedInterfacesRef.current.has(interfaceName)) return;
-
-    autoConnectedInterfacesRef.current.add(interfaceName);
-    socket.emit('selectMidiInterface', interfaceName);
-    void maybeAutoApplyTemplate(interfaceName);
+  const maybePromptController = (interfaceName: string) => {
+    const controller = describeDetectedMidiController(interfaceName, 'server');
+    if (!controller) return;
+    dispatchDetectedMidiController(controller);
   };
 
+  useEffect(() => {
+    const handleConnectServer = (event: Event) => {
+      const controller = (event as CustomEvent<DetectedMidiController>).detail;
+      if (!socket || !connected || !controller || controller.transport !== 'server') return;
+      debugLog.log('[GlobalMidiManager] Connecting detected MIDI controller:', controller.name);
+      socket.emit('selectMidiInterface', controller.name);
+      if (controller.templateId) void maybeAutoApplyTemplate(controller.name);
+      dispatchConnectedMidiController(controller);
+    };
+
+    window.addEventListener(MIDI_CONNECT_SERVER_EVENT, handleConnectServer);
+    return () => window.removeEventListener(MIDI_CONNECT_SERVER_EVENT, handleConnectServer);
+  }, [socket, connected]);
   useEffect(() => {
     if (!connected) {
       setIsInitialized(false);
@@ -86,16 +101,17 @@ export const useGlobalMidiManager = () => {
         debugLog.log('[GlobalMidiManager] Received MIDI interfaces:', interfaces);
         setMidiInterfaces(interfaces);
         setStoreMidiInterfaces(interfaces);
-        autoConnectedInterfacesRef.current = new Set(
-          [...autoConnectedInterfacesRef.current].filter((interfaceName) => interfaces.includes(interfaceName)),
-        );
-        interfaces.forEach(maybeAutoConnectInterface);
+        interfaces.forEach(maybePromptController);
       };
 
       const handleActiveInterfaces = (interfaces: string[]) => {
         debugLog.log('[GlobalMidiManager] Received active MIDI interfaces:', interfaces);
         setActiveInterfaces(interfaces);
         setStoreActiveInterfaces(interfaces);
+        interfaces.forEach((interfaceName) => {
+          const controller = describeDetectedMidiController(interfaceName, 'server');
+          if (controller) dispatchConnectedMidiController(controller);
+        });
       };
 
       socket.on('midiInterfaces', handleMidiInterfaces);

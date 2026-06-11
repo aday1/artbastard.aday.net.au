@@ -10,6 +10,12 @@ import {
   setOnHandshakeDone,
   setOnTouch,
 } from '../engines/roliLightpad';
+import {
+  MIDI_CONNECT_ROLI_EVENT,
+  ROLI_LIGHTPAD_CONNECT_APPROVED_KEY,
+  describeDetectedMidiController,
+  dispatchConnectedMidiController,
+} from '../midi/detectedMidiController';
 
 export interface UseRoliLightpadResult {
   connected: boolean;
@@ -24,8 +30,8 @@ export interface UseRoliLightpadResult {
 }
 
 /**
- * Connects to a Roli Lightpad Block once on mount, auto-maps the first matching
- * Web MIDI port, and exposes touch input + LED output.
+ * Subscribes to Roli Lightpad state and connects only after user approval.
+ * Exposes touch input + LED output after the detected-device prompt is accepted.
  *
  * SysEx is requested via a *separate* MIDI access call (the global
  * `useGlobalBrowserMidi` hook does not enable SysEx).
@@ -51,18 +57,27 @@ export function useRoliLightpad(): UseRoliLightpadResult {
       setHandshakeDone(done);
     });
     setOnTouch((ev) => touchRef.current?.(ev));
-    connectRoliLightpad().then((ok) => {
-      if (cancelled) return;
-      const status = getRoliStatus();
-      setConnected(ok || status.connected);
-      setDeviceName(status.inputName ?? status.outputName ?? null);
-      setHandshakeDone(status.handshakeDone);
-    });
+    const connectApprovedRoli = () => {
+      connectRoliLightpad().then((ok) => {
+        if (cancelled) return;
+        const status = getRoliStatus();
+        setConnected(ok || status.connected);
+        setDeviceName(status.inputName ?? status.outputName ?? null);
+        setHandshakeDone(status.handshakeDone);
+        const controller = describeDetectedMidiController(status.inputName ?? status.outputName ?? 'ROLI Lightpad BLOCK', 'browser');
+        if (controller && (ok || status.connected)) dispatchConnectedMidiController(controller);
+      });
+    };
+
+    const handleConnectRoli = () => connectApprovedRoli();
+    window.addEventListener(MIDI_CONNECT_ROLI_EVENT, handleConnectRoli);
+    if (localStorage.getItem(ROLI_LIGHTPAD_CONNECT_APPROVED_KEY) === 'true') connectApprovedRoli();
     return () => {
       cancelled = true;
       setOnTouch(null);
       setOnDeviceChange(null);
       setOnHandshakeDone(null);
+      window.removeEventListener(MIDI_CONNECT_ROLI_EVENT, handleConnectRoli);
       // Keep the MIDI access alive in case another mount wants it; only release
       // listeners. Full disconnect on full app teardown happens implicitly.
     };

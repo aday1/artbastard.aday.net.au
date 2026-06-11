@@ -586,6 +586,13 @@
   box-shadow: 0 0 10px rgba(245, 158, 11, 0.7);
 }
 
+.stripBtn.apcSelected {
+  background: rgba(8, 145, 178, 0.65) !important;
+  border-color: #67e8f9 !important;
+  color: #ecfeff !important;
+  box-shadow: 0 0 14px rgba(103, 232, 249, 0.82) !important;
+}
+
 .stripBtn.saveArmed,
 .txBtn.saveArmed {
   background: rgba(127, 29, 29, 0.82) !important;

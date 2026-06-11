@@ -1,18 +1,19 @@
 import React, { useMemo } from 'react';
 import { useStore } from '../../store';
-import { decodeApc40Message, isApc40Source } from '../../midi/apc40';
+import { isApc40Source } from '../../midi/apc40';
 import { LucideIcon } from '../ui/LucideIcon';
 import { StageMapDashboard } from './StageMapDashboard';
 import { Apc40SurfaceDiagram } from '../midi/Apc40SurfaceDiagram';
 import styles from './FixtureSetup.module.scss';
 
 export const Apc40WorkflowPanel: React.FC = () => {
-  const { midiMessages, scenes, fixtures, groups, fixtureTemplates } = useStore((state) => ({
+  const { midiMessages, scenes, fixtures, groups, fixtureTemplates, apc40State } = useStore((state) => ({
     midiMessages: state.midiMessages,
     scenes: state.scenes,
     fixtures: state.fixtures,
     groups: state.groups,
     fixtureTemplates: state.fixtureTemplates,
+    apc40State: state.apc40CrossfaderState,
   }));
 
   const lastApcSource = useMemo(() => {
@@ -20,18 +21,8 @@ export const Apc40WorkflowPanel: React.FC = () => {
     return recent?.source;
   }, [midiMessages]);
 
-  const lastTrackSelectIndex = useMemo(() => {
-    for (let i = midiMessages.length - 1; i >= 0; i--) {
-      const action = decodeApc40Message(midiMessages[i] as any);
-      if (action?.type === 'track-select') return action.trackIndex;
-    }
-    return null;
-  }, [midiMessages]);
-
-  const highlightedGroupId = useMemo(() => {
-    if (lastTrackSelectIndex == null) return null;
-    return groups[lastTrackSelectIndex]?.id ?? null;
-  }, [groups, lastTrackSelectIndex]);
+  const lastTrackSelectIndex = apc40State.activeTrackIndex;
+  const highlightedGroupId = apc40State.activeGroupId;
 
   const highlightedGroup = highlightedGroupId
     ? groups.find((group) => group.id === highlightedGroupId)
@@ -55,10 +46,14 @@ export const Apc40WorkflowPanel: React.FC = () => {
         title="APC40 live stage map"
         subtitle={
           highlightedGroup
-            ? `APC track ${(lastTrackSelectIndex ?? 0) + 1} → ${highlightedGroup.name} (${highlightedGroup.fixtureIndices.length} fixtures)`
-            : `${fixtures.length} fixtures · ${groups.length} groups · tap to target the surface`
+            ? `APC track ${(lastTrackSelectIndex ?? 0) + 1} -> ${highlightedGroup.name} (${highlightedGroup.fixtureIndices.length} fixtures)`
+            : apc40State.activeTargetLabel
+              ? `APC target -> ${apc40State.activeTargetLabel}`
+              : `${fixtures.length} fixtures · ${groups.length} groups · tap to target the surface`
         }
         highlightGroupId={highlightedGroupId}
+        highlightFixtureIds={apc40State.activeFixtureIds}
+        highlightLabel={apc40State.activeTargetLabel}
       />
 
       <Apc40SurfaceDiagram mode="fixtures" showBothDecks title="track select → groups" />

@@ -113,6 +113,26 @@ export function useApc40Workflow() {
   const autoGroupsRef = useRef<Set<number>>(new Set());
   const suppressTrackControlUntilRef = useRef(0);
 
+
+  const apcTargetPatch = (
+    trackIndex: number | null,
+    groupId: string | null,
+    fixtureIds: string[],
+    label: string | null
+  ) => ({
+    activeTrackIndex: trackIndex,
+    activeGroupId: groupId,
+    activeFixtureIds: fixtureIds,
+    activeTargetLabel: label,
+  });
+
+  const fixtureIdsForGroup = (state: StoreState, groupId: string): string[] => {
+    const group = state.groups.find((candidate) => candidate.id === groupId);
+    if (!group) return [];
+    return group.fixtureIndices
+      .map((fixtureIndex) => state.fixtures[fixtureIndex]?.id)
+      .filter((fixtureId): fixtureId is string => Boolean(fixtureId));
+  };
   const publishSurfaceState = (patch: Parameters<typeof setApc40StatePatch>[0] = {}) => {
     const state = useStore.getState();
     const roles = resolveApc40DeviceRoleSlots(
@@ -320,6 +340,23 @@ export function useApc40Workflow() {
     }
 
     if (action.type === 'scene-launch') {
+      if (armedColumnsRef.current.size > 0) {
+        publishSurfaceState({
+          mode: 'save',
+          lastChange: makeLastChange(
+            'scene',
+            `Scene Launch ${action.sceneIndex + 1}`,
+            'Scene Launch buttons start ACTS; they do not save Deck scenes',
+            `Save mode is armed for Deck ${deck}. Press a clip-grid pad in an armed Record Arm column to save or overwrite a Deck scene.`
+          ),
+        });
+        state.addNotification({
+          message: 'APC40 save mode uses the clip grid, not Scene Launch. Press an armed column pad to save.',
+          type: 'warning',
+          priority: 'normal',
+        });
+        return;
+      }
       const act = state.acts[action.sceneIndex];
       if (!act) {
         publishSurfaceState({
@@ -575,10 +612,12 @@ export function useApc40Workflow() {
       const group = state.groups[action.trackIndex];
       if (group) {
         state.selectFixtureGroup(group.id);
+        const fixtureIds = fixtureIdsForGroup(state, group.id);
         const fixtureNames = group.fixtureIndices
           .map((fixtureIndex) => state.fixtures[fixtureIndex]?.name)
           .filter((name): name is string => Boolean(name));
         publishSurfaceState({
+          ...apcTargetPatch(action.trackIndex, group.id, fixtureIds, `Track ${action.trackIndex + 1}: ${group.name}`),
           lastChange: makeLastChange(
             'selection',
             `Track Select ${action.trackIndex + 1}`,
@@ -597,6 +636,7 @@ export function useApc40Workflow() {
         if (fixture) {
           state.setSelectedFixtures([fixture.id]);
           publishSurfaceState({
+            ...apcTargetPatch(action.trackIndex, null, [fixture.id], `Track ${action.trackIndex + 1}: ${fixture.name}`),
             lastChange: makeLastChange(
               'selection',
               `Track Select ${action.trackIndex + 1}`,
@@ -612,6 +652,7 @@ export function useApc40Workflow() {
           });
         } else {
           publishSurfaceState({
+            ...apcTargetPatch(action.trackIndex, null, [], `Track ${action.trackIndex + 1}: empty`),
             lastChange: makeLastChange(
               'selection',
               `Track Select ${action.trackIndex + 1}`,
@@ -623,7 +664,6 @@ export function useApc40Workflow() {
       }
       return;
     }
-
     if (action.type === 'solo-cue') {
       const groupIndex = activeGroupIndexRef.current;
       const group = state.groups[groupIndex] || state.groups[action.trackIndex];
@@ -654,9 +694,11 @@ export function useApc40Workflow() {
       }
 
       if (soloRestoreRef.current?.fixtureId === fixture.id) {
-        state.setSelectedFixtures(soloRestoreRef.current.restoreIds);
+        const restoredIds = soloRestoreRef.current.restoreIds;
+        state.setSelectedFixtures(restoredIds);
         soloRestoreRef.current = null;
         publishSurfaceState({
+          ...apcTargetPatch(groupIndex, group.id, restoredIds.length > 0 ? restoredIds : fixtureIdsForGroup(state, group.id), `Track ${groupIndex + 1}: ${group.name}`),
           lastChange: makeLastChange(
             'selection',
             `Solo/Cue ${action.trackIndex + 1}`,
@@ -678,6 +720,7 @@ export function useApc40Workflow() {
         };
         state.setSelectedFixtures([fixture.id]);
         publishSurfaceState({
+          ...apcTargetPatch(groupIndex, group.id, [fixture.id], `Solo ${action.trackIndex + 1}: ${fixture.name}`),
           lastChange: makeLastChange(
             'selection',
             `Solo/Cue ${action.trackIndex + 1}`,
@@ -721,6 +764,7 @@ export function useApc40Workflow() {
           'Auto-control modulates context-aware fixture roles for that group.',
           { groupNames: [group.name] }
         ),
+        ...apcTargetPatch(action.trackIndex, group.id, fixtureIdsForGroup(state, group.id), `Track ${action.trackIndex + 1}: ${group.name}`),
       });
       state.addNotification({
         message: `APC40 ${enabled ? 'enabled' : 'disabled'} auto control for "${group.name}"`,
@@ -757,6 +801,7 @@ export function useApc40Workflow() {
             groupNames: selectedGroupNames(nextState),
           }
         ),
+        ...apcTargetPatch(null, null, [...nextState.selectedFixtures], targetLabelForSelection(nextState, false)),
       });
       return;
     }
@@ -788,6 +833,7 @@ export function useApc40Workflow() {
           'PAN utility button is mapped as Select All in ArtBastard.',
           { fixtureNames: selectedFixtureNames(nextState) }
         ),
+        ...apcTargetPatch(null, null, [...nextState.selectedFixtures], `All fixtures (${nextState.selectedFixtures.length})`),
       });
       state.addNotification({
         message: 'APC40 selected all fixtures',

@@ -1,0 +1,81 @@
+.promptStack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.prompt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--color-primary, #d68706) 60%, transparent);
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(214, 135, 6, 0.18), rgba(78, 205, 196, 0.12));
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+}
+
+.copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.copy strong {
+  color: var(--text-primary, #fff);
+  font-size: 0.95rem;
+}
+
+.copy span,
+.copy p {
+  color: var(--text-secondary, #b8c0cc);
+  font-size: 0.82rem;
+}
+
+.copy p {
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.primaryButton,
+.dismissButton {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.55rem 0.8rem;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.primaryButton {
+  background: var(--color-primary, #d68706);
+}
+
+.dismissButton {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.primaryButton:hover,
+.dismissButton:hover {
+  filter: brightness(1.12);
+}
+
+@media (max-width: 700px) {
+  .prompt {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .actions {
+    justify-content: flex-start;
+  }
+}

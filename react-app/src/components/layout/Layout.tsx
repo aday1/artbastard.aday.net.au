@@ -25,6 +25,7 @@ import { MobileTopBar } from './MobileTopBar'
 import { DeployLaneBadge } from './DeployLaneBadge'
 import { useAppContextMenu } from '../../context/ContextMenuContext'
 import { SiteBrandingLink } from '../ui/SiteBrandingLink'
+import { DetectedMidiControllerPrompt } from '../midi/DetectedMidiControllerPrompt'
 import { useRouter } from '../../context/RouterContext'
 
 interface LayoutProps {
@@ -166,6 +167,8 @@ const LayoutBody: React.FC<LayoutProps> = ({ children }) => {
                 <div className={styles.serverInfo}>{serverAddress}</div>
               </>
             )}
+            <DetectedMidiControllerPrompt />
+
 
             <main
               className={styles.contentArea}
