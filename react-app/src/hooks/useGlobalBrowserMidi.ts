@@ -289,6 +289,7 @@ export const useGlobalBrowserMidi = () => {
     handlerRefs.current.set(inputId, handleMidiMessage);
     input.addEventListener('midimessage', handleMidiMessage);
     setActiveInputs(prev => {
+      if (prev.has(inputId)) return prev;
       const newSet = new Set([...prev, inputId]);
       saveActiveInputs(newSet); // Persist to localStorage
       return newSet;
@@ -306,17 +307,38 @@ export const useGlobalBrowserMidi = () => {
   useEffect(() => {
     if (!midiAccess) return;
 
+    const saved = loadSavedActiveInputs();
+
     inputs.forEach((input) => {
       if (input.state === 'disconnected') return;
+
+      // Re-attach listener for any input we previously connected (this session
+      // or persisted in localStorage) but no longer have a live handler for —
+      // happens on every unplug/replug. Without this, the controller goes
+      // silent until the user re-clicks Connect.
+      const previouslyActive = activeInputs.has(input.id) || saved.has(input.id);
+      if (previouslyActive && !handlerRefs.current.has(input.id)) {
+        connectBrowserInput(input.id);
+      }
+
+      // Also auto-reconnect any input whose name matches a known template
+      // (APC40, ROLI, Lightpad, etc.) even on first appearance, restoring the
+      // pre-prompt behavior for recognised controllers.
+      const templateId = detectTemplateForMidiInterface(input.name || '');
+      if (templateId && !activeInputs.has(input.id) && !handlerRefs.current.has(input.id)) {
+        void maybeAutoApplyTemplate(input.name || '');
+        connectBrowserInput(input.id);
+      }
+
       const controller = describeDetectedMidiController(input.name || '', 'browser', input.id);
       if (!controller) return;
-      if (activeInputs.has(input.id)) {
+      if (activeInputs.has(input.id) || handlerRefs.current.has(input.id)) {
         dispatchConnectedMidiController(controller);
         return;
       }
       dispatchDetectedMidiController(controller);
     });
-  }, [midiAccess, inputs, activeInputs]);
+  }, [midiAccess, inputs, activeInputs, connectBrowserInput, maybeAutoApplyTemplate]);
 
   useEffect(() => {
     const handleConnectBrowser = (event: Event) => {
