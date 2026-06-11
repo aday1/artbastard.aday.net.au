@@ -17,6 +17,7 @@ import {
   type StageMapViewMode,
 } from '../../fixtures/stageMap';
 import { STAGE_RIG_PRESETS, buildRigFromPreset, type StageRigPreset } from '../../fixtures/stageRigPresets';
+import { getTemplateMode } from '../../fixtures/showBuilder/showPlan';
 import { SceneSeedButton } from '../scenes/SceneSeedButton';
 import { ActSeedButton } from '../acts/ActSeedButton';
 import { ShowBuilderPanel } from './ShowBuilderPanel';
@@ -269,6 +270,73 @@ export const StageMapFixtureSetup: React.FC = () => {
         console.error('Failed to save fixture layout:', error);
         notify('Stage map moved locally, but server save failed', 'warning');
       }
+    }
+  };
+
+  const findTemplateForFixture = (fixture: Fixture) => {
+    if (fixture.templateId) {
+      const byId = fixtureTemplates.find((tmpl) => tmpl.id === fixture.templateId);
+      if (byId) return byId;
+    }
+    if (fixture.manufacturer && fixture.model) {
+      const byModel = fixtureTemplates.find(
+        (tmpl) => tmpl.manufacturer === fixture.manufacturer && tmpl.model === fixture.model
+      );
+      if (byModel) return byModel;
+    }
+    return undefined;
+  };
+
+  const changeFixtureMode = async (fixtureId: string, newModeName: string) => {
+    const fixture = fixtures.find((item) => item.id === fixtureId);
+    if (!fixture) return;
+    const template = findTemplateForFixture(fixture);
+    if (!template) {
+      notify('Cannot switch mode: source template not found in library', 'warning');
+      return;
+    }
+    if (fixture.mode === newModeName) return;
+
+    const nextMode = getTemplateMode(template as any, newModeName);
+    const newChannelCount = nextMode.channels.length;
+    const oldChannelCount = fixture.channels.length;
+
+    let nextStartAddress = fixture.startAddress;
+    if (newChannelCount > oldChannelCount) {
+      const othersOnly = fixtures.filter((item) => item.id !== fixtureId);
+      const myEnd = fixture.startAddress + newChannelCount - 1;
+      const collides = othersOnly.some((other) => {
+        const start = other.startAddress;
+        const end = other.startAddress + other.channels.length - 1;
+        return !(myEnd < start || fixture.startAddress > end);
+      });
+      if (collides || myEnd > 512) {
+        nextStartAddress = findNextAvailableDmxStart(othersOnly, newChannelCount, fixture.startAddress);
+      }
+    }
+
+    const updatedFixture: Fixture = {
+      ...fixture,
+      mode: nextMode.modeName,
+      channels: nextMode.channels.map((channel) => ({
+        ...channel,
+        ranges: channel.ranges?.map((range) => ({ ...range })),
+      })) as Fixture['channels'],
+      startAddress: nextStartAddress,
+    };
+
+    const nextFixtures = fixtures.map((item) => (item.id === fixtureId ? updatedFixture : item));
+    try {
+      await persistFixtures(nextFixtures);
+      notify(
+        nextStartAddress === fixture.startAddress
+          ? `Mode switched to ${nextMode.modeName}`
+          : `Mode switched to ${nextMode.modeName}; relocated to DMX ${nextStartAddress}`,
+        'success',
+      );
+    } catch (error) {
+      console.error('Failed to switch fixture mode:', error);
+      notify('Mode change saved locally, but server save failed', 'warning');
     }
   };
 
@@ -843,10 +911,37 @@ export const StageMapFixtureSetup: React.FC = () => {
                         onChange={(event) => updateLayoutItem(primarySelectedFixture.id, { scale: Math.max(0.5, Math.min(2, Number(event.target.value) || 1)) })}
                       />
                     </label>
-                    <label>
-                      Mode
-                      <input value={primarySelectedFixture.mode || 'Default'} readOnly />
-                    </label>
+                    {(() => {
+                      const sourceTemplate = findTemplateForFixture(primarySelectedFixture);
+                      const availableModes = sourceTemplate?.modes ?? [];
+                      if (availableModes.length > 1) {
+                        return (
+                          <label>
+                            Mode
+                            <select
+                              value={primarySelectedFixture.mode || availableModes[0]?.name || ''}
+                              onChange={(event) => changeFixtureMode(primarySelectedFixture.id, event.target.value)}
+                            >
+                              {availableModes.map((mode) => (
+                                <option key={mode.name} value={mode.name}>
+                                  {mode.name} ({mode.channelData?.length ?? mode.channels} ch)
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        );
+                      }
+                      return (
+                        <label>
+                          Mode
+                          <input
+                            value={primarySelectedFixture.mode || 'Default'}
+                            readOnly
+                            title={sourceTemplate ? 'This template has only one mode' : 'Source template not found; mode is locked'}
+                          />
+                        </label>
+                      );
+                    })()}
                   </div>
                 ) : (
                   <div className={styles.selectionList}>

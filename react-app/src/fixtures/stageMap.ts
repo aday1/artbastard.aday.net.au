@@ -102,6 +102,7 @@ export function createFixtureFromTemplate(
     manufacturer: template.manufacturer || '',
     model: template.model,
     mode: mode.modeName,
+    templateId: template.id,
     startAddress,
     channels: mode.channels.map((channel) => ({
       ...channel,

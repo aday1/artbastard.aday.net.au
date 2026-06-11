@@ -13,6 +13,7 @@ import { getVersionDisplay, getBuildInfo } from '../../utils/version';
 import { isDebugEnabled, setDebugEnabled } from '../../utils/debugLog';
 import { ReleaseNotes } from './ReleaseNotes'
 import SettingsPanel from './SettingsPanel'
+import ProjectIoPanel from './ProjectIoPanel'
 import { MidiOscSetup } from '../midi/MidiOscSetup'
 import { DebugMenu } from '../debug/DebugMenu'
 import { BridgeSettings } from './BridgeSettings'
@@ -682,7 +683,8 @@ export const UnifiedSettings: React.FC = () => {
     { id: 'debug', label: 'Debug & Diagnostics', icon: 'fas fa-bug' },
     { id: 'help', label: 'Help & Documentation', icon: 'fas fa-question-circle' },
     { id: 'advanced', label: 'Advanced', icon: 'fas fa-tools' },
-    { id: 'state', label: 'State Management', icon: 'fas fa-database' }
+    { id: 'state', label: 'State Management', icon: 'fas fa-database' },
+    { id: 'projectIo', label: 'Project YAML', icon: 'fas fa-file-code' }
   ];
 
   const settingsOverviewCards = [
@@ -2011,6 +2013,12 @@ export const UnifiedSettings: React.FC = () => {
             {activeSection === 'state' && (
               <div className={styles.settingsSection}>
                 <SettingsPanel />
+              </div>
+            )}
+
+            {activeSection === 'projectIo' && (
+              <div className={styles.settingsSection}>
+                <ProjectIoPanel />
               </div>
             )}
           </div>

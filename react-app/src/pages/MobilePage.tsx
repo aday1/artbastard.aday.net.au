@@ -11,10 +11,9 @@ import { useStore } from '../store';
 import styles from './MobilePage.module.scss';
 
 const ActsScenesPage = React.lazy(() => import('./ActsScenesPage'));
-const ActsPage = React.lazy(() => import('./ActsPage'));
 const SettingsPage = React.lazy(() => import('./SettingsPage'));
 
-type MobileTab = 'dmx' | 'supercontrol' | 'fixture' | 'scenes' | 'acts' | 'settings';
+type MobileTab = 'dmx' | 'supercontrol' | 'fixture' | 'scenes' | 'settings';
 
 const TabFallback = () => <div className={styles.tabFallback}>Chargement...</div>;
 
@@ -50,7 +49,9 @@ const MobilePage: React.FC = () => {
         tab === 'acts' ||
         tab === 'settings'
       ) {
-        activateTab(tab === 'control' ? 'supercontrol' : tab);
+        const normalized: MobileTab =
+          tab === 'control' ? 'supercontrol' : tab === 'acts' ? 'scenes' : (tab as MobileTab);
+        activateTab(normalized);
       }
     };
     window.addEventListener('message', handleMessage);
@@ -59,7 +60,7 @@ const MobilePage: React.FC = () => {
 
   const tabs: Array<{
     id: MobileTab;
-    icon: 'Lightbulb' | 'Zap' | 'LampDesk' | 'Theater' | 'Clapperboard' | 'Settings';
+    icon: 'Lightbulb' | 'Zap' | 'LampDesk' | 'Theater' | 'Settings';
     label: { artsnob: string; standard: string };
   }> = [
     {
@@ -80,12 +81,7 @@ const MobilePage: React.FC = () => {
     {
       id: 'scenes',
       icon: 'Theater',
-      label: { artsnob: 'Scènes', standard: 'Scenes' },
-    },
-    {
-      id: 'acts',
-      icon: 'Clapperboard',
-      label: { artsnob: 'Actes', standard: 'Acts' },
+      label: { artsnob: 'Scènes & Actes', standard: 'Scenes & Acts' },
     },
     {
       id: 'settings',
@@ -167,18 +163,6 @@ const MobilePage: React.FC = () => {
           >
             <Suspense fallback={<TabFallback />}>
               <ActsScenesPage />
-            </Suspense>
-          </div>
-        )}
-        {activeTab === 'acts' && (
-          <div
-            id="mobile-panel-acts"
-            className={styles.tabContent}
-            role="tabpanel"
-            aria-labelledby="mobile-tab-acts"
-          >
-            <Suspense fallback={<TabFallback />}>
-              <ActsPage />
             </Suspense>
           </div>
         )}

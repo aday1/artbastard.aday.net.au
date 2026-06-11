@@ -10,12 +10,15 @@ interface FixtureGroupProps {
 
 export const FixtureGroup: React.FC<FixtureGroupProps> = ({ group, onEdit }) => {
   const [isFading, setIsFading] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState(group.name);
   const fadeInterval = useRef<NodeJS.Timeout | null>(null);
-  const { 
+  const {
     updateGroup,
+    renameGroup,
     saveGroupLastStates,
-    setGroupMasterValue, 
-    setGroupMute, 
+    setGroupMasterValue,
+    setGroupMute,
     setGroupSolo,
     startMidiLearn,
     cancelMidiLearn,
@@ -25,6 +28,7 @@ export const FixtureGroup: React.FC<FixtureGroupProps> = ({ group, onEdit }) => 
     setGroupZoomValue
   } = useStore(state => ({
     updateGroup: state.updateGroup,
+    renameGroup: state.renameGroup,
     saveGroupLastStates: state.saveGroupLastStates,
     setGroupMasterValue: state.setGroupMasterValue,
     setGroupMute: state.setGroupMute,
@@ -36,6 +40,25 @@ export const FixtureGroup: React.FC<FixtureGroupProps> = ({ group, onEdit }) => 
     setGroupTiltOffset: state.setGroupTiltOffset,
     setGroupZoomValue: state.setGroupZoomValue,
   }));
+
+  useEffect(() => {
+    if (!isEditingName) setNameDraft(group.name);
+  }, [group.name, isEditingName]);
+
+  const commitRename = () => {
+    setIsEditingName(false);
+    const trimmed = nameDraft.trim();
+    if (trimmed && trimmed !== group.name) {
+      renameGroup(group.id, trimmed);
+    } else {
+      setNameDraft(group.name);
+    }
+  };
+
+  const cancelRename = () => {
+    setIsEditingName(false);
+    setNameDraft(group.name);
+  };
 
   // Clean up any active fade on unmount
   useEffect(() => {
@@ -138,7 +161,40 @@ export const FixtureGroup: React.FC<FixtureGroupProps> = ({ group, onEdit }) => 
   return (
     <div className={styles.fixtureGroup}>
       <div className={styles.header}>
-        <h3>{group.name}</h3>
+        {isEditingName ? (
+          <input
+            type="text"
+            value={nameDraft}
+            autoFocus
+            onChange={(e) => setNameDraft(e.target.value)}
+            onBlur={commitRename}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commitRename();
+              else if (e.key === 'Escape') cancelRename();
+            }}
+            className={styles.nameInput}
+            aria-label="Group name"
+            maxLength={64}
+          />
+        ) : (
+          <h3
+            onDoubleClick={() => setIsEditingName(true)}
+            title="Double-click to rename"
+            style={{ cursor: 'text' }}
+          >
+            {group.name}
+          </h3>
+        )}
+        {!isEditingName && (
+          <button
+            onClick={() => setIsEditingName(true)}
+            className={styles.editButton}
+            title="Rename group"
+            aria-label="Rename group"
+          >
+            <i className="fas fa-i-cursor" />
+          </button>
+        )}
         {onEdit && (
           <button onClick={onEdit} className={styles.editButton}>
             <i className="fas fa-edit" />

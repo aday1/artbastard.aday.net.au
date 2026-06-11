@@ -27,6 +27,8 @@ export interface Fixture {
   manufacturer?: string;
   model?: string;
   mode?: string;
+  /** ID of the library template/entry this fixture was created from. Optional for backwards-compat. */
+  templateId?: string;
   startAddress: number;
   channels: FixtureChannel[];
   notes?: string;
@@ -77,6 +79,12 @@ export interface Group {
   id: string;
   name: string;
   fixtureIndices: number[];
+  /**
+   * Stable fixture-id mirror of fixtureIndices, used by YAML import/export
+   * and any cross-rig persistence path. Optional because legacy groups.json
+   * only stored positional indices; populated lazily on hydration.
+   */
+  fixtureIds?: string[];
   lastStates: number[];
   position?: { x: number; y: number };
   isMuted: boolean;

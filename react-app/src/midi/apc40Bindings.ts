@@ -1,5 +1,10 @@
 import type { Apc40Model } from './apc40';
 import { apc40DeckSceneName } from './apc40WorkflowHelpers';
+import {
+  APC40_GRID as GENERATED_APC40_GRID,
+  APC40_TRANSPORT_NOTES as GENERATED_APC40_TRANSPORT_NOTES,
+  APC40_MASTER_CC as GENERATED_APC40_MASTER_CC,
+} from './generated';
 
 export type Apc40Deck = 'A' | 'B';
 
@@ -13,8 +18,8 @@ export interface ApcCcAddress {
   channel: number;
 }
 
-export const APC40_GRID_ROWS = 5;
-export const APC40_GRID_COLS = 8;
+export const APC40_GRID_ROWS = GENERATED_APC40_GRID.rows;
+export const APC40_GRID_COLS = GENERATED_APC40_GRID.cols;
 
 export function clipNoteForCell(
   model: Apc40Model,
@@ -63,25 +68,9 @@ export function trackKnobCc(slot: number): ApcCcAddress {
   return { controller: 0x30 + slot, channel: 0 };
 }
 
-export const APC40_TRANSPORT_NOTES = {
-  shift: 0x62,
-  play: 0x5b,
-  stop: 0x5c,
-  record: 0x5d,
-  navFixturePrev: 0x5e,
-  navFixtureNext: 0x5f,
-  navScenePrev: 0x60,
-  navSceneNext: 0x61,
-  selectAll: 0x57,
-  stopAll: 0x51,
-  masterButton: 0x33,
-} as const;
+export const APC40_TRANSPORT_NOTES = GENERATED_APC40_TRANSPORT_NOTES;
 
-export const APC40_MASTER_CC = {
-  master: 0x0e,
-  crossfader: 0x0f,
-  cue: 0x2f,
-} as const;
+export const APC40_MASTER_CC = GENERATED_APC40_MASTER_CC;
 
 // The deck-A scene name a clip pad at (row, col) launches under the default
 // useApc40Workflow contract: rows fill 8-wide before wrapping. Used to render

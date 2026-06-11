@@ -2544,6 +2544,11 @@ $color-wheel-checker: repeating-conic-gradient(
     background: var(--wb-copper, #ffa044);
     color: var(--wb-panel, #2d2350);
   }
+
+  // Phones: hide the entire column picker. Layout falls back to Auto.
+  @media (max-width: 640px) {
+    display: none;
+  }
 }
 
 .columnPickerLabel {

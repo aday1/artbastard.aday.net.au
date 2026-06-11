@@ -13,12 +13,14 @@ interface Stage3DVisualizerProps {
 }
 
 // Simplified fixture representation in 3D space
-function Fixture3DRepresentation({ 
-  fixture, 
-  position 
-}: { 
-  fixture: any; 
+function Fixture3DRepresentation({
+  fixture,
+  position,
+  selected = false,
+}: {
+  fixture: any;
   position: [number, number, number];
+  selected?: boolean;
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const headRef = useRef<THREE.Group>(null);
@@ -62,6 +64,13 @@ function Fixture3DRepresentation({
   
   return (
     <group ref={groupRef} position={position}>
+      {/* Selection halo (live store selection) */}
+      {selected && (
+        <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.28, 0.36, 32]} />
+          <meshBasicMaterial color="#ffd34a" transparent opacity={0.85} />
+        </mesh>
+      )}
       {/* Fixture base */}
       <mesh position={[0, 0, 0]} castShadow>
         <cylinderGeometry args={[0.15, 0.15, 0.3, 8]} />
@@ -118,6 +127,8 @@ export const Stage3DVisualizer: React.FC<Stage3DVisualizerProps> = ({
 }) => {
   const fixtures = useStore(state => state.fixtures);
   const fixtureLayout = useStore(state => state.fixtureLayout);
+  const selectedFixtureIds = useStore(state => state.selectedFixtures);
+  const selectedSet = useMemo(() => new Set(selectedFixtureIds), [selectedFixtureIds]);
   
   // Map fixtures to 3D positions
   const fixturePositions = useMemo(() => {
@@ -205,6 +216,7 @@ export const Stage3DVisualizer: React.FC<Stage3DVisualizerProps> = ({
               key={fixture.id}
               fixture={fixture}
               position={position}
+              selected={selectedSet.has(fixture.id)}
             />
           );
         })}

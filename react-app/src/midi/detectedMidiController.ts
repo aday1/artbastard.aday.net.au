@@ -1,6 +1,7 @@
 import { detectTemplateForMidiInterface, MidiControllerTemplateId } from '../components/midi/midiControllerTemplates';
+import { detectControllerKind as generatedDetectControllerKind, DetectedMidiControllerKind as GeneratedKind } from './generated';
 
-export type DetectedMidiControllerKind = 'apc40' | 'roli-lightpad';
+export type DetectedMidiControllerKind = GeneratedKind;
 export type DetectedMidiTransport = 'browser' | 'server';
 
 export interface DetectedMidiController {
@@ -19,17 +20,7 @@ export const MIDI_CONNECT_ROLI_EVENT = 'artbastard:connect-roli-lightpad';
 export const ROLI_LIGHTPAD_CONNECT_APPROVED_KEY = 'artbastard:roli-lightpad-connect-approved';
 
 export const detectMidiControllerKind = (interfaceName: string): DetectedMidiControllerKind | null => {
-  const normalized = interfaceName.toLowerCase();
-  if (normalized.includes('apc40') || normalized.includes('apc 40')) return 'apc40';
-  if (
-    normalized.includes('roli') ||
-    normalized.includes('lightpad') ||
-    normalized.includes('block') ||
-    normalized.includes('seaboard')
-  ) {
-    return 'roli-lightpad';
-  }
-  return null;
+  return generatedDetectControllerKind(interfaceName);
 };
 
 export const describeDetectedMidiController = (

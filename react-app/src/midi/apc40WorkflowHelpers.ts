@@ -1,4 +1,9 @@
 import type { Fixture, Scene } from '../store';
+import {
+  DEVICE_ROLE_PRIORITY as GENERATED_DEVICE_ROLE_PRIORITY,
+  TRACK_CONTROL_ROLES as GENERATED_TRACK_CONTROL_ROLES,
+  FULL_ON_EXCLUDED_TYPES as GENERATED_FULL_ON_EXCLUDED_TYPES,
+} from './generated';
 
 export type Apc40Deck = 'A' | 'B';
 
@@ -10,51 +15,19 @@ export interface Apc40RoleSlot {
 
 export const APC40_GRID_SLOT_COUNT = 40;
 
-const DEVICE_ROLE_PRIORITY: Apc40RoleSlot[] = [
-  { label: 'Gobo', controlName: 'gobo', aliases: ['gobo', 'gobowheel', 'gobo_wheel'] },
-  { label: 'Gobo Rotate', controlName: 'gobo_rotation', aliases: ['gobo_rotation', 'goborotation', 'gobo_rotate', 'gobo_spin'] },
-  { label: 'Color Wheel', controlName: 'color_wheel', aliases: ['color_wheel', 'colour_wheel', 'colorwheel', 'colourwheel'] },
-  { label: 'Prism', controlName: 'prism', aliases: ['prism', 'prism_rotate', 'prism_rotation'] },
-  { label: 'Iris', controlName: 'iris', aliases: ['iris'] },
-  { label: 'Focus', controlName: 'focus', aliases: ['focus'] },
-  { label: 'Zoom', controlName: 'zoom', aliases: ['zoom'] },
-  { label: 'Strobe', controlName: 'strobe', aliases: ['strobe', 'shutter'] },
-  { label: 'Macro', controlName: 'macro', aliases: ['macro', 'program', 'pattern', 'effect', 'effects'] },
-  { label: 'Speed', controlName: 'speed', aliases: ['speed', 'rate', 'movement_speed', 'effect_speed'] },
-  { label: 'Pan Fine', controlName: 'fine_pan', aliases: ['pan_fine', 'finepan', 'pan_lsb'] },
-  { label: 'Tilt Fine', controlName: 'fine_tilt', aliases: ['tilt_fine', 'finetilt', 'tilt_lsb'] },
-  { label: 'White', controlName: 'white', aliases: ['white', 'w'] },
-  { label: 'Amber', controlName: 'amber', aliases: ['amber', 'a'] },
-  { label: 'UV', controlName: 'uv', aliases: ['uv', 'ultraviolet'] },
-  { label: 'Red', controlName: 'red', aliases: ['red', 'r'] },
-  { label: 'Green', controlName: 'green', aliases: ['green', 'g'] },
-  { label: 'Blue', controlName: 'blue', aliases: ['blue', 'b'] },
-  { label: 'Pan', controlName: 'pan', aliases: ['pan', 'pan_coarse'] },
-  { label: 'Tilt', controlName: 'tilt', aliases: ['tilt', 'tilt_coarse'] },
-];
+const DEVICE_ROLE_PRIORITY: Apc40RoleSlot[] = GENERATED_DEVICE_ROLE_PRIORITY.map((slot) => ({
+  label: slot.label,
+  controlName: slot.controlName,
+  aliases: [...slot.aliases],
+}));
 
-export const APC40_TRACK_CONTROL_ROLES: Apc40RoleSlot[] = [
-  { label: 'Pan', controlName: 'pan', aliases: ['pan', 'pan_coarse'] },
-  { label: 'Tilt', controlName: 'tilt', aliases: ['tilt', 'tilt_coarse'] },
-  { label: 'Red', controlName: 'red', aliases: ['red', 'r'] },
-  { label: 'Green', controlName: 'green', aliases: ['green', 'g'] },
-  { label: 'Blue', controlName: 'blue', aliases: ['blue', 'b'] },
-  { label: 'White', controlName: 'white', aliases: ['white', 'w'] },
-  { label: 'Strobe', controlName: 'strobe', aliases: ['strobe', 'shutter'] },
-  { label: 'Speed', controlName: 'speed', aliases: ['speed', 'rate', 'effect_speed'] },
-];
+export const APC40_TRACK_CONTROL_ROLES: Apc40RoleSlot[] = GENERATED_TRACK_CONTROL_ROLES.map((slot) => ({
+  label: slot.label,
+  controlName: slot.controlName,
+  aliases: [...slot.aliases],
+}));
 
-const FULL_ON_EXCLUDED_TYPES = new Set([
-  'reset',
-  'reset_control',
-  'function',
-  'lamp',
-  'lamp_on',
-  'lamp_control',
-  'mode',
-  'sound',
-  'auto',
-]);
+const FULL_ON_EXCLUDED_TYPES = GENERATED_FULL_ON_EXCLUDED_TYPES;
 
 export function apc40DeckSceneName(deck: Apc40Deck, index: number): string {
   const slot = Math.max(0, Math.min(APC40_GRID_SLOT_COUNT - 1, index));
@@ -138,6 +111,77 @@ export function buildRoleUpdates(
   });
 
   return updates;
+}
+
+function hsvToRgb255(h: number, s: number, v: number): [number, number, number] {
+  const c = v * s;
+  const hh = (h * 6) % 6;
+  const x = c * (1 - Math.abs((hh % 2) - 1));
+  let r = 0, g = 0, b = 0;
+  if (hh < 1) { r = c; g = x; }
+  else if (hh < 2) { r = x; g = c; }
+  else if (hh < 3) { g = c; b = x; }
+  else if (hh < 4) { g = x; b = c; }
+  else if (hh < 5) { r = x; b = c; }
+  else { r = c; b = x; }
+  const m = v - c;
+  return [
+    Math.max(0, Math.min(255, Math.round((r + m) * 255))),
+    Math.max(0, Math.min(255, Math.round((g + m) * 255))),
+    Math.max(0, Math.min(255, Math.round((b + m) * 255))),
+  ];
+}
+
+export interface RandomLookResult {
+  updates: Record<number, number>;
+  touchedFixtures: number;
+}
+
+export function buildRandomLookUpdates(fixtures: Fixture[]): RandomLookResult {
+  const updates: Record<number, number> = {};
+  const dimmerAliases = ['dimmer', 'intensity', 'master_dimmer'];
+  const redAliases = ['red', 'r'];
+  const greenAliases = ['green', 'g'];
+  const blueAliases = ['blue', 'b'];
+  const whiteAliases = ['white', 'w'];
+  const panAliases = ['pan', 'pan_coarse'];
+  const tiltAliases = ['tilt', 'tilt_coarse'];
+  const strobeAliases = ['strobe', 'shutter'];
+
+  let touchedFixtures = 0;
+
+  fixtures.forEach((fixture) => {
+    const hue = Math.random();
+    const sat = 0.6 + Math.random() * 0.4;
+    const [r, g, b] = hsvToRgb255(hue, sat, 1);
+    const dimmer = 140 + Math.floor(Math.random() * 116);
+    const pan = Math.floor(Math.random() * 256);
+    const tilt = Math.floor(Math.random() * 256);
+
+    let touched = false;
+    const assign = (aliases: string[], value: number) => {
+      const idx = fixture.channels.findIndex((channel) =>
+        channelMatchesRoleAliases(channel, aliases)
+      );
+      if (idx >= 0) {
+        updates[fixtureDmxAddress(fixture, idx)] = value;
+        touched = true;
+      }
+    };
+
+    assign(dimmerAliases, dimmer);
+    assign(redAliases, r);
+    assign(greenAliases, g);
+    assign(blueAliases, b);
+    assign(whiteAliases, 0);
+    assign(panAliases, pan);
+    assign(tiltAliases, tilt);
+    assign(strobeAliases, 0);
+
+    if (touched) touchedFixtures += 1;
+  });
+
+  return { updates, touchedFixtures };
 }
 
 export function buildFullOnUpdates(fixtures: Fixture[]): Record<number, number> {

@@ -10,6 +10,7 @@ import { useGlobalMidiManager } from './hooks/useGlobalMidiManager'
 import { useGlobalBrowserMidi } from './hooks/useGlobalBrowserMidi'
 import { useApc40Workflow } from './hooks/useApc40Workflow'
 import { useApc40LedFeedback } from './hooks/useApc40LedFeedback'
+import { useApc40Health } from './hooks/useApc40Health'
 import { useActsPlaybackEngine } from './hooks/useActsPlaybackEngine'
 import { useActsOscProcessor } from './hooks/useActsOscProcessor'
 import { useActsMidiProcessor } from './hooks/useActsMidiProcessor'
@@ -78,6 +79,8 @@ function App() {
 
   // Native Akai APC40/APC40 mkII scene and fixture workflow controls
   useApc40Workflow();
+  // Force APC40 into Generic Mode (Mode 1) on connect, listen for SysEx replies.
+  useApc40Health();
   // Push LED state back to APC40 so the device surface mirrors scene + selection state.
   useApc40LedFeedback();
   

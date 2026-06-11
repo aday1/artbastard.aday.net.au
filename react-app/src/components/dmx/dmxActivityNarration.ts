@@ -186,17 +186,35 @@ export function describeApc40DmxSource(
     case 'crossfader':
       return 'APC40 crossfader: Deck A/B blend';
     case 'master-button':
-      return 'APC40 Master Select: Full on';
+      return 'APC40 Master Select: FREEZE DMX latch';
+    case 'freeze-dmx':
+      return 'APC40 Master Select: FREEZE DMX latch';
+    case 'tap-tempo':
+      return 'APC40 Tap Tempo: Auto Scene BPM tap';
+    case 'nudge':
+      return `APC40 Nudge${action.direction === 'up' ? '+' : '\u2212'}: Auto Scene BPM`;
+    case 'toggle-color-auto':
+      return 'APC40 SEND A: toggle color automation';
+    case 'toggle-pan-tilt-auto':
+      return 'APC40 SEND B: toggle pan/tilt automation';
+    case 'toggle-effect-auto':
+      return 'APC40 SEND C: toggle effects automation';
+    case 'solo-group':
+      return `APC40 Solo Group ${action.trackIndex + 1}: solo-latch group blackout`;
     case 'clip-launch':
       return `APC40 clip grid row ${action.row + 1}, column ${action.column + 1}`;
     case 'scene-launch':
       return `APC40 Scene Launch ${action.sceneIndex + 1}: ACT trigger`;
     case 'activator':
       return `APC40 Activator ${action.trackIndex + 1}: group auto-control`;
+    case 'select-group':
+      return `APC40 Activator ${action.trackIndex + 1}: select fixture group`;
     case 'track-select':
       return `APC40 Track Select ${action.trackIndex + 1}: fixture/group selection`;
     case 'solo-cue':
       return `APC40 Solo/Cue ${action.trackIndex + 1}: fixture isolation`;
+    case 'select-fixture':
+      return `APC40 Solo/Cue ${action.trackIndex + 1}: select fixture`;
     default:
       return undefined;
   }

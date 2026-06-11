@@ -47,6 +47,10 @@ export const FixtureCanvasInteractive: React.FC<FixtureCanvasInteractiveProps> =
     dmxFaderOrientation,
     setDmxFaderOrientation
   } = useStore();
+  // Live "currently controlled" fixtures (driven by APC40 track-select, SuperControl, etc.).
+  // Distinct from `selectedFixture` (singular) below, which tracks the canvas's edit target.
+  const liveSelectedFixtureIds = useStore(s => s.selectedFixtures);
+  const liveSelectedSet = useMemo(() => new Set(liveSelectedFixtureIds), [liveSelectedFixtureIds]);
 
   const { socket } = useSocket();
 
@@ -201,7 +205,7 @@ export const FixtureCanvasInteractive: React.FC<FixtureCanvasInteractiveProps> =
     const placedFixture = placedFixturesData.find(f => f.id === fixtureId);
     if (!placedFixture) return;
 
-    const dmxChannel = placedFixture.startAddress + channelIndex;
+    const dmxChannel = placedFixture.startAddress + channelIndex - 1;
     setDmxChannelValue(dmxChannel, value);
 
     if (socket?.emit) {
@@ -255,7 +259,7 @@ export const FixtureCanvasInteractive: React.FC<FixtureCanvasInteractiveProps> =
     const channelIndex = fixtureDef.channels.findIndex(ch => ch.name === control.channelNameInFixture);
     if (channelIndex === -1) return;
 
-    const dmxChannel = placedFixture.startAddress + channelIndex;
+    const dmxChannel = placedFixture.startAddress + channelIndex - 1;
     removeMidiMapping(dmxChannel);
   };
 
@@ -287,7 +291,7 @@ export const FixtureCanvasInteractive: React.FC<FixtureCanvasInteractiveProps> =
     const channelIndex = fixtureDef.channels.findIndex(ch => ch.name === control.channelNameInFixture);
     if (channelIndex === -1) return null;
 
-    const dmxChannel = placedFixture.startAddress + channelIndex;
+    const dmxChannel = placedFixture.startAddress + channelIndex - 1;
     return midiMappings[dmxChannel] || null;
   };
 
@@ -342,8 +346,8 @@ export const FixtureCanvasInteractive: React.FC<FixtureCanvasInteractiveProps> =
         xOffset: controlXOffset,
         yOffset: controlYOffset,
         currentValue: 127, // Middle position
-        panValue: dmxChannels[placedFixture.startAddress + panChannel] || 127,
-        tiltValue: dmxChannels[placedFixture.startAddress + tiltChannel] || 127,
+        panValue: dmxChannels[placedFixture.startAddress + panChannel - 1] || 127,
+        tiltValue: dmxChannels[placedFixture.startAddress + tiltChannel - 1] || 127,
         panChannelName: fixtureDef.channels[panChannel].name,
         tiltChannelName: fixtureDef.channels[tiltChannel].name,
       });
@@ -379,7 +383,7 @@ export const FixtureCanvasInteractive: React.FC<FixtureCanvasInteractiveProps> =
         label: controlLabel,
         xOffset: sliderX,
         yOffset: sliderY,
-        currentValue: dmxChannels[placedFixture.startAddress + index] || 0,
+        currentValue: dmxChannels[placedFixture.startAddress + index - 1] || 0,
         orientation: orientation,
       });
 
@@ -457,7 +461,7 @@ export const FixtureCanvasInteractive: React.FC<FixtureCanvasInteractiveProps> =
     }
 
     if (channelIndex !== -1) {
-      const dmxChannel = placedFixture.startAddress + channelIndex;
+      const dmxChannel = placedFixture.startAddress + channelIndex - 1;
       setDmxChannelValue(dmxChannel, value);
 
       if (socket?.emit) {
@@ -658,6 +662,8 @@ export const FixtureCanvasInteractive: React.FC<FixtureCanvasInteractiveProps> =
               <div
                 className={`${styles.fixtureItem} ${
                   selectedFixture === placedFixture.id ? styles.selected : ''
+                } ${
+                  liveSelectedSet.has(placedFixture.fixtureStoreId) ? styles.liveSelected : ''
                 }`}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -944,7 +950,7 @@ export const FixtureCanvasInteractive: React.FC<FixtureCanvasInteractiveProps> =
               const placedFixture = getSelectedFixtureData();
               if (!placedFixture) return null;
 
-              const dmxChannel = placedFixture.startAddress + index;
+              const dmxChannel = placedFixture.startAddress + index - 1;
               const currentValue = dmxChannels[dmxChannel] || 0;
 
               return (

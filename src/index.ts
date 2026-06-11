@@ -54,6 +54,8 @@ interface Fixture {
 interface Group {
     name: string;
     fixtureIndices: number[];
+    /** Stable fixture-id mirror written by the frontend hydration migration. */
+    fixtureIds?: string[];
 }
 
 interface MidiMapping {
@@ -1425,6 +1427,8 @@ function handleMidiMessage(io: Server, type: 'noteon' | 'cc' | 'pitch', msg: Mid
     } else if (type === 'noteon') {
         // Ensure note is defined before using it
         if (msg.note !== undefined) {
+            // NoteOn with velocity 0 is functionally a NoteOff — don't trigger scenes.
+            if ((msg.velocity ?? 0) <= 0) return;
             // Check for scene triggers
             scenes.forEach(scene => {
                 if (scene.midiMapping &&

@@ -291,6 +291,12 @@
     box-shadow: 0 0 20px rgba(var(--color-interactive), 0.3);
     transform: scale(1.05);
   }
+
+  &.liveSelected {
+    outline: 2px solid #ffd34a;
+    outline-offset: 3px;
+    box-shadow: 0 0 18px rgba(255, 211, 74, 0.55);
+  }
   
   &:active {
     cursor: grabbing;

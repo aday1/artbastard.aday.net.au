@@ -1361,6 +1361,8 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
 
       if (!roliApplyRef.current.hasSelection) return;
       if (ev.phase !== 'move' && ev.phase !== 'start') return;
+      // Ignore decay frames after release. Real touches sit well above 0.05.
+      if (ev.z < 0.05) return;
       const p = Math.round(Math.max(0, Math.min(255, ev.x * 255)));
       const t = Math.round(Math.max(0, Math.min(255, (1 - ev.y) * 255)));
       roliApplyRef.current.setPanValue(p);
@@ -2238,35 +2240,37 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
             )}
           </div>
           <div className={styles.superControlHeaderActions} aria-label="Super Control layout recovery">
-            <span
-              className={styles.columnPicker}
-              role="group"
-              aria-label="Super Control column count"
-              title="Set the maximum number of Super Control card columns. Auto fits to the screen; manual layouts are capped at 4 columns."
-            >
-              <span className={styles.columnPickerLabel}>Cols</span>
-              {[0, 1, 2, 3, 4].map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => setColumnCount(n)}
-                  className={panelLayout.columns === n ? styles.columnPickerActive : ''}
-                  title={
-                    n === 0
-                      ? 'Auto-fit Super Control cards to available width'
-                      : `Use a ${n}-column Super Control layout`
-                  }
-                  aria-label={
-                    n === 0
-                      ? 'Use auto-fit Super Control columns'
-                      : `Use ${n} Super Control column${n === 1 ? '' : 's'}`
-                  }
-                  aria-pressed={panelLayout.columns === n}
-                >
-                  {n === 0 ? 'Auto' : n}
-                </button>
-              ))}
-            </span>
+            {!isMobile && (
+              <span
+                className={styles.columnPicker}
+                role="group"
+                aria-label="Super Control column count"
+                title="Set the maximum number of Super Control card columns. Auto fits to the screen; manual layouts are capped at 4 columns."
+              >
+                <span className={styles.columnPickerLabel}>Cols</span>
+                {[0, 1, 2, 3, 4].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setColumnCount(n)}
+                    className={panelLayout.columns === n ? styles.columnPickerActive : ''}
+                    title={
+                      n === 0
+                        ? 'Auto-fit Super Control cards to available width'
+                        : `Use a ${n}-column Super Control layout`
+                    }
+                    aria-label={
+                      n === 0
+                        ? 'Use auto-fit Super Control columns'
+                        : `Use ${n} Super Control column${n === 1 ? '' : 's'}`
+                    }
+                    aria-pressed={panelLayout.columns === n}
+                  >
+                    {n === 0 ? 'Auto' : n}
+                  </button>
+                ))}
+              </span>
+            )}
             {hiddenPanelCount > 0 && (
               <button type="button" onClick={showAllPanels} title="Show every hidden Super Control card again">
                 <LucideIcon name="Eye" />

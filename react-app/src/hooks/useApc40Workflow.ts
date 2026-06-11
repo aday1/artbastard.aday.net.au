@@ -6,6 +6,7 @@ import {
   APC40_TRACK_CONTROL_ROLES,
   blendApc40DeckScenes,
   buildFullOnUpdates,
+  buildRandomLookUpdates,
   buildRoleUpdates,
   midiToDmx,
   resolveApc40DeviceRoleSlots,
@@ -19,6 +20,18 @@ const DIMMER_ROLE: Apc40RoleSlot = {
   controlName: 'dimmer',
   aliases: ['dimmer', 'intensity', 'master'],
 };
+
+// Pattern cyclers driven by SHIFT+SEND row. Must stay in sync with the
+// union types declared on setColorAutomation / setPanTiltAutomation /
+// setEffectsAutomation in store/slices/automationSlice.ts.
+const COLOR_PATTERNS = ['rainbow', 'pulse', 'strobe', 'cycle', 'breathe', 'wave', 'random'] as const;
+const PAN_TILT_PATHS = ['circle', 'figure8', 'square', 'triangle', 'linear', 'custom'] as const;
+const EFFECT_TYPES = ['gobo_cycle', 'prism_rotate', 'iris_breathe', 'zoom_bounce', 'focus_sweep'] as const;
+
+function nextInCycle<T extends string>(values: readonly T[], current: T): T {
+  const index = values.indexOf(current);
+  return values[(index + 1) % values.length];
+}
 
 const TRACK_SELECT_ENCODER_SUPPRESSION_MS = 250;
 
@@ -107,11 +120,17 @@ export function useApc40Workflow() {
   const slotRefs = useRef<Record<Apc40Deck, number | null>>({ A: null, B: null });
   const armedColumnsRef = useRef<Set<number>>(new Set());
   const activeGroupIndexRef = useRef(0);
-  const soloRestoreRef = useRef<{ groupIndex: number; fixtureId: string; restoreIds: string[] } | null>(null);
   const fullOnSnapshotRef = useRef<number[] | null>(null);
+  const blackoutSnapshotRef = useRef<number[] | null>(null);
   const deviceRoleBankRef = useRef(0);
   const autoGroupsRef = useRef<Set<number>>(new Set());
   const suppressTrackControlUntilRef = useRef(0);
+  // Solo Group state (Record Arm row): a snapshot of pre-solo DMX is taken
+  // when the soloed-group set transitions from empty to non-empty, then
+  // restored when it transitions back to empty. While any group is soloed,
+  // fixtures not in any soloed group have their dimmer channels driven to 0.
+  const soloedGroupsRef = useRef<Set<number>>(new Set());
+  const soloSnapshotRef = useRef<number[] | null>(null);
 
 
   const apcTargetPatch = (
@@ -146,6 +165,7 @@ export function useApc40Workflow() {
       sceneAName: sceneRefs.current.A,
       sceneBName: sceneRefs.current.B,
       armedColumns: sortedColumns(armedColumnsRef.current),
+      soloedGroups: sortedColumns(soloedGroupsRef.current),
       fullOn: fullOnSnapshotRef.current !== null,
       autoGroups: sortedColumns(autoGroupsRef.current),
       deviceRoleLabels: roles.map((role) => role.label),
@@ -175,15 +195,6 @@ export function useApc40Workflow() {
     return true;
   };
 
-  const toggleRecordColumn = (column: number) => {
-    if (armedColumnsRef.current.has(column)) {
-      armedColumnsRef.current.delete(column);
-    } else {
-      armedColumnsRef.current.add(column);
-    }
-    publishSurfaceState({ mode: armedColumnsRef.current.size > 0 ? 'save' : null });
-  };
-
   const toggleAllRecordColumns = () => {
     if (armedColumnsRef.current.size > 0) {
       armedColumnsRef.current.clear();
@@ -191,6 +202,43 @@ export function useApc40Workflow() {
       for (let column = 0; column < 8; column += 1) armedColumnsRef.current.add(column);
     }
     publishSurfaceState({ mode: armedColumnsRef.current.size > 0 ? 'save' : null });
+  };
+
+  const fixtureIdsInSoloedGroups = (state: StoreState): Set<string> => {
+    const ids = new Set<string>();
+    soloedGroupsRef.current.forEach((groupIndex) => {
+      const group = state.groups[groupIndex];
+      if (!group) return;
+      group.fixtureIndices.forEach((fixtureIndex) => {
+        const id = state.fixtures[fixtureIndex]?.id;
+        if (id) ids.add(id);
+      });
+    });
+    return ids;
+  };
+
+  const applySoloMask = () => {
+    const state = useStore.getState();
+    const aliveIds = fixtureIdsInSoloedGroups(state);
+    const updates: Record<number, number> = {};
+    state.fixtures.forEach((fixture) => {
+      if (aliveIds.has(fixture.id)) return;
+      const blackoutUpdates = buildRoleUpdates(state.fixtures, [fixture.id], DIMMER_ROLE, 0);
+      Object.assign(updates, blackoutUpdates);
+    });
+    if (Object.keys(updates).length > 0) state.setMultipleDmxChannels(updates, true);
+  };
+
+  const restoreSoloSnapshot = () => {
+    const snapshot = soloSnapshotRef.current;
+    if (!snapshot) return;
+    const state = useStore.getState();
+    const restore: Record<number, number> = {};
+    snapshot.forEach((value, channel) => {
+      if (state.dmxChannels[channel] !== value) restore[channel] = value;
+    });
+    soloSnapshotRef.current = null;
+    if (Object.keys(restore).length > 0) state.setMultipleDmxChannels(restore, true);
   };
 
   const applyRoleToSelection = (role: Apc40RoleSlot, midiValue: number) => {
@@ -228,22 +276,55 @@ export function useApc40Workflow() {
       return;
     }
 
-    if (action.type === 'record-arm') {
-      toggleRecordColumn(action.trackIndex);
-      const armed = armedColumnsRef.current.has(action.trackIndex);
+    if (action.type === 'solo-group') {
+      const group = state.groups[action.trackIndex];
+      if (!group) {
+        publishSurfaceState({
+          lastChange: makeLastChange(
+            'selection',
+            `Solo Group ${action.trackIndex + 1}`,
+            `Group ${action.trackIndex + 1} does not exist`,
+            'Record Arm row solos the matching fixture group. Patch a group first.'
+          ),
+        });
+        return;
+      }
+
+      const wasEmpty = soloedGroupsRef.current.size === 0;
+      const alreadyOn = soloedGroupsRef.current.has(action.trackIndex);
+      if (alreadyOn) {
+        soloedGroupsRef.current.delete(action.trackIndex);
+      } else {
+        if (wasEmpty) soloSnapshotRef.current = [...state.dmxChannels];
+        soloedGroupsRef.current.add(action.trackIndex);
+      }
+
+      if (soloedGroupsRef.current.size === 0) {
+        restoreSoloSnapshot();
+      } else {
+        applySoloMask();
+      }
+
+      const soloedNames = sortedColumns(soloedGroupsRef.current)
+        .map((groupIndex) => state.groups[groupIndex]?.name)
+        .filter((name): name is string => Boolean(name));
       publishSurfaceState({
-        mode: armedColumnsRef.current.size > 0 ? 'save' : null,
         lastChange: makeLastChange(
-          'scene',
-          `Record Arm ${action.trackIndex + 1}`,
-          `${armed ? 'Armed' : 'Disarmed'} save column ${action.trackIndex + 1} for Deck ${deck}`,
-          armed
-            ? `Next clip-grid pad in column ${action.trackIndex + 1} saves current DMX to Deck ${deck}.`
-            : `Column ${action.trackIndex + 1} will launch saved scenes instead of saving.`
+          'selection',
+          `Solo Group ${action.trackIndex + 1}`,
+          alreadyOn
+            ? `Released solo on group "${group.name}"`
+            : `Soloed group "${group.name}"`,
+          soloedGroupsRef.current.size > 0
+            ? `Currently soloed: ${formatList(soloedNames.map(quoted))}. Other fixtures dimmed to 0.`
+            : 'No groups soloed; previous DMX snapshot restored.',
+          { groupNames: [group.name] }
         ),
       });
       state.addNotification({
-        message: `APC40 record ${armed ? 'armed' : 'disarmed'} column ${action.trackIndex + 1} for Deck ${deck}`,
+        message: alreadyOn
+          ? `APC40 released solo on "${group.name}"`
+          : `APC40 soloed group "${group.name}"`,
         type: 'info',
         priority: 'low',
       });
@@ -251,6 +332,41 @@ export function useApc40Workflow() {
     }
 
     if (action.type === 'record') {
+      if (shiftHeldRef.current) {
+        const { updates, touchedFixtures } = buildRandomLookUpdates(state.fixtures);
+        if (touchedFixtures === 0) {
+          state.addNotification({
+            message: 'APC40 roll-dice: no fixtures with recognized roles to randomize',
+            type: 'warning',
+            priority: 'normal',
+          });
+          publishSurfaceState({
+            lastChange: makeLastChange(
+              'effect',
+              'SHIFT+REC',
+              'Roll dice skipped — no fixtures',
+              'Add fixtures to the stage canvas before rolling a random look.'
+            ),
+          });
+          return;
+        }
+        state.setMultipleDmxChannels(updates, true);
+        publishSurfaceState({
+          lastChange: makeLastChange(
+            'effect',
+            'SHIFT+REC',
+            `Rolled random look across ${touchedFixtures} fixture${touchedFixtures === 1 ? '' : 's'}`,
+            'Preview only — press REC then a grid pad to save it as a scene.'
+          ),
+        });
+        state.addNotification({
+          message: `APC40 rolled fresh random look (${touchedFixtures} fixtures). Press REC + a pad to save.`,
+          type: 'success',
+          priority: 'normal',
+        });
+        return;
+      }
+
       toggleAllRecordColumns();
       publishSurfaceState({
         mode: armedColumnsRef.current.size > 0 ? 'save' : null,
@@ -410,7 +526,26 @@ export function useApc40Workflow() {
       return;
     }
 
-    if (action.type === 'stop-all-clips' || action.type === 'stop') {
+    if (action.type === 'stop') {
+      const wasEnabled = state.autoSceneEnabled;
+      if (wasEnabled) state.setAutoSceneEnabled(false);
+      publishSurfaceState({
+        lastChange: makeLastChange(
+          'transport',
+          'STOP',
+          wasEnabled ? 'Stopped Auto Scene playback' : 'STOP pressed with Auto Scene already idle',
+          'STOP toggles Auto Scene only. Use Stop All Clips for a panic-safe full stop.'
+        ),
+      });
+      state.addNotification({
+        message: wasEnabled ? 'APC40 STOP: Auto Scene stopped' : 'APC40 STOP: Auto Scene was not running',
+        type: 'info',
+        priority: 'low',
+      });
+      return;
+    }
+
+    if (action.type === 'stop-all-clips') {
       const hadPlayback = Boolean(sceneRefs.current.A || sceneRefs.current.B || state.actPlaybackState.currentActId);
       sceneRefs.current = { A: null, B: null };
       slotRefs.current = { A: null, B: null };
@@ -424,10 +559,10 @@ export function useApc40Workflow() {
         mode: null,
         lastChange: makeLastChange(
           'transport',
-          action.type === 'stop' ? 'STOP' : 'Stop All Clips',
+          'Stop All Clips',
           hadPlayback
             ? 'Stopped Deck A/B scenes and ACT playback'
-            : 'Stop pressed with no active Deck scene or ACT playback',
+            : 'Stop All Clips pressed with no active Deck scene or ACT playback',
           'Panic-safe stop clears active decks, armed columns, ACT playback, and scene timeline playback.'
         ),
       });
@@ -554,23 +689,49 @@ export function useApc40Workflow() {
     }
 
     if (action.type === 'cue-level') {
+      // Endless rotary encoder: 1..63 = CW step (forward), 65..127 = CCW step (reverse).
+      // 0 and 64 are no-movement noise — ignore.
+      if (action.value === 0 || action.value === 64) return;
+      const direction = action.value < 64 ? 'forward' : 'reverse';
+      if (state.automationDirection === direction) return;
+      state.setAutomationDirection(direction);
+      publishSurfaceState({
+        lastChange: makeLastChange(
+          'transport',
+          'Cue Level',
+          `Automation direction set to ${direction.toUpperCase()}`,
+          'AutoScene index advance and pan/tilt autopilot now step in the new direction. Modular color/dimmer/effects phases run on wall-clock and are not reversible.',
+        ),
+      });
+      state.addNotification({
+        message: `APC40 automation direction: ${direction}`,
+        type: 'info',
+        priority: 'low',
+      });
+      return;
+    }
+
+    if (action.type === 'bank-prev' || action.type === 'bank-next') {
       const roles = resolveApc40DeviceRoleSlots(state.fixtures, state.selectedFixtures, 0);
-      deviceRoleBankRef.current = roles.length > 0 ? Math.floor(action.value / 16) % roles.length : 0;
-      const activeRoles = resolveApc40DeviceRoleSlots(state.fixtures, state.selectedFixtures, deviceRoleBankRef.current);
+      const total = roles.length || 1;
+      const delta = action.type === 'bank-next' ? 1 : -1;
+      deviceRoleBankRef.current = ((deviceRoleBankRef.current + delta) % total + total) % total;
+      const activeRoles = resolveApc40DeviceRoleSlots(
+        state.fixtures, state.selectedFixtures, deviceRoleBankRef.current,
+      );
       publishSurfaceState({
         deviceRoleLabels: activeRoles.map((role) => role.label),
         lastChange: makeLastChange(
           'device',
-          'Cue Level',
+          action.type === 'bank-next' ? 'Device Bank \u2192' : 'Device Bank \u2190',
           `Rotated Device Control bank to ${deviceRoleBankRef.current + 1}`,
           `D1-D8 now expose: ${formatList(activeRoles.map((role) => role.label))}.`,
-          { value: action.value }
         ),
       });
       return;
     }
 
-    if (action.type === 'master-button') {
+    if (action.type === 'full-on') {
       if (fullOnSnapshotRef.current) {
         const restore: Record<number, number> = {};
         fullOnSnapshotRef.current.forEach((value, channel) => {
@@ -582,7 +743,7 @@ export function useApc40Workflow() {
           fullOn: false,
           lastChange: makeLastChange(
             'effect',
-            'Master Track Select',
+            'Clip/Track',
             'Released FULL ON and restored the previous DMX snapshot',
             `Restored ${Object.keys(restore).length} DMX channel${Object.keys(restore).length === 1 ? '' : 's'}.`
           ),
@@ -596,7 +757,7 @@ export function useApc40Workflow() {
           fullOn: true,
           lastChange: makeLastChange(
             'effect',
-            'Master Track Select',
+            'Clip/Track',
             'Latched FULL ON across patched fixtures',
             `Raised ${Object.keys(updates).length} fixture DMX channel${Object.keys(updates).length === 1 ? '' : 's'} to full, excluding reset/lamp/function-style channels.`
           ),
@@ -606,182 +767,328 @@ export function useApc40Workflow() {
       return;
     }
 
-    if (action.type === 'track-select') {
+    if (action.type === 'blackout') {
+      // Toggle: latch all DMX to 0 (snapshot prev state), or restore snapshot.
+      if (blackoutSnapshotRef.current) {
+        const restore: Record<number, number> = {};
+        blackoutSnapshotRef.current.forEach((value, channel) => {
+          if (state.dmxChannels[channel] !== value) restore[channel] = value;
+        });
+        blackoutSnapshotRef.current = null;
+        if (Object.keys(restore).length > 0) state.setMultipleDmxChannels(restore, true);
+        publishSurfaceState({
+          lastChange: makeLastChange(
+            'effect',
+            'Device On/Off',
+            'Released BLACKOUT and restored the previous DMX snapshot',
+            `Restored ${Object.keys(restore).length} DMX channel${Object.keys(restore).length === 1 ? '' : 's'}.`,
+          ),
+        });
+        state.addNotification({ message: 'APC40 BLACKOUT released', type: 'info', priority: 'normal' });
+      } else {
+        blackoutSnapshotRef.current = [...state.dmxChannels];
+        const updates: Record<number, number> = {};
+        state.dmxChannels.forEach((value, channel) => {
+          if (value !== 0) updates[channel] = 0;
+        });
+        if (Object.keys(updates).length > 0) state.setMultipleDmxChannels(updates, true);
+        publishSurfaceState({
+          lastChange: makeLastChange(
+            'effect',
+            'Device On/Off',
+            'Latched BLACKOUT \u2014 all DMX channels driven to 0',
+            `Zeroed ${Object.keys(updates).length} active channel${Object.keys(updates).length === 1 ? '' : 's'}; press again to restore.`,
+          ),
+        });
+        state.addNotification({ message: 'APC40 BLACKOUT latched', type: 'warning', priority: 'high' });
+      }
+      return;
+    }
+
+    if (action.type === 'select-fixture') {
+      // Solo/Cue row (note 0x31): toggle fixture in/out of multi-selection.
+      suppressTrackControlUntilRef.current = Date.now() + TRACK_SELECT_ENCODER_SUPPRESSION_MS;
+      const fixture = state.fixtures[action.trackIndex];
+      if (fixture) {
+        const wasSelected = state.selectedFixtures.includes(fixture.id);
+        state.toggleFixtureSelection(fixture.id);
+        state.deselectAllChannels();
+        const nextSelection = wasSelected
+          ? state.selectedFixtures.filter((id) => id !== fixture.id)
+          : [...state.selectedFixtures, fixture.id];
+        publishSurfaceState({
+          ...apcTargetPatch(action.trackIndex, null, nextSelection, `Fixture ${action.trackIndex + 1}: ${fixture.name}`),
+          lastChange: makeLastChange(
+            'selection',
+            `Select Fixture ${action.trackIndex + 1}`,
+            wasSelected
+              ? `Deselected fixture "${fixture.name}" (${nextSelection.length} now selected)`
+              : `Added fixture "${fixture.name}" to selection (${nextSelection.length} now selected)`,
+            'Solo/Cue row toggles individual fixtures in the live selection.',
+            { fixtureNames: [fixture.name] }
+          ),
+        });
+        state.addNotification({
+          message: wasSelected
+            ? `APC40 deselected fixture "${fixture.name}"`
+            : `APC40 added fixture "${fixture.name}" to selection`,
+          type: 'info',
+          priority: 'low',
+        });
+      } else {
+        publishSurfaceState({
+          ...apcTargetPatch(action.trackIndex, null, [], `Fixture ${action.trackIndex + 1}: empty`),
+          lastChange: makeLastChange(
+            'selection',
+            `Select Fixture ${action.trackIndex + 1}`,
+            `Fixture ${action.trackIndex + 1} has no patched fixture`,
+            'No selection changed.'
+          ),
+        });
+      }
+      return;
+    }
+
+    if (action.type === 'select-group') {
+      // Activator row (note 0x32): toggle the group's fixtures in/out of multi-selection.
       suppressTrackControlUntilRef.current = Date.now() + TRACK_SELECT_ENCODER_SUPPRESSION_MS;
       activeGroupIndexRef.current = action.trackIndex;
       const group = state.groups[action.trackIndex];
       if (group) {
-        state.selectFixtureGroup(group.id);
-        const fixtureIds = fixtureIdsForGroup(state, group.id);
+        const groupFixtureIds = group.fixtureIndices
+          .map((fixtureIndex) => state.fixtures[fixtureIndex]?.id)
+          .filter((id): id is string => Boolean(id));
+        const currentSelection = state.selectedFixtures;
+        const allAlreadySelected = groupFixtureIds.length > 0
+          && groupFixtureIds.every((id) => currentSelection.includes(id));
+        const nextSelection = allAlreadySelected
+          ? currentSelection.filter((id) => !groupFixtureIds.includes(id))
+          : Array.from(new Set([...currentSelection, ...groupFixtureIds]));
+        state.setSelectedFixtures(nextSelection);
+        state.deselectAllChannels();
         const fixtureNames = group.fixtureIndices
           .map((fixtureIndex) => state.fixtures[fixtureIndex]?.name)
           .filter((name): name is string => Boolean(name));
         publishSurfaceState({
-          ...apcTargetPatch(action.trackIndex, group.id, fixtureIds, `Track ${action.trackIndex + 1}: ${group.name}`),
+          ...apcTargetPatch(action.trackIndex, group.id, nextSelection, `Group ${action.trackIndex + 1}: ${group.name}`),
           lastChange: makeLastChange(
             'selection',
-            `Track Select ${action.trackIndex + 1}`,
-            `Selected fixture group "${group.name}"`,
+            `Select Group ${action.trackIndex + 1}`,
+            allAlreadySelected
+              ? `Removed group "${group.name}" from selection (${nextSelection.length} now selected)`
+              : `Added group "${group.name}" to selection (${nextSelection.length} now selected)`,
             fixtureNames.length > 0 ? `Group contains ${formatList(fixtureNames.map(quoted))}.` : 'Group has no patched fixtures.',
             { groupNames: [group.name], fixtureNames }
           ),
         });
         state.addNotification({
-          message: `APC40 selected group "${group.name}"`,
+          message: allAlreadySelected
+            ? `APC40 removed group "${group.name}" from selection`
+            : `APC40 added group "${group.name}" to selection`,
           type: 'info',
           priority: 'low',
         });
       } else {
-        const fixture = state.fixtures[action.trackIndex];
-        if (fixture) {
-          state.setSelectedFixtures([fixture.id]);
-          publishSurfaceState({
-            ...apcTargetPatch(action.trackIndex, null, [fixture.id], `Track ${action.trackIndex + 1}: ${fixture.name}`),
-            lastChange: makeLastChange(
-              'selection',
-              `Track Select ${action.trackIndex + 1}`,
-              `Selected fixture "${fixture.name}"`,
-              'No fixture group exists in this slot, so Track Select fell back to direct fixture selection.',
-              { fixtureNames: [fixture.name] }
-            ),
-          });
-          state.addNotification({
-            message: `APC40 selected fixture "${fixture.name}"`,
-            type: 'info',
-            priority: 'low',
-          });
-        } else {
-          publishSurfaceState({
-            ...apcTargetPatch(action.trackIndex, null, [], `Track ${action.trackIndex + 1}: empty`),
-            lastChange: makeLastChange(
-              'selection',
-              `Track Select ${action.trackIndex + 1}`,
-              `Track Select ${action.trackIndex + 1} has no group or fixture`,
-              'No selection changed.'
-            ),
-          });
-        }
-      }
-      return;
-    }
-    if (action.type === 'solo-cue') {
-      const groupIndex = activeGroupIndexRef.current;
-      const group = state.groups[groupIndex] || state.groups[action.trackIndex];
-      if (!group) {
         publishSurfaceState({
+          ...apcTargetPatch(action.trackIndex, null, [], `Group ${action.trackIndex + 1}: empty`),
           lastChange: makeLastChange(
             'selection',
-            `Solo/Cue ${action.trackIndex + 1}`,
-            `Solo/Cue ${action.trackIndex + 1} has no active group`,
-            'Select a group before isolating fixtures.'
+            `Select Group ${action.trackIndex + 1}`,
+            `Group ${action.trackIndex + 1} does not exist`,
+            'No selection changed.'
           ),
-        });
-        return;
-      }
-      const fixtureIndex = group.fixtureIndices[action.trackIndex];
-      const fixture = fixtureIndex !== undefined ? state.fixtures[fixtureIndex] : undefined;
-      if (!fixture) {
-        publishSurfaceState({
-          lastChange: makeLastChange(
-            'selection',
-            `Solo/Cue ${action.trackIndex + 1}`,
-            `Solo/Cue ${action.trackIndex + 1} found no fixture in "${group.name}"`,
-            'No selection changed.',
-            { groupNames: [group.name] }
-          ),
-        });
-        return;
-      }
-
-      if (soloRestoreRef.current?.fixtureId === fixture.id) {
-        const restoredIds = soloRestoreRef.current.restoreIds;
-        state.setSelectedFixtures(restoredIds);
-        soloRestoreRef.current = null;
-        publishSurfaceState({
-          ...apcTargetPatch(groupIndex, group.id, restoredIds.length > 0 ? restoredIds : fixtureIdsForGroup(state, group.id), `Track ${groupIndex + 1}: ${group.name}`),
-          lastChange: makeLastChange(
-            'selection',
-            `Solo/Cue ${action.trackIndex + 1}`,
-            `Released solo for "${fixture.name}"`,
-            `Restored the previous fixture selection in group "${group.name}".`,
-            { fixtureNames: [fixture.name], groupNames: [group.name] }
-          ),
-        });
-        state.addNotification({
-          message: `APC40 solo released "${fixture.name}"`,
-          type: 'info',
-          priority: 'low',
-        });
-      } else {
-        soloRestoreRef.current = {
-          groupIndex,
-          fixtureId: fixture.id,
-          restoreIds: [...state.selectedFixtures],
-        };
-        state.setSelectedFixtures([fixture.id]);
-        publishSurfaceState({
-          ...apcTargetPatch(groupIndex, group.id, [fixture.id], `Solo ${action.trackIndex + 1}: ${fixture.name}`),
-          lastChange: makeLastChange(
-            'selection',
-            `Solo/Cue ${action.trackIndex + 1}`,
-            `Isolated "${fixture.name}" from "${group.name}"`,
-            'Solo/Cue temporarily targets one fixture inside the active group.',
-            { fixtureNames: [fixture.name], groupNames: [group.name] }
-          ),
-        });
-        state.addNotification({
-          message: `APC40 SOLO/CUE isolated "${fixture.name}" from "${group.name}"`,
-          type: 'info',
-          priority: 'low',
         });
       }
       return;
     }
 
-    if (action.type === 'activator') {
-      const group = state.groups[action.trackIndex];
-      if (!group) {
+    if (action.type === 'play') {
+      const wasEnabled = state.autoSceneEnabled;
+      if (state.autoSceneList.length === 0) {
+        publishSurfaceState({
+          lastChange: makeLastChange(
+            'transport',
+            'PLAY',
+            'Auto Scene list is empty',
+            'Add scenes to the Auto Scene list in the Scenes panel, then press PLAY again.'
+          ),
+        });
         state.addNotification({
-          message: `APC40 auto group ${action.trackIndex + 1} is empty`,
+          message: 'APC40 PLAY: auto-scene list is empty',
           type: 'warning',
           priority: 'low',
         });
         return;
       }
-      if (autoGroupsRef.current.has(action.trackIndex)) {
-        autoGroupsRef.current.delete(action.trackIndex);
-      } else {
-        autoGroupsRef.current.add(action.trackIndex);
-      }
-      state.selectFixtureGroup(group.id);
-      const enabled = autoGroupsRef.current.has(action.trackIndex);
+      if (!wasEnabled) state.setAutoSceneEnabled(true);
       publishSurfaceState({
-        autoGroups: sortedColumns(autoGroupsRef.current),
         lastChange: makeLastChange(
-          'effect',
-          `Activator ${action.trackIndex + 1}`,
-          `${enabled ? 'Enabled' : 'Disabled'} APC40 auto-control for "${group.name}"`,
-          'Auto-control modulates context-aware fixture roles for that group.',
-          { groupNames: [group.name] }
+          'transport',
+          'PLAY',
+          wasEnabled ? 'Auto Scene already running' : 'Started Auto Scene playback',
+          `BPM source: ${state.autoSceneTempoSource}; ${state.autoSceneList.length} scene(s) in rotation; mode: ${state.autoSceneMode}.`
         ),
-        ...apcTargetPatch(action.trackIndex, group.id, fixtureIdsForGroup(state, group.id), `Track ${action.trackIndex + 1}: ${group.name}`),
       });
       state.addNotification({
-        message: `APC40 ${enabled ? 'enabled' : 'disabled'} auto control for "${group.name}"`,
+        message: wasEnabled ? 'APC40 PLAY: Auto Scene already running' : 'APC40 PLAY: Auto Scene started',
         type: 'info',
         priority: 'normal',
       });
       return;
     }
 
-    if (action.type === 'play') {
+    if (action.type === 'tap-tempo') {
+      state.recordTapTempo();
+      if (state.autoSceneTempoSource !== 'tap_tempo') {
+        state.setAutoSceneTempoSource('tap_tempo');
+      }
+      const next = useStore.getState();
       publishSurfaceState({
         lastChange: makeLastChange(
           'transport',
-          'PLAY',
-          'PLAY is reserved in ArtBastard today',
-          'The button is decoded and shown in monitors, but it does not trigger live DMX yet.'
+          'Tap Tempo',
+          `Tapped — ${next.autoSceneTapTempoBpm} BPM`,
+          'Auto Scene tempo source switched to Tap Tempo. Tap on the beat to set the BPM.'
         ),
+      });
+      return;
+    }
+
+    if (action.type === 'nudge') {
+      const currentBpm = state.autoSceneManualBpm;
+      const nextBpm = action.direction === 'up' ? currentBpm + 1 : currentBpm - 1;
+      state.setManualBpm(nextBpm);
+      if (state.autoSceneTempoSource !== 'manual_bpm') {
+        state.setAutoSceneTempoSource('manual_bpm');
+      }
+      const next = useStore.getState();
+      publishSurfaceState({
+        lastChange: makeLastChange(
+          'transport',
+          action.direction === 'up' ? 'Nudge+' : 'Nudge\u2212',
+          `Auto Scene tempo ${action.direction === 'up' ? 'increased' : 'decreased'} to ${next.autoSceneManualBpm} BPM`,
+          'Auto Scene tempo source switched to Manual BPM.'
+        ),
+      });
+      return;
+    }
+
+    if (action.type === 'freeze-dmx') {
+      const wasFrozen = state.dmxFrozen;
+      state.setDmxFrozen(!wasFrozen);
+      publishSurfaceState({
+        lastChange: makeLastChange(
+          'transport',
+          'Master Select',
+          wasFrozen ? 'DMX output released' : 'DMX OUTPUT FROZEN',
+          wasFrozen
+            ? 'Backend send re-enabled. Current store state was flushed to the rig.'
+            : 'Backend send suppressed. GUI keeps reflecting state; rig holds last value until released.'
+        ),
+      });
+      state.addNotification({
+        message: wasFrozen ? 'APC40 DMX output released' : 'APC40 DMX output FROZEN — press Master again to release',
+        type: wasFrozen ? 'info' : 'warning',
+        priority: wasFrozen ? 'normal' : 'high',
+      });
+      return;
+    }
+
+    if (action.type === 'toggle-color-auto') {
+      if (shiftHeldRef.current) {
+        const nextPattern = nextInCycle(COLOR_PATTERNS, state.modularAutomation.color.type as typeof COLOR_PATTERNS[number]);
+        state.setColorAutomation({ type: nextPattern });
+        publishSurfaceState({
+          lastChange: makeLastChange(
+            'effect',
+            'SHIFT+SEND A',
+            `Color pattern \u2192 ${nextPattern}`,
+            'Cycles modular color engine pattern.'
+          ),
+        });
+        state.addNotification({ message: `APC40 color pattern: ${nextPattern}`, type: 'info', priority: 'low' });
+        return;
+      }
+      state.toggleColorAutomation();
+      const enabled = useStore.getState().modularAutomation.color.enabled;
+      publishSurfaceState({
+        lastChange: makeLastChange(
+          'effect',
+          'SEND A',
+          enabled ? 'Color automation enabled' : 'Color automation disabled',
+          'Toggles the modular color automation engine for the current fixture set.'
+        ),
+      });
+      state.addNotification({
+        message: `APC40 color automation ${enabled ? 'on' : 'off'}`,
+        type: 'info',
+        priority: 'low',
+      });
+      return;
+    }
+
+    if (action.type === 'toggle-pan-tilt-auto') {
+      if (shiftHeldRef.current) {
+        const nextPath = nextInCycle(PAN_TILT_PATHS, state.modularAutomation.panTilt.pathType as typeof PAN_TILT_PATHS[number]);
+        state.setPanTiltAutomation({ pathType: nextPath });
+        publishSurfaceState({
+          lastChange: makeLastChange(
+            'effect',
+            'SHIFT+SEND B',
+            `Pan/Tilt path \u2192 ${nextPath}`,
+            'Cycles modular pan/tilt engine path.'
+          ),
+        });
+        state.addNotification({ message: `APC40 pan/tilt path: ${nextPath}`, type: 'info', priority: 'low' });
+        return;
+      }
+      state.togglePanTiltAutomation();
+      const enabled = useStore.getState().modularAutomation.panTilt.enabled;
+      publishSurfaceState({
+        lastChange: makeLastChange(
+          'effect',
+          'SEND B',
+          enabled ? 'Pan/Tilt automation enabled' : 'Pan/Tilt automation disabled',
+          'Toggles the modular pan/tilt automation engine for the current fixture set.'
+        ),
+      });
+      state.addNotification({
+        message: `APC40 pan/tilt automation ${enabled ? 'on' : 'off'}`,
+        type: 'info',
+        priority: 'low',
+      });
+      return;
+    }
+
+    if (action.type === 'toggle-effect-auto') {
+      if (shiftHeldRef.current) {
+        const nextType = nextInCycle(EFFECT_TYPES, state.modularAutomation.effects.type as typeof EFFECT_TYPES[number]);
+        state.setEffectsAutomation({ type: nextType });
+        publishSurfaceState({
+          lastChange: makeLastChange(
+            'effect',
+            'SHIFT+SEND C',
+            `Effect type \u2192 ${nextType}`,
+            'Cycles modular effects engine type.'
+          ),
+        });
+        state.addNotification({ message: `APC40 effect type: ${nextType}`, type: 'info', priority: 'low' });
+        return;
+      }
+      state.toggleEffectsAutomation();
+      const enabled = useStore.getState().modularAutomation.effects.enabled;
+      publishSurfaceState({
+        lastChange: makeLastChange(
+          'effect',
+          'SEND C',
+          enabled ? 'Effects automation enabled' : 'Effects automation disabled',
+          'Toggles the modular effects automation engine for the current fixture set.'
+        ),
+      });
+      state.addNotification({
+        message: `APC40 effects automation ${enabled ? 'on' : 'off'}`,
+        type: 'info',
+        priority: 'low',
       });
       return;
     }

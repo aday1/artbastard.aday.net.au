@@ -68,7 +68,7 @@ describe('APC40 workflow decoder', () => {
     }
   });
 
-  it('decodes record-arm, activator, solo, stop-all, and master-button rows', () => {
+  it('decodes solo-group, activator, solo-cue, stop-all, and freeze-dmx rows', () => {
     expect(decodeApc40Message({
       _type: 'noteon',
       source: 'Akai APC40',
@@ -76,7 +76,7 @@ describe('APC40 workflow decoder', () => {
       note: 0x30,
       velocity: 127,
     })).toEqual({
-      type: 'record-arm',
+      type: 'solo-group',
       model: 'apc40-mk1',
       trackIndex: 4,
     });
@@ -88,7 +88,7 @@ describe('APC40 workflow decoder', () => {
       note: 0x32,
       velocity: 127,
     })).toEqual({
-      type: 'activator',
+      type: 'select-group',
       model: 'apc40-mk1',
       trackIndex: 2,
     });
@@ -100,22 +100,20 @@ describe('APC40 workflow decoder', () => {
       note: 0x31,
       velocity: 127,
     })).toEqual({
-      type: 'solo-cue',
+      type: 'select-fixture',
       model: 'apc40-mk1',
       trackIndex: 1,
     });
 
+    // Track Select row (note 0x33) is intentionally unmapped on channels 0-7
+    // since APC40 hardware emits unreliable CCs in some modes.
     expect(decodeApc40Message({
       _type: 'noteon',
       source: 'Akai APC40',
       channel: 6,
       note: 0x33,
       velocity: 127,
-    })).toEqual({
-      type: 'track-select',
-      model: 'apc40-mk1',
-      trackIndex: 6,
-    });
+    })).toBeNull();
 
     expect(decodeApc40Message({
       _type: 'noteon',
@@ -128,6 +126,7 @@ describe('APC40 workflow decoder', () => {
       model: 'apc40-mk1',
     });
 
+    // Master Select (note 0x33, channel 8) is FREEZE DMX latch.
     expect(decodeApc40Message({
       _type: 'noteon',
       source: 'Akai APC40',
@@ -135,12 +134,12 @@ describe('APC40 workflow decoder', () => {
       note: 0x33,
       velocity: 127,
     })).toEqual({
-      type: 'master-button',
+      type: 'freeze-dmx',
       model: 'apc40-mk1',
     });
   });
 
-  it('maps every Record Arm button to its matching save column', () => {
+  it('maps every Record Arm button to its matching solo-group column', () => {
     for (let channel = 0; channel < 8; channel += 1) {
       expect(decodeApc40Message({
         _type: 'noteon',
@@ -149,14 +148,46 @@ describe('APC40 workflow decoder', () => {
         note: 0x30,
         velocity: 127,
       })).toEqual({
-        type: 'record-arm',
+        type: 'solo-group',
         model: 'apc40-mk1',
         trackIndex: channel,
       });
     }
   });
 
-  it('decodes device control, cue level, and shift press/release', () => {
+  it('decodes SEND A/B/C as modular automation toggles', () => {
+    expect(decodeApc40Message({
+      _type: 'noteon',
+      source: 'Akai APC40',
+      note: 0x58,
+      velocity: 127,
+    })).toEqual({
+      type: 'toggle-color-auto',
+      model: 'apc40-mk1',
+    });
+
+    expect(decodeApc40Message({
+      _type: 'noteon',
+      source: 'Akai APC40',
+      note: 0x59,
+      velocity: 127,
+    })).toEqual({
+      type: 'toggle-pan-tilt-auto',
+      model: 'apc40-mk1',
+    });
+
+    expect(decodeApc40Message({
+      _type: 'noteon',
+      source: 'Akai APC40',
+      note: 0x5a,
+      velocity: 127,
+    })).toEqual({
+      type: 'toggle-effect-auto',
+      model: 'apc40-mk1',
+    });
+  });
+
+  it('decodes device control and shift press/release; cue level is unmapped', () => {
     expect(decodeApc40Message({
       _type: 'cc',
       source: 'Akai APC40',
@@ -170,17 +201,14 @@ describe('APC40 workflow decoder', () => {
       value: 64,
     });
 
+    // Cue Level (CC 0x2f) is intentionally unmapped; Device Left/Right cycles role banks instead.
     expect(decodeApc40Message({
       _type: 'cc',
       source: 'Akai APC40',
       channel: 0,
       controller: 0x2f,
       value: 32,
-    })).toEqual({
-      type: 'cue-level',
-      model: 'apc40-mk1',
-      value: 32,
-    });
+    })).toBeNull();
 
     expect(decodeApc40Message({
       _type: 'noteon',
@@ -231,17 +259,14 @@ describe('APC40 workflow decoder', () => {
       value: 74,
     });
 
+    // CC 0x3c (formerly track-encoder-press alias) is unmapped now.
     expect(decodeApc40Message({
       _type: 'cc',
       source: 'Akai APC40',
       channel: 0,
       controller: 0x3c,
       value: 127,
-    })).toEqual({
-      type: 'track-select',
-      model: 'apc40-mk1',
-      trackIndex: 4,
-    });
+    })).toBeNull();
 
     expect(decodeApc40Message({
       _type: 'cc',

@@ -1,6 +1,6 @@
 {
   "name": "artbastard-dmx",
-  "version": "5.2.5.2",
+  "version": "5.2.6.0",
   "private": true,
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
@@ -38,6 +38,7 @@
     "socket.io-client": "^4.7.4",
     "three": "^0.160.1",
     "uuid": "^11.1.0",
+    "yaml": "^2.9.0",
     "zustand": "^4.5.0"
   },
   "devDependencies": {

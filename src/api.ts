@@ -1153,14 +1153,22 @@ apiRouter.post('/groups', (req, res) => {
   try {
     const { groups } = req.body;
 
-    // Load current fixtures data and update only groups
     const fixtureData = loadFixturesData();
-    fixtureData.groups = groups;
+    const fixtures = fixtureData.fixtures || [];
+    const normalized = Array.isArray(groups)
+      ? groups.map((group: any) => {
+          const indices: number[] = Array.isArray(group?.fixtureIndices) ? group.fixtureIndices : [];
+          const ids: string[] = Array.isArray(group?.fixtureIds) && group.fixtureIds.length
+            ? group.fixtureIds.slice()
+            : indices.map((idx: number) => fixtures[idx]?.id).filter((id: string | undefined) => Boolean(id)) as string[];
+          return { ...group, fixtureIds: ids };
+        })
+      : groups;
+    fixtureData.groups = normalized;
     const success = saveFixturesData(fixtureData);
 
     if (success) {
-      // Notify all clients of the groups update
-      global.io.emit('groupsUpdate', groups);
+      global.io.emit('groupsUpdate', normalized);
       res.json({ success: true });
     } else {
       res.status(500).json({ error: 'Failed to save groups data' });
@@ -1297,6 +1305,142 @@ const importHandler: RequestHandler = (req: Request, res: Response) => {
 };
 
 apiRouter.post('/import', importHandler);
+
+// ============================================================================
+// Project YAML round-trip (per-section export/import). Pretty, hand-editable
+// YAML; same loaders/savers as the JSON paths above so writes go through one
+// place. Sections: fixtures, groups, scenes, acts, bindings.
+// ============================================================================
+import { stringify as yamlStringify, parse as yamlParse } from 'yaml';
+
+type ProjectSection = 'fixtures' | 'groups' | 'scenes' | 'acts' | 'bindings';
+const PROJECT_SECTIONS: ProjectSection[] = ['fixtures', 'groups', 'scenes', 'acts', 'bindings'];
+
+function buildSectionYaml(section: ProjectSection): string {
+  const opts = { indent: 2, lineWidth: 0 } as const;
+  if (section === 'fixtures') {
+    const fx = loadFixturesData();
+    return yamlStringify({ fixtures: fx.fixtures }, opts);
+  }
+  if (section === 'groups') {
+    const fx = loadFixturesData();
+    const groups = (fx.groups || []).map((g: any) => {
+      const fixtureIds = Array.isArray(g.fixtureIds) && g.fixtureIds.length
+        ? g.fixtureIds
+        : (g.fixtureIndices || []).map((idx: number) => fx.fixtures[idx]?.id).filter(Boolean);
+      return { ...g, fixtureIds };
+    });
+    return yamlStringify({ groups }, opts);
+  }
+  if (section === 'scenes') return yamlStringify({ scenes: loadScenes() }, opts);
+  if (section === 'acts') return yamlStringify({ acts: loadActs() }, opts);
+  if (section === 'bindings') {
+    const config = loadConfig();
+    return yamlStringify({ midiMappings: config.midiMappings || {} }, opts);
+  }
+  throw new Error(`unknown section: ${section}`);
+}
+
+apiRouter.get('/project/export', (req, res) => {
+  try {
+    const section = String(req.query.section || '') as ProjectSection;
+    if (!PROJECT_SECTIONS.includes(section)) {
+      res.status(400).json({ error: `section must be one of: ${PROJECT_SECTIONS.join(', ')}` });
+      return;
+    }
+    res.type('text/yaml').send(buildSectionYaml(section));
+  } catch (error) {
+    log('project/export failed', 'ERROR', { error });
+    res.status(500).json({ error: String(error) });
+  }
+});
+
+apiRouter.get('/project/export/bundle', (_req, res) => {
+  try {
+    const bundle: Record<string, string> = {};
+    for (const section of PROJECT_SECTIONS) bundle[section] = buildSectionYaml(section);
+    res.json(bundle);
+  } catch (error) {
+    log('project/export/bundle failed', 'ERROR', { error });
+    res.status(500).json({ error: String(error) });
+  }
+});
+
+apiRouter.post('/project/import', (req, res) => {
+  try {
+    const { section, yamlText } = req.body || {};
+    if (!PROJECT_SECTIONS.includes(section)) {
+      res.status(400).json({ error: `section must be one of: ${PROJECT_SECTIONS.join(', ')}` });
+      return;
+    }
+    if (typeof yamlText !== 'string' || !yamlText.trim()) {
+      res.status(400).json({ error: 'yamlText is required' });
+      return;
+    }
+    const parsed: any = yamlParse(yamlText);
+    const warnings: string[] = [];
+    let applied = 0;
+
+    if (section === 'fixtures') {
+      const list = Array.isArray(parsed?.fixtures) ? parsed.fixtures : null;
+      if (!list) throw new Error('expected top-level "fixtures" list');
+      const fx = loadFixturesData();
+      fx.fixtures = list;
+      saveFixturesData(fx);
+      global.io.emit('fixturesUpdate', fx.fixtures);
+      applied = list.length;
+    } else if (section === 'groups') {
+      const list = Array.isArray(parsed?.groups) ? parsed.groups : null;
+      if (!list) throw new Error('expected top-level "groups" list');
+      const fx = loadFixturesData();
+      const fixtureIdToIndex = new Map(fx.fixtures.map((f: any, i: number) => [f.id, i]));
+      fx.groups = list.map((g: any) => {
+        const ids = Array.isArray(g.fixtureIds) ? g.fixtureIds.map(String) : [];
+        const resolvedIds: string[] = [];
+        const resolvedIndices: number[] = [];
+        ids.forEach((id: string) => {
+          const idx = fixtureIdToIndex.get(id);
+          if (idx === undefined) {
+            warnings.push(`group "${g.name}": fixtureId "${id}" not found — dropped`);
+            return;
+          }
+          resolvedIds.push(id);
+          resolvedIndices.push(idx);
+        });
+        return { ...g, fixtureIds: resolvedIds, fixtureIndices: resolvedIndices };
+      });
+      saveFixturesData(fx);
+      global.io.emit('groupsUpdate', fx.groups);
+      applied = list.length;
+    } else if (section === 'scenes') {
+      const list = Array.isArray(parsed?.scenes) ? parsed.scenes : null;
+      if (!list) throw new Error('expected top-level "scenes" list');
+      saveScenes(list);
+      global.io.emit('sceneList', list);
+      applied = list.length;
+    } else if (section === 'acts') {
+      const list = Array.isArray(parsed?.acts) ? parsed.acts : null;
+      if (!list) throw new Error('expected top-level "acts" list');
+      saveActs(list);
+      global.io.emit('actsUpdate', list);
+      applied = list.length;
+    } else if (section === 'bindings') {
+      if (!parsed?.midiMappings || typeof parsed.midiMappings !== 'object') {
+        throw new Error('expected top-level "midiMappings" map');
+      }
+      const config = loadConfig();
+      config.midiMappings = parsed.midiMappings;
+      saveConfig();
+      global.io.emit('midiMappingsUpdate', config.midiMappings);
+      applied = Object.keys(parsed.midiMappings).length;
+    }
+
+    res.json({ success: true, applied, warnings });
+  } catch (error) {
+    log('project/import failed', 'ERROR', { error });
+    res.status(400).json({ error: String(error) });
+  }
+});
 
 // Ping ArtNet device
 apiRouter.post('/ping-artnet', (req, res) => {

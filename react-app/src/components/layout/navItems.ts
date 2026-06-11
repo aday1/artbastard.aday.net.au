@@ -52,21 +52,10 @@ export const NAV_ITEMS: NavItem[] = [
     icon: 'Theater',
     launch: 'route',
     title: {
-      artsnob: 'Scènes Dramatiques',
-      standard: 'Scenes',
-      minimal: 'Scenes',
-      tooltip: 'Capture lighting scenes and scene timelines.',
-    },
-  },
-  {
-    id: 'acts',
-    icon: 'Clapperboard',
-    launch: 'route',
-    title: {
-      artsnob: 'Actes Dramatiques',
-      standard: 'Acts',
-      minimal: 'Acts',
-      tooltip: 'Arrange scenes into touch-friendly act timelines and ACT triggers.',
+      artsnob: 'Scènes & Actes',
+      standard: 'Scenes & Acts',
+      minimal: 'S+A',
+      tooltip: 'Capture scenes and arrange them into ACT timelines.',
     },
   },
   {

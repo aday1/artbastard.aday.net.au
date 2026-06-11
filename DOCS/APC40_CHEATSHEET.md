@@ -12,14 +12,14 @@ APC40 MK1 factory MIDI mode and works without applying a MIDI template.
                 pan/tilt/RGB/W/strobe      gobo, wheel, prism, iris,
                 speed                      focus, zoom, effects
 
-  RECORD ARM   [arm col 1] ... [arm col 8]   next grid press saves current deck
-  SOLO/CUE     [fixture 1] ... [fixture 8]   solo inside selected fixture group
-  ACTIVATOR    [auto grp1] ... [auto grp8]   per-group auto visual control
-  TRACK SELECT [group 1] ... [group 8]       fixture group selection
+  RECORD ARM   [solo grp1] ... [solo grp8]   latched Solo-Group blackout of non-soloed fixtures
+  SOLO/CUE     [fixture 1] ... [fixture 8]   select fixture N (positional)
+  ACTIVATOR    [group 1]   ... [group 8]     select fixture group N (positional)
+  TRACK SELECT [UNMAPPED ] ... [UNMAPPED ]   hardware CC bleed — selection lives on Solo/Cue + Activator
   CLIP STOP    [stop col1] ... [stop col8]   release current deck scene
 
   FADERS       [slot 1] ... [slot 8]         SuperControl dimmer per selected slot
-  MASTER BTN   FULL ON latch                 press again restores previous DMX
+  MASTER BTN   FREEZE DMX latch              press once to freeze rig at last value; press again to release + flush
   MASTER FADER selected DIMMER/masterDimmer  not a raw-all-channel fader
 
   CLIP GRID / SESSION VIEW
@@ -28,8 +28,20 @@ APC40 MK1 factory MIDI mode and works without applying a MIDI template.
 
   SCENE LAUNCH 1-5   ACT 1-5 launch
   STOP ALL CLIPS     stop Deck A/B scenes and stop ACT playback
-  CROSS FADER        blend active Deck A scene with active Deck B scene
-  CUE LEVEL          page Device Control role banks
+  CROSSFADER         blend active Deck A scene with active Deck B scene
+  CUE LEVEL          UNMAPPED (Device Left/Right cycles Device Control role bank)
+  PLAY               enable Auto Scene playback        (LED green-blink while running)
+  STOP               disable Auto Scene playback       (LED red while running)
+  REC                arm grid column for clip save     (LED red-blink while any column armed)
+                     SHIFT+REC = roll fresh random look across all fixtures (preview only)
+  SEND A             toggle Color modular automation   (SHIFT+SEND A cycles color pattern)
+  SEND B             toggle Pan/Tilt modular auto      (SHIFT+SEND B cycles pan/tilt path)
+  SEND C             toggle Effects modular auto       (SHIFT+SEND C cycles effect type)
+  TAP TEMPO          tap to set Auto Scene BPM
+  NUDGE -/+          decrement/increment manual BPM by 1
+  CLIP/TRACK         FULL ON latch (raise all patched channels to 255)
+  DEVICE ON/OFF      BLACKOUT latch (snapshot + zero all channels)
+  DEVICE LEFT/RIGHT  cycle Device Control role bank
 ```
 
 ## At a glance
@@ -38,22 +50,33 @@ APC40 MK1 factory MIDI mode and works without applying a MIDI template.
 | --- | --- | --- |
 | **Clip Launch / Session View 8x5** | Launch Deck A scene slots `APC40 Deck A 01` through `APC40 Deck A 40` | green = saved, orange-blink = active deck scene, off = empty |
 | **SHIFT + Clip Grid** | Hold SHIFT to use Deck B scene slots `APC40 Deck B 01` through `APC40 Deck B 40` | SHIFT orange while held; grid repaints for Deck B |
-| **Record Arm 1-8** | Arm a grid column. Next grid pad in that column saves current DMX into the current deck slot | red-blink on Record Arm, REC, and every armed clip pad |
+| **REC (transport)** | Arm a grid column (cycles each press). Next grid pad in any armed column saves current DMX into the current deck slot. SHIFT+REC rolls a fresh random look across all fixtures (preview only — does not save). | red-blink on REC and every armed clip pad |
+| **Record Arm 1-8 (top row)** | **SOLO GROUP N** latch. Snapshots DMX on first solo, blacks out fixtures not in soloed groups, restores snapshot when last solo released. | red-blink while soloed, off otherwise (MK1: single-color amber row) |
 | **Scene Launch 1-5** | Launch ACT 1-5 | green = ACT exists, orange-blink = playing ACT |
 | **Clip Stop row** | Stop/unselect the active scene for that column in the current deck | red while a deck scene is active |
 | **Stop All Clips** | Stop Deck A scene, Deck B scene, scene timeline playback, and ACT playback | red while a deck scene or ACT is active |
-| **Track Select 1-8** | Select fixture group 1-8; falls back to fixture 1-8. The top Track Control encoder push/ring buttons also act as select aliases. | green when that group/fixture is selected |
-| **Master Track Select** | FULL ON latch: sends 255 to fixture output channels, excluding lamp/reset/function controls | red while FULL ON is latched |
+| **Track Select 1-8** | **UNMAPPED** — APC40 hardware emits unreliable CCs in some modes (CC bleed). Selection lives on Solo/Cue + Activator. | LEDs always off |
+| **Master Track Select** | **FREEZE DMX latch**: press to freeze rig at last value (store state still updates, hardware stays frozen); press again to release and flush store state to backend | red while frozen |
 | **Faders 1-8** | SuperControl dimmer for selected fixture slot 1-8 | n/a |
 | **Master fader** | SuperControl `masterDimmer`/DIMMER for current selection | n/a |
 | **Device Control knobs 1-8** | Dynamic fixture role controls, prioritizing gobo/effects roles for the selected fixture/group | in-app APC40 manual labels current roles |
-| **Cue Level** | Pages Device Control role banks | n/a |
-| **Solo/Cue 1-8** | Solo fixture 1-8 inside the currently selected group; press same solo again to restore selection | momentary |
-| **Activator 1-8** | Toggle APC40 auto control for fixture group 1-8 | green = group exists, orange-blink = auto active |
+| **Cue Level** | **AUTOMATION DIRECTION** — endless rotary encoder. CW = forward, CCW = reverse. Inverts step direction in AutoScene index advance and pan/tilt autopilot track. Modular color/dimmer/effects phases run on wall-clock and are not affected. | n/a |
+| **Solo/Cue 1-8** | Toggle fixture N in multi-selection (positional, one per column). Press to add, press again to remove. | lit when fixture is selected, off otherwise (MK1: single-color amber row) |
+| **Activator 1-8** | Toggle fixture group N in multi-selection (positional, one per column). Press to add the whole group, press again to remove it. | lit when every fixture in the group is selected, off otherwise (MK1: single-color amber row) |
 | **Crossfader** | Linear DMX blend between active Deck A and active Deck B scenes | n/a |
 | **Nav up/down** | Previous/next fixture | n/a |
 | **Nav left/right** | Previous/next ArtBastard scene | n/a |
 | **Pan** | Select all fixtures | n/a |
+| **PLAY** | Enable Auto Scene playback | green-blink while Auto Scene running |
+| **STOP (transport)** | Disable Auto Scene playback | red while Auto Scene running |
+| **SEND A** | Toggle Color modular automation. SHIFT+SEND A cycles color pattern. | orange-blink while engine enabled |
+| **SEND B** | Toggle Pan/Tilt modular automation. SHIFT+SEND B cycles pan/tilt path. | orange-blink while engine enabled |
+| **SEND C** | Toggle Effects modular automation (gobo/strobe/shutter). SHIFT+SEND C cycles effect type. | orange-blink while engine enabled |
+| **Tap Tempo** | Tap to set Auto Scene BPM | n/a |
+| **Nudge -/+** | Decrement/increment manual BPM by 1 (switches tempo source to manual) | n/a |
+| **Clip/Track (DEVICE CONTROL block)** | FULL ON latch — raise patched channels to 255, snapshot prior DMX; press again to restore | red while latched |
+| **Device On/Off** | BLACKOUT latch — snapshot DMX and zero all channels; press again to restore | red while latched |
+| **Device Left/Right** | Cycle Device Control role banks | n/a |
 
 ## Scene decks
 
@@ -85,16 +108,7 @@ Texture, and Strobe Move 90. **Performance ACTS 8** adds longer show-section
 ACTS. Reseeding refreshes generated ACTS only; handmade ACTS are kept. You can
 ignore ACT seeds completely when building a show from scratch.
 
-To save a scene:
-
-1. Choose the deck: leave SHIFT released for Deck A, hold SHIFT for Deck B.
-2. Press **Record Arm** for the grid column you want to save into. ArtBastard enters **SAVE MODE** and flashes that column red in hardware and in the in-app APC40 visual.
-3. Press a flashing red grid pad in that armed column. Empty pads are spare save targets; saved pads will be overwritten.
-4. ArtBastard saves the current DMX state into that deck slot name.
-
-To launch a scene, press any saved grid pad in the current deck. Empty pads
-warn instead of silently creating scenes; that keeps accidental scene capture
-from happening during a show.
+See **Save scene workflow** below for the save procedure.
 
 ## Crossfader
 
@@ -112,10 +126,10 @@ delete scenes.
 
 ### Selection first
 
-Use **Track Select 1-8** to choose the fixture group you want to tweak. If you
-are using the top Track Control section, press the encoder push/ring button
-above the same column to select that group first; turning the encoder changes
-the fixed role for the current selection.
+Use **Solo/Cue 1-8** to select an individual fixture, or **Activator 1-8** to
+select a fixture group. The top Track Control encoder push/ring buttons no
+longer act as select aliases (Track Select row is unmapped because of APC40
+hardware CC bleed).
 
 ### Faders
 
@@ -144,18 +158,62 @@ Priority order begins with:
 `gobo`, `gobo_rotation`, `color_wheel`, `prism`, `iris`, `focus`, `zoom`,
 `strobe`, `macro`, `speed`, then fine pan/tilt and color channels.
 
-Turn **Cue Level** to page through additional roles if the selected fixture
-has more than eight useful DMX roles.
+Turn the **Device Left/Right** buttons (DEVICE CONTROL block) to page through
+additional roles if the selected fixture has more than eight useful DMX roles.
 
 ## Automation row
 
-**Activator 1-8** toggles a small APC40-local auto controller for fixture group
-1-8. The auto controller chooses a visual role for that group, preferring
-gobo/effect/color-wheel/prism/strobe channels. If a group has none of those,
-it falls back to a dimmer breathe.
+**Activator 1-8** selects a fixture group (positional). The legacy "per-group
+auto controller" feature has been removed; modular automation now lives on
+the SEND row instead:
 
-This is separate from scene playback and can be stopped by pressing the same
-Activator again.
+- **SEND A** — toggle the modular **color** automation engine. SHIFT+SEND A
+  cycles the color pattern (`rainbow`, `pulse`, `strobe`, `cycle`, `breathe`,
+  `wave`, `random`).
+- **SEND B** — toggle the modular **pan/tilt** automation engine. SHIFT+SEND B
+  cycles the path (`circle`, `figure8`, `square`, `triangle`, `linear`,
+  `custom`).
+- **SEND C** — toggle the modular **effects** automation engine. SHIFT+SEND C
+  cycles the effect type (`gobo_cycle`, `prism_rotate`, `iris_breathe`,
+  `zoom_bounce`, `focus_sweep`).
+
+The SEND-row LED is orange-blink while its engine is enabled.
+
+## Save scene workflow
+
+1. Choose the deck: leave SHIFT released for Deck A, hold SHIFT for Deck B.
+2. Press **REC** (transport row) once per grid column you want armed. ArtBastard enters **SAVE MODE** and flashes those columns red.
+3. Press a flashing red grid pad in any armed column. Empty pads are spare save targets; saved pads will be overwritten.
+4. ArtBastard saves the current DMX state into that deck slot name.
+
+To launch a scene, press any saved grid pad in the current deck.
+
+## Roll dice — SHIFT+REC
+
+Hold **SHIFT** and press **REC** to roll a fresh randomized look across every
+fixture on stage. Each fixture gets a random hue (saturation 60-100%), a random
+dimmer between 140 and 255, and random pan/tilt where present. Strobe and white
+are forced to 0 so the roll never blasts the room.
+
+The roll writes DMX **live for preview only** — no scene is saved. If you like
+the look, follow the normal save workflow: press REC, then a flashing grid pad.
+If you don't, roll again (SHIFT+REC) or launch any saved scene to clear it.
+
+## FREEZE DMX latch
+
+Press the **Master Select** button to freeze rig output at its current value.
+The store keeps updating (so UI and automations still respond) but no bytes
+ship to the DMX backend. Press Master Select again to release the latch —
+the hook flushes the current store state to the backend so the rig catches
+up to whatever you changed during the freeze.
+
+## Solo Group latch
+
+Press a **Record Arm** button (top row) to solo that group. The first press
+in an empty solo set snapshots DMX and blacks out all fixtures that are not
+in any soloed group. Additional presses add groups to the solo set. Pressing
+a soloed group again removes it; releasing the last solo restores the
+snapshot.
 
 ## Stop behavior
 
@@ -170,12 +228,14 @@ Activator again.
 | Velocity | Color | Meaning |
 | --- | --- | --- |
 | 0 | off | empty/inactive |
-| 1 | green | saved deck slot or saved ACT/group exists |
-| 2 | green-blink | currently unused by ArtBastard save mode |
-| 3 | red | stop-all or full-on active |
-| 4 | red-blink | record-armed save column: Record Arm, REC, and armed clip pads |
-| 5 | orange | SHIFT/full deck context |
-| 6 | orange-blink | active deck scene, playing ACT, or active group auto |
+| 1 | green | saved deck slot, saved ACT, fixture/group selected (MK1 single-color rows display this as plain amber-on) |
+| 2 | green-blink | PLAY while Auto Scene running |
+| 3 | red | STOP active / FULL ON latched / Master Select frozen / active deck scene present (MK1 single-color rows display this as plain amber-on) |
+| 4 | red-blink | record-armed save column (REC + armed clip pads) **or** Solo Group latched |
+| 5 | orange | SHIFT latched |
+| 6 | orange-blink | active deck scene, playing ACT, SEND-row engine enabled |
+
+> **MK1 palette caveat:** only the 8×5 clip grid renders all three colors. The Solo/Cue, Activator, Record Arm, and Track Select rows are single-color amber pads — any non-zero velocity reads as "amber on", so this table's `green` vs `red` distinction only matters on the clip grid.
 
 ## Debugging
 

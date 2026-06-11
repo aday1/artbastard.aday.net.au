@@ -43,6 +43,7 @@ export const Apc40Manual: React.FC = () => {
   const acts = useStore(s => s.acts);
   const currentActId = useStore(s => s.actPlaybackState.currentActId);
   const apc40State = useStore(s => s.apc40CrossfaderState);
+  const dmxFrozen = useStore(s => s.dmxFrozen);
   const superControlLearnTarget = useStore(s => s.superControlLearnTarget);
   const startSuperControlLearn = useStore(s => s.startSuperControlLearn);
 
@@ -356,7 +357,7 @@ export const Apc40Manual: React.FC = () => {
 
           {/* Clip grid + scene launch column */}
           <div className={`${styles.cluster} ${styles.clipGrid}`}>
-            <div className={styles.clusterLabel}>Clip Grid 8×5 → Deck {apc40State.activeDeck} scene slots · Record Arm saves current DMX</div>
+            <div className={styles.clusterLabel}>Clip Grid 8×5 → Deck {apc40State.activeDeck} scene slots · REC arms columns, then Clip pad saves current DMX</div>
             <div className={styles.gridAndScenes}>
               <div className={styles.grid}>
                 {Array.from({ length: 5 }).map((_, row) => (
@@ -407,7 +408,7 @@ export const Apc40Manual: React.FC = () => {
 
           {/* Tracks 1-8 + master */}
           <div className={`${styles.cluster} ${styles.tracks}`}>
-            <div className={styles.clusterLabel}>Tracks 1–8: group select, auto, fixture solo, record-arm, and slot dimmer</div>
+            <div className={styles.clusterLabel}>Tracks 1–8: solo-group, group-auto, fixture/group select, slot dimmer (Track Select row unmapped — hardware CC bleed)</div>
             <div className={styles.trackRow}>
               {Array.from({ length: 8 }).map((_, trackIdx) => {
                 const armKey = `note:${trackIdx}:48`;
@@ -426,24 +427,24 @@ export const Apc40Manual: React.FC = () => {
                   <div key={trackIdx} className={styles.track}>
                     <div
                       className={`${styles.trackButton} ${activeKey === armKey ? styles.active : ''} ${shouldMuteControl(armKey, false) ? styles.focusMuted : ''}`}
-                      style={{ background: apc40State.armedColumns.includes(trackIdx) ? '#ef4444' : APC40_CATEGORY_COLORS.transport }}
-                      title={`Record Arm ${trackIdx + 1} → arm grid column ${trackIdx + 1} for Deck ${apc40State.activeDeck}`}
-                    >ARM</div>
+                      style={{ background: apc40State.soloedGroups.includes(trackIdx) ? '#ef4444' : APC40_CATEGORY_COLORS.selection }}
+                      title={`Record Arm ${trackIdx + 1} → SOLO GROUP ${trackIdx + 1} (latched blackout of non-soloed fixtures)`}
+                    >S/G</div>
                     <div
                       className={`${styles.trackButton} ${activeKey === autoKey ? styles.active : ''} ${shouldMuteControl(autoKey, false) ? styles.focusMuted : ''}`}
                       style={{ background: apc40State.autoGroups.includes(trackIdx) ? '#f59e0b' : APC40_CATEGORY_COLORS.transport }}
-                      title={`Activator ${trackIdx + 1} → toggle auto control for fixture group ${trackIdx + 1}`}
-                    >AUTO</div>
+                      title={`Activator ${trackIdx + 1} → select fixture group ${trackIdx + 1}`}
+                    >GRP</div>
                     <div
                       className={`${styles.trackButton} ${activeKey === soloKey ? styles.active : ''} ${shouldMuteControl(soloKey, false) ? styles.focusMuted : ''}`}
                       style={{ background: APC40_CATEGORY_COLORS.selection }}
-                      title={`Solo/Cue ${trackIdx + 1} → solo fixture ${trackIdx + 1} inside selected group`}
-                    >SOLO</div>
+                      title={`Solo/Cue ${trackIdx + 1} → select fixture ${trackIdx + 1}`}
+                    >FIX</div>
                     <div
                       className={`${styles.trackButton} ${activeKey === selectKey ? styles.active : ''} ${shouldMuteControl(selectKey, false) ? styles.focusMuted : ''}`}
-                      style={{ background: slotInUse ? APC40_CATEGORY_COLORS.selection : '#475569' }}
-                      title={`Track ${trackIdx + 1} Select → group/fixture index ${trackIdx + 1}`}
-                    >SEL</div>
+                      style={{ background: '#475569' }}
+                      title={`Track Select ${trackIdx + 1} → UNMAPPED (APC40 hardware CC bleed)`}
+                    >—</div>
                     <div
                       className={`${styles.trackButton} ${activeKey === stopKey ? styles.active : ''} ${shouldMuteControl(stopKey, false) ? styles.focusMuted : ''}`}
                       style={{ background: APC40_CATEGORY_COLORS.utility }}
@@ -472,9 +473,9 @@ export const Apc40Manual: React.FC = () => {
                 ))}
                 <div
                   className={`${styles.trackButton} ${shouldMuteControl('note:0:80', false) ? styles.focusMuted : ''}`}
-                  style={{ background: apc40State.fullOn ? '#ef4444' : APC40_CATEGORY_COLORS.utility }}
-                  title="Master Select → FULL ON latch; press again to restore previous DMX"
-                >FULL</div>
+                  style={{ background: dmxFrozen ? '#ef4444' : APC40_CATEGORY_COLORS.utility }}
+                  title="Master Select → FREEZE DMX latch (press once to freeze rig at last value; press again to release and flush store state)"
+                >{dmxFrozen ? 'FRZN' : 'FRZ'}</div>
                 <div
                   className={`${styles.fader} ${styles.masterFader} ${activeKey === `cc:${masterFaderBinding?.channel ?? 0}:${masterFaderBinding?.controller ?? 14}` ? styles.active : ''} ${isLearningKey('masterDimmer') ? styles.learning : ''} ${shouldMuteControl(`cc:${masterFaderBinding?.channel ?? 0}:${masterFaderBinding?.controller ?? 14}`, Boolean(masterFaderBinding)) ? styles.focusMuted : ''}`}
                   title={`${masterFaderBinding?.label ?? 'Master Fader -> Master Dimmer'} - click to re-learn\n${bindingTargetSummary(masterFaderBinding)}`}
@@ -496,9 +497,9 @@ export const Apc40Manual: React.FC = () => {
           <div className={`${styles.cluster} ${styles.transport}`}>
             <div className={styles.clusterLabel}>Transport / Nav — Up/Down cycles fixtures, Left/Right cycles scenes</div>
             <div className={styles.transportRow}>
-              <div className={`${styles.transportButton} ${shouldMuteControl('note:0:91', false) ? styles.focusMuted : ''}`} style={{ background: APC40_CATEGORY_COLORS.scene }} title="Play is free for future transport behavior; ACT launch lives on Scene Launch 1-5">▶ PLAY</div>
-              <div className={`${styles.transportButton} ${shouldMuteControl('note:0:92', false) ? styles.focusMuted : ''}`} style={{ background: APC40_CATEGORY_COLORS.utility }} title="Stop → stop all Deck A/B scenes and ACT playback">■ STOP</div>
-              <div className={`${styles.transportButton} ${shouldMuteControl('note:0:93', false) ? styles.focusMuted : ''}`} style={{ background: apc40State.armedColumns.length > 0 ? '#ef4444' : APC40_CATEGORY_COLORS.transport }} title="Record → arm or clear all record columns">● REC</div>
+              <div className={`${styles.transportButton} ${shouldMuteControl('note:0:91', false) ? styles.focusMuted : ''}`} style={{ background: APC40_CATEGORY_COLORS.scene }} title="PLAY → enable Auto Scene playback (LED green-blink while running)">▶ PLAY</div>
+              <div className={`${styles.transportButton} ${shouldMuteControl('note:0:92', false) ? styles.focusMuted : ''}`} style={{ background: APC40_CATEGORY_COLORS.utility }} title="STOP → disable Auto Scene playback (LED red while Auto Scene running)">■ STOP</div>
+              <div className={`${styles.transportButton} ${shouldMuteControl('note:0:93', false) ? styles.focusMuted : ''}`} style={{ background: apc40State.armedColumns.length > 0 ? '#ef4444' : APC40_CATEGORY_COLORS.transport }} title="Record → arm or clear all record columns. SHIFT+REC = roll fresh random look across all fixtures (preview only)">● REC</div>
               <div className={`${styles.transportButton} ${shouldMuteControl('note:0:82', false) ? styles.focusMuted : ''}`} style={{ background: APC40_CATEGORY_COLORS.utility }} title="Clear Selection">CLEAR</div>
               <div className={`${styles.transportButton} ${shouldMuteControl('note:0:98', false) ? styles.focusMuted : ''}`} style={{ background: apc40State.shiftLatched ? '#f59e0b' : APC40_CATEGORY_COLORS.utility }} title="Hold SHIFT → Deck B grid mode">SHIFT</div>
               <div className={`${styles.transportButton} ${shouldMuteControl('note:0:87', false) ? styles.focusMuted : ''}`} style={{ background: APC40_CATEGORY_COLORS.selection }} title="Pan button → Select All fixtures">SEL ALL</div>
@@ -514,14 +515,14 @@ export const Apc40Manual: React.FC = () => {
               <div className={styles.knobBlock}>
                 <div
                   className={`${styles.knob} ${activeKey === `cc:${cueBinding?.channel ?? 0}:${cueBinding?.controller ?? 47}` ? styles.active : ''} ${shouldMuteControl(`cc:${cueBinding?.channel ?? 0}:${cueBinding?.controller ?? 47}`, Boolean(cueBinding)) ? styles.focusMuted : ''}`}
-                  style={{ borderColor: APC40_CATEGORY_COLORS.superControl }}
-                  title="Cue Level → page Device Control role banks for the selected fixture/group"
+                  style={{ borderColor: '#475569' }}
+                  title="Cue Level → UNMAPPED (Device Left/Right cycles Device Control role banks instead)"
                   role="button"
                   tabIndex={0}
                 >
                   <div className={styles.knobDot} />
                 </div>
-                <div className={styles.controlBlockLabel}>Role Bank</div>
+                <div className={styles.controlBlockLabel}>Cue (unmapped)</div>
                 <div className={styles.controlBlockSig}>CC47</div>
               </div>
               <div className={styles.knobBlock}>

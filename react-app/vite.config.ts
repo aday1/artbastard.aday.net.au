@@ -1,6 +1,8 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { resolve } from 'path'
+// @ts-ignore — plain .mjs plugin, no types
+import specsPlugin from './vite.specs.plugin.mjs'
 
 // WebSocket fallback ports to try if default fails
 const WS_FALLBACK_PORTS = [3000, 3001, 8080, 8081]
@@ -25,6 +27,7 @@ process.env.NPM_CONFIG_OPTIONAL = 'false'
 
 export default defineConfig({
   plugins: [
+    specsPlugin(),
     react({
       babel: {
         plugins: []

@@ -1,6 +1,7 @@
 import type { Fixture, Scene, SceneTimeline } from '../store';
 import { apc40DeckSceneName, type Apc40Deck } from '../midi/apc40WorkflowHelpers';
 import { sceneNameToOscPath } from '../utils/sceneCapture';
+import { MD_SCENE_SEED_PACKS, MD_SCENE_PACK_TEMPLATE_IDS } from './generated/seedPacks';
 
 export const SCENE_SEED_GENERATOR_ID = 'artbastard-scene-seeder';
 export const SCENE_SEED_GENERATOR_VERSION = 1;
@@ -85,23 +86,26 @@ const DEFAULT_OPTIONS: SceneSeedOptions = {
   includeAutomation: true,
 };
 
-export const SCENE_SEED_PACKS: Array<{ id: SceneSeedPackId; label: string; description: string }> = [
-  {
-    id: 'smart-starter-40',
-    label: 'Smart Starter 40',
-    description: 'Fills one APC40 deck with color, wash, movement, gobo, strobe, and combo scenes.',
-  },
-  {
-    id: 'smart-ab-80',
-    label: 'Smart A+B 80',
-    description: 'Fills Deck A and Deck B with crossfader-friendly scene variants.',
-  },
-  {
-    id: 'compact-starter',
-    label: 'Compact Starter 16',
-    description: 'Creates the first 16 APC40 slots with essential starter looks.',
-  },
-];
+export const SCENE_SEED_PACKS: Array<{ id: SceneSeedPackId; label: string; description: string }> =
+  MD_SCENE_SEED_PACKS.length
+    ? (MD_SCENE_SEED_PACKS as Array<{ id: SceneSeedPackId; label: string; description: string }>)
+    : [
+        {
+          id: 'smart-starter-40',
+          label: 'Smart Starter 40',
+          description: 'Fills one APC40 deck with color, wash, movement, gobo, strobe, and combo scenes.',
+        },
+        {
+          id: 'smart-ab-80',
+          label: 'Smart A+B 80',
+          description: 'Fills Deck A and Deck B with crossfader-friendly scene variants.',
+        },
+        {
+          id: 'compact-starter',
+          label: 'Compact Starter 16',
+          description: 'Creates the first 16 APC40 slots with essential starter looks.',
+        },
+      ];
 
 const COLOR_WHEEL_VALUES = {
   open: 0,
@@ -486,6 +490,12 @@ function compactTemplates(): SceneSeedTemplate[] {
 }
 
 function selectedTemplates(packId: SceneSeedPackId): SceneSeedTemplate[] {
+  const ids = MD_SCENE_PACK_TEMPLATE_IDS[packId];
+  if (ids && ids.length) {
+    const byId = new Map(SMART_TEMPLATES.map((t) => [t.id, t] as const));
+    const picked = ids.map((id) => byId.get(id)).filter((t): t is SceneSeedTemplate => Boolean(t));
+    if (picked.length) return picked;
+  }
   if (packId === 'compact-starter') return compactTemplates();
   return SMART_TEMPLATES;
 }

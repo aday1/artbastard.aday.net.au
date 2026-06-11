@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { Fixture, Group, FixtureTemplate, FixtureFlag, PlacedFixture } from '../types';
+import { ensureGroupsSync } from '../groupIds';
 
 export interface FixtureSlice {
   // Fixtures and Groups State
@@ -15,6 +16,8 @@ export interface FixtureSlice {
   deleteFixture: (fixtureId: string) => void;
   setFixtures: (fixtures: Fixture[]) => void;
   setGroups: (groups: Group[]) => void;
+  /** Rename a group by id. Persists through setGroups + POST /api/groups. */
+  renameGroup: (groupId: string, newName: string) => void;
 
   // Fixture profile management
   addFixtureTemplate: (template: Omit<FixtureTemplate, 'id' | 'createdAt' | 'updatedAt'>) => void;
@@ -160,7 +163,29 @@ export const createFixtureSlice = (
   },
 
   setGroups: (groups) => {
-    set({ groups });
+    const fixtures = get().fixtures;
+    set({ groups: ensureGroupsSync(groups, fixtures) });
+  },
+
+  renameGroup: (groupId, newName) => {
+    const trimmed = newName.trim();
+    if (!trimmed) return;
+    const { groups, fixtures } = get();
+    const target = groups.find((g: Group) => g.id === groupId);
+    if (!target || target.name === trimmed) return;
+    const nextGroups = ensureGroupsSync(
+      groups.map((g: Group) => (g.id === groupId ? { ...g, name: trimmed } : g)),
+      fixtures,
+    );
+    set({ groups: nextGroups });
+    axios.post('/api/groups', { groups: nextGroups }).catch((error) => {
+      console.error('Failed to persist group rename:', error);
+      get().addNotification?.({
+        message: `Group renamed locally but failed to sync to server`,
+        type: 'warning',
+        priority: 'normal',
+      });
+    });
   },
 
   // Template Management Actions

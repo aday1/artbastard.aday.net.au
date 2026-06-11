@@ -213,8 +213,7 @@ export const HelpOverlay: React.FC<HelpOverlayProps> = ({ embedded = false }) =>
               <ul>
                 <li><code>#/</code> - DMX Control home</li>
                 <li><code>#/fixture</code> - Fixture Setup + Advanced Fixture Control (SuperControl)</li>
-                <li><code>#/scenes-acts</code> - Scenes and scene timelines</li>
-                <li><code>#/acts</code> - Act timeline builder and ACT triggers</li>
+                <li><code>#/scenes-acts</code> - Scenes and ACT timeline builder (combined)</li>
                 <li><code>#/mobile</code> - Touch-first phone and tablet surface</li>
                 <li><code>#/settings</code> - Settings + embedded Help</li>
               </ul>

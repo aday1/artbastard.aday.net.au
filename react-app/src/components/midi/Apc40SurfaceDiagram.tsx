@@ -44,7 +44,14 @@ type FlashKey =
   | 'nav-fixture-next'
   | 'nav-scene-prev'
   | 'nav-scene-next'
-  | 'select-all';
+  | 'select-all'
+  | 'tap-tempo'
+  | 'nudge-up'
+  | 'nudge-down'
+  | 'send-a'
+  | 'send-b'
+  | 'send-c'
+  | 'freeze-dmx';
 
 const describeFlashKey = (key: FlashKey): string => {
   if (key.startsWith('clip-')) {
@@ -53,7 +60,7 @@ const describeFlashKey = (key: FlashKey): string => {
   }
   if (key.startsWith('scene-')) return `ACT launch ${Number(key.split('-')[1]) + 1}`;
   if (key.startsWith('track-select-')) return `Track Select ${Number(key.split('-')[2]) + 1}`;
-  if (key.startsWith('record-arm-')) return `Record Arm ${Number(key.split('-')[2]) + 1}`;
+  if (key.startsWith('record-arm-')) return `Solo Group ${Number(key.split('-')[2]) + 1}`;
   if (key.startsWith('solo-')) return `Solo/Cue ${Number(key.split('-')[1]) + 1}`;
   if (key.startsWith('activator-')) return `Activator ${Number(key.split('-')[1]) + 1}`;
   if (key.startsWith('track-stop-')) return `Track Stop ${Number(key.split('-')[2]) + 1}`;
@@ -66,7 +73,7 @@ const describeFlashKey = (key: FlashKey): string => {
   if (key === 'play') return 'Play';
   if (key === 'stop') return 'Stop';
   if (key === 'record') return 'Record';
-  if (key === 'master-button') return 'Master button';
+  if (key === 'master-button') return 'Master button (Freeze DMX)';
   if (key === 'stop-all') return 'Stop all clips';
   if (key === 'shift') return 'SHIFT';
   if (key === 'nav-fixture-prev') return 'Fixture previous';
@@ -74,6 +81,13 @@ const describeFlashKey = (key: FlashKey): string => {
   if (key === 'nav-scene-prev') return 'Scene previous';
   if (key === 'nav-scene-next') return 'Scene next';
   if (key === 'select-all') return 'Select all';
+  if (key === 'tap-tempo') return 'Tap Tempo';
+  if (key === 'nudge-up') return 'Nudge+';
+  if (key === 'nudge-down') return 'Nudge\u2212';
+  if (key === 'send-a') return 'SEND A (Color auto)';
+  if (key === 'send-b') return 'SEND B (Pan/Tilt auto)';
+  if (key === 'send-c') return 'SEND C (Effects auto)';
+  if (key === 'freeze-dmx') return 'FREEZE DMX';
   return key;
 };
 
@@ -109,6 +123,7 @@ export const Apc40SurfaceDiagram: React.FC<Props> = ({
   const activeDeck = apc40State?.activeDeck === 'B' ? 'B' : 'A';
   const decksToRender = showBothDecks ? (['A', 'B'] as const) : ([activeDeck] as const);
   const armedColumnSet = useMemo(() => new Set(apc40State?.armedColumns ?? []), [apc40State?.armedColumns]);
+  const soloedGroupSet = useMemo(() => new Set(apc40State?.soloedGroups ?? []), [apc40State?.soloedGroups]);
   const saveMode = apc40State?.mode === 'save' && armedColumnSet.size > 0;
   const armedColumnLabel = Array.from(armedColumnSet)
     .sort((a, b) => a - b)
@@ -197,14 +212,11 @@ export const Apc40SurfaceDiagram: React.FC<Props> = ({
       assigned: true,
     }));
 
-    const trackSelect = Array.from({ length: 8 }, (_, idx) => {
-      const group = groups[idx];
-      return {
-        control: `Track Select ${idx + 1}`,
-        action: group ? `Select group: ${group.name}` : 'Unassigned (no group)',
-        assigned: Boolean(group),
-      };
-    });
+    const trackSelect = Array.from({ length: 8 }, (_, idx) => ({
+      control: `Track Select ${idx + 1}`,
+      action: 'Unmapped (hardware CC bleed)',
+      assigned: false,
+    }));
 
     const quick = [
       { control: 'Scene Launch 1-5', action: APC40_QUICK_MAP_BASE.sceneLaunch, assigned: acts.length > 0 },
@@ -258,13 +270,19 @@ export const Apc40SurfaceDiagram: React.FC<Props> = ({
       case 'track-select':
         flash(`track-select-${action.trackIndex}`);
         break;
-      case 'record-arm':
+      case 'select-fixture':
+        flash(`solo-${action.trackIndex}`);
+        break;
+      case 'solo-group':
         flash(`record-arm-${action.trackIndex}`);
         break;
       case 'solo-cue':
         flash(`solo-${action.trackIndex}`);
         break;
       case 'activator':
+        flash(`activator-${action.trackIndex}`);
+        break;
+      case 'select-group':
         flash(`activator-${action.trackIndex}`);
         break;
       case 'track-stop':
@@ -299,6 +317,24 @@ export const Apc40SurfaceDiagram: React.FC<Props> = ({
         break;
       case 'master-button':
         flash('master-button');
+        break;
+      case 'freeze-dmx':
+        flash('freeze-dmx');
+        break;
+      case 'tap-tempo':
+        flash('tap-tempo');
+        break;
+      case 'nudge':
+        flash(action.direction === 'up' ? 'nudge-up' : 'nudge-down');
+        break;
+      case 'toggle-color-auto':
+        flash('send-a');
+        break;
+      case 'toggle-pan-tilt-auto':
+        flash('send-b');
+        break;
+      case 'toggle-effect-auto':
+        flash('send-c');
         break;
       case 'stop-all-clips':
         flash('stop-all');
@@ -568,7 +604,7 @@ export const Apc40SurfaceDiagram: React.FC<Props> = ({
               {Array.from({ length: 8 }, (_, col) => {
                 const isSel = rowName === 'SEL';
                 const isAutoArmed = rowName === 'AUTO' && apc40State?.autoGroups?.includes(col);
-                const isArmed = rowName === 'ARM' && apc40State?.armedColumns?.includes(col);
+                const isArmed = rowName === 'ARM' && soloedGroupSet.has(col);
                 const group = groups[col];
                 const isApcTrackSelected = isSel && apc40State?.activeTrackIndex === col;
                 const isGroupSelected = isSel && group && selectedGroupIdx === col;
@@ -591,7 +627,7 @@ export const Apc40SurfaceDiagram: React.FC<Props> = ({
                     className={`${styles.stripBtn} ${styles[`row_${rowName}`]} ${isGroupSelected || isApcTrackSelected || isArmed || isAutoArmed ? styles.active : ''} ${isApcTrackSelected ? styles.apcSelected : ''} ${isArmed ? styles.saveArmed : ''} ${isFlashing ? styles.flash : ''} ${isSel && group ? styles.bound : styles.unbound} ${lastTouched?.key === flashKey ? styles.lastTouched : ''}`}
                     onClick={() => isSel && onTrackSelectClick(col)}
                     disabled={!isSel || (mode !== 'fixtures' && mode !== 'view')}
-                    title={isSel ? (apc40State?.activeTargetLabel && apc40State.activeTrackIndex === col ? `APC selected: ${apc40State.activeTargetLabel}` : group ? `Select group "${group.name}"` : `Track Select ${col + 1}`) : `${rowName} col ${col + 1}`}
+                    title={isSel ? (apc40State?.activeTargetLabel && apc40State.activeTrackIndex === col ? `APC selected: ${apc40State.activeTargetLabel}` : group ? `Select group "${group.name}"` : `Track Select ${col + 1}`) : rowName === 'ARM' ? `Solo Group ${col + 1}${groups[col] ? ` (${groups[col].name})` : ' (no group)'}` : `${rowName} col ${col + 1}`}
                   >
                     <span className={styles.cellLabel}>{label}</span>
                   </button>

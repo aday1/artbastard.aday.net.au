@@ -23,6 +23,7 @@ import {
   applyModeAwarePreset,
 } from '../utils/themeUtils'
 import type { ChannelEnvelope } from './types'
+import { ensureGroupsSync } from './groupIds'
 import {
   fixtureLibraryEntries,
   toStoreFixtureTemplate,
@@ -69,6 +70,8 @@ export interface Fixture {
   manufacturer?: string
   model?: string
   mode?: string
+  /** ID of the library template/entry this fixture was created from. Optional for backwards-compat. */
+  templateId?: string
   startAddress: number
   channels: { name: string; type: string; dmxAddress?: number; ranges?: Array<{ min: number; max: number; description: string }>; ticksOnly?: boolean }[]
   notes?: string // Notes section for fixture documentation
@@ -635,6 +638,11 @@ export interface ChannelRange {
 interface State extends AutomationState, TransitionTrackerSlice {
   // DMX State
   dmxChannels: number[]
+  // When true, store DMX state continues to update locally (so the GUI keeps
+  // reflecting new values) but backend / serial output is suppressed. Used by
+  // the APC40 Master Select button (panic FREEZE). Press again to unfreeze.
+  dmxFrozen: boolean
+  setDmxFrozen: (frozen: boolean) => void
   oscAssignments: string[]
   superControlOscAddresses: Record<string, string> // OSC addresses for SuperControl controls
   channelNames: string[]
@@ -712,6 +720,7 @@ interface State extends AutomationState, TransitionTrackerSlice {
     mode: 'save' | null;
     activeDeck: 'A' | 'B';
     armedColumns: number[];
+    soloedGroups: number[];
     fullOn: boolean;
     autoGroups: number[];
     deviceRoleLabels: string[];
@@ -732,6 +741,7 @@ interface State extends AutomationState, TransitionTrackerSlice {
     mode: 'save' | null;
     activeDeck: 'A' | 'B';
     armedColumns: number[];
+    soloedGroups: number[];
     fullOn: boolean;
     autoGroups: number[];
     deviceRoleLabels: string[];
@@ -764,6 +774,7 @@ interface State extends AutomationState, TransitionTrackerSlice {
   deleteFixture: (fixtureId: string) => void;
   setFixtures: (fixtures: Fixture[]) => void;
   setGroups: (groups: Group[]) => void;
+  renameGroup: (groupId: string, newName: string) => void;
   // Template management
   addFixtureTemplate: (template: Omit<FixtureTemplate, 'id' | 'createdAt' | 'updatedAt'>) => void;
   updateFixtureTemplate: (id: string, template: Partial<FixtureTemplate>) => void;
@@ -907,6 +918,9 @@ interface State extends AutomationState, TransitionTrackerSlice {
   autoSceneMode: 'forward' | 'ping-pong' | 'random';
   autoSceneCurrentIndex: number;
   autoScenePingPongDirection: 'forward' | 'backward';
+  // Global automation direction toggle (driven by APC40 Cue Level encoder).
+  // Inverts the sign of advancement in AutoScene and pan/tilt autopilot tracks.
+  automationDirection: 'forward' | 'reverse';
   autoSceneBeatDivision: number; // e.g., 4 for every 4 beats (1 bar in 4/4)
   autoSceneManualBpm: number;
   autoSceneTapTempoBpm: number;
@@ -1194,6 +1208,7 @@ interface State extends AutomationState, TransitionTrackerSlice {
   setAutoSceneEnabled: (enabled: boolean) => void;
   setAutoSceneList: (sceneNames: string[]) => void;
   setAutoSceneMode: (mode: 'forward' | 'ping-pong' | 'random') => void; setAutoSceneBeatDivision: (division: number) => void;
+  setAutomationDirection: (direction: 'forward' | 'reverse') => void;
   setAutoSceneTempoSource: (source: 'internal_clock' | 'manual_bpm' | 'tap_tempo' | 'ableton_link') => void;
   setNextAutoSceneIndex: () => void; // Calculates and updates autoSceneCurrentIndex
   resetAutoSceneIndex: () => void;
@@ -1543,6 +1558,21 @@ export const useStore = create<State>()(
     ((set, get) => ({
       // Initial state
       dmxChannels: new Array(512).fill(0),
+      dmxFrozen: false,
+      setDmxFrozen: (frozen) => {
+        const wasFrozen = get().dmxFrozen;
+        set({ dmxFrozen: frozen });
+        if (wasFrozen && !frozen) {
+          // Unfreezing: flush the current store state out to the backend so
+          // the rig snaps to whatever the operator dialed in while frozen.
+          const channels = get().dmxChannels;
+          const updates: Record<number, number> = {};
+          for (let i = 0; i < channels.length; i += 1) updates[i] = channels[i];
+          enqueueDmxBackendUpdates(updates, () => {
+            get().addNotification({ message: 'Failed to flush DMX after unfreeze', type: 'error', priority: 'high' });
+          });
+        }
+      },
       oscAssignments: new Array(512).fill('').map((_, i) => `/1/fader${i + 1}`),
       superControlOscAddresses: (() => {
         // Load from localStorage or use defaults
@@ -1727,6 +1757,7 @@ export const useStore = create<State>()(
         mode: null,
         activeDeck: 'A',
         armedColumns: [],
+        soloedGroups: [],
         fullOn: false,
         autoGroups: [],
         deviceRoleLabels: [],
@@ -2073,6 +2104,7 @@ export const useStore = create<State>()(
           autoSceneEnabled: savedSettings.autoSceneEnabled ?? false,
           autoSceneList: savedSettings.autoSceneList ?? [],
           autoSceneMode: savedSettings.autoSceneMode ?? 'forward',
+          automationDirection: 'forward' as const,
           autoSceneCurrentIndex: -1, // Always start fresh, don't persist current index
           autoScenePingPongDirection: 'forward', // Always start fresh
           autoSceneBeatDivision: savedSettings.autoSceneBeatDivision ?? 4,
@@ -2651,11 +2683,13 @@ export const useStore = create<State>()(
         dmxChannels[channel] = clampedValue
         set({ dmxChannels })
 
-        if (sendToBackend) {
+        if (sendToBackend && !get().dmxFrozen) {
           debugLog.log(`[STORE] Queueing DMX backend update: channel=${channel}, value=${clampedValue}`);
           enqueueDmxBackendChannel(channel, clampedValue, () => {
             get().addNotification({ message: 'Failed to update DMX channel', type: 'error', priority: 'high' })
           })
+        } else if (sendToBackend && get().dmxFrozen) {
+          debugLog.log(`[STORE] DMX backend send suppressed (FROZEN): channel=${channel}, value=${clampedValue}`);
         } else {
           debugLog.log(`[STORE] DMX channel updated locally (no backend request): channel=${channel}, value=${value}`);
         }
@@ -2683,11 +2717,13 @@ export const useStore = create<State>()(
           debugLog.log('[STORE] setMultipleDmxChannels: No actual changes to local DMX state after processing batch.');
         }
 
-        if (sendToBackend) {
+        if (sendToBackend && !get().dmxFrozen) {
           debugLog.log('[STORE] setMultipleDmxChannels: Queueing backend DMX batch:', updates);
           enqueueDmxBackendUpdates(updates, () => {
             get().addNotification({ message: 'Failed to send DMX batch update to server', type: 'error', priority: 'high' });
           });
+        } else if (sendToBackend && get().dmxFrozen) {
+          debugLog.log('[STORE] setMultipleDmxChannels: backend send suppressed (FROZEN)');
         } else {
           debugLog.log('[STORE] setMultipleDmxChannels: Skipping backend request (sendToBackend=false)');
         }
@@ -3708,7 +3744,29 @@ export const useStore = create<State>()(
       },
 
       setGroups: (groups) => {
-        set({ groups });
+        const state = get();
+        set({ groups: ensureGroupsSync(groups, state.fixtures) });
+      },
+
+      renameGroup: (groupId: string, newName: string) => {
+        const trimmed = newName.trim();
+        if (!trimmed) return;
+        const state = get();
+        const target = state.groups.find((g) => g.id === groupId);
+        if (!target || target.name === trimmed) return;
+        const nextGroups = ensureGroupsSync(
+          state.groups.map((g) => (g.id === groupId ? { ...g, name: trimmed } : g)),
+          state.fixtures,
+        );
+        set({ groups: nextGroups });
+        axios.post('/api/groups', { groups: nextGroups }).catch((error) => {
+          console.error('Failed to persist group rename:', error);
+          get().addNotification?.({
+            message: 'Group renamed locally but failed to sync to server',
+            type: 'warning',
+            priority: 'normal',
+          });
+        });
       },
 
       setFixtureLayout: (layout) => {
@@ -5311,9 +5369,12 @@ export const useStore = create<State>()(
             const cyclesPerSecond = cyclesPerMinute / 60;
             const advancementPerSecond = cyclesPerSecond * 100; // Convert to percentage
 
-            // Update position
+            // Update position. Global automationDirection inverts the step
+            // when set to 'reverse' (driven by APC40 Cue Level encoder).
             const currentPosition = state.autopilotTrackPosition;
-            const newPosition = (currentPosition + (advancementPerSecond * deltaTime)) % 100;
+            const directionSign = state.automationDirection === 'reverse' ? -1 : 1;
+            const rawNext = currentPosition + (directionSign * advancementPerSecond * deltaTime);
+            const newPosition = ((rawNext % 100) + 100) % 100;
 
             if (deltaTime > 0 && deltaTime < 1) { // Only log if reasonable delta time
               const tempoSource = (state.midiClockIsPlaying && state.midiClockBpm > 0) ? 'MIDI Clock' : 'Manual BPM';
@@ -6121,6 +6182,11 @@ export const useStore = create<State>()(
         saveAutoSceneSettings(get());
       },
 
+      setAutomationDirection: (direction) => {
+        if (get().automationDirection === direction) return;
+        set({ automationDirection: direction });
+      },
+
       setAutoSceneTempoSource: (source) => {
         debugLog.log('Store: Setting auto scene tempo source to:', source);
         set({ autoSceneTempoSource: source });
@@ -6136,28 +6202,37 @@ export const useStore = create<State>()(
       },
 
       setNextAutoSceneIndex: () => {
-        const { autoSceneList, autoSceneCurrentIndex, autoSceneMode, autoScenePingPongDirection } = get();
+        const { autoSceneList, autoSceneCurrentIndex, autoSceneMode, autoScenePingPongDirection, automationDirection } = get();
 
         if (autoSceneList.length === 0) return;
 
         let nextIndex = autoSceneCurrentIndex;
+        // Global direction flips the step sign in 'forward' mode and seeds
+        // ping-pong's internal direction. 'random' ignores direction by design.
+        const step = automationDirection === 'reverse' ? -1 : 1;
 
         switch (autoSceneMode) {
           case 'forward':
-            nextIndex = (autoSceneCurrentIndex + 1) % autoSceneList.length;
+            nextIndex = (autoSceneCurrentIndex + step + autoSceneList.length) % autoSceneList.length;
             break;
 
           case 'ping-pong':
             if (autoScenePingPongDirection === 'forward') {
-              nextIndex = autoSceneCurrentIndex + 1;
+              nextIndex = autoSceneCurrentIndex + step;
               if (nextIndex >= autoSceneList.length - 1) {
                 nextIndex = autoSceneList.length - 1;
                 set({ autoScenePingPongDirection: 'backward' });
+              } else if (nextIndex < 0) {
+                nextIndex = 0;
+                set({ autoScenePingPongDirection: 'backward' });
               }
             } else {
-              nextIndex = autoSceneCurrentIndex - 1;
+              nextIndex = autoSceneCurrentIndex - step;
               if (nextIndex <= 0) {
                 nextIndex = 0;
+                set({ autoScenePingPongDirection: 'forward' });
+              } else if (nextIndex >= autoSceneList.length - 1) {
+                nextIndex = autoSceneList.length - 1;
                 set({ autoScenePingPongDirection: 'forward' });
               }
             }

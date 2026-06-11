@@ -92,6 +92,28 @@ V5.12 represents a shocking departure from previous versions by actually being..
 - **Comprehensive Factory Reset** - Complete system reset that clears all saved state
 - **Server Reset Flag** - `--reset` flag for `start.sh` and `start.ps1` to force a factory fresh start
 
+## 🎛️ **V5.2.5.2 - "The Data-Driven Doctrine"**
+
+*"Mes amis,"* the Créateur murmured, fingers stained with markdown ink, *"the time of the hardcoded array has passed. Henceforth, every template, every preset, every seed lives in the open, in files an artist may read, edit, and commit to git without the indignity of recompiling."*
+
+### **Specification as Source of Truth**
+The entire MIDI, fixture-library, scene-pack, and ACT-pack stack now reads from `DOCS/{midi,fixtures,scenes,acts}/*.md`. `scripts/buildSpecs.mjs` regenerates the TypeScript shadows in place; the Vite plugin watches and rebuilds on every save. Editing a fixture profile, a scene template, or a launchable ACT is now a markdown edit — not a code change.
+
+### **Project YAML Round-Trip**
+A new `Settings → Project YAML` panel exports the live rig as five hand-editable YAML files (`fixtures.yaml`, `groups.yaml`, `scenes.yaml`, `acts.yaml`, `bindings.yaml`). Groups reference fixtures by stable id, never by positional offset, so rigs survive renames, re-patches, and migrations between venues. Hand-edit, re-import, share via git — the round-trip is lossless.
+
+### **APC40 MK1 Deck A/B Polish**
+The eight Track Control rotaries now correctly handle endless-encoder MIDI semantics. The LED blink-phase reset eliminates the long-set drift that plagued earlier builds. Activator/Solo/Record buttons now drive group select and record-arm cleanly. Most importantly: the five scene-launch ACTS are seeded from `DOCS/acts/packs/starter-acts.md` — edit the pack, re-seed, the buttons reload.
+
+### **Roli Blocks Family Support**
+The Lightpad's MPE-aware XY mirror was only the beginning. Seaboard BLOCKs now send continuous pitch-bend per finger for live pan/tilt rides, and Control BLOCKs become a transport row for ACT triggers. All discovered over the same MIDI bus — no DAW, no juggling.
+
+### **Out-of-the-Box Mode**
+Open ArtBastard with no rig, no scenes, no ACTS — and a single seed run gives you a complete demo show: catalog fixtures from the markdown library, forty named scenes across two APC40 decks, five launchable ACTS, and a patched stage map. Trade shows, training rooms, and bug repros all become a thirty-second setup.
+
+### **Mobile Tidy-Up**
+Combined Scenes & Acts in a single navigation button (no more two-row wrap on phones). Hid the manual COLS picker on phone widths in Super Control — auto layout already does the right thing, and the chips were unreachable below 640px anyway.
+
 ## 🌈 **The Legacy Continues**
 
 Today, ArtBastard powers lighting installations from intimate café concerts to major theater productions, always maintaining its core philosophy: 

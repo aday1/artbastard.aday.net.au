@@ -53,6 +53,7 @@ interface InternalState {
   lastX: number;
   lastY: number;
   lastZ: number;
+  isTouching: boolean;
   needsFullRepaint: boolean;
   onTouch: RoliTouchCallback | null;
   onDevice: RoliDeviceChangeCallback | null;
@@ -74,6 +75,7 @@ const s: InternalState = {
   lastX: 0.5,
   lastY: 0.5,
   lastZ: 0,
+  isTouching: false,
   needsFullRepaint: false,
   onTouch: null,
   onDevice: null,
@@ -377,6 +379,11 @@ function emitTouch(x: number, y: number, z: number, phase: TouchPhase): void {
   s.lastX = x;
   s.lastY = y;
   s.lastZ = z;
+  if (phase === 'start') s.isTouching = true;
+  else if (phase === 'end') {
+    s.isTouching = false;
+    s.lastZ = 0;
+  }
   s.onTouch?.({ x, y, z, phase });
 }
 
@@ -393,6 +400,9 @@ function parseRoliTouchSysex(data: Uint8Array): void {
       bitPos += 12;
       const y = read7BitBits(msgData, bitPos, 12);
       bitPos += 12 + 8;
+      // Only forward 'move' events while a touch is actually active.
+      // Pre-fix: stale `lastZ || 0.5` made idle/decay frames write pan/tilt.
+      if (!s.isTouching) return;
       emitTouch(x / 4095, y / 4095, s.lastZ || 0.5, 'move');
       return;
     }
@@ -441,12 +451,12 @@ function onMidiMessage(event: WebMidi.MIDIMessageEvent): void {
       emitTouch(s.lastX, s.lastY, d[2] / 127, 'start');
     } else if (cmd === 0x08 && d.length >= 3) {
       emitTouch(s.lastX, s.lastY, 0, 'end');
-    } else if (cmd === 0x0b && d.length >= 3 && d[1] === 74) {
+    } else if (cmd === 0x0b && d.length >= 3 && d[1] === 74 && s.isTouching) {
       emitTouch(s.lastX, d[2] / 127, s.lastZ, 'move');
-    } else if (cmd === 0x0e && d.length >= 3) {
+    } else if (cmd === 0x0e && d.length >= 3 && s.isTouching) {
       const bend = (d[2] * 128 + d[1]) / 16383;
       emitTouch(bend, s.lastY, s.lastZ, 'move');
-    } else if (cmd === 0x0d && d.length >= 2) {
+    } else if (cmd === 0x0d && d.length >= 2 && s.isTouching) {
       emitTouch(s.lastX, s.lastY, d[1] / 127, 'move');
     }
   }

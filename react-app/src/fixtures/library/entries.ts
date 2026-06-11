@@ -15,9 +15,10 @@ import {
   rgbwParCan,
   simpleRgbPar,
 } from './coreFixtureLibrary';
+import { mdFixtureLibraryEntries } from './generated/mdFixtureLibraryEntries';
 import type { FixtureLibraryEntry } from './types';
 
-export const fixtureLibraryEntries: FixtureLibraryEntry[] = [
+const legacyTsEntries: FixtureLibraryEntry[] = [
   laserTwinklingRgy,
   miniBeamMovingHead,
   miniLedMovingHeadWash,
@@ -31,6 +32,15 @@ export const fixtureLibraryEntries: FixtureLibraryEntry[] = [
   simpleRgbPar,
   rgbwParCan,
   basicMovingHeadSpot,
+];
+
+// MD-sourced entries (DOCS/fixtures/library/*.md) take precedence over legacy
+// TS entries with the same id. Migrate hand-authored entries to MD over time;
+// the merge keeps everything addressable until the TS files are removed.
+const mdIds = new Set(mdFixtureLibraryEntries.map((entry) => entry.id));
+export const fixtureLibraryEntries: FixtureLibraryEntry[] = [
+  ...mdFixtureLibraryEntries,
+  ...legacyTsEntries.filter((entry) => !mdIds.has(entry.id)),
 ];
 
 export function getFixtureLibraryEntryById(id: string): FixtureLibraryEntry | undefined {

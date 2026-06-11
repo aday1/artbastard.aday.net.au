@@ -1,4 +1,5 @@
 import type { Act, ActStep, ActTrigger, Scene, TimelineMarker } from '../store';
+import { MD_ACT_SEED_PACKS, MD_ACT_PACK_TEMPLATE_IDS } from './generated/seedPacks';
 
 export const ACT_SEED_GENERATOR_ID = 'artbastard-act-seeder';
 export const ACT_SEED_GENERATOR_VERSION = 1;
@@ -38,7 +39,7 @@ interface ActSeedTemplate {
   steps: ActSeedStepTemplate[];
 }
 
-export const ACT_SEED_PACKS: Array<{ id: ActSeedPackId; label: string; description: string }> = [
+const HARDCODED_ACT_SEED_PACKS: Array<{ id: ActSeedPackId; label: string; description: string }> = [
   {
     id: 'starter-acts',
     label: 'Starter ACTS 5',
@@ -50,6 +51,15 @@ export const ACT_SEED_PACKS: Array<{ id: ActSeedPackId; label: string; descripti
     description: 'Creates eight optional show-section ACTS with longer builds, loops, gobo passes, strobe breaks, and finale looks.',
   },
 ];
+
+export const ACT_SEED_PACKS: Array<{ id: ActSeedPackId; label: string; description: string }> =
+  MD_ACT_SEED_PACKS.length > 0
+    ? MD_ACT_SEED_PACKS.map((pack) => ({
+        id: pack.id as ActSeedPackId,
+        label: pack.label,
+        description: pack.description,
+      }))
+    : HARDCODED_ACT_SEED_PACKS;
 
 const STARTER_TEMPLATES: ActSeedTemplate[] = [
   {
@@ -184,6 +194,12 @@ function step(
 }
 
 function templatesForPack(packId: ActSeedPackId): ActSeedTemplate[] {
+  const ids = MD_ACT_PACK_TEMPLATE_IDS[packId];
+  if (ids && ids.length) {
+    const byId = new Map(PERFORMANCE_TEMPLATES.map((t) => [t.id, t] as const));
+    const picked = ids.map((id) => byId.get(id)).filter((t): t is ActSeedTemplate => Boolean(t));
+    if (picked.length) return picked;
+  }
   return packId === 'performance-acts' ? PERFORMANCE_TEMPLATES : STARTER_TEMPLATES;
 }
 

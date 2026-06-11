@@ -4,10 +4,12 @@ export type Apc40Action =
   | { type: 'clip-launch'; model: Apc40Model; row: number; column: number; index: number }
   | { type: 'scene-launch'; model: Apc40Model; sceneIndex: number }
   | { type: 'track-select'; model: Apc40Model; trackIndex: number }
+  | { type: 'select-fixture'; model: Apc40Model; trackIndex: number }
+  | { type: 'select-group'; model: Apc40Model; trackIndex: number }
   | { type: 'track-stop'; model: Apc40Model; trackIndex: number }
   | { type: 'activator'; model: Apc40Model; trackIndex: number }
   | { type: 'solo-cue'; model: Apc40Model; trackIndex: number }
-  | { type: 'record-arm'; model: Apc40Model; trackIndex: number }
+  | { type: 'solo-group'; model: Apc40Model; trackIndex: number }
   | { type: 'channel-fader'; model: Apc40Model; trackIndex: number; value: number }
   | { type: 'master-fader'; model: Apc40Model; value: number }
   | { type: 'crossfader'; model: Apc40Model; value: number }
@@ -15,6 +17,10 @@ export type Apc40Action =
   | { type: 'track-control'; model: Apc40Model; slotIndex: number; value: number }
   | { type: 'cue-level'; model: Apc40Model; value: number }
   | { type: 'master-button'; model: Apc40Model }
+  | { type: 'blackout'; model: Apc40Model }
+  | { type: 'full-on'; model: Apc40Model }
+  | { type: 'bank-prev'; model: Apc40Model }
+  | { type: 'bank-next'; model: Apc40Model }
   | { type: 'stop-all-clips'; model: Apc40Model }
   | { type: 'record'; model: Apc40Model }
   | { type: 'play'; model: Apc40Model }
@@ -23,7 +29,13 @@ export type Apc40Action =
   | { type: 'shift'; model: Apc40Model; pressed: boolean }
   | { type: 'nav-fixture'; model: Apc40Model; direction: 'next' | 'prev' }
   | { type: 'nav-scene'; model: Apc40Model; direction: 'next' | 'prev' }
-  | { type: 'select-all'; model: Apc40Model };
+  | { type: 'select-all'; model: Apc40Model }
+  | { type: 'tap-tempo'; model: Apc40Model }
+  | { type: 'nudge'; model: Apc40Model; direction: 'up' | 'down' }
+  | { type: 'freeze-dmx'; model: Apc40Model }
+  | { type: 'toggle-color-auto'; model: Apc40Model }
+  | { type: 'toggle-pan-tilt-auto'; model: Apc40Model }
+  | { type: 'toggle-effect-auto'; model: Apc40Model };
 
 export interface MidiLikeMessage {
   channel?: number;
@@ -81,6 +93,20 @@ function sceneLaunch(model: Apc40Model, note: number): Apc40Action | null {
 export function decodeApc40Message(message: MidiLikeMessage): Apc40Action | null {
   if (!isApc40Source(message.source)) return null;
 
+  // Opt-in raw logger: set `localStorage.apc40Debug = '1'` then watch console.
+  // Helps diagnose mode/binding issues (e.g. Track Select emitting CC instead of Note).
+  if (typeof localStorage !== 'undefined' && localStorage.getItem('apc40Debug') === '1') {
+    // eslint-disable-next-line no-console
+    console.log('[APC40-RAW]', {
+      type: message.type ?? message._type,
+      channel: message.channel,
+      note: message.note,
+      controller: message.controller,
+      value: message.value ?? message.velocity,
+      source: message.source,
+    });
+  }
+
   const source = message.source || '';
   const model: Apc40Model = /\b(mk2|mkii|mk\s?ii|apc40ii)\b/i.test(source)
     ? 'apc40-mk2'
@@ -97,15 +123,15 @@ export function decodeApc40Message(message: MidiLikeMessage): Apc40Action | null
     if (controller >= 0x10 && controller <= 0x17 && (message.channel ?? 0) === 0) {
       return { type: 'device-control', model, slotIndex: controller - 0x10, value };
     }
-    // APC40 Track Control encoder push/ring buttons are CC 56-63 on channel 1.
-    // Treat them as group/fixture Track Select aliases so pressing the top row
-    // selects context instead of being confused with encoder movement.
-    if (controller >= 0x38 && controller <= 0x3f && (message.channel ?? 0) === 0 && isCcButtonPress(message)) {
-      return { type: 'track-select', model, trackIndex: controller - 0x38 };
-    }
+    // Track Control encoders rotate as CC 0x30-0x37 on channel 0.
+    // (The press alias on CC 0x38-0x3f was removed when Track Select was unmapped.)
     if (controller >= 0x30 && controller <= 0x37 && (message.channel ?? 0) === 0) {
       return { type: 'track-control', model, slotIndex: controller - 0x30, value };
     }
+    // CC 0x2f (Cue Level encoder): endless rotary, 2's-complement deltas.
+    //   value 1..63   = CW step (forward intent)
+    //   value 65..127 = CCW step (reverse intent)
+    //   value 0 / 64  = no movement, ignored upstream
     if (controller === 0x2f && (message.channel ?? 0) === 0) {
       return { type: 'cue-level', model, value };
     }
@@ -130,12 +156,24 @@ export function decodeApc40Message(message: MidiLikeMessage): Apc40Action | null
   const scene = sceneLaunch(model, note);
   if (scene) return scene;
 
-  if (note === 0x30) return { type: 'record-arm', model, trackIndex };
-  if (note === 0x31) return { type: 'solo-cue', model, trackIndex };
-  if (note === 0x32) return { type: 'activator', model, trackIndex };
-  if (note === 0x33 && (message.channel ?? 0) === 8) return { type: 'master-button', model };
-  if (note === 0x33) return { type: 'track-select', model, trackIndex };
+  if (note === 0x30) return { type: 'solo-group', model, trackIndex };
+  // Solo/Cue row selects FIXTURES (formerly solo-isolation).
+  if (note === 0x31) return { type: 'select-fixture', model, trackIndex };
+  // Activator row selects GROUPS (formerly auto-control toggle).
+  if (note === 0x32) return { type: 'select-group', model, trackIndex };
+  if (note === 0x33 && (message.channel ?? 0) === 8) return { type: 'freeze-dmx', model };
+  // Note 0x33 (Track Select row) is intentionally unmapped \u2014 the hardware
+  // emits unreliable CCs in some modes. Selection lives on Solo/Cue + Activator.
   if (note === 0x34) return { type: 'track-stop', model, trackIndex };
+  // Device Control cluster (right side of APC40, channel 0):
+  // 0x3A = Clip/Track toggle  → Full On latch
+  // 0x3B = Device On/Off       → Blackout latch
+  // 0x3C = Device Left         → previous device-knob bank
+  // 0x3D = Device Right        → next device-knob bank
+  if (note === 0x3a && (message.channel ?? 0) === 0) return { type: 'full-on', model };
+  if (note === 0x3b && (message.channel ?? 0) === 0) return { type: 'blackout', model };
+  if (note === 0x3c && (message.channel ?? 0) === 0) return { type: 'bank-prev', model };
+  if (note === 0x3d && (message.channel ?? 0) === 0) return { type: 'bank-next', model };
   if (note === 0x51) return { type: 'stop-all-clips', model };
   if (note === 0x5b) return { type: 'play', model };
   if (note === 0x5c) return { type: 'stop', model };
@@ -150,6 +188,23 @@ export function decodeApc40Message(message: MidiLikeMessage): Apc40Action | null
   // Pan button (note 0x57) doubles as "select all fixtures" — easy to reach
   // and the APC40 hardware LED gives positive feedback when pressed.
   if (note === 0x57) return { type: 'select-all', model };
+
+  // SEND row toggles modular automation engines (unshifted = toggle on/off;
+  // SHIFT-combo handled in the workflow hook cycles the engine pattern).
+  //   SEND A (0x58) = color engine
+  //   SEND B (0x59) = pan/tilt engine
+  //   SEND C (0x5A) = effects engine
+  if (note === 0x58) return { type: 'toggle-color-auto', model };
+  if (note === 0x59) return { type: 'toggle-pan-tilt-auto', model };
+  if (note === 0x5a) return { type: 'toggle-effect-auto', model };
+
+  // Transport block extras on APC40 MK1 hardware:
+  //   0x63 = Tap Tempo
+  //   0x64 = Nudge+ (faster)
+  //   0x65 = Nudge- (slower)
+  if (note === 0x63) return { type: 'tap-tempo', model };
+  if (note === 0x64) return { type: 'nudge', model, direction: 'up' };
+  if (note === 0x65) return { type: 'nudge', model, direction: 'down' };
 
   if (model === 'apc40-mk1' && note >= 0x35 && note <= 0x39) {
     const row = note - 0x35;

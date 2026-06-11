@@ -1,4 +1,5 @@
 import type { SuperControlBinding } from './midiControllerTemplates';
+import { APC40_DEVICE_KNOB_ASSIGNMENTS as GENERATED_APC40_DEVICE_KNOB_ASSIGNMENTS } from '../../midi/generated';
 
 export type Apc40Category = 'selection' | 'scene' | 'transport' | 'superControl' | 'utility' | 'nav';
 
@@ -61,16 +62,12 @@ export const APC40_DEVICE_KNOB_ASSIGNMENTS: Array<{
   cc: number;
   controlName: SuperControlBinding['controlName'];
   roleLabel: string;
-}> = [
-  { slot: 0, cc: 16, controlName: 'gobo', roleLabel: 'Gobo' },
-  { slot: 1, cc: 17, controlName: 'gobo_rotation', roleLabel: 'Gobo Rotate' },
-  { slot: 2, cc: 18, controlName: 'color_wheel', roleLabel: 'Color Wheel' },
-  { slot: 3, cc: 19, controlName: 'prism', roleLabel: 'Prism' },
-  { slot: 4, cc: 20, controlName: 'iris', roleLabel: 'Iris' },
-  { slot: 5, cc: 21, controlName: 'focus', roleLabel: 'Focus' },
-  { slot: 6, cc: 22, controlName: 'zoom', roleLabel: 'Zoom' },
-  { slot: 7, cc: 23, controlName: 'strobe', roleLabel: 'Strobe/Shutter' },
-];
+}> = GENERATED_APC40_DEVICE_KNOB_ASSIGNMENTS.map((entry) => ({
+  slot: entry.slot,
+  cc: entry.cc,
+  controlName: entry.controlName as SuperControlBinding['controlName'],
+  roleLabel: entry.roleLabel,
+}));
 
 export const APC40_QUICK_MAP_BASE = {
   sceneLaunch: 'Launch ACT 1-5',
