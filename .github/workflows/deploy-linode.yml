@@ -1,0 +1,58 @@
+name: deploy-linode
+
+on:
+  workflow_run:
+    workflows: ["artbastard-image"]
+    types: [completed]
+    branches: [main, dev]
+  workflow_dispatch:
+    inputs:
+      track:
+        description: "Track to deploy (dev|live)"
+        required: true
+        default: "dev"
+
+jobs:
+  deploy:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger remote compose refresh
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          DEPLOY_REF: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.track == 'dev' && 'dev' || 'main') || (github.event.workflow_run.head_branch == 'dev' && 'dev' || 'main') }}
+        with:
+          host: ${{ secrets.LINODE_HOST }}
+          username: ${{ secrets.LINODE_USER }}
+          key: ${{ secrets.LINODE_SSH_KEY }}
+          envs: DEPLOY_REF
+          script: |
+            flock /tmp/macroverse-deploy.lock bash -lc '
+              set -e
+              echo "Disk before cleanup:"
+              df -h / || true
+              docker system df || true
+              docker container prune -f || true
+              docker image prune -af || true
+              docker builder prune -af || true
+              docker network prune -f || true
+              docker system prune -af || true
+              echo "Disk after Docker cleanup:"
+              df -h / || true
+              cd ~/compose/macroverse.aday.net.au
+              DEPLOY_REF="${DEPLOY_REF:-main}"
+              rm -f .git/index.lock
+              find nginx/auth -maxdepth 1 -type f -name "aday.htpasswd.bak.*" -mtime +14 -delete 2>/dev/null || true
+              if [ -f nginx/auth/aday.htpasswd ] && ! git ls-files --error-unmatch nginx/auth/aday.htpasswd >/dev/null 2>&1; then
+                mv nginx/auth/aday.htpasswd "nginx/auth/aday.htpasswd.bak.$(date +%s)"
+              fi
+              git fetch origin "$DEPLOY_REF"
+              git reset --hard "origin/$DEPLOY_REF"
+              if [ -f nginx/auth/aday.htpasswd ]; then
+                sed -i "s/\r$//" nginx/auth/aday.htpasswd
+              fi
+              docker compose pull
+              docker compose up -d --remove-orphans
+              docker compose exec -T nginx nginx -t
+              docker restart edge_nginx
+            '

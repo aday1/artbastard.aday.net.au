@@ -1,0 +1,62 @@
+ArtBastard UI/UX Tour
+======================
+
+Per-screen action notes for the recorded operator how-to videos and the
+still screenshot tour. Every screen is reachable via hash routing.
+
+SuperControl (Fixture page > Advanced Fixture Control)
+  Select All / Deselect All quick actions.
+  Empty states: no fixtures, no groups, no capabilities.
+  Quick tip text guides first-time users.
+  Modes: Fixtures, Groups, Channels, Capabilities.
+
+Screen 01: DMX Control Home  (#/)
+  Focus: 512-channel grid, filtering, master fader, MIDI/OSC monitors.
+  Operator lesson: use faders, filters, master level, pinned/active channels,
+  and the MIDI/OSC monitor area.
+  Demo actions: scroll the channel grid; pinned channels highlight.
+
+Screen 02: Fixture Setup  (#/fixture)
+  Focus: canvas-first stage map, fixture library, inspector, Smart Groups,
+  Seed Scenes, Seed ACTS, Giddy Up, and the SuperControl handoff.
+  Operator lesson: place fixtures onto the map to patch them, select fixtures
+  spatially, create groups, then drive the same global selection through
+  Super Control roles such as dimmer, gobo, pan/tilt, color, movement, strobe,
+  and scene capture.
+  Demo actions: select a library fixture, place it on the map, show the
+  inspector, scroll to SuperControl, then return to the map.
+
+Screen 03: Scenes and Clip Launcher  (#/scenes-acts)
+  Focus: scene library, clip launcher, APC40 scene slots, and scene
+  timeline keyframes (DMX values).
+  Operator lesson: capture a look, launch clips, understand APC40 Deck A/B
+  scene naming, and inspect timeline keyframes.
+  Demo actions: scroll and scrub the scene timeline drag preview.
+
+Screen 04: Acts Timeline  (#/acts)
+  Focus: dedicated act editor, scene clips, gaps, playhead, ACT transport,
+  Sync to BPM hints, and scheduled MIDI/OSC events.
+  Operator lesson: assemble a show from scene clips, add gaps, and use ACT
+  triggers as transport rather than tempo clock.
+  Demo actions: scroll the act lanes and show gap / transport controls.
+
+Screen 05: Mobile Control Surface  (#/mobile)
+  Focus: touch-first 430x932 surface, simplified chrome, no floating
+  monitors by default.
+  Operator lesson: run Super Control and DMX from a phone/tablet without
+  desktop-only panels.
+  Demo actions: scroll once or twice to show the layout adapting.
+
+Screen 06: Settings and In-App Help  (#/settings)
+  Focus: theme system, network detection, embedded HelpOverlay tabs.
+  Operator lesson: configure appearance, bridge/network settings, and use
+  Ctrl+H / Help when setting up MIDI, OSC, APC40, or address sheets.
+  Demo actions: scroll, switch help tabs (Overview, Timeline, MIDI,
+  OSC, Shortcuts, Address Sheet).
+
+Release page:
+  https://github.com/aday1/artbastard.aday.net.au/releases/latest
+Public showcase (quick-jump hub):
+  https://aday1.github.io/artbastard.aday.net.au/
+Public showcase (operator video tour):
+  https://aday1.github.io/artbastard.aday.net.au/

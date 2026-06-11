@@ -1,0 +1,179 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  height: 100%;
+  min-height: 14rem;
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  gap: 0.35rem;
+}
+
+.dual {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+  flex: 1;
+  min-height: 14rem;
+  align-items: stretch;
+}
+
+.triple {
+  display: grid;
+  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1fr) minmax(0, 1.12fr);
+  gap: 0.3rem;
+  flex: 1;
+  min-height: 14rem;
+  align-items: stretch;
+}
+
+.single {
+  flex: 1;
+  display: flex;
+  min-height: 14rem;
+  min-width: 0;
+  height: 100%;
+}
+
+.horizontal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.horizontalTicks {
+  display: flex;
+  align-items: stretch;
+  gap: 0.35rem;
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  padding: 0.1rem 0 0.25rem;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--wb-copper, #ffa044) 45%, transparent) transparent;
+}
+
+.horizontalTickButton {
+  flex: 0 0 auto;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.1rem;
+  min-width: 5.8rem;
+  min-height: 2.35rem;
+  padding: 0.32rem 0.5rem;
+  border-radius: 3px;
+  border: 1px solid var(--wb-bevel-dark, #110a25);
+  border-top-color: color-mix(in srgb, var(--wb-bevel-light, #5a48a0) 82%, white);
+  border-left-color: color-mix(in srgb, var(--wb-bevel-light, #5a48a0) 82%, white);
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.08), transparent 36%),
+    var(--wb-surface, #251c44);
+  color: var(--wb-text, #ece4f8);
+  font-family: var(--wb-mono, 'Share Tech Mono', monospace);
+  font-size: 0.62rem;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  small {
+    color: var(--wb-copper, #ffa044);
+    font-size: 0.56rem;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: var(--wb-copper, #ffa044);
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.horizontalTickActive {
+  color: var(--wb-bg, #1a1530);
+  border-color: var(--wb-copper, #ffa044);
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.24), transparent 38%),
+    var(--wb-copper, #ffa044);
+
+  small {
+    color: var(--wb-bg, #1a1530);
+  }
+}
+
+.horizontalTicksMore {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.35rem;
+  color: var(--color-text-secondary, #94a3b8);
+  font-family: var(--wb-mono, 'Share Tech Mono', monospace);
+  font-size: 0.68rem;
+  padding-inline: 0.35rem;
+}
+
+.faderFill {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+
+.fineCol {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.slotCol {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.modeBadge {
+  align-self: center;
+  font-family: var(--wb-mono, 'Share Tech Mono', monospace);
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.45rem;
+  border-radius: 2px;
+  border: 1px solid var(--wb-bevel-dark, #110a25);
+  border-top-color: var(--wb-bevel-light, #5a48a0);
+  border-left-color: var(--wb-bevel-light, #5a48a0);
+  background: var(--wb-surface, #251c44);
+  color: var(--wb-copper, #ffa044);
+  cursor: pointer;
+  touch-action: manipulation;
+
+  &:hover {
+    color: var(--wb-text, #ece4f8);
+    background: var(--wb-panel, #2d2350);
+  }
+}
+
+.modeBadgeActive {
+  background: var(--wb-accent, #6aa6e6);
+  color: var(--wb-bg, #1a1530);
+  border-color: var(--wb-accent, #6aa6e6);
+}
+
+.fullCol {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}

@@ -1,0 +1,337 @@
+// CSS variables are defined globally in styles/index.scss
+
+.experimentalPage {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 100vh;
+  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+  color: var(--text-primary);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+      radial-gradient(circle at 20% 50%, rgba(78, 205, 196, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(255, 107, 180, 0.1) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 1010; // Below ComponentToolbar (1020) and Navbar (1030)
+  padding: 2rem 3rem;
+  padding-right: calc(var(--navbar-expanded-width, 240px) + 360px); // Space for navbar + toolbar
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(20px);
+  border-bottom: 2px solid var(--accent-color);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+  margin-bottom: 1rem;
+
+  // Adjust padding when navbar is collapsed
+  :global(body.navbar-is-collapsed) & {
+    padding-right: calc(var(--navbar-collapsed-width, 64px) + 360px);
+  }
+
+  .headerContent {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 2rem;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+
+  .titleSection {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+
+    .icon {
+      width: 48px;
+      height: 48px;
+      color: var(--accent-color);
+      filter: drop-shadow(0 0 10px rgba(78, 205, 196, 0.5));
+    }
+
+    .mainTitle {
+      margin: 0;
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      // Fallback color in case gradient doesn't work
+      background: linear-gradient(135deg, var(--accent-color, #00d4ff), var(--accent-secondary, #ff6bb4));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.02em;
+      // Ensure text is visible even if gradient fails
+      @supports not (-webkit-background-clip: text) {
+        color: var(--text-primary) !important;
+        -webkit-text-fill-color: var(--text-primary) !important;
+      }
+    }
+
+    .subtitle {
+      margin: 0.5rem 0 0 0;
+      font-size: 0.95rem;
+      color: var(--text-primary) !important;
+      font-style: italic;
+      opacity: 0.95;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+  }
+
+  .headerActions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .tabButton {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    font-weight: 500;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: var(--accent-color);
+      color: var(--text-primary);
+      transform: translateY(-2px);
+    }
+
+    &.active {
+      background: linear-gradient(135deg, var(--accent-color), var(--accent-secondary));
+      border-color: var(--accent-color);
+      color: white;
+      box-shadow: 0 4px 15px rgba(78, 205, 196, 0.4);
+    }
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+  }
+}
+
+.tabNavigation {
+  display: flex;
+  gap: 1rem;
+  padding: 0 3rem;
+  margin-bottom: 2rem;
+  position: relative;
+  z-index: 1;
+
+  .tabButton {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    font-weight: 500;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: var(--accent-color);
+      color: var(--text-primary);
+      transform: translateY(-2px);
+    }
+
+    &.active {
+      background: linear-gradient(135deg, var(--accent-color), var(--accent-secondary));
+      border-color: var(--accent-color);
+      color: white;
+      box-shadow: 0 4px 15px rgba(78, 205, 196, 0.4);
+    }
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+  }
+}
+
+.oscSection {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.featureGrid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 2rem;
+  width: 100%;
+
+  @media (max-width: 1200px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.featureCard {
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.infoCard {
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+
+  h3 {
+    margin-top: 0;
+    color: var(--accent-color);
+  }
+
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 1rem 0;
+
+    li {
+      padding: 0.5rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+      &:last-child {
+        border-bottom: none;
+      }
+    }
+  }
+
+  .note {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding: 1rem;
+    background: rgba(255, 193, 7, 0.1);
+    border: 1px solid rgba(255, 193, 7, 0.3);
+    border-radius: 8px;
+    color: #ffc107;
+  }
+}
+
+.wipTag {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  background: rgba(255, 68, 68, 0.2);
+  border: 1px solid #ff4444;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: #ff4444;
+  font-weight: bold;
+}
+
+.content {
+  flex: 1;
+  position: relative;
+  z-index: 1;
+  padding: 2rem 3rem;
+  overflow-y: auto;
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.trackerSection,
+.configSection {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.trackerContainer,
+.configContainer {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+
+.footerNote {
+  position: relative;
+  z-index: 1;
+  padding: 1rem 3rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-style: italic;
+
+  svg {
+    width: 16px;
+    height: 16px;
+    opacity: 0.6;
+  }
+
+  em {
+    color: var(--accent-color);
+    font-style: normal;
+  }
+}
+
+// Responsive
+@media (max-width: 1200px) {
+  .header .headerContent {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .headerActions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+  .header {
+    padding: 1.5rem;
+  }
+
+  .content {
+    padding: 1.5rem;
+  }
+
+  .header .titleSection .mainTitle {
+    font-size: 1.5rem;
+  }
+}
+

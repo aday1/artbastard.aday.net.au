@@ -1,0 +1,173 @@
+.root {
+  width: 100%;
+}
+
+.help {
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--text-secondary, #94a3b8);
+  margin: 0 0 0.5rem;
+  max-width: 52rem;
+}
+
+.empty {
+  font-family: var(--rk-mono, monospace);
+  color: var(--rk-label-dim, var(--text-secondary));
+  padding: 0.5rem;
+}
+
+.emptyGrid {
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--rk-label-dim, var(--text-secondary));
+  padding: 1rem 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.selectWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--rk-label-dim, var(--text-secondary));
+
+  select {
+    font-family: var(--rk-mono, monospace);
+    font-size: 11px;
+    padding: 0.2rem 0.35rem;
+    background: var(--rk-cell, var(--input-bg));
+    color: var(--rk-label, var(--text-primary));
+    border: 1px solid var(--rk-bevel-lo, var(--border-color));
+  }
+}
+
+.inspector {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.35rem 0.5rem;
+  margin-bottom: 0.35rem;
+  background: var(--rk-surface, var(--bg-tertiary));
+  border: 1px inset var(--rk-bevel-lo, var(--border-color));
+}
+
+.inspectorLabel {
+  font-size: 10px;
+  color: var(--rk-label-dim, var(--text-secondary));
+}
+
+.inspectorHex {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--rk-accent, var(--color-accent));
+}
+
+.grid {
+  max-height: min(480px, 55vh);
+  margin-bottom: 0.5rem;
+  overflow: auto;
+
+  table {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  th,
+  td {
+    white-space: nowrap;
+  }
+}
+
+.headerRow th {
+  font-size: 9px;
+  vertical-align: bottom;
+  padding: 0.15rem 0.25rem;
+  background: var(--rk-surface, var(--bg-tertiary));
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.colFixture {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 8px;
+  font-weight: 600;
+  color: var(--rk-label, var(--text-primary));
+  max-width: 5.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.colRole {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-family: var(--rk-mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--rk-accent, var(--color-accent));
+}
+
+.colDmx {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--rk-label, var(--text-primary, #e2e8f0));
+}
+
+@mixin laneCol($color, $bg) {
+  border-top: 2px solid $color;
+  background: $bg;
+}
+
+.colLane_pan_tilt {
+  @include laneCol(#38bdf8, rgba(56, 189, 248, 0.08));
+}
+
+.colLane_color_rgb {
+  @include laneCol(#f472b6, rgba(244, 114, 182, 0.08));
+}
+
+.colLane_color_wheel {
+  @include laneCol(#a78bfa, rgba(167, 139, 250, 0.08));
+}
+
+.colLane_gobo {
+  @include laneCol(#fbbf24, rgba(251, 191, 36, 0.08));
+}
+
+.colLane_dimmer {
+  @include laneCol(#e2e8f0, rgba(226, 232, 240, 0.06));
+}
+
+.colLane_beam {
+  @include laneCol(#34d399, rgba(52, 211, 153, 0.08));
+}
+
+.colLane_fx {
+  @include laneCol(#fb923c, rgba(251, 146, 60, 0.08));
+}
+
+.colLane_moving_head_all {
+  @include laneCol(#ef4444, rgba(239, 68, 68, 0.08));
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}

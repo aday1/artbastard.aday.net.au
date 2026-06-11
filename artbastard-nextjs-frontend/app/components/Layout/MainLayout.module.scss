@@ -1,0 +1,31 @@
+@import '../../styles/variables'; // Adjusted path
+
+.mainLayout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: $background-dark-primary; // Using theme variable
+  color: $text-color-light; // Default text color from theme
+}
+
+.content {
+  flex: 1;
+  padding: $spacing-unit * 2.5; // Using theme variable
+  // The header is not fixed by default, so no margin-top needed unless
+  // the header position becomes 'fixed' or 'sticky'.
+}
+
+.footer {
+  height: $footer-height;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: $background-dark-secondary; // Using theme variable
+  border-top: 1px solid color.scale($primary-color, $lightness: -20%); // Slightly darker border
+  font-size: $font-size-sm; // Using theme variable
+  color: $text-color-muted; // Using theme variable
+
+  p {
+    margin: 0; // Reset paragraph margin inside footer
+  }
+}

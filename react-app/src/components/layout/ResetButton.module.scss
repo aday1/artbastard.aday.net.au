@@ -1,0 +1,44 @@
+.resetButton {
+  background-color: var(--color-card-bg);
+  border: 2px solid var(--color-card-border);
+  border-radius: var(--border-radius, 8px);
+  padding: 8px 12px;
+  min-width: 100px; // Ensure uniform width with other buttons
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  color: var(--color-text);
+  transition: all 0.2s ease;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  box-shadow: var(--card-shadow);
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  &:hover {
+    background-color: var(--color-interactive);
+    border-color: var(--color-interactive);
+    color: var(--color-text-inverse);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-primary);
+  }
+
+  span {
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+  }
+}

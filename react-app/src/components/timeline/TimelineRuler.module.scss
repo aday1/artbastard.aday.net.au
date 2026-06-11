@@ -1,0 +1,42 @@
+.timelineRuler {
+  position: relative;
+  height: 40px;
+  background: var(--background-color, #0f0f0f);
+  border-bottom: 1px solid var(--border-color, #333);
+  overflow: hidden;
+  user-select: none;
+}
+
+.rulerContent {
+  position: relative;
+  height: 100%;
+}
+
+.tick {
+  position: absolute;
+  top: 0;
+  width: 1px;
+  height: 100%;
+  background: var(--border-color, #333);
+  
+  &.major {
+    height: 100%;
+    background: var(--primary-color, #3b82f6);
+    
+    .label {
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      font-size: 0.75rem;
+      color: var(--text-color, #fff);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+  }
+  
+  &.minor {
+    height: 50%;
+    opacity: 0.5;
+  }
+}
+

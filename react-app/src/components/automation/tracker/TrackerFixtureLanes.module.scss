@@ -1,0 +1,126 @@
+.lanes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.4rem 0.5rem;
+  margin-bottom: 0.35rem;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--rk-bevel-lo, var(--border-color));
+  border-radius: 3px;
+}
+
+.scopeRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.label {
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--rk-label-dim, var(--text-secondary));
+  min-width: 3rem;
+}
+
+.scopeBtn {
+  font-family: var(--rk-mono, monospace);
+  font-size: 10px;
+  padding: 0.15rem 0.45rem;
+  background: var(--rk-cell, var(--input-bg));
+  border: 1px solid var(--rk-bevel-lo, var(--border-color));
+  color: var(--rk-label-dim, var(--text-secondary));
+  cursor: pointer;
+
+  &:hover {
+    color: var(--rk-label, var(--text-primary));
+  }
+}
+
+.scopeBtnActive {
+  font-family: var(--rk-mono, monospace);
+  font-size: 10px;
+  padding: 0.15rem 0.45rem;
+  background: var(--rk-cell, var(--input-bg));
+  border: 1px solid var(--rk-accent, var(--color-accent));
+  color: var(--rk-accent, var(--color-accent));
+  cursor: pointer;
+}
+
+.laneGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.35rem;
+}
+
+.laneCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.3rem 0.4rem;
+  background: var(--rk-surface, var(--bg-tertiary));
+  border: 1px inset var(--rk-bevel-lo, var(--border-color));
+}
+
+.laneHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.25rem;
+}
+
+.laneTitle {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--rk-label, var(--text-primary));
+}
+
+.laneCount {
+  font-family: var(--rk-mono, monospace);
+  font-size: 9px;
+  color: var(--rk-label-dim, var(--text-secondary));
+}
+
+.laneActions {
+  display: flex;
+  gap: 0.2rem;
+}
+
+.laneDesc {
+  font-size: 8px;
+  line-height: 1.25;
+  color: var(--rk-label-dim, var(--text-secondary));
+}
+
+.lane_pan_tilt {
+  border-left: 3px solid #38bdf8;
+}
+
+.lane_color_rgb {
+  border-left: 3px solid #f472b6;
+}
+
+.lane_color_wheel {
+  border-left: 3px solid #a78bfa;
+}
+
+.lane_gobo {
+  border-left: 3px solid #fbbf24;
+}
+
+.lane_dimmer {
+  border-left: 3px solid #f8fafc;
+}
+
+.lane_beam {
+  border-left: 3px solid #34d399;
+}
+
+.lane_fx {
+  border-left: 3px solid #fb923c;
+}
+
+.lane_moving_head_all {
+  border-left: 3px solid #ef4444;
+}

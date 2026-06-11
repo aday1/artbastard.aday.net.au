@@ -1,0 +1,434 @@
+// PdfAddressSheet.module.scss
+.addressSheet {
+  padding: 1rem;
+  max-width: 100%;
+  overflow-x: auto;
+  
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    
+    h3 {
+      margin: 0;
+      color: #333;
+    }
+    
+    .actions {
+      display: flex;
+      gap: 0.5rem;
+      
+      button {
+        padding: 0.5rem 1rem;
+        border: 1px solid #ddd;
+        background: #f5f5f5;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition: all 0.2s ease;
+        
+        &:hover {
+          background: #e0e0e0;
+          border-color: #ccc;
+        }
+        
+        &.addButton {
+          background: #4CAF50;
+          color: white;
+          border-color: #45a049;
+          
+          &:hover {
+            background: #45a049;
+          }
+        }
+        
+        &.conflictsButton {
+          background: #ff9800;
+          color: white;
+          border-color: #f57c00;
+          
+          &.hasConflicts {
+            background: #f44336;
+            border-color: #d32f2f;
+            animation: pulse 2s infinite;
+          }
+          
+          &:hover {
+            background: #f57c00;
+          }
+        }
+        
+        &.exportButton {
+          background: #2196F3;
+          color: white;
+          border-color: #1976D2;
+          
+          &:hover {
+            background: #1976D2;
+          }
+        }
+          &.printButton {
+          background: #9C27B0;
+          color: white;
+          border-color: #7B1FA2;
+          
+          &:hover {
+            background: #7B1FA2;
+          }
+        }
+        
+        &.autoSyncButton {
+          background: #607D8B;
+          color: white;
+          border-color: #455A64;
+          
+          &.active {
+            background: #4CAF50;
+            border-color: #45a049;
+            animation: pulse-green 2s infinite;
+          }
+          
+          &:hover {
+            background: #455A64;
+          }
+        }
+        
+        &.syncButton {
+          background: #FF5722;
+          color: white;
+          border-color: #E64A19;
+          
+          &:hover {
+            background: #E64A19;
+          }
+        }
+        
+        &.pdfButton {
+          background: #795548;
+          color: white;
+          border-color: #5D4037;
+          
+          &:hover {
+            background: #5D4037;
+          }
+        }
+      }
+    }
+  }
+  
+  .conflictPanel {
+    background: #ffebee;
+    border: 1px solid #ffcdd2;
+    border-radius: 4px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    
+    h4 {
+      margin: 0 0 0.5rem 0;
+      color: #c62828;
+    }
+    
+    .conflict {
+      padding: 0.25rem 0;
+      color: #d32f2f;
+      font-size: 0.9rem;
+    }
+  }
+  
+  .tableContainer {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow-x: auto;
+    margin-bottom: 1rem;
+  }
+  
+  .fixtureTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    
+    th {
+      background: #f5f5f5;
+      padding: 0.75rem 0.5rem;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+      font-weight: 600;
+      color: #333;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    
+    td {
+      padding: 0.5rem;
+      border-bottom: 1px solid #eee;
+      vertical-align: middle;
+    }
+    
+    .conflictRow {
+      background: #ffebee;
+      
+      td {
+        border-color: #ffcdd2;
+      }
+    }
+    
+    .input, .select, .numberInput {
+      width: 100%;
+      padding: 0.25rem 0.5rem;
+      border: 1px solid #ddd;
+      border-radius: 3px;
+      font-size: 0.85rem;
+      background: white;
+      
+      &:focus {
+        outline: none;
+        border-color: #2196F3;
+        box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+      }
+    }
+    
+    .numberInput {
+      max-width: 80px;
+      text-align: center;
+    }
+    
+    .endAddress {
+      text-align: center;
+      font-weight: 600;
+      color: #666;
+      background: #f9f9f9;
+    }
+    
+    .deleteButton {
+      padding: 0.25rem 0.5rem;
+      background: #f44336;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      
+      &:hover {
+        background: #d32f2f;
+      }
+    }
+  }
+  
+  .summary {
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    
+    .stats {
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+      
+      .stat {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        
+        .statLabel {
+          font-size: 0.8rem;
+          color: #666;
+          margin-bottom: 0.25rem;
+        }
+        
+        .statValue {
+          font-size: 1.2rem;
+          font-weight: 600;
+          
+          &.error {
+            color: #f44336;
+          }
+          
+          &.ok {
+            color: #4CAF50;
+          }
+        }
+      }
+    }
+  }
+  
+  .help {
+    background: #e3f2fd;
+    border: 1px solid #bbdefb;
+    border-radius: 4px;
+    padding: 1rem;
+    
+    h4 {
+      margin: 0 0 0.5rem 0;
+      color: #1976D2;
+    }
+    
+    ul {
+      margin: 0;
+      padding-left: 1.2rem;
+      
+      li {
+        margin-bottom: 0.25rem;
+        font-size: 0.85rem;
+        line-height: 1.4;
+        
+        strong {
+          color: #1976D2;
+        }
+      }
+    }
+  }
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(244, 67, 54, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(244, 67, 54, 0);
+  }
+}
+
+@keyframes pulse-green {
+  0% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(76, 175, 80, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+  }
+}
+
+// Print styles
+@media print {
+  .addressSheet {
+    .header .actions {
+      display: none;
+    }
+    
+    .conflictPanel {
+      page-break-inside: avoid;
+    }
+    
+    .fixtureTable {
+      font-size: 0.75rem;
+      
+      th, td {
+        padding: 0.25rem;
+      }
+    }
+    
+    .help {
+      display: none;
+    }
+  }
+}
+
+// Mobile responsive
+@media (max-width: 768px) {
+  .addressSheet {
+    .header {
+      flex-direction: column;
+      gap: 1rem;
+      align-items: stretch;
+      
+      .actions {
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+    }
+    
+    .summary .stats {
+      justify-content: center;
+      gap: 1rem;
+    }
+    
+    .fixtureTable {
+      font-size: 0.8rem;
+      
+      th, td {
+        padding: 0.25rem;
+      }
+      
+      .input, .select, .numberInput {
+        font-size: 0.75rem;
+      }
+    }
+  }
+}
+
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modalContent {
+  background: var(--bg-primary, #1a1a1a);
+  border: 2px solid var(--border-color, #444);
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
+  
+  h4 {
+    margin: 0 0 1rem 0;
+    color: var(--text-primary, #fff);
+  }
+  
+  p {
+    margin: 0 0 1rem 0;
+    color: var(--text-secondary, #ccc);
+  }
+  
+  input {
+    width: 100%;
+    padding: 0.5rem;
+    margin-top: 0.5rem;
+    border: 1px solid var(--border-color, #444);
+    border-radius: 6px;
+    background: var(--bg-secondary, #2c2c34);
+    color: var(--text-primary, #fff);
+    font-size: 1rem;
+    
+    &:focus {
+      outline: none;
+      border-color: var(--color-primary, #4a5cff);
+    }
+  }
+  
+  button {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    &:not(:disabled):hover {
+      transform: translateY(-1px);
+    }
+  }
+}

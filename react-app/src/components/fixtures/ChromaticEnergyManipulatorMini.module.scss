@@ -1,0 +1,889 @@
+// ChromaticEnergyManipulatorMini.module.scss
+.chromaticEnergyManipulatorMini {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  font-family: var(--system-sans);
+
+  .container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+    font-size: 12px;
+    position: relative;
+  }
+
+  // Error and Loading States
+  .errorMessage {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    background: rgba(220, 53, 69, 0.1);
+    border: 1px solid #dc3545;
+    border-radius: 4px;
+    color: #dc3545;
+    font-size: 11px;
+    animation: slideIn 0.3s ease-out;
+
+    svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+    }
+
+    .closeError {
+      margin-left: auto;
+      background: none;
+      border: none;
+      color: #dc3545;
+      cursor: pointer;
+      padding: 2px;
+      border-radius: 2px;
+      transition: background-color 0.2s ease;
+
+      &:hover {
+        background: rgba(220, 53, 69, 0.2);
+      }
+
+      svg {
+        width: 12px;
+        height: 12px;
+      }
+    }
+  }
+
+  .loadingIndicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    background: rgba(13, 202, 240, 0.1);
+    border: 1px solid #0dcaf0;
+    border-radius: 4px;
+    color: #0dcaf0;
+    font-size: 11px;
+    animation: pulse 1.5s ease-in-out infinite;
+
+    svg {
+      width: 14px;
+      height: 14px;
+      animation: spin 1s linear infinite;
+    }
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+
+  .fixtureSection {
+    position: relative;
+
+    .fixtureSelector {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: 6px 8px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      color: var(--text-primary);
+      cursor: pointer;
+      font-size: 11px;
+      transition: all 0.2s ease;
+
+      &:hover {
+        border-color: var(--accent-color);
+        background: var(--bg-secondary);
+      }
+
+      .fixtureName {
+        flex: 1;
+        text-align: left;
+        margin: 0 6px;
+        font-weight: 500;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      
+      .selectorRight {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        
+        .selectionBadge {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 18px;
+          height: 18px;
+          padding: 0 4px;
+          background: var(--accent-color);
+          color: white;
+          border-radius: 9px;
+          font-size: 9px;
+          font-weight: 600;
+          line-height: 1;
+        }
+      }
+    }
+
+    .fixtureDropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      max-height: 150px;
+      overflow-y: auto;
+      z-index: 1000;
+
+      .fixtureOption {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        padding: 8px;
+        background: none;
+        border: none;
+        border-bottom: 1px solid var(--border-color);
+        color: var(--text-primary);
+        cursor: pointer;
+        font-size: 11px;
+        text-align: left;
+        transition: background 0.2s ease;
+
+        &:hover {
+          background: var(--bg-secondary);
+        }
+
+        &:last-child {
+          border-bottom: none;
+        }
+      }
+    }
+  }
+
+  .controlsSection {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .colorControl,
+  .movementControl {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    .controlLabel {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+
+      svg {
+        width: 12px;
+        height: 12px;
+      }
+    }
+  }
+
+  .colorCanvas {
+    width: 100%;
+    height: 20px;
+    border: 1px solid var(--border-color);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+
+    &:hover {
+      border-color: var(--accent-color);
+    }
+  }
+
+  .movementControl {
+    align-items: center;
+
+    .movementCanvas {
+      width: 80px;
+      height: 80px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      cursor: pointer;
+      background: var(--bg-primary);
+      transition: border-color 0.2s ease;
+
+      &:hover {
+        border-color: var(--accent-color);
+      }
+    }
+  }
+
+  .noChannels {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 12px;
+    color: var(--text-secondary);
+    font-size: 11px;
+    text-align: center;
+
+    svg {
+      width: 16px;
+      height: 16px;
+      color: var(--warning-color);
+    }
+  }
+
+  // Enhanced Controls
+  .controlModeSelector {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 8px;
+    
+    .modeButton {
+      flex: 1;
+      padding: 4px 8px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-size: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      
+      &:hover {
+        border-color: var(--accent-color);
+      }
+      
+      &.active {
+        background: var(--accent-color);
+        color: white;
+        border-color: var(--accent-color);
+      }
+    }
+  }
+
+  .basicControls, .advancedControls, .performanceControls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .colorWheel {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    border: 2px solid var(--border-color);
+    cursor: crosshair;
+    margin: 0 auto;
+    display: block;
+    
+    &:hover {
+      border-color: var(--accent-color);
+    }
+  }
+
+  .hueSlider {
+    width: 100%;
+    height: 20px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    cursor: pointer;
+    
+    &:hover {
+      border-color: var(--accent-color);
+    }
+  }
+
+  .colorSliders, .movementSliders {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    
+    .sliderGroup {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      
+      .sliderLabel {
+        min-width: 20px;
+        font-size: 10px;
+        color: var(--text-secondary);
+        font-weight: 500;
+      }
+      
+      .slider {
+        flex: 1;
+        height: 18px;
+        background: var(--bg-primary);
+        border-radius: 9px;
+        outline: none;
+        cursor: pointer;
+        
+        &::-webkit-slider-thumb {
+          appearance: none;
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          background: var(--accent-color);
+          cursor: pointer;
+          border: 2px solid white;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+        
+        &::-moz-range-thumb {
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          background: var(--accent-color);
+          cursor: pointer;
+          border: 2px solid white;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+      }
+      
+      .value {
+        min-width: 30px;
+        font-size: 10px;
+        color: var(--text-primary);
+        text-align: right;
+        font-weight: 500;
+      }
+    }
+  }
+
+  .undoRedoControls {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+    
+    .undoButton, .redoButton {
+      padding: 4px 8px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-size: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      
+      &:hover:not(:disabled) {
+        background: var(--bg-secondary);
+        border-color: var(--accent-color);
+      }
+      
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      
+      svg {
+        width: 12px;
+        height: 12px;
+      }
+    }
+  }
+
+  .toggleControls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 8px;
+    
+    .toggleButton {
+      padding: 3px 6px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 3px;
+      color: var(--text-primary);
+      font-size: 9px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      
+      &:hover {
+        border-color: var(--accent-color);
+      }
+      
+      &.active {
+        background: var(--accent-color);
+        color: white;
+        border-color: var(--accent-color);
+      }
+    }
+  }
+
+  .lockControls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    
+    .lockToggle {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      
+      input[type="checkbox"] {
+        margin: 0;
+        transform: scale(0.8);
+      }
+      
+      &:hover {
+        color: var(--text-primary);
+      }
+    }
+  }
+
+  // Channel Functions Display
+  .channelFunctions {
+    font-size: 9px;
+    color: var(--text-muted);
+    background: var(--bg-tertiary);
+    padding: 2px 4px;
+    border-radius: 3px;
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: monospace;
+    border: 1px solid var(--border-color);
+  }
+
+  // Enhanced Controls Sections
+  .dimmerControls,
+  .effectControls,
+  .beamControls {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 8px;
+    margin-top: 8px;
+
+    h4 {
+      margin: 0 0 8px 0;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-primary);
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 4px;
+    }
+  }
+
+  .quickStrobeActions {
+    display: flex;
+    gap: 4px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+
+  .goboSection,
+  .colorWheelSection {
+    margin-bottom: 12px;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  .sectionLabel {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+    padding-bottom: 2px;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .presetButtons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+    gap: 4px;
+    margin-bottom: 8px;
+
+    .presetButton {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 3px;
+      padding: 4px 6px;
+      font-size: 9px;
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      min-height: 24px;
+
+      svg {
+        width: 10px;
+        height: 10px;
+      }
+
+      &:hover {
+        background: var(--bg-hover);
+        border-color: var(--border-hover);
+        transform: translateY(-1px);
+      }
+
+      &:active {
+        transform: translateY(0);
+        background: var(--bg-active);
+      }
+    }
+  }
+
+  .value {
+    font-size: 10px;
+    color: var(--text-muted);
+    min-width: 25px;
+    text-align: right;
+    font-family: monospace;
+  }
+
+  // Enhanced Type Buttons
+  .typeButtons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+    gap: 4px;
+    margin-bottom: 8px;
+
+    .typeButton {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 3px;
+      padding: 4px 6px;
+      font-size: 9px;
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      min-height: 28px;
+
+      svg {
+        width: 12px;
+        height: 12px;
+      }
+
+      &:hover {
+        background: var(--bg-hover);
+        border-color: var(--border-hover);
+      }
+
+      &:active {
+        background: var(--bg-active);
+      }
+    }
+  }
+}
+
+// Theme variations
+[data-theme="artsnob"] .chromaticEnergyManipulatorMini {
+  background: linear-gradient(145deg, #2a2a2a, #1e1e1e);
+  border-color: #444;
+  
+  .fixtureSelector {
+    background: linear-gradient(145deg, #333, #222);
+    border-color: #555;
+    
+    &:hover {
+      border-color: var(--accent-color);
+      box-shadow: 0 0 8px rgba(var(--accent-color-rgb, 255, 107, 107), 0.3);
+    }
+  }
+
+  .colorCanvas,
+  .movementCanvas {
+    border-color: #444;
+    
+    &:hover {
+      border-color: var(--accent-color);
+      box-shadow: 0 0 6px rgba(var(--accent-color-rgb, 255, 107, 107), 0.2);
+    }
+  }
+}
+
+[data-theme="minimal"] .chromaticEnergyManipulatorMini {
+  background: #fafafa;
+  border-color: #e0e0e0;
+  
+  .fixtureSelector {
+    background: white;
+    border-color: #ccc;
+    
+    &:hover {
+      border-color: #999;
+    }
+  }
+
+  .colorCanvas,
+  .movementCanvas {
+    border-color: #ccc;
+    
+    &:hover {
+      border-color: #666;
+    }
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 480px) {
+  .chromaticEnergyManipulatorMini {
+    .container {
+      padding: 6px;
+    }
+
+    .movementCanvas {
+      width: 60px !important;
+      height: 60px !important;
+    }
+  }
+}
+
+// Enhanced Controls Section
+.enhancedControls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 12px;
+  background: var(--bg-primary);
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+}
+
+.controlMode {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.modeButton {
+  padding: 6px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: var(--bg-hover);
+    border-color: var(--accent-color);
+  }
+
+  &.active {
+    background: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+  }
+}
+
+.toggleControls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.toggleButton {
+  padding: 4px 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: var(--bg-hover);
+    border-color: var(--accent-color);
+  }
+
+  &.active {
+    background: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+  }
+}
+
+.professionalControls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+}
+
+.dimmerControls,
+.effectControls,
+.beamControls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+}
+
+.sliderGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sliderLabel {
+  font-size: 10px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.slider {
+  width: 100%;
+  height: 4px;
+  background: var(--bg-primary);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+
+  &::-webkit-slider-thumb {
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    background: var(--accent-color);
+    border-radius: 50%;
+    cursor: pointer;
+  }
+
+  &::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    background: var(--accent-color);
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.value {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  min-width: 30px;
+  text-align: right;
+}
+
+.functionButtons {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.functionButton {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: var(--bg-hover);
+    border-color: var(--accent-color);
+  }
+
+  &.active {
+    background: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  svg {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+.controlsNote {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  text-align: center;
+  padding: 8px;
+  background: var(--bg-primary);
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+// Theme adjustments for enhanced controls
+[data-theme="artsnob"] .enhancedControls {
+  background: linear-gradient(135deg, rgba(138, 43, 226, 0.05), rgba(75, 0, 130, 0.05));
+  border-color: rgba(138, 43, 226, 0.3);
+}
+
+[data-theme="minimal"] .enhancedControls {
+  background: #f8f9fa;
+  border-color: #dee2e6;
+}

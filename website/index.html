@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArtBastard DMX512 v5.2.4.2 - APC40 Deck A/B Edition</title>
+    <meta name="description" content="ArtBastard DMX512 v5.2.4.2 - APC40 Deck A/B scene workflow, optional fixture-aware scene and ACT seed templates, Record Arm scene saves, Device Control gobo roles, Roli Lightpad XY-pad path memory, fixture-aware transition tracker, live theme tuning, Super Control, scene timelines, MIDI templates, Art-Net, OSC, LAN bridge, mobile surface. Open source.">
+    <link rel="stylesheet" href="theatrical.css?v=20260609-mobile">
+    <link rel="stylesheet" href="styles.css?v=20260609-mobile">
+    <link rel="stylesheet" href="showcase-shell.css?v=20260609-mobile">
+    <style>
+        .theatre:not(.is-open) .curtain-l,
+        .theatre:not(.is-open) .curtain-r { width: calc(50% + 1px); }
+        .theatre:not(.is-open) .theatre-content { visibility: hidden; }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,600;0,700;1,500&display=swap" rel="stylesheet">
+</head>
+<body class="theatre-body">
+    <div class="theatre" id="theatre">
+    <div class="theatre-decor" aria-hidden="true">
+        <div class="curtain-l"></div>
+        <div class="curtain-r"></div>
+        <span class="curtain-label curtain-label-l">Coulisse // Exhibits B Through Infinity</span>
+        <span class="curtain-label curtain-label-r">Coulisse // Exhibits B Through Infinity</span>
+        <div class="rig-bar">
+            <span class="rig-label">Instruments of Photonic Supremacy</span>
+            <div class="rig-can"></div>
+            <div class="rig-can"></div>
+            <div class="rig-can"></div>
+            <div class="rig-can"></div>
+            <div class="rig-can"></div>
+            <div class="rig-can"></div>
+            <div class="rig-can"></div>
+        </div>
+        <div class="spotlight-wash"></div>
+        <div class="stage-floor"></div>
+        <div class="footlights">
+            <span class="footlights-label">Ligne de fosse // pour les connaisseurs seulement</span>
+            <div class="footlight"></div>
+            <div class="footlight"></div>
+            <div class="footlight"></div>
+            <div class="footlight"></div>
+            <div class="footlight"></div>
+            <div class="footlight"></div>
+            <div class="footlight"></div>
+            <div class="footlight"></div>
+            <div class="footlight"></div>
+        </div>
+    </div>
+
+    <div class="theatre-content proscenium">
+    <p id="theatre-whisper" class="theatre-whisper" aria-live="polite"></p>
+    <div class="particles dmx-wash" id="particles" aria-hidden="true"></div>
+
+    <nav class="showcase-nav theatre-nav" aria-label="Showcase navigation">
+        <div class="showcase-nav-inner container">
+            <a class="showcase-nav-brand nav-brand" href="./">
+                <span class="brand-icon">DMX</span>
+                <span class="brand-text">ArtBastard</span>
+            </a>
+            <div class="showcase-nav-links nav-links">
+                <a href="#luminary">Luminary</a>
+                <a href="#tour">Tour</a>
+                <a href="#features">Features</a>
+                <a href="#download">Download</a>
+                <a href="DOCS/">Docs</a>
+                <a href="https://artbastard.aday.net.au/">Try it live</a>
+                <a href="https://github.com/aday1/artbastard.aday.net.au" target="_blank" rel="noopener">GitHub</a>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        <section class="hero">
+            <div class="container">
+                <div class="hero-content">
+                    <p class="showcase-banner">GitHub Showcase Page // not the primary live app</p>
+                    <span class="showcase-banner-sub">Academie des Illuminations Pretentieuses</span>
+                    <h1 class="hero-title marquee-title">
+                        <span class="gradient-text">ArtBastard</span>
+                        <span class="hero-subtitle">DMX512 v5.2.4.2 - APC40 Deck A/B Edition</span>
+                    </h1>
+                    <p class="tagline">Breath of Light Manuscripts // Photonic Supremacy</p>
+                    <span class="tagline-secondary">Theatre des Photons // ruelle parisienne</span>
+                    <blockquote class="canon-quote canon-quote-hero">
+                        "Light belongs to no one; it is our honor merely to dance with it for a time."
+                        &mdash; Grand Master Feng Zhi, Illuminating Wind Dancing Masters
+                    </blockquote>
+                    <p class="canon-quote">
+                        From the Illuminating Wind Dancing Masters to modern photonic mastery:
+                        conduct photons with the finesse of a Parisian maitre d'eclairage.
+                    </p>
+                    <div class="hero-ticker" id="hero-ticker" aria-live="polite">
+                        <span class="hero-ticker-label">Luminary dispatch</span>
+                        <q id="hero-ticker-text">Loading aristocratic wisdom...</q>
+                        <cite id="hero-ticker-author"></cite>
+                    </div>
+                    <p class="hero-description">
+                        <em>Elite illumination control for the discerning luminaire artist.</em><br>
+                        512 channels per universe, Art-Net output, MIDI Learn with controller templates,
+                        two-way OSC, scene timelines, a clip launcher, optional fixture-aware scene
+                        and ACT seed templates, and one Super Control engine across desktop and mobile.
+                        Cloud hosting with an optional Raspberry Pi LAN bridge for home Art-Net and
+                        Ableton Link. Open source, MIT.
+                    </p>
+                    <div class="hero-actions">
+                        <a href="https://artbastard.aday.net.au/" class="btn btn-live">Try it live</a>
+                        <a href="#tour" class="btn btn-primary">Watch the Tour</a>
+                        <a href="#download" class="btn btn-secondary">Get Started</a>
+                        <a href="https://github.com/aday1/artbastard.aday.net.au" target="_blank" rel="noopener" class="btn btn-secondary">View on GitHub</a>
+                    </div>
+                    <div class="deploy-panel">
+                        <div class="deploy-row">
+                            <span class="deploy-key">Live app</span>
+                            <span><a href="https://artbastard.aday.net.au">artbastard.aday.net.au</a> &mdash; cloud DMX control plane</span>
+                        </div>
+                        <div class="deploy-row">
+                            <span class="deploy-key">Dev lane</span>
+                            <span><a href="https://artbastard-dev.aday.net.au">artbastard-dev.aday.net.au</a> &mdash; pre-prod ArtBastard build, image <code>:dev</code></span>
+                        </div>
+                        <div class="deploy-row">
+                            <span class="deploy-key">Showcase</span>
+                            <span><a href="https://aday1.github.io/artbastard.aday.net.au/">aday1.github.io/artbastard.aday.net.au</a></span>
+                        </div>
+                        <div class="deploy-row">
+                            <span class="deploy-key">Source</span>
+                            <span><a href="https://github.com/aday1/artbastard.aday.net.au">github.com/aday1/artbastard.aday.net.au</a></span>
+                        </div>
+                        <p class="deploy-note">// this is the GitHub showcase page &mdash; the live runtime above serves the actual app</p>
+                    </div>
+                    <div class="hero-stats">
+                        <div class="stat">
+                            <span class="stat-number">512</span>
+                            <span class="stat-label">DMX Channels</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-number">6</span>
+                            <span class="stat-label">Demo Clips</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-number">5.2.4</span>
+                            <span class="stat-label">APC40 Decks</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-number">100%</span>
+                            <span class="stat-label">Open Source</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="luminary" class="luminary">
+            <div class="container">
+                <p class="luminary-chip">Exhibits B Through Infinity</p>
+                <h2 class="section-title luminary-title">The Luminary Aristocracy</h2>
+                <p class="section-subtitle">
+                    Pretentious lighting nonsense for the discerning cognoscenti.
+                    Same quote deck as the in-app ArtSnob theme &mdash; now unleashed upon the public web.
+                </p>
+
+                <div id="luminary-stage" class="luminary-stage coulisse-panel" role="status" aria-live="polite">
+                    <span class="quote-deco" aria-hidden="true">&ldquo;</span>
+                    <q id="luminary-quote-text">Loading the photonic manifesto...</q>
+                    <div id="luminary-quote-author" class="luminary-quote-author"></div>
+                    <div class="luminary-toolbar">
+                        <button type="button" id="btn-luminary-next">Another quote</button>
+                        <button type="button" id="btn-luminary-random">Random aristocrat</button>
+                        <button type="button" id="btn-luminary-pause">Pause rotation</button>
+                        <span class="luminary-meta" id="luminary-meta"></span>
+                    </div>
+                </div>
+
+                <div class="breath-panel">
+                    <h3 class="breath-title">Breath of Light Manuscripts</h3>
+                    <p>
+                        ArtBastard is not merely software &mdash; it is the digital descendant of an ancient and noble tradition.
+                        The Wind Dancing Masters shared illumination freely; Le Cr&eacute;ateur des Lumi&egrave;res forged this
+                        bastard child of art and DMX in a Parisian warehouse sustained by espresso and questionable Camembert.
+                        Light is emotion made visible. Occasionally it helps you find your keys.
+                    </p>
+                    <p class="breath-link">
+                        <a href="DOCS/HISTORY.md">Read the full chronicles</a>
+                    </p>
+                </div>
+
+                <div class="rack-doctrine-panel">
+                    <div class="rack-module-mock">
+                        <div class="rack-module-header">
+                            <span class="rack-screw rack-screw-tl" aria-hidden="true"></span>
+                            <span class="rack-screw rack-screw-tr" aria-hidden="true"></span>
+                            <span class="rack-module-title">RACK DOCTRINE v5.2.4</span>
+                        </div>
+                        <div class="rack-module-body">
+                            <p>
+                                Reason-style rack modules. Corner screws. Striped headers. Rotary knobs.
+                                Gold metallic faders. This is not decoration &mdash; it is how operators
+                                recognize ArtBastard in the dark.
+                            </p>
+                            <a href="#features" class="btn btn-secondary rack-doctrine-link">See rack features</a>
+                        </div>
+                        <span class="rack-screw rack-screw-bl" aria-hidden="true"></span>
+                        <span class="rack-screw rack-screw-br" aria-hidden="true"></span>
+                    </div>
+                </div>
+
+                <h3 class="reviews-heading">Academy des Illuminations Pr&eacute;tentieuses &mdash; Selected Reviews</h3>
+                <div class="reviews-grid">
+                    <article class="review-card review-five">
+                        <div class="review-stars" aria-label="Five stars">*****</div>
+                        <h4>A Photonic Revelation</h4>
+                        <p class="review-author">Marquis de Luminaire-Supr&ecirc;me, Th&eacute;&acirc;tre de l'Op&eacute;ra de Paris</p>
+                        <p>ArtBastard has transformed my approach to lighting design. The face tracking feature alone is worth the price of admission. Five stars, sans h&eacute;sitation.</p>
+                    </article>
+                    <article class="review-card review-five">
+                        <div class="review-stars" aria-label="Five stars">*****</div>
+                        <h4>Conducting Photons</h4>
+                        <p class="review-author">Comtesse des Ombres &Eacute;l&eacute;gantes</p>
+                        <p>The OSC integration is flawless, the gesture recognition is revolutionary, and the elitist aesthetic reminds me that I am not merely operating lights. Five stars, naturally.</p>
+                    </article>
+                    <article class="review-card review-four">
+                        <div class="review-stars" aria-label="Four stars">****</div>
+                        <h4>Excellent, With Minor Reservations</h4>
+                        <p class="review-author">Henri Photon-Narcisse, Acad&eacute;mie des Illuminations Pr&eacute;tentieuses</p>
+                        <p>Remarkable achievement. The documentation still lacks the philosophical depth I would prefer. Four stars, with hope for more existential musings on light itself.</p>
+                    </article>
+                    <article class="review-card review-three">
+                        <div class="review-stars" aria-label="Three stars">***</div>
+                        <h4>Competent, Yet Restrained</h4>
+                        <p class="review-author">Baron von Beleuchtungskunst</p>
+                        <p>Face tracking is interesting, though I find the interface somewhat lacking in the artistic pretension I would prefer. Three stars.</p>
+                    </article>
+                    <article class="review-card review-one">
+                        <div class="review-stars" aria-label="One star">*</div>
+                        <h4>Unnecessary</h4>
+                        <p class="review-author">Sol Invictus</p>
+                        <p>I have been using the sun for my lighting shows for billions of years. It has never required configuration, updates, or face tracking. One star, and that is generous.</p>
+                        <p class="review-editor">Editor's note: The sun cannot be controlled via MIDI, OSC, or face tracking.</p>
+                    </article>
+                </div>
+
+                <h3 class="quote-wall-heading">The Complete Luminary Quote Wall</h3>
+                <p class="quote-wall-lede">All <span id="quote-wall-count">61</span> aristocrats. Each card tinted to their personal photonic wavelength.</p>
+                <div id="quote-wall" class="quote-wall"></div>
+            </div>
+        </section>
+
+        <section id="tour" class="tour">
+            <div class="container">
+                <h2 class="section-title">Operator How-To Videos</h2>
+                <p class="section-voice">Reel de formation // enregistre sans philistines</p>
+                <p class="section-subtitle">
+                    Six current walkthrough clips of the main ArtBastard workflow, recorded straight
+                    off the running app. Watch them in order to learn the desk from patch to showtime.
+                    Click any tile to play. Tiles load on demand, no autoplay.
+                </p>
+                <ol class="tour-path" aria-label="Recommended video watch order">
+                    <li><strong>Map</strong><span>Stage Canvas</span></li>
+                    <li><strong>Drive</strong><span>DMX + Super Control</span></li>
+                    <li><strong>Capture</strong><span>Scenes and APC40 slots</span></li>
+                    <li><strong>Sequence</strong><span>Acts timeline</span></li>
+                    <li><strong>Remote</strong><span>Mobile surface</span></li>
+                    <li><strong>Configure</strong><span>Settings and Help</span></li>
+                </ol>
+                <div class="video-grid">
+                    <figure class="video-tile" data-video="videos/dmx-control.webm" data-exhibit="Exhibit // DMX">
+                        <video controls preload="none" playsinline muted
+                               poster="videos/dmx-control.jpg" data-src="videos/dmx-control.webm">
+                        </video>
+                        <figcaption>
+                            <strong>How to drive the DMX desk</strong>
+                            <span>Use the 512-channel grid, styled vertical faders, filters, master, MIDI, and OSC monitors.</span>
+                        </figcaption>
+                    </figure>
+                    <figure class="video-tile" data-video="videos/fixture-page.webm" data-exhibit="Exhibit // FIXTURE">
+                        <video controls preload="none" playsinline muted
+                               poster="videos/fixture-page.jpg" data-src="videos/fixture-page.webm">
+                        </video>
+                        <figcaption>
+                            <strong>How to build a show from the stage canvas</strong>
+                            <span>Place fixtures, inspect DMX addresses, build groups, use optional seeds, then drive the same selection from Super Control.</span>
+                        </figcaption>
+                    </figure>
+                    <figure class="video-tile" data-video="videos/scenes-acts.webm" data-exhibit="Exhibit // SCENE">
+                        <video controls preload="none" playsinline muted
+                               poster="videos/scenes-acts.jpg" data-src="videos/scenes-acts.webm">
+                        </video>
+                        <figcaption>
+                            <strong>How to save scenes and launch clips</strong>
+                            <span>Scene capture, timeline keyframes, clip launcher state, and APC40 Deck A/B scene slots.</span>
+                        </figcaption>
+                    </figure>
+                    <figure class="video-tile" data-video="videos/acts-page.webm" data-exhibit="Exhibit // ACT">
+                        <video controls preload="none" playsinline muted
+                               poster="videos/acts-page.jpg" data-src="videos/acts-page.webm">
+                        </video>
+                        <figcaption>
+                            <strong>How to sequence a show with ACTs</strong>
+                            <span>ACT transport, scene clips, gaps, scheduled MIDI/OSC events, and show sequencing.</span>
+                        </figcaption>
+                    </figure>
+                    <figure class="video-tile mobile" data-video="videos/mobile.webm" data-exhibit="Exhibit // TACTILE">
+                        <video controls preload="none" playsinline muted
+                               poster="videos/mobile.jpg" data-src="videos/mobile.webm">
+                        </video>
+                        <figcaption>
+                            <strong>How to run the mobile surface</strong>
+                            <span>Super Control and DMX channels on one touch-first route for phones and tablets.</span>
+                        </figcaption>
+                    </figure>
+                    <figure class="video-tile" data-video="videos/settings-help.webm" data-exhibit="Exhibit // CONFIG">
+                        <video controls preload="none" playsinline muted
+                               poster="videos/settings-help.jpg" data-src="videos/settings-help.webm">
+                        </video>
+                        <figcaption>
+                            <strong>How to configure and get unstuck</strong>
+                            <span>Theme system, network detection, bridge settings, and the in-app help overlay (also Ctrl+H).</span>
+                        </figcaption>
+                    </figure>
+                </div>
+                <p class="tour-note">
+                    Want to record your own? See
+                    <a href="DOCS/DEMO_RECORDING.txt">DEMO_RECORDING.txt</a>
+                    or run <code>npm run demo:capture-videos</code>.
+                </p>
+            </div>
+        </section>
+
+        <section id="features" class="features">
+            <div class="container">
+                <h2 class="section-title">Instruments of Photonic Supremacy</h2>
+                <p class="section-subtitle">
+                    "Mes amis, you hold before you not mere software, but symphonic mastery
+                    over the electromagnetic spectrum itself."
+                </p>
+                <div class="features-grid">
+                    <div class="feature-card feature-card-rack">
+                        <div class="feature-icon">RACK</div>
+                        <h3>Reason-Style Rack UI</h3>
+                        <p>Skeuomorphic rack modules, rotary knobs, LEDs, and tab strips across DMX,
+                            Super Control, and settings.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">AUTO</div>
+                        <h3>Automation Workbench</h3>
+                        <p>DMX sidebar Automation: per-channel envelopes plus a Renoise-inspired
+                            transition tracker with fixture lanes (pan/tilt, RGB, gobo), pages,
+                            live hex preview, Env/Grid sync, and BPM/LPB playback.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">GRID</div>
+                        <h3>Tracker Channel Columns</h3>
+                        <p>Grid columns match the page chip list only (no hidden CH 1-8). Add by
+                            number, DMX selection, or fixture lanes; Clear all or optional + Pinned.
+                            New pages start empty.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">CTRL</div>
+                        <h3>Remastered Operator Controls</h3>
+                        <p>Shared React control kit: XY pads for pan/tilt, gold vertical and horizontal
+                            faders, dual-handle range windows, stepped gobo slider, and envelope automation
+                            with anime.js outExpo easing. Retired legacy browser range inputs on DMX,
+                            fixtures, scenes, mobile, and automation panels.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">DMX</div>
+                        <h3>Modular DMX Control Page</h3>
+                        <p>The 512-channel control surface is split into header, filters,
+                            fixture selector, channels viewport, scene controls and a footer
+                            status row. Styled faders on every channel card; filtering and pinned-channel
+                            logic is unit tested.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">MAP</div>
+                        <h3>Canvas-First Fixture Setup</h3>
+                        <p>Fixture Setup opens on a 1000x600 stage map. Drag or tap a library
+                            profile onto the map to create a real patched fixture, assign the next
+                            safe DMX start address, save its layout, select it globally, and open
+                            the inspector. Top and Side view share coordinates; map selections feed
+                            Super Control, APC40 fixture/group selection, Smart Groups, scene seeds,
+                            ACT seeds, and Giddy Up.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">SCENE</div>
+                        <h3>Scenes &amp; Acts</h3>
+                        <p>Save and recall scenes; sequence them in the <strong>act timeline</strong>
+                            (clips, gaps, scheduled MIDI/OSC). ACT triggers start/stop acts via
+                            MIDI or OSC — separate from Ableton Link tempo sync.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">SEED</div>
+                        <h3>Optional Show Starters</h3>
+                        <p>After fixtures are patched, Seed Scenes can fill APC40 Deck A/B slots with
+                            fixture-aware looks such as red slow, wash fast, gobo texture, dimmer pulse,
+                            color cycles, strobe, and movement. Seed ACTS can then build Starter ACTS 5
+                            or Performance ACTS 8 from those scenes. Generated content is tagged so
+                            reseeding refreshes only ArtBastard-made scenes and ACTS; handmade show work
+                            stays untouched.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">SCENE</div>
+                        <h3>Timeline Editors</h3>
+                        <p>Scene timeline: DMX keyframes (0-255), multi-track, snap, undo.
+                            Act timeline: scene clips with start times and gaps. See
+                            <a href="DOCS/ACT_TIMELINE.md">ACT_TIMELINE.md</a>.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">CLIP</div>
+                        <h3>Clip Launcher</h3>
+                        <p>Session-style grid for live performance. Assign any scene to any
+                            cell, see playing/queued/recording states, and stop everything with
+                            one button.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">CLIP</div>
+                        <h3>MIDI Controller Templates</h3>
+                        <p>One-click templates for Behringer X-Touch (Mackie mode + scribble
+                            strip SysEx labels) and Akai APC40 MK1. Pitch-bend mappings, MIDI
+                            Learn for everything else, applied via UI or
+                            <code>POST /api/midi/controller-template</code>.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">APC40</div>
+                        <h3>APC40 MK1 Deep Integration</h3>
+                        <p>The full surface, alive. Clip Launch / Session View is Deck A
+                            scene slots 1-40; hold <strong>SHIFT</strong> for Deck B.
+                            <strong>Record Arm</strong> saves the next grid pad into the
+                            current deck. Scene Launch fires ACTS 1-5, Clip Stop unselects
+                            scenes, and Stop All clears scenes and acts. Channel faders drive
+                            Super Control, Device Control follows selected fixture gobo/effect
+                            roles, Master Select toggles FULL ON, and the crossfader blends
+                            the active Deck A/B scenes. Out-of-box APC defaults now auto-apply
+                            on first connect (without overwriting custom maps), the manual has a
+                            one-click Reset to APC defaults action, Focus Mode for declutter,
+                            and fixture-target tooltips that show exactly which selected fixtures
+                            each mapped control is driving. Even disconnected, the APC reference
+                            still shows what each knob, fader, and button does.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">ROLI</div>
+                        <h3>Roli Lightpad XY-Pad Mirror</h3>
+                        <p>Plug in a Roli Lightpad BLOCK and it becomes an MPE-aware XY pad
+                            for Super Control. Touch-draw a path on the surface and it renders
+                            live on the React canvas; pencil-draw on the canvas and the LED
+                            mirrors it as you go. Save up to <strong>8 path slots (A–H)</strong>
+                            per fixture, recall by tapping the strip, right-click to rename
+                            or clear. Bidirectional path memory between hardware and software.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">OSC</div>
+                        <h3>OSC Integration</h3>
+                        <p>Two-way OSC for Super Control, scenes, master faders, and ACT triggers.
+                            Use the in-app OSC monitor while mapping. Works with Reaper, QLab,
+                            Max/MSP, Pure Data, and any tablet OSC app you configure yourself.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">SYNC</div>
+                        <h3>Unified Operator Surfaces</h3>
+                        <p>One Super Control engine on the fixture page and mobile route.
+                            Shared DmxFaderRow controls on the DMX page and a touch
+                            pinned-channel strip. Experimental stubs and duplicate touch panels removed.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">NET</div>
+                        <h3>Art-Net Output</h3>
+                        <p>Professional Art-Net distribution across multiple universes. Network
+                            interface auto-detection with ICMP ping verification helps you
+                            identify USB Ethernet adapters from the Settings panel.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">BRIDGE</div>
+                        <h3>LAN / Pi Bridge</h3>
+                        <p>Hosted at artbastard.aday.net.au? Run <code>artbastard-bridge</code> on a
+                            Raspberry Pi on your fixture LAN. The cloud UI drives Art-Net locally;
+                            optional Ableton Link on the Pi. Many browsers, one shared show.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">TOUCH</div>
+                        <h3>Touch Surface</h3>
+                        <p>The <code>#/mobile</code> route gives you Super Control and DMX
+                            channels with a touch-first layout on phones and tablets.
+                            Hash-based deep linking everywhere.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">THEME</div>
+                        <h3>Live Theme Tuning</h3>
+                        <p>HSL sliders and rack presets apply to the UI as you move them.
+                            Debounced server sync via /api/appearance; Sync now and Reload UI for
+                            multi-client shows. Typography, spacing, and animation speed included.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">HELP</div>
+                        <h3>In-App Help &amp; Address Sheet</h3>
+                        <p>Press <kbd>Ctrl</kbd>+<kbd>H</kbd> anywhere or open Settings &gt;
+                            Help. Covers DMX basics, DIP-switch calculator, MIDI/OSC,
+                            ACT triggers, factory reset, controller templates,
+                            keyboard shortcuts, troubleshooting, plus a printable PDF
+                            address sheet.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">TEST</div>
+                        <h3>Smoke + Demo Tooling</h3>
+                        <p>Vitest unit tests for filtering, ACT triggers, clip launcher and
+                            scene capture. Backend smoke script
+                            (<code>test:api-contract</code>) plus an automated
+                            screenshot and video capture pipeline for the showcase tour.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="download" class="download">
+            <div class="container">
+                <h2 class="section-title">Download &amp; Install</h2>
+                <p class="section-voice">Obtenir ArtBastard // sans compromis</p>
+                <div class="download-content">
+                    <div class="download-info">
+                        <h3>Get ArtBastard DMX512</h3>
+                        <p>Available for Windows, macOS, and Linux. Node.js 20+ and any
+                            modern browser. Plug your USB DMX or Art-Net interface in,
+                            run the start script, point your browser at
+                            <code>http://localhost:3030</code>.</p>
+                        <div class="download-buttons">
+                            <a href="https://github.com/aday1/artbastard.aday.net.au/releases/latest" class="btn btn-primary btn-large">
+                                Download v5.2.4.2
+                            </a>
+                            <a href="https://github.com/aday1/artbastard.aday.net.au" target="_blank" rel="noopener" class="btn btn-secondary btn-large">
+                                View Source
+                            </a>
+                        </div>
+                        <div class="version-info">
+                            <p>Latest Version: <span id="latest-version">v5.2.4.2</span> - APC40 Deck A/B Edition</p>
+                        </div>
+                    </div>
+                    <div class="install-steps">
+                        <h4>Quick Start</h4>
+                        <ol>
+                            <li>Clone: <code>git clone https://github.com/aday1/artbastard.aday.net.au.git</code></li>
+                            <li>Install: <code>npm ci &amp;&amp; npm --prefix react-app ci</code></li>
+                            <li>Run <code>./start.sh</code> (Linux/macOS) or <code>.\start.ps1</code> (Windows)</li>
+                            <li>Open <code>http://localhost:3030</code></li>
+                            <li>Configure your DMX interface in Settings</li>
+                            <li>Need a clean slate? Run with <code>--reset</code> / <code>-Reset</code></li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="docs" class="docs">
+            <div class="container">
+                <h2 class="section-title">Documentation</h2>
+                <p class="section-subtitle showcase-section-lede" style="text-align:center;max-width:640px;margin:0 auto 2rem;">
+                    Same index as <a href="DOCS/">/DOCS/</a>. Browse guides on GitHub Pages or jump to the docs hub.
+                </p>
+                <div class="docs-grid">
+                    <a href="DOCS/README.md" class="doc-card">
+                        <h3>Getting Started</h3>
+                        <p>Documentation index, current rebuild status, validation commands.</p>
+                    </a>
+                    <a href="DOCS/INSTALL.md" class="doc-card">
+                        <h3>Install &amp; Reset</h3>
+                        <p>Environment setup, launch scripts, factory reset workflow.</p>
+                    </a>
+                    <a href="DOCS/BRIDGE.md" class="doc-card">
+                        <h3>LAN / Pi Bridge</h3>
+                        <p>Cloud UI to home Art-Net, Ableton Link on Pi, concurrent operators.</p>
+                    </a>
+                    <a href="DOCS/USAGE.md" class="doc-card">
+                        <h3>Usage Guide</h3>
+                        <p>Operator flow, routes, MIDI/OSC setup, timeline + clip launcher.</p>
+                    </a>
+                    <a href="DOCS/ACT_TIMELINE.md" class="doc-card">
+                        <h3>Act Timeline</h3>
+                        <p>Scene clips, gaps, ACT triggers vs BPM vs Ableton Link.</p>
+                    </a>
+                    <a href="DOCS/FEATURES.md" class="doc-card">
+                        <h3>Features Guide</h3>
+                        <p>Full feature inventory by subsystem after the v5.2.4.2 release.</p>
+                    </a>
+                    <a href="DOCS/FIXTURES.md" class="doc-card">
+                        <h3>Fixture Setup</h3>
+                        <p>Profiles, canvas placement, addressing, groups, PDF address sheet.</p>
+                    </a>
+                    <a href="DOCS/STAGE_CANVAS_TUTORIAL.md" class="doc-card">
+                        <h3>Stage Canvas Tutorial</h3>
+                        <p>Build a show from fixture placement through groups, seeds, Super Control, APC40, and debugging.</p>
+                    </a>
+                    <a href="DOCS/HELP.md" class="doc-card">
+                        <h3>Help (Offline Mirror)</h3>
+                        <p>Plain-text mirror of the in-app HelpOverlay - read it anywhere.</p>
+                    </a>
+                    <a href="DOCS/SHORTCUTS.md" class="doc-card">
+                        <h3>Keyboard Shortcuts</h3>
+                        <p>Master shortcut reference - timeline, scenes, faders, navigation.</p>
+                    </a>
+                    <a href="DOCS/MIDI_TEMPLATES.md" class="doc-card">
+                        <h3>MIDI Templates</h3>
+                        <p>X-Touch Mackie + APC40 MK1 mapping reference and apply flow.</p>
+                    </a>
+                    <a href="DOCS/APC40_CHEATSHEET.md" class="doc-card">
+                        <h3>APC40 MK1 Cheatsheet</h3>
+                        <p>Live integration: Deck A/B grids, Record Arm scene saves, Device Control roles, FULL ON, LED legend.</p>
+                    </a>
+                    <a href="DOCS/OSC_REFERENCE.md" class="doc-card">
+                        <h3>OSC Reference</h3>
+                        <p>Every SuperControl OSC address and value range, in one page.</p>
+                    </a>
+                    <a href="DOCS/UI_UX_TOUR.txt" class="doc-card">
+                        <h3>UI &amp; UX Tour</h3>
+                        <p>Per-screen action notes for every major route in the app.</p>
+                    </a>
+                    <a href="DOCS/HISTORY.md" class="doc-card">
+                        <h3>Chronicles</h3>
+                        <p>Wind Dancing Masters lineage through the Parisian warehouse era.</p>
+                    </a>
+                    <a href="DOCS/SHOWCASE.md" class="doc-card">
+                        <h3>Showcase Notes</h3>
+                        <p>How this very page is built, recorded, and deployed.</p>
+                    </a>
+                    <a href="DOCS/DEMO_RECORDING.txt" class="doc-card">
+                        <h3>Demo Recording</h3>
+                        <p>Capturing screenshots and WebM operator how-to clips.</p>
+                    </a>
+                    <a href="DOCS/" class="doc-card">
+                        <h3>Full DOCS Index</h3>
+                        <p>Browse the complete static documentation tree on GitHub Pages.</p>
+                    </a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <span class="brand-icon">DMX</span>
+                    <span class="brand-text">ArtBastard</span>
+                </div>
+                <div class="footer-links">
+                    <a href="https://github.com/aday1/artbastard.aday.net.au">GitHub</a>
+                    <a href="https://github.com/aday1/artbastard.aday.net.au/issues">Issues</a>
+                    <a href="https://github.com/aday1/artbastard.aday.net.au/releases">Releases</a>
+                    <a href="https://github.com/aday1/artbastard.aday.net.au/blob/main/LICENSE">License</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p class="footer-canon">
+                    "Light is not merely illumination &mdash; it is emotion made visible, dreams given form."
+                </p>
+                <p>
+                    &copy; 2026 ArtBastard DMX512 v5.2.4.2 - APC40 Deck A/B Edition. MIT licensed.
+                    <a href="DOCS/HISTORY.md">Chronicles</a>
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    </div>
+    </div>
+
+    <script src="DOCS/showcase-quotes-data.js"></script>
+    <script src="theatrical.js"></script>
+    <script src="luminary-shared.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

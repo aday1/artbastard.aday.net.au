@@ -1,0 +1,141 @@
+.tip {
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--rk-label-dim, var(--text-secondary));
+  margin: 0 0 0.35rem;
+}
+
+.lanesToggle {
+  font-size: 10px;
+  padding: 0.2rem 0.45rem;
+  background: var(--rk-cell, var(--input-bg));
+  border: 1px solid var(--rk-bevel-lo, var(--border-color));
+  color: var(--rk-label, var(--text-primary));
+  cursor: pointer;
+  text-align: left;
+}
+
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.35rem 0.5rem;
+  margin-bottom: 0.35rem;
+  background: var(--rk-surface, var(--bg-tertiary));
+  border: 1px inset var(--rk-bevel-lo, var(--border-color));
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.label {
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--rk-label-dim, var(--text-secondary));
+}
+
+.addForm {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+
+  input {
+    width: 3.5rem;
+    font-family: var(--rk-mono, monospace);
+    font-size: 11px;
+    padding: 0.15rem 0.3rem;
+    background: var(--rk-cell, var(--input-bg));
+    color: var(--rk-label, var(--text-primary));
+    border: 1px solid var(--rk-bevel-lo, var(--border-color));
+  }
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.chip button[type='button']:first-of-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-family: var(--rk-mono, monospace);
+  font-size: 10px;
+  padding: 0.1rem 0.35rem;
+  background: var(--rk-cell, var(--input-bg));
+  border: 1px solid var(--rk-bevel-lo, var(--border-color));
+  color: var(--rk-label, var(--text-primary));
+  cursor: pointer;
+
+  &Active {
+    border-color: var(--rk-accent, var(--color-accent));
+    box-shadow: 0 0 0 1px var(--rk-accent, var(--color-accent));
+  }
+}
+
+.chipRemove {
+  font-size: 9px;
+  opacity: 0.7;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.pages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.pageTab {
+  font-family: var(--rk-mono, monospace);
+  font-size: 10px;
+  padding: 0.15rem 0.4rem;
+  background: var(--rk-cell, var(--input-bg));
+  border: 1px solid var(--rk-bevel-lo, var(--border-color));
+  color: var(--rk-label-dim, var(--text-secondary));
+  cursor: pointer;
+
+  &Active {
+    color: var(--rk-accent, var(--color-accent));
+    border-color: var(--rk-accent, var(--color-accent));
+  }
+}
+
+.trackList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.trackRow {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 10px;
+  font-family: var(--rk-mono, monospace);
+}
+
+.trackLink {
+  font-size: 9px;
+  color: var(--rk-label-dim, var(--text-secondary));
+}

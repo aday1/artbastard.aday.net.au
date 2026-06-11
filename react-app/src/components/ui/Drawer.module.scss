@@ -1,0 +1,94 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal-backdrop, 1040);
+  background: rgba(2, 6, 23, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  animation: drawerFade 180ms ease-out;
+}
+
+@keyframes drawerFade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.panel {
+  background: var(--color-surface, #1a1a1a);
+  color: var(--color-text-primary, #ffffff);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 48px -8px rgba(0, 0, 0, 0.5);
+  outline: none;
+  overflow: hidden;
+  // Default panel surface is full-bleed; the side variants pin it.
+  padding-top: var(--safe-top);
+  padding-bottom: var(--safe-bottom);
+}
+
+.panel.elevated {
+  z-index: calc(var(--z-modal-backdrop, 1040) + 1);
+}
+
+// LEFT
+.panel.left {
+  position: relative;
+  width: 90vw;
+  max-width: 360px;
+  height: 100%;
+  margin-right: auto;
+  border-right: 1px solid var(--color-border, rgba(71, 85, 105, 0.3));
+  padding-left: var(--safe-left);
+  animation: drawerSlideFromLeft 220ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes drawerSlideFromLeft {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(0); }
+}
+
+// RIGHT
+.panel.right {
+  position: relative;
+  width: 90vw;
+  max-width: 360px;
+  height: 100%;
+  margin-left: auto;
+  border-left: 1px solid var(--color-border, rgba(71, 85, 105, 0.3));
+  padding-right: var(--safe-right);
+  animation: drawerSlideFromRight 220ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes drawerSlideFromRight {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+// BOTTOM (used by full-screen sheets like fixture pickers)
+.panel.bottom {
+  position: relative;
+  width: 100%;
+  max-height: 85vh;
+  max-height: 85dvh;
+  margin-top: auto;
+  border-top: 1px solid var(--color-border, rgba(71, 85, 105, 0.3));
+  border-radius: 16px 16px 0 0;
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+  animation: drawerSlideFromBottom 220ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes drawerSlideFromBottom {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+// Tablet bumps the max width a bit so iPad portrait/landscape get more
+// room without filling the whole screen.
+@media (min-width: 641px) and (max-width: 1279px) {
+  .panel.left,
+  .panel.right {
+    max-width: 420px;
+  }
+}

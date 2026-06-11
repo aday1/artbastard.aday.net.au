@@ -1,0 +1,764 @@
+// DMX DIP Switch Simulator - Realistic Red DMX Switch Design
+.dipSimulator {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, rgba(20, 20, 20, 0.95), rgba(30, 30, 30, 0.95));
+  border-radius: 16px;
+  border: 2px solid rgba(200, 50, 50, 0.4);
+  max-width: 100%;
+  overflow-x: auto;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Input Section */
+.inputSection {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  background: rgba(40, 40, 40, 0.6);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid rgba(200, 50, 50, 0.2);
+}
+
+.addressInput {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.addressInput label {
+  font-weight: 700;
+  color: #ff4444;
+  min-width: 120px;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-shadow: 0 0 6px rgba(255, 68, 68, 0.4);
+}
+
+.addressField {
+  padding: 1rem;
+  border: 3px solid rgba(200, 50, 50, 0.4);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #ffffff;
+  font-size: 1.3rem;
+  font-weight: 700;
+  width: 140px;
+  text-align: center;
+  transition: all 0.3s ease;
+  font-family: 'Monaco', 'Consolas', monospace;
+}
+
+.addressField:focus {
+  border-color: #ff4444;
+  background: rgba(255, 68, 68, 0.1);
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(255, 68, 68, 0.3);
+  transform: scale(1.02);
+}
+
+.addressInfo {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* Binary Display */
+.binaryDisplay {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.binaryDisplay label {
+  font-weight: 700;
+  color: #ff4444;
+  min-width: 120px;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-shadow: 0 0 6px rgba(255, 68, 68, 0.4);
+}
+
+.binaryCode {
+  display: flex;
+  gap: 4px;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 8px;
+  border: 2px solid rgba(200, 50, 50, 0.4);
+  font-family: 'Monaco', 'Consolas', monospace;
+  font-size: 1.4rem;
+  font-weight: bold;
+}
+
+.bitOn {
+  color: #ff4444;
+  text-shadow: 0 0 8px rgba(255, 68, 68, 0.6);
+  transform: scale(1.1);
+}
+
+.bitOff {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.binaryInfo {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.9rem;
+  font-style: italic;
+  font-weight: 600;
+}
+
+/* DIP Switch Panel - Realistic DMX Switch Housing */
+.dipSwitchPanel {
+  background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+  border-radius: 16px;
+  border: 3px solid #444;
+  padding: 2rem;
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.8),
+    inset 0 2px 8px rgba(255, 255, 255, 0.05),
+    inset 0 -2px 8px rgba(0, 0, 0, 0.4);
+  position: relative;
+}
+
+.dipSwitchPanel::before {
+  content: 'DMX512 DIP SWITCH CONFIGURATION';
+  position: absolute;
+  top: -12px;
+  left: 20px;
+  background: #1a1a1a;
+  color: #ff4444;
+  padding: 0 1rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.dipSwitchPanel h5 {
+  margin: 0 0 1.5rem 0;
+  color: #ff4444;
+  font-size: 1.4rem;
+  font-weight: 700;
+  text-shadow: 0 0 10px rgba(255, 68, 68, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-align: center;
+}
+
+.instructions {
+  margin-bottom: 2rem;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.5;
+  background: linear-gradient(135deg, rgba(255, 68, 68, 0.1), rgba(200, 50, 50, 0.1));
+  padding: 1rem;
+  border-radius: 8px;
+  border-left: 4px solid #ff4444;
+  font-weight: 600;
+}
+
+.instructions strong {
+  color: #ff6666;
+  text-shadow: 0 0 6px rgba(255, 102, 102, 0.4);
+}
+
+.currentAddress {
+  color: #ff4444;
+  font-size: 1.2em;
+  text-shadow: 0 0 8px rgba(255, 68, 68, 0.5);
+  background: rgba(255, 68, 68, 0.2);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 68, 68, 0.3);
+}
+
+.switchInstructions {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-style: italic;
+}
+
+/* DIP Switch Grid - Realistic Layout */
+.dipSwitchGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  background: linear-gradient(145deg, #333, #222);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 2px solid #444;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+.dipSwitchItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.dipSwitchLabel {
+  font-weight: 700;
+  color: #ffffff;
+  font-size: 0.8rem;
+  text-align: center;
+  background: #1a1a1a;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #444;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* Realistic DMX DIP Switch Design */
+.dipSwitch {
+  position: relative;
+  width: 50px;
+  height: 80px;
+  background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+  border: 3px solid #444;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow: 
+    0 4px 8px rgba(0, 0, 0, 0.6),
+    inset 0 1px 2px rgba(255, 255, 255, 0.1);
+}
+
+.dipSwitch::before {
+  content: 'ON';
+  position: absolute;
+  top: 8px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #666;
+  letter-spacing: 1px;
+}
+
+.dipSwitch::after {
+  content: 'OFF';
+  position: absolute;
+  bottom: 8px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #666;
+  letter-spacing: 1px;
+}
+
+/* ON State - Red DMX Style */
+.dipSwitch.on {
+  background: linear-gradient(145deg, #ff4444, #cc3333);
+  border-color: #ff6666;
+  box-shadow: 
+    0 4px 12px rgba(255, 68, 68, 0.5),
+    inset 0 1px 2px rgba(255, 255, 255, 0.2),
+    0 0 20px rgba(255, 68, 68, 0.3);
+}
+
+.dipSwitch.on::before {
+  color: #ffffff;
+  text-shadow: 0 0 4px rgba(255, 255, 255, 0.8);
+}
+
+.dipSwitch.on::after {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* OFF State */
+.dipSwitch.off {
+  background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+  border-color: #444;
+}
+
+.dipSwitch.off::before {
+  color: #666;
+}
+
+.dipSwitch.off::after {
+  color: #999;
+}
+
+.dipSwitch:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 6px 16px rgba(0, 0, 0, 0.8),
+    inset 0 1px 2px rgba(255, 255, 255, 0.1);
+}
+
+.dipSwitch.on:hover {
+  box-shadow: 
+    0 6px 20px rgba(255, 68, 68, 0.6),
+    inset 0 1px 2px rgba(255, 255, 255, 0.2),
+    0 0 30px rgba(255, 68, 68, 0.4);
+}
+
+/* Switch Handle - Realistic Slider */
+.switchHandle {
+  position: absolute;
+  width: 35px;
+  height: 20px;
+  background: linear-gradient(145deg, #ffffff, #e0e0e0);
+  border-radius: 3px;
+  transition: all 0.2s ease;
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.4),
+    inset 0 1px 2px rgba(255, 255, 255, 0.6);
+  border: 1px solid #ccc;
+}
+
+.dipSwitch.on .switchHandle {
+  transform: translateY(-15px);
+  background: linear-gradient(145deg, #ffffff, #f0f0f0);
+  box-shadow: 
+    0 2px 6px rgba(0, 0, 0, 0.3),
+    inset 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+.dipSwitch.off .switchHandle {
+  transform: translateY(15px);
+  background: linear-gradient(145deg, #e0e0e0, #d0d0d0);
+}
+
+.switchState {
+  position: absolute;
+  font-size: 1rem;
+  font-weight: 900;
+  z-index: 1;
+  pointer-events: none;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.dipSwitch.on .switchState {
+  color: #ffffff;
+  transform: translateY(-15px);
+}
+
+.dipSwitch.off .switchState {
+  color: #999;
+  transform: translateY(15px);
+}
+
+.dipSwitchValue {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: center;
+  font-family: monospace;
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  min-width: 60px;
+}
+
+/* Calculation Section */
+.calculation {
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.4), rgba(20, 20, 20, 0.4));
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 2px solid rgba(200, 50, 50, 0.3);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.calculation h6 {
+  color: #ff4444;
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-shadow: 0 0 8px rgba(255, 68, 68, 0.4);
+}
+
+.calculationSteps {
+  font-family: 'Monaco', 'Consolas', monospace;
+  font-size: 1.1rem;
+  color: #ffffff;
+  line-height: 1.6;
+}
+
+.calculationTerm {
+  color: #ff6666;
+  margin-right: 0.5rem;
+  font-weight: 600;
+  text-shadow: 0 0 4px rgba(255, 102, 102, 0.3);
+}
+
+.calculationResult {
+  color: #ffffff;
+  font-weight: 700;
+  margin-left: 0.5rem;
+  background: rgba(255, 68, 68, 0.2);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+/* Common Addresses */
+.commonAddresses {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid rgba(78, 205, 196, 0.2);
+}
+
+.commonAddresses h6 {
+  color: #4ecdc4;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.addressGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.addressButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.addressButton:hover {
+  background: rgba(78, 205, 196, 0.1);
+  border-color: rgba(78, 205, 196, 0.3);
+  transform: translateY(-2px);
+}
+
+.addressButton.active {
+  background: rgba(78, 205, 196, 0.2);
+  border-color: #4ecdc4;
+  box-shadow: 0 0 10px rgba(78, 205, 196, 0.3);
+}
+
+.addressNumber {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #4ecdc4;
+}
+
+.addressDesc {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: center;
+}
+
+/* Help Section */
+.helpSection {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid rgba(78, 205, 196, 0.2);
+}
+
+.helpSection h6 {
+  color: #4ecdc4;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.helpList {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 1.5rem;
+}
+
+.helpList li {
+  padding: 0.5rem 0;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.4;
+}
+
+.helpList li strong {
+  color: #4ecdc4;
+}
+
+/* Tip Box */
+.tipBox {
+  background: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.tipBox h6 {
+  color: #ffc107;
+  margin-bottom: 0.75rem;
+  font-size: 1rem;
+}
+
+.tipBox ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.tipBox li {
+  padding: 0.25rem 0;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.9rem;
+  line-height: 1.3;
+}
+
+/* Enhanced Help Section */
+.helpGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.helpCard {
+  background: linear-gradient(145deg, rgba(50, 50, 50, 0.8), rgba(30, 30, 30, 0.8));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.helpCard h6 {
+  color: #ff6666;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+  text-shadow: none;
+  text-align: left;
+}
+
+.tipGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.tip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 193, 7, 0.2);
+}
+
+.tipIcon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .dipSimulator {
+    padding: 0.75rem;
+    gap: 1.5rem;
+  }
+  
+  .inputSection {
+    gap: 1rem;
+  }
+  
+  .addressInput,
+  .binaryDisplay {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .addressInput label,
+  .binaryDisplay label {
+    min-width: auto;
+  }
+  
+  .dipSwitchGrid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+  }
+  
+  .addressGrid {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+  
+  .binaryCode {
+    flex-wrap: wrap;
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .dipSwitchGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .dipSwitch {
+    width: 50px;
+    height: 25px;
+  }
+  
+  .switchHandle {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .dipSwitch.on .switchHandle {
+    transform: translateX(12px);
+  }
+  
+  .dipSwitch.off .switchHandle {
+    transform: translateX(-12px);
+  }
+}
+
+.addressChannels {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-family: monospace;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+}
+
+/* Fixture Calculator */
+.fixtureCalculator {
+  background: linear-gradient(135deg, rgba(40, 40, 40, 0.6), rgba(30, 30, 30, 0.6));
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 2px solid rgba(200, 50, 50, 0.2);
+}
+
+.fixtureCalculator h6 {
+  color: #ff4444;
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-shadow: 0 0 8px rgba(255, 68, 68, 0.4);
+}
+
+.calculatorInfo {
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 1.5rem;
+  font-weight: 500;
+}
+
+.fixtureGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.fixtureCard {
+  background: linear-gradient(145deg, rgba(50, 50, 50, 0.8), rgba(30, 30, 30, 0.8));
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 1rem;
+  transition: all 0.3s ease;
+}
+
+.fixtureCard:hover {
+  border-color: rgba(255, 68, 68, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 68, 68, 0.2);
+}
+
+.fixtureHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.fixtureName {
+  font-weight: 700;
+  color: #ffffff;
+  font-size: 0.9rem;
+}
+
+.fixtureChannels {
+  background: #ff4444;
+  color: #ffffff;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-shadow: 0 0 4px rgba(255, 255, 255, 0.3);
+}
+
+.fixtureDesc {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.8rem;
+  line-height: 1.3;
+  margin-bottom: 0.75rem;
+}
+
+.fixtureCalc {
+  font-family: 'Monaco', 'Consolas', monospace;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.5rem;
+  border-radius: 4px;
+  margin-bottom: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.fixtureCalc strong {
+  color: #ff6666;
+}
+
+.useAddressBtn {
+  width: 100%;
+  padding: 0.5rem;
+  background: linear-gradient(145deg, rgba(255, 68, 68, 0.8), rgba(200, 50, 50, 0.8));
+  border: 2px solid #ff4444;
+  border-radius: 6px;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.useAddressBtn:hover:not(:disabled) {
+  background: linear-gradient(145deg, rgba(255, 68, 68, 1), rgba(200, 50, 50, 1));
+  box-shadow: 0 0 16px rgba(255, 68, 68, 0.5);
+  transform: translateY(-1px);
+}
+
+.useAddressBtn:disabled {
+  background: linear-gradient(145deg, rgba(100, 100, 100, 0.5), rgba(80, 80, 80, 0.5));
+  border-color: #666;
+  color: #999;
+  cursor: not-allowed;
+  opacity: 0.5;
+}

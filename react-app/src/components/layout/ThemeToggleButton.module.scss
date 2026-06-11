@@ -1,0 +1,101 @@
+.themeToggleContainer {
+  display: flex;
+  gap: 4px; // Reduced space between the buttons
+  padding: 4px; // Reduced padding for the container itself
+  background-color: var(--color-card-bg);
+  border-radius: var(--border-radius, 6px); // Smaller border radius
+  box-shadow: var(--card-shadow);
+  
+  // Navbar variant - when used inside navbar
+  :global(.darkModeToggle) & {
+    position: static;
+    top: auto;
+    right: auto;
+    z-index: auto;
+    background-color: transparent;
+    box-shadow: none;
+    padding: 0;
+    gap: var(--space-sm);
+  }
+}
+
+.iconButton {
+  background-color: transparent; // Buttons themselves are transparent
+  border: none;
+  border-radius: var(--radius-md, 999px); // Pill-shaped by default
+  min-width: 60px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 4px;       // Reduced padding
+  color: var(--color-text); // Icon color
+  transition: all 0.2s ease;
+
+  svg {
+    width: 16px;      // Smaller icon
+    height: 16px;
+  }
+
+  &:hover {
+    background-color: var(--color-card-border); // Hover effect on individual buttons
+    transform: scale(1.1);
+  }
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-primary); // Focus indicator
+  }
+  
+  // Navbar variant - when used inside navbar
+  :global(.darkModeToggle) & {
+    width: auto;
+    height: auto;
+    min-width: 120px; // Wider to accommodate text
+    max-width: 120px; // Wider to accommodate text
+    min-height: 36px;
+    padding: 8px 12px; // Match ResetButton padding
+    border-radius: var(--radius-md);
+    background-color: var(--color-surface);
+    border: 2px solid var(--color-border);
+    color: var(--color-text-primary);
+    font-size: var(--text-sm); // Match ResetButton font size
+    font-weight: var(--font-medium);
+    overflow: hidden; // Prevent text overflow
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    
+    svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+    }
+    
+    &:hover {
+      background-color: var(--color-interactive);
+      border-color: var(--color-interactive);
+      color: var(--color-text-inverse);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+    
+    &:active {
+      transform: translateY(0);
+    }
+    
+    span {
+      margin-left: 0;
+      font-size: 0.75rem;
+      font-weight: var(--font-medium);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      line-height: 1;
+    }
+  }
+}

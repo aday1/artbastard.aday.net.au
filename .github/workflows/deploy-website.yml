@@ -1,0 +1,78 @@
+name: Deploy Website - The Digital Shrine
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'website/**'
+      - 'DOCS/**'
+      - '.github/workflows/deploy-website.yml'
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to GitHub Pages
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Update GitHub Links
+        run: |
+          REPO_OWNER="${{ github.repository_owner }}"
+          REPO_NAME="${{ github.event.repository.name }}"
+          if [ -f "website/index.html" ]; then
+            sed -i "s/yourusername/$REPO_OWNER/g" website/index.html website/script.js || true
+            sed -i "s/ArtBastard-DMX512/$REPO_NAME/g" website/index.html website/script.js || true
+          fi
+
+      - name: Assemble Pages bundle
+        run: |
+          rm -rf pages-out
+          mkdir -p pages-out/DOCS pages-out/website
+          cp -r website/. pages-out/
+          cp -r DOCS/. pages-out/DOCS/
+          cat > pages-out/website/index.html <<'EOF'
+          <!doctype html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <meta http-equiv="refresh" content="0; url=../">
+            <link rel="canonical" href="../">
+            <title>ArtBastard showcase moved</title>
+          </head>
+          <body>
+            <p>The showcase lives at the site root now. <a href="../">Continue</a>.</p>
+          </body>
+          </html>
+          EOF
+          touch pages-out/.nojekyll
+          ls -la pages-out/
+          ls -la pages-out/DOCS/ | head
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './pages-out'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

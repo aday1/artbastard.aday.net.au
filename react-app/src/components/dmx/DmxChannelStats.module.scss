@@ -1,0 +1,102 @@
+// Styles for the DMX channel statistics component
+.channelStats {
+  display: flex;
+  gap: 1.5rem;
+  width: 100%;
+  margin: 1rem 0;
+  
+  .statCard {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    padding: 1rem;
+    flex: 1;
+    min-width: 100px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .statValue {
+      font-size: 2rem;
+      font-weight: bold;
+      color: var(--text-primary);
+      margin-bottom: 0.25rem;
+    }
+    
+    .statLabel {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.25rem;
+    }
+    
+    .statSecondary {
+      font-size: 0.8rem;
+      color: var(--text-tertiary, #999);
+    }
+  }
+}
+
+// Compact view for navbar
+.compactStats {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  
+  .statItem {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+    cursor: default;
+    
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.1);
+    }
+    
+    i {
+      color: var(--accent-color, #4ecdc4);
+    }
+    
+    .active {
+      color: var(--accent-color, #4ecdc4);
+      font-weight: 500;
+    }
+    
+    .maxLabel {
+      margin-left: 3px;
+      font-size: 0.7rem;
+      opacity: 0.7;
+    }
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .channelStats {
+    flex-wrap: wrap;
+    gap: 1rem;
+    
+    .statCard {
+      min-width: 75px;
+      padding: 0.75rem;
+      
+      .statValue {
+        font-size: 1.5rem;
+      }
+    }
+  }
+  
+  .compactStats {
+    .statItem {
+      padding: 4px;
+      font-size: 0.8rem;
+    }
+  }
+}

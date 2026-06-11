@@ -1,0 +1,28 @@
+{
+  "name": "artbastard-bridge",
+  "version": "1.0.0",
+  "description": "LAN bridge agent for ArtBastard - Art-Net, Ableton Link, outbound to cloud",
+  "main": "dist/index.js",
+  "bin": {
+    "artbastard-bridge": "./dist/index.js"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc && node dist/index.js"
+  },
+  "dependencies": {
+    "dmxnet": "^0.9.0",
+    "socket.io-client": "^4.8.0"
+  },
+  "optionalDependencies": {
+    "abletonlink": "^0.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^18.19.111",
+    "typescript": "^4.9.5"
+  }
+}

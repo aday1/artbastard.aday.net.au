@@ -1,0 +1,289 @@
+.dmxControlPanel {
+  display: flex;
+  flex-direction: column;
+}
+
+.sectionTitle {
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+  
+  // Theme-specific styles are handled in the global ThemeContext
+}
+
+.statusBar {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+  background-color: var(--color-card-bg);
+  padding: 0.5rem;
+  border-radius: var(--border-radius);
+  box-shadow: var(--card-shadow);
+}
+
+.progressBar {
+  flex: 1;
+  height: 10px;
+  background-color: var(--color-slider-track);
+  border-radius: 5px;
+  overflow: hidden;
+  margin-right: 1rem;
+}
+
+.progressFill {
+  height: 100%;
+  background-color: var(--color-primary);
+  border-radius: 5px;
+  transition: width 0.3s ease;
+}
+
+.stats {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.8rem;
+  color: var(--color-secondary);
+  align-items: center;
+}
+
+.modeIndicator {
+  background-color: var(--color-primary);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--border-radius);
+  font-size: 0.7rem;
+  font-weight: bold;
+}
+
+// Touch mode information section
+.modeInfo {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background-color: var(--color-card-bg);
+  border-radius: var(--border-radius);
+  border-left: 4px solid var(--color-primary);
+}
+
+.emptyState {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-secondary);
+  font-style: italic;
+  
+  i {
+    color: var(--color-primary);
+  }
+}
+
+.modeStats {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-text);
+  font-weight: 500;
+  
+  i {
+    color: var(--color-primary);
+  }
+}
+
+.controlToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background-color: var(--color-card-bg);
+  border-radius: var(--border-radius);
+  box-shadow: var(--card-shadow);
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
+}
+
+.selectionControls,
+.pageControls,
+.viewControls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.selectionControls {
+  flex: 1;
+}
+
+.viewControls {
+  flex: 1;
+  justify-content: flex-end;
+  
+  @media (max-width: 768px) {
+    justify-content: flex-start;
+  }
+}
+
+.toolbarButton,
+.pageButton,
+.paginationButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background-color: var(--color-card-bg);
+  border: 1px solid var(--color-card-border);
+  border-radius: var(--border-radius);
+  color: var(--color-text);
+  transition: all var(--transition-speed) ease;
+  cursor: pointer;
+  
+  &:hover:not(:disabled) {
+    background-color: var(--color-primary);
+    color: #f0f0f0;
+  }
+  
+  &.active {
+    background-color: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+    
+    &:hover {
+      background-color: var(--color-primary-dark, var(--color-primary));
+    }
+  }
+
+  // Touch-friendly sizing
+  &.touchMode {
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+  }
+}
+
+.pageSelect,
+.viewSelect {
+  padding: 0.5rem;
+  border: 1px solid var(--color-card-border);
+  border-radius: var(--border-radius);
+  background-color: var(--color-card-bg);
+  color: var(--color-text);
+  
+  &:focus {
+    outline: none;
+    border-color: var(--color-primary);
+  }
+}
+
+.searchBox {
+  position: relative;
+  flex: 1;
+  max-width: 200px;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 0.5rem;
+  padding-right: 2rem;
+  border: 1px solid var(--color-card-border);
+  border-radius: var(--border-radius);
+  background-color: var(--color-card-bg);
+  color: var(--color-text);
+  
+  &:focus {
+    outline: none;
+    border-color: var(--color-primary);
+  }
+}
+
+.clearSearch {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--color-text);
+  opacity: 0.5;
+  cursor: pointer;
+  
+  &:hover {
+    opacity: 1;
+  }
+}
+
+.channelsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  
+  // Touch mode optimization
+  &.touchMode {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1.5rem;
+    
+    @media (max-width: 768px) {
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+    
+    @media (max-width: 480px) {
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+    }
+  }
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  margin-bottom: 2rem;
+}
+
+.pageIndicator {
+  padding: 0.5rem 1rem;
+  background-color: var(--color-card-bg);
+  border-radius: var(--border-radius);
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.modeLabel {
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+/* Channel Filter Dropdown */
+.filterSelect {
+  background-color: var(--color-input-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  color: var(--color-text);
+  font-size: 0.9rem;
+  padding: 0.5rem;
+  margin-left: 0.5rem;
+  min-width: 200px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    border-color: var(--color-primary);
+    background-color: var(--color-input-hover-bg);
+  }
+  
+  &:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px var(--color-primary-alpha);
+  }
+  
+  option {
+    background-color: var(--color-input-bg);
+    color: var(--color-text);
+    padding: 0.5rem;
+  }
+}

@@ -1,0 +1,538 @@
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { LucideIcon } from '../LucideIcon';
+import styles from './ArtbastardXYPad.module.scss';
+import {
+  PathPoint,
+  buildShapePath,
+  dmxToPadPercent,
+  interpolatePath,
+  pathToDmxPoints,
+  smoothUserPath,
+} from './xyPadPathUtils';
+
+export type PathSlotId = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H';
+export const PATH_SLOT_IDS: PathSlotId[] = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+
+export interface PathSlotSummary {
+  id: PathSlotId;
+  label: string;
+  filled: boolean;
+}
+
+export interface ArtbastardXYPadProps {
+  pan: number;
+  tilt: number;
+  disabled?: boolean;
+  size?: number;
+  /** Shape radius 10-100 (autopilot track size) */
+  shapeSize?: number;
+  showShapeSize?: boolean;
+  onShapeSizeChange?: (size: number) => void;
+  onPanTiltChange: (pan: number, tilt: number) => void;
+  onPathSaved?: (points: { x: number; y: number }[]) => void;
+  onOpenPathEditor?: () => void;
+  className?: string;
+  /** Path slot strip — when provided, renders A–H slot row. */
+  slots?: PathSlotSummary[];
+  activeSlotId?: PathSlotId | null;
+  onSaveToSlot?: (id: PathSlotId, pointsDmx: { x: number; y: number }[]) => void;
+  onLoadSlot?: (id: PathSlotId) => void;
+  onRenameSlot?: (id: PathSlotId, label: string) => void;
+  onClearSlot?: (id: PathSlotId) => void;
+  /** Roli Lightpad status (optional badge). */
+  roliConnected?: boolean;
+  roliDeviceName?: string | null;
+  /** Fires whenever the internal path mutates (drawing, shape, Roli touch). Normalized 0..1 coords. */
+  onPathChange?: (points: Array<{ x: number; y: number }>) => void;
+}
+
+export interface ArtbastardXYPadHandle {
+  /** Start a Roli-driven path. Coords are normalized 0..1 (origin top-left, same as Roli y). */
+  beginExternalPath: (nx: number, ny: number) => void;
+  extendExternalPath: (nx: number, ny: number) => void;
+  /** Finalize the path and fire onPathSaved if it has any meaningful length. */
+  endExternalPath: () => void;
+}
+
+type ToolMode = 'live' | 'pencil';
+
+const SHAPES = ['circle', 'triangle', 'square', 'star'] as const;
+type ShapeName = (typeof SHAPES)[number];
+
+const PAD_TOOLS = [
+  { id: 'pencil', icon: 'Pencil', title: 'Draw custom path' },
+  { id: 'play', icon: 'Play', title: 'Play path' },
+  { id: 'stop', icon: 'Square', title: 'Stop playback' },
+  { id: 'eraser', icon: 'Eraser', title: 'Clear path' },
+  { id: 'shapes', icon: 'Shapes', title: 'Insert shape path (tap to cycle)' },
+] as const;
+
+export const ArtbastardXYPad = forwardRef<ArtbastardXYPadHandle, ArtbastardXYPadProps>(({
+  pan,
+  tilt,
+  disabled = false,
+  size,
+  shapeSize = 50,
+  showShapeSize = false,
+  onShapeSizeChange,
+  onPanTiltChange,
+  onPathSaved,
+  onOpenPathEditor,
+  className = '',
+  slots,
+  activeSlotId = null,
+  onSaveToSlot,
+  onLoadSlot,
+  onRenameSlot,
+  onClearSlot,
+  roliConnected = false,
+  roliDeviceName = null,
+  onPathChange,
+}, ref) => {
+  const padRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [tool, setTool] = useState<ToolMode>('live');
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [path, setPath] = useState<PathPoint[]>([]);
+  const [isPredefinedShape, setIsPredefinedShape] = useState(false);
+  const [activeIcon, setActiveIcon] = useState<string | null>(null);
+  const playbackRef = useRef<number | null>(null);
+  const shapeIndexRef = useRef(0);
+  const lastShapeRef = useRef<ShapeName | null>(null);
+
+  const xy = dmxToPadPercent(pan, tilt);
+  const emitPanTilt = useCallback(
+    (px: number, py: number) => {
+      const el = padRef.current;
+      if (!el) return;
+      const w = el.clientWidth;
+      const h = el.clientHeight;
+      const p = Math.round(Math.max(0, Math.min(255, (px / w) * 255)));
+      const t = Math.round(Math.max(0, Math.min(255, (1 - py / h) * 255)));
+      onPanTiltChange(p, t);
+    },
+    [onPanTiltChange]
+  );
+
+  const drawPath = useCallback(() => {
+    const canvas = canvasRef.current;
+    const pad = padRef.current;
+    if (!canvas || !pad) return;
+    const w = pad.clientWidth;
+    const h = pad.clientHeight;
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx || path.length < 2) {
+      if (ctx) ctx.clearRect(0, 0, w, h);
+      return;
+    }
+    ctx.clearRect(0, 0, w, h);
+    const processed = isPredefinedShape ? interpolatePath(path) : smoothUserPath(path);
+    const gradient = ctx.createLinearGradient(0, 0, w, h);
+    gradient.addColorStop(0, 'rgba(207, 62, 223, 0.8)');
+    gradient.addColorStop(1, 'rgba(207, 62, 223, 0.2)');
+    ctx.strokeStyle = gradient;
+    ctx.lineWidth = 4;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.shadowColor = 'rgba(207, 62, 223, 0.5)';
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    processed.forEach((pt, i) => {
+      if (i === 0) ctx.moveTo(pt.x, pt.y);
+      else ctx.lineTo(pt.x, pt.y);
+    });
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }, [path, isPredefinedShape]);
+
+  useEffect(() => {
+    drawPath();
+  }, [drawPath]);
+
+  const stopPlayback = useCallback(() => {
+    if (playbackRef.current != null) {
+      cancelAnimationFrame(playbackRef.current);
+      playbackRef.current = null;
+    }
+  }, []);
+
+  const playPath = useCallback(() => {
+    if (path.length === 0) return;
+    stopPlayback();
+    let index = 0;
+    let startTime = performance.now();
+
+    const tick = () => {
+      if (index >= path.length - 1) {
+        index = 0;
+        startTime = performance.now();
+      }
+      const current = path[index];
+      const next = path[index + 1] || path[0];
+      const segmentDuration = Math.max(16, (next.timestamp ?? 0) - (current.timestamp ?? 0) || 32);
+      const elapsed = performance.now() - startTime;
+      const t = Math.min(1, elapsed / segmentDuration);
+      const x = current.x + (next.x - current.x) * t;
+      const y = current.y + (next.y - current.y) * t;
+      emitPanTilt(x, y);
+      if (t >= 1) {
+        index++;
+        startTime = performance.now();
+      }
+      playbackRef.current = requestAnimationFrame(tick);
+    };
+    playbackRef.current = requestAnimationFrame(tick);
+  }, [path, emitPanTilt, stopPlayback]);
+
+  const updateFromEvent = (clientX: number, clientY: number) => {
+    const pad = padRef.current;
+    if (!pad || disabled) return;
+    const rect = pad.getBoundingClientRect();
+    const x = Math.max(0, Math.min(rect.width, clientX - rect.left));
+    const y = Math.max(0, Math.min(rect.height, clientY - rect.top));
+    emitPanTilt(x, y);
+    if (tool === 'pencil' || isDrawing) {
+      setPath((prev) => [...prev, { x, y, timestamp: performance.now() }]);
+      setIsPredefinedShape(false);
+    }
+  };
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (disabled) return;
+    setIsDragging(true);
+    if (tool === 'pencil' || isDrawing) {
+      const pad = padRef.current;
+      if (pad) {
+        const rect = pad.getBoundingClientRect();
+        const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+        const y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+        setPath([{ x, y, timestamp: performance.now() }]);
+        setIsPredefinedShape(false);
+      }
+    }
+    updateFromEvent(e.clientX, e.clientY);
+  };
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!isDragging || disabled) return;
+    updateFromEvent(e.clientX, e.clientY);
+  };
+
+  const onPointerUp = () => {
+    setIsDragging(false);
+    if (isDrawing && path.length > 1) {
+      onPathSaved?.(
+        pathToDmxPoints(
+          path,
+          padRef.current?.clientWidth ?? 320,
+          padRef.current?.clientHeight ?? 320
+        )
+      );
+    }
+  };
+
+  const erasePath = () => {
+    stopPlayback();
+    setPath([]);
+    setIsPredefinedShape(false);
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      ctx?.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  };
+
+  const shapeRadiusPx = useCallback(() => {
+    const padW = padRef.current?.clientWidth ?? 320;
+    const padH = padRef.current?.clientHeight ?? 320;
+    return (shapeSize / 100) * Math.min(padW, padH) * 0.45;
+  }, [shapeSize]);
+
+  const applyShapeByName = useCallback(
+    (shape: ShapeName) => {
+      stopPlayback();
+      const padW = padRef.current?.clientWidth ?? 320;
+      const padH = padRef.current?.clientHeight ?? 320;
+      const centerX = padW / 2;
+      const centerY = padH / 2;
+      const radius = shapeRadiusPx();
+      const newPath = buildShapePath(shape, centerX, centerY, radius);
+      lastShapeRef.current = shape;
+      setIsPredefinedShape(true);
+      setPath(newPath);
+      onPathSaved?.(pathToDmxPoints(newPath, padW, padH));
+    },
+    [onPathSaved, shapeRadiusPx, stopPlayback]
+  );
+
+  const applyShape = () => {
+    const shape = SHAPES[shapeIndexRef.current % SHAPES.length];
+    shapeIndexRef.current++;
+    applyShapeByName(shape);
+  };
+
+  useEffect(() => {
+    if (!isPredefinedShape || !lastShapeRef.current) return;
+    applyShapeByName(lastShapeRef.current);
+  }, [shapeSize, isPredefinedShape, applyShapeByName]);
+
+  const handleIcon = (icon: string) => {
+    setActiveIcon(icon);
+    if (icon === 'pencil') {
+      setTool('pencil');
+      setIsDrawing(true);
+      stopPlayback();
+    } else if (icon === 'play') {
+      setIsDrawing(false);
+      playPath();
+    } else if (icon === 'stop') {
+      setIsDrawing(false);
+      stopPlayback();
+    } else if (icon === 'eraser') {
+      setIsDrawing(false);
+      stopPlayback();
+      erasePath();
+    } else if (icon === 'shapes') {
+      setIsDrawing(false);
+      stopPlayback();
+      applyShape();
+    }
+  };
+
+  useEffect(() => () => stopPlayback(), [stopPlayback]);
+
+  const xFill = xy.x;
+  const yFill = xy.y;
+
+  const saveCurrentToSlot = useCallback(
+    (id: PathSlotId) => {
+      if (!onSaveToSlot) return;
+      if (path.length < 2) return;
+      const pad = padRef.current;
+      const w = pad?.clientWidth ?? 320;
+      const h = pad?.clientHeight ?? 320;
+      onSaveToSlot(id, pathToDmxPoints(path, w, h));
+    },
+    [onSaveToSlot, path]
+  );
+
+  const handleSlotContext = useCallback(
+    (e: React.MouseEvent, slot: PathSlotSummary) => {
+      e.preventDefault();
+      if (!onRenameSlot && !onClearSlot) return;
+      const next = window.prompt(
+        `Slot ${slot.id} — rename (blank = keep) or type CLEAR to empty:`,
+        slot.label
+      );
+      if (next == null) return;
+      const trimmed = next.trim();
+      if (trimmed.toUpperCase() === 'CLEAR') {
+        onClearSlot?.(slot.id);
+        return;
+      }
+      if (trimmed && trimmed !== slot.label) onRenameSlot?.(slot.id, trimmed);
+    },
+    [onRenameSlot, onClearSlot]
+  );
+
+  // Notify parent of every path mutation so the LED mirror can stay in sync.
+  const onPathChangeRef = useRef(onPathChange);
+  useEffect(() => {
+    onPathChangeRef.current = onPathChange;
+  }, [onPathChange]);
+  useEffect(() => {
+    const cb = onPathChangeRef.current;
+    if (!cb) return;
+    const pad = padRef.current;
+    const w = pad?.clientWidth ?? 320;
+    const h = pad?.clientHeight ?? 320;
+    cb(path.map((p) => ({ x: p.x / w, y: p.y / h })));
+  }, [path]);
+
+  // Roli touches mutate the same internal path state pencil drawing uses,
+  // so the React canvas renders them and the LED + slot save logic see them.
+  const onPathSavedRef = useRef(onPathSaved);
+  useEffect(() => {
+    onPathSavedRef.current = onPathSaved;
+  }, [onPathSaved]);
+  const externalDrawingRef = useRef(false);
+  const normToPx = useCallback((nx: number, ny: number) => {
+    const pad = padRef.current;
+    const w = pad?.clientWidth ?? 320;
+    const h = pad?.clientHeight ?? 320;
+    return {
+      x: Math.max(0, Math.min(w, nx * w)),
+      y: Math.max(0, Math.min(h, ny * h)),
+    };
+  }, []);
+  useImperativeHandle(
+    ref,
+    () => ({
+      beginExternalPath(nx, ny) {
+        stopPlayback();
+        const { x, y } = normToPx(nx, ny);
+        setIsPredefinedShape(false);
+        setPath([{ x, y, timestamp: performance.now() }]);
+        externalDrawingRef.current = true;
+      },
+      extendExternalPath(nx, ny) {
+        if (!externalDrawingRef.current) return;
+        const { x, y } = normToPx(nx, ny);
+        setPath((prev) => [...prev, { x, y, timestamp: performance.now() }]);
+      },
+      endExternalPath() {
+        if (!externalDrawingRef.current) return;
+        externalDrawingRef.current = false;
+        setPath((prev) => {
+          if (prev.length > 1) {
+            const pad = padRef.current;
+            const w = pad?.clientWidth ?? 320;
+            const h = pad?.clientHeight ?? 320;
+            onPathSavedRef.current?.(pathToDmxPoints(prev, w, h));
+          }
+          return prev;
+        });
+      },
+    }),
+    [normToPx, stopPlayback]
+  );
+
+  return (
+    <div className={`${styles.card} ${className} ${disabled ? styles.disabled : ''}`}>
+      <div className={styles.mainContent}>
+        <div
+          ref={padRef}
+          className={`${styles.xyPad} ${size == null ? styles.xyPadFluid : ''}`}
+          style={size != null ? { width: size, height: size } : undefined}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerLeave={onPointerUp}
+          onPointerCancel={onPointerUp}
+        >
+          <canvas ref={canvasRef} className={styles.canvas} />
+          <div className={styles.gridOverlay} />
+          <div
+            className={`${styles.thumb} ${isDragging ? styles.dragging : ''}`}
+            style={{ left: `${xy.x}%`, top: `${xy.y}%` }}
+          />
+        </div>
+        <div className={styles.icons}>
+          {PAD_TOOLS.map((tool) => (
+            <button
+              key={tool.id}
+              type="button"
+              className={`${styles.icon} ${activeIcon === tool.id ? styles.iconActive : ''}`}
+              title={tool.title}
+              disabled={disabled}
+              onClick={() => handleIcon(tool.id)}
+              aria-label={tool.title}
+            >
+              <LucideIcon name={tool.icon} size={20} />
+            </button>
+          ))}
+          {onOpenPathEditor ? (
+            <button
+              type="button"
+              className={styles.icon}
+              title="Open path editor"
+              disabled={disabled}
+              onClick={onOpenPathEditor}
+              aria-label="Open path editor"
+            >
+              <LucideIcon name="Waypoints" size={20} />
+            </button>
+          ) : null}
+          {showShapeSize ? (
+            <div className={styles.shapeSizeControl}>
+              <label className={styles.shapeSizeLabel} htmlFor="xy-pad-shape-size">
+                Size
+              </label>
+              <input
+                id="xy-pad-shape-size"
+                type="range"
+                className={styles.shapeSizeSlider}
+                min={10}
+                max={100}
+                step={1}
+                value={shapeSize}
+                disabled={disabled}
+                onChange={(e) => onShapeSizeChange?.(Number(e.target.value))}
+              />
+              <span className={styles.shapeSizeValue}>{shapeSize}</span>
+            </div>
+          ) : null}
+        </div>
+      </div>
+      <div className={styles.axisIndicators}>
+        <div className={styles.xIndicator}>
+          <span>X</span>
+          <div className={styles.xBar}>
+            <div className={styles.xFill} style={{ width: `${xFill}%` }} />
+          </div>
+        </div>
+        <div className={styles.yIndicator}>
+          <span>Y</span>
+          <div className={styles.yBar}>
+            <div className={styles.yFill} style={{ width: `${yFill}%` }} />
+          </div>
+        </div>
+      </div>
+      <div className={styles.readout}>
+        Pan {pan} / Tilt {tilt}
+      </div>
+      {slots && slots.length > 0 ? (
+        <div className={styles.slotStrip} role="group" aria-label="Path memory slots">
+          {slots.map((slot) => {
+            const active = slot.id === activeSlotId;
+            const canSave = !!onSaveToSlot && path.length > 1 && !disabled;
+            return (
+              <div key={slot.id} className={styles.slotCell}>
+                <button
+                  type="button"
+                  className={`${styles.slotButton} ${slot.filled ? styles.slotFilled : ''} ${active ? styles.slotActive : ''}`}
+                  title={`${slot.label}${slot.filled ? ' — click to load, right-click to rename/clear' : ' — click to save current path'}`}
+                  disabled={disabled || (!slot.filled && !canSave)}
+                  onClick={() => {
+                    if (slot.filled) onLoadSlot?.(slot.id);
+                    else if (canSave) saveCurrentToSlot(slot.id);
+                  }}
+                  onContextMenu={(e) => handleSlotContext(e, slot)}
+                  aria-label={`Slot ${slot.id} ${slot.label}`}
+                >
+                  <span className={styles.slotId}>{slot.id}</span>
+                  <span className={styles.slotLabel}>{slot.label}</span>
+                  {slot.filled ? <span className={styles.slotDot} aria-hidden="true" /> : null}
+                </button>
+                {slot.filled && onSaveToSlot ? (
+                  <button
+                    type="button"
+                    className={styles.slotOverwrite}
+                    title={`Overwrite slot ${slot.id} with current path`}
+                    disabled={disabled || path.length < 2}
+                    onClick={() => saveCurrentToSlot(slot.id)}
+                    aria-label={`Overwrite slot ${slot.id}`}
+                  >
+                    <LucideIcon name="Save" size={12} />
+                  </button>
+                ) : null}
+              </div>
+            );
+          })}
+          <div
+            className={`${styles.roliBadge} ${roliConnected ? styles.roliBadgeOn : ''}`}
+            title={roliConnected ? `Roli: ${roliDeviceName ?? 'connected'}` : 'No Roli Lightpad detected'}
+          >
+            <LucideIcon name="Square" size={12} />
+            <span>{roliConnected ? 'Roli' : 'Roli —'}</span>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+});
+
+ArtbastardXYPad.displayName = 'ArtbastardXYPad';

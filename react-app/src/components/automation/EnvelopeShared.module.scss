@@ -1,0 +1,140 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color, #334155);
+  border-radius: 6px;
+  background: color-mix(in srgb, #0f172a 80%, transparent);
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.channelTitle {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary, #e2e8f0);
+}
+
+.headerActions {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.iconBtn {
+  padding: 0.3rem 0.5rem;
+  font-size: 0.7rem;
+  border-radius: 4px;
+  border: 1px solid var(--border-color, #475569);
+  background: var(--secondary-bg, #1e293b);
+  color: var(--text-primary, #e2e8f0);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    border-color: var(--color-accent, #f8dd36);
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  &.active {
+    border-color: #e74c3c;
+    color: #e74c3c;
+  }
+}
+
+.globalHint {
+  font-size: 0.7rem;
+  color: #f59e0b;
+}
+
+.drawWrap {
+  height: auto;
+  min-height: clamp(12rem, 34dvh, 17rem);
+  max-height: none;
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+.formRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+
+  label {
+    font-size: 0.7rem;
+    color: var(--text-secondary, #94a3b8);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  select {
+    padding: 0.35rem 0.5rem;
+    border-radius: 4px;
+    border: 1px solid var(--border-color, #475569);
+    background: #0f172a;
+    color: #e2e8f0;
+    font-size: 0.8rem;
+  }
+}
+
+.segmentRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.segmentBtn {
+  flex: 1;
+  min-width: 4rem;
+}
+
+.sliderRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.emptyState {
+  font-size: 0.8rem;
+  color: var(--text-secondary, #94a3b8);
+}
+
+.addBtn {
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 1px dashed var(--color-primary, #d68706);
+  background: transparent;
+  color: var(--color-accent, #f8dd36);
+  cursor: pointer;
+  font-size: 0.8rem;
+
+  &:hover {
+    background: color-mix(in srgb, #d68706 12%, transparent);
+  }
+}
+
+@media (max-width: 640px) {
+  .panel {
+    padding: 0.6rem;
+    overflow: visible;
+  }
+
+  .drawWrap {
+    min-height: clamp(13rem, 40dvh, 19rem);
+  }
+
+  .sliderRow {
+    grid-template-columns: 1fr;
+  }
+}

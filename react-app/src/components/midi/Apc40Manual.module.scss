@@ -1,0 +1,627 @@
+// The APC40 "Tactile Codex" panel. Theme-aware: the device chrome adopts the
+// app's surface colours so light mode stays readable, while dark mode keeps the
+// black-rack look. Hardware accents (LED reds, knob orange) are kept literal
+// because they reference the physical APC40, not the UI theme.
+
+.manual {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  font-size: 0.9rem;
+  color: var(--color-text, var(--text-primary, #1f2937));
+}
+
+.intro {
+  p {
+    margin: 0 0 0.5rem;
+    color: var(--text-secondary, var(--color-text-secondary, #475569));
+    line-height: 1.4;
+  }
+}
+
+.statusRow {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin: 0.5rem 0;
+  flex-wrap: wrap;
+}
+
+.status {
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+}
+.statusOn  { color: #16a34a; background: rgba(34,197,94,0.12); }
+.statusOff { color: var(--text-secondary, #64748b); background: rgba(100,116,139,0.12); }
+
+.statusMeta { color: var(--text-secondary, #475569); font-size: 0.85rem; }
+.focusToolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  margin: 0.25rem 0 0;
+}
+
+.focusLabel {
+  font-size: 0.78rem;
+  color: var(--text-secondary, #475569);
+  font-weight: 600;
+}
+
+.focusBtn {
+  background: transparent;
+  border: 1px solid var(--color-card-border, rgba(0,0,0,0.15));
+  color: var(--color-text, #1f2937);
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(59,130,246,0.1);
+    border-color: rgba(59,130,246,0.4);
+  }
+}
+
+.focusBtnActive {
+  background: rgba(59,130,246,0.18);
+  border-color: rgba(59,130,246,0.65);
+  color: #1d4ed8;
+}
+
+.focusHint {
+  font-size: 0.74rem;
+  color: var(--text-secondary, #64748b);
+}
+
+.focusMuted {
+  opacity: 0.25 !important;
+  filter: saturate(0.35);
+}
+
+.resetTemplateBtn {
+  background: rgba(59,130,246,0.12);
+  border: 1px solid rgba(59,130,246,0.45);
+  color: #1d4ed8;
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+
+  &:hover:not(:disabled) {
+    background: rgba(59,130,246,0.2);
+    border-color: rgba(59,130,246,0.7);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: wait;
+  }
+}
+.templateHint {
+  margin: 0.25rem 0 0 !important;
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+.learnBanner {
+  background: rgba(59,130,246,0.12);
+  border: 1px solid rgba(59,130,246,0.4);
+  color: var(--color-text, #1f2937);
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin: 0.25rem 0 0;
+
+  button {
+    background: rgba(239,68,68,0.15);
+    border: 1px solid rgba(239,68,68,0.5);
+    color: #b91c1c;
+    padding: 0.25rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:hover { background: rgba(239,68,68,0.25); }
+  }
+}
+
+.activityTicker {
+  background: var(--color-card-bg, rgba(15,17,21,0.04));
+  border: 1px solid var(--color-card-border, rgba(0,0,0,0.08));
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  font-size: 0.72rem;
+  color: var(--text-secondary, #475569);
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  min-height: 1.6rem;
+  align-items: center;
+
+  span { white-space: nowrap; }
+}
+
+// The device frame keeps a slightly darker tint so the simulated hardware
+// reads as a separate object from the page background in both themes.
+.deviceFrame {
+  background: var(--apc40-frame-bg,
+    linear-gradient(180deg, color-mix(in srgb, var(--color-card-bg, #1a1d24) 92%, black) 0%, var(--color-card-bg, #0f1115) 100%)
+  );
+  border: 2px solid var(--color-border, var(--color-card-border, #2a2f3a));
+  border-radius: 10px;
+  padding: 1rem;
+  color: var(--color-text, #e5e7eb);
+  contain: layout paint;
+}
+
+[data-theme="light"] .deviceFrame {
+  background: linear-gradient(180deg, #f1f3f9 0%, #e2e6ef 100%);
+  color: #1f2937;
+}
+
+.deviceHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--color-border, #2a2f3a);
+
+  .brand {
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    color: #ef4444;
+  }
+  .model {
+    font-size: 0.75rem;
+    color: var(--text-secondary, #64748b);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 0.75rem;
+
+  @media (max-width: 720px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cluster {
+  background: var(--color-card-bg, rgba(255,255,255,0.04));
+  border: 1px solid var(--color-card-border, rgba(255,255,255,0.06));
+  border-radius: 6px;
+  padding: 0.6rem;
+}
+
+[data-theme="light"] .cluster {
+  background: rgba(255,255,255,0.55);
+  border-color: rgba(0,0,0,0.08);
+}
+
+.clusterLabel {
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-secondary, #64748b);
+  margin-bottom: 0.5rem;
+}
+
+// Device knobs (8 knobs in a row)
+.deviceKnobs { grid-column: 1 / 3; }
+
+.knobRow {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 0.4rem;
+}
+
+// Inline label block under any control. Always visible (no hover) so the user
+// can see at a glance what every knob/fader is assigned to and the MIDI sig.
+.knobBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.controlBlockLabel {
+  margin-top: 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-text, #e5e7eb);
+  text-align: center;
+  line-height: 1.1;
+  max-width: 7rem;
+  word-break: break-word;
+}
+
+.controlBlockSig {
+  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  font-size: 0.62rem;
+  color: var(--text-secondary, #94a3b8);
+  text-align: center;
+}
+
+.knob {
+  background: radial-gradient(circle at 30% 30%, #3a3f4a 0%, #1a1d24 70%);
+  border: 2px solid #475569;
+  border-radius: 50%;
+  aspect-ratio: 1;
+  position: relative;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  &.active {
+    transform: scale(1.08);
+    box-shadow: 0 0 14px rgba(59,130,246,0.6);
+  }
+
+  &.learning {
+    animation: learnPulse 900ms ease-in-out infinite;
+    box-shadow: 0 0 16px rgba(59,130,246,0.9);
+  }
+}
+
+@keyframes learnPulse {
+  0%, 100% { border-color: #3b82f6; }
+  50% { border-color: #f59e0b; }
+}
+
+.knobDot {
+  width: 4px;
+  height: 30%;
+  background: #f59e0b;
+  position: absolute;
+  top: 8%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 2px;
+  transition: transform 80ms ease-out;
+}
+
+// Compact 4-way nav pad: ▲ ◀ ▶ ▼ in a + layout.
+.navCluster {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  grid-template-areas:
+    "up    right"
+    "left  down";
+  gap: 0.15rem;
+  width: 7rem;
+  align-self: center;
+}
+
+.navBtn {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #0f1115;
+  padding: 0.3rem 0.4rem;
+  border-radius: 3px;
+  text-align: center;
+  cursor: help;
+  opacity: 0.85;
+  transition: opacity 120ms ease, box-shadow 120ms ease;
+
+  &.active {
+    opacity: 1;
+    box-shadow: 0 0 10px currentColor;
+  }
+}
+
+.controlLabel {
+  position: absolute;
+  top: 105%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.65rem;
+  white-space: nowrap;
+  color: var(--color-text, #cbd5e1);
+  background: var(--color-card-bg, rgba(0,0,0,0.75));
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+  z-index: 5;
+  border: 1px solid var(--color-card-border, rgba(255,255,255,0.08));
+}
+.knob:hover .controlLabel,
+.fader:hover .controlLabel,
+.crossfader:hover .controlLabel {
+  opacity: 1;
+}
+
+.controlSig {
+  position: absolute;
+  bottom: -1.05rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.6rem;
+  color: var(--text-secondary, #64748b);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+// Clip grid
+.clipGrid { grid-column: 1 / 2; }
+
+.gridAndScenes {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.4rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-rows: repeat(5, 1fr);
+  gap: 0.25rem;
+}
+.gridRow {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 0.25rem;
+}
+.pad {
+  aspect-ratio: 1;
+  border-radius: 3px;
+  opacity: 0.5;
+  cursor: help;
+  transition: opacity 120ms ease, transform 120ms ease, box-shadow 120ms ease;
+  &.active {
+    opacity: 1;
+    transform: scale(1.1);
+    box-shadow: 0 0 8px currentColor;
+  }
+}
+
+.sceneColumn {
+  display: grid;
+  grid-template-rows: repeat(5, 1fr);
+  gap: 0.25rem;
+}
+.scenePad {
+  padding: 0.4rem 0.5rem;
+  border-radius: 3px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #1a1d24;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: help;
+  opacity: 0.85;
+  transition: opacity 120ms ease, transform 120ms ease;
+  &.active {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+// Tracks (8 + master)
+.tracks { grid-column: 2 / 3; }
+
+.trackRow {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 0.3rem;
+}
+
+.track {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.trackButton {
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: #0f1115;
+  padding: 0.2rem 0.3rem;
+  border-radius: 2px;
+  text-align: center;
+  width: 100%;
+  cursor: help;
+  opacity: 0.85;
+  transition: opacity 120ms ease, box-shadow 120ms ease;
+
+  &.active {
+    opacity: 1;
+    box-shadow: 0 0 8px currentColor;
+  }
+}
+
+.fader {
+  position: relative;
+  width: 100%;
+  height: 110px;
+  cursor: pointer;
+  transition: box-shadow 120ms ease;
+
+  &.active {
+    box-shadow: 0 0 10px rgba(59,130,246,0.6);
+  }
+
+  &.learning {
+    box-shadow: 0 0 14px rgba(59,130,246,0.85);
+    animation: learnPulse 900ms ease-in-out infinite;
+  }
+}
+.faderTrack {
+  width: 6px;
+  height: 100%;
+  background: var(--color-slider-track, #2a2f3a);
+  margin: 0 auto;
+  border-radius: 3px;
+  position: relative;
+}
+.faderCap {
+  width: 22px;
+  height: 10px;
+  background: linear-gradient(180deg, #e5e7eb 0%, #94a3b8 100%);
+  border-radius: 2px;
+  position: absolute;
+  top: 60%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  transition: top 80ms ease-out;
+}
+.faderLive .faderCap {
+  background: linear-gradient(180deg, #fde047 0%, #f59e0b 100%);
+}
+.faderIdle .faderCap {
+  opacity: 0.5;
+}
+.masterFader .faderCap {
+  background: linear-gradient(180deg, #fb7185 0%, #be123c 100%);
+}
+
+// Bottom transport row
+.transport { grid-column: 1 / 3; }
+.transportRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.transportButton {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #0f1115;
+  padding: 0.5rem 0.8rem;
+  border-radius: 4px;
+  cursor: help;
+  opacity: 0.9;
+  transition: opacity 120ms ease, transform 120ms ease;
+  &:hover { opacity: 1; transform: translateY(-1px); }
+}
+
+.crossfader {
+  position: relative;
+  width: 140px;
+  height: 36px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+
+  &.learning {
+    box-shadow: 0 0 14px rgba(59,130,246,0.85);
+    animation: learnPulse 900ms ease-in-out infinite;
+  }
+}
+.crossfaderTrack {
+  width: 100%;
+  height: 6px;
+  background: var(--color-slider-track, #2a2f3a);
+  border-radius: 3px;
+  position: relative;
+}
+.crossfaderCap {
+  width: 18px;
+  height: 20px;
+  background: linear-gradient(90deg, #e5e7eb 0%, #94a3b8 100%);
+  border-radius: 2px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+.crossfader.active .crossfaderCap {
+  background: linear-gradient(90deg, #fde047 0%, #f59e0b 100%);
+}
+
+// Legend
+.legend {
+  background: var(--color-card-bg, rgba(255,255,255,0.04));
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--color-card-border, rgba(0,0,0,0.08));
+
+  h4 { margin: 0 0 0.5rem; font-size: 0.95rem; color: var(--color-text); }
+  ul { list-style: none; padding: 0; margin: 0; display: flex; gap: 1rem; flex-wrap: wrap; }
+  li { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--color-text); }
+}
+
+.legendSwatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  vertical-align: middle;
+  margin-right: 0.35rem;
+}
+
+.legendNote {
+  margin: 0.5rem 0 0;
+  font-size: 0.78rem;
+  color: var(--text-secondary, #475569);
+  font-style: italic;
+}
+
+// Hardwire + binding tables
+.hardwireTable,
+.bindingTable {
+  background: var(--color-card-bg, rgba(255,255,255,0.04));
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--color-card-border, rgba(0,0,0,0.08));
+
+  h4 { margin: 0 0 0.5rem; font-size: 0.95rem; color: var(--color-text); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; color: var(--color-text); }
+  th, td { text-align: left; padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--color-card-border, rgba(0,0,0,0.08)); }
+  th { color: var(--text-secondary, #475569); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  td:first-child { white-space: nowrap; font-weight: 600; }
+
+  code {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.78rem;
+    padding: 0.05rem 0.3rem;
+    border-radius: 3px;
+    background: rgba(59,130,246,0.12);
+    color: var(--color-text);
+  }
+
+  .relearnBtn {
+    background: transparent;
+    border: 1px solid var(--color-card-border, rgba(0,0,0,0.15));
+    color: var(--color-text);
+    padding: 0.2rem 0.55rem;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    cursor: pointer;
+
+    &:hover { background: rgba(59,130,246,0.12); border-color: rgba(59,130,246,0.45); }
+    &.learningBtn {
+      background: rgba(59,130,246,0.18);
+      border-color: rgba(59,130,246,0.6);
+      color: #1d4ed8;
+    }
+  }
+}

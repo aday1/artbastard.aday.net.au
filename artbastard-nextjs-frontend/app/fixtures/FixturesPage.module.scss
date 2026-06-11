@@ -1,0 +1,35 @@
+@import '../styles/variables';
+
+.fixturesPageContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: $spacing-unit * 1.5; // Add some padding to the overall page container
+}
+
+.pageHeader {
+  padding-bottom: $spacing-unit * 2;
+  margin-bottom: $spacing-unit * 2;
+  border-bottom: 1px solid $background-dark-tertiary;
+
+  h1 {
+    font-size: $font-size-xxl;
+    margin-bottom: $spacing-unit;
+    color: $primary-color;
+  }
+
+  p {
+    font-size: $font-size-base;
+    color: $text-color-muted;
+    margin-bottom: 0;
+  }
+}
+
+.contentArea {
+  flex-grow: 1;
+  // If FixtureList itself is not scrollable and content might overflow,
+  // add overflow-y: auto; here. But FixtureList is designed to be scrollable.
+  // background-color: $background-dark-secondary; // Optional: slightly different bg for content area
+  // border-radius: $border-radius;
+  // padding: $spacing-unit * 2;
+}

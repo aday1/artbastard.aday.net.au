@@ -1,0 +1,92 @@
+ArtBastard Demo Recording Guide
+================================
+
+How to capture screenshots and operator how-to videos for the showcase page,
+release notes, onboarding, and bug reports.
+
+------------------------------------------------------------------
+1. Prerequisites
+------------------------------------------------------------------
+
+- Build first if dist/ is missing:    npm run build
+- Start the backend (or let the capture scripts start it):
+    node dist/server.js
+  Server runs at http://localhost:3030 (or your configured port).
+- Required tools:
+    Chrome or Edge       (screenshots and videos)
+    ffmpeg               (videos only)
+  Set CAPTURE_CHROME or CAPTURE_FFMPEG when those binaries are not on PATH.
+
+------------------------------------------------------------------
+2. Screenshots
+------------------------------------------------------------------
+
+Capture six still frames of every current primary route:
+
+    npm run demo:capture-screenshots
+
+Output: /tmp/artbastard-demo-screenshots-YYYYMMDD-HHMMSS/
+
+Routes captured:
+    dmx-control, fixture-page, scenes-acts-page,
+    acts-page, mobile, settings-page
+
+------------------------------------------------------------------
+3. Videos
+------------------------------------------------------------------
+
+Capture six short WebM clips for the showcase operator tour:
+
+    npm run demo:capture-videos
+
+Output: website/videos/<name>.webm + <name>.jpg poster.
+
+Clip matrix:
+    fixture-page      1280x720  ~14s  stage canvas patching, groups, seeds, Super Control
+    dmx-control       1280x720  ~12s  use faders, filters, master, MIDI, OSC
+    scenes-acts       1280x720  ~12s  save scenes and launch APC40 deck slots
+    acts-page         1280x720  ~12s  sequence ACT clips and scheduled events
+    mobile             430x932  ~10s  operate the touch-first remote surface
+    settings-help     1280x720  ~12s  configure network/theme/help/bridge
+
+Tweak via environment variables (see DOCS/SHOWCASE.md):
+    CAPTURE_FRAMERATE        default 12
+    CAPTURE_VBITRATE         default 800k
+    CAPTURE_DURATION_SEC     override per-clip
+    CAPTURE_CLIP_LIST        comma list, e.g. dmx-control,mobile
+    CAPTURE_CHROME           Chrome/Edge executable override
+    CAPTURE_FFMPEG           ffmpeg executable override
+    CAPTURE_BASE_URL         backend URL override
+
+------------------------------------------------------------------
+4. Combined evidence
+------------------------------------------------------------------
+
+    npm run demo:evidence         smoke + screenshots
+    npm run demo:evidence-full    smoke + screenshots + videos
+
+Use demo:evidence-full when preparing release artefacts.
+
+------------------------------------------------------------------
+5. Manual recording (when scripted capture is not enough)
+------------------------------------------------------------------
+
+When you want narrated walkthroughs, use OBS / QuickTime / ffmpeg
+directly. Suggestions:
+
+- Resolution: 1600x1200 desktop, 430x932 mobile.
+- Frame rate: 24 or 30 fps.
+- Keep clips under 2 minutes each for release notes.
+- Pre-show the empty state of the stage canvas on a fresh install:
+  Fixture Setup > stage map > "Drag from the library, or tap a profile and
+  then tap the stage."
+
+------------------------------------------------------------------
+6. Publishing
+------------------------------------------------------------------
+
+- Showcase: anything in website/videos/ ships automatically with
+  the GitHub Pages deploy (deploy-website.yml).
+- GitHub Releases: attach the screenshot directory as a tarball,
+  reference the showcase URL for video links.
+- Bug reports: drag the .webm into the issue body.

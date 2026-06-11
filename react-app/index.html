@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#fff7ed" media="(prefers-color-scheme: light)" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta
+      name="description"
+      content="ArtBastard DMX512FTW - Advanced DMX Controller with WebGL and MIDI Integration"
+    />    <link rel="apple-touch-icon" href="/logo192.png" />    <!-- Locally hosted fonts -->
+    <link rel="stylesheet" href="/fonts/fonts.css" />
+    <!-- FontAwesome served locally (was cdnjs CDN; switched for perf + offline) -->
+    <link rel="preload" as="font" type="font/woff2" href="/fontawesome/webfonts/fa-solid-900.woff2" crossorigin />
+    <link rel="stylesheet" href="/fontawesome/css/all.min.css" />
+    <title>ArtBastard DMX512FTW - The Illuminated Canvas [LIVE]</title>
+    <script>
+      (function () {
+        var h = location.hostname.toLowerCase();
+        if (h === "artbastard-beta.aday.net.au") {
+          location.replace(
+            location.protocol +
+              "//artbastard-dev.aday.net.au" +
+              location.pathname +
+              location.search +
+              location.hash
+          );
+          return;
+        }
+        var m = h.match(/^dev\.(macroverse|artbastard)\.aday\.net\.au$/);
+        if (m) {
+          location.replace(
+            location.protocol +
+              "//" +
+              m[1] +
+              "-dev.aday.net.au" +
+              location.pathname +
+              location.search +
+              location.hash
+          );
+        }
+      })();
+    </script>
+    <style>
+      .deploy-lane-top-badge {
+        position: fixed;
+        top: 8px;
+        left: 8px;
+        z-index: 10001;
+        font: 700 10px/1.2 ui-monospace, Consolas, monospace;
+        letter-spacing: 0.14em;
+        padding: 4px 8px;
+        border-radius: 3px;
+        border: 1px solid rgba(76, 255, 138, 0.55);
+        pointer-events: none;
+      }
+      .deploy-lane-top-badge[data-lane="live"] {
+        color: #efffef;
+        background: rgba(46, 204, 113, 0.35);
+      }
+      .deploy-lane-top-badge[data-lane="dev"] {
+        color: #061018;
+        background: linear-gradient(135deg, #00d7ff, #ff4fd8);
+        border-color: rgba(246, 224, 94, 0.78);
+      }
+      .deploy-lane-top-badge[data-lane="beta"] {
+        color: #dff7ff;
+        background: rgba(38, 169, 255, 0.42);
+        border-color: rgba(108, 206, 255, 0.72);
+      }
+      .deploy-lane-top-badge[data-lane="aday"] {
+        color: #f0e6ff;
+        background: rgba(176, 128, 255, 0.35);
+        border-color: rgba(200, 160, 255, 0.65);
+      }
+      .deploy-lane-inline {
+        display: inline-block;
+        font-size: 0.45em;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        vertical-align: middle;
+        margin-right: 0.45em;
+        padding: 0.12em 0.45em;
+        border-radius: 3px;
+        border: 1px solid rgba(76, 255, 138, 0.55);
+        -webkit-text-fill-color: currentColor;
+        background-clip: border-box;
+        animation: none;
+      }
+      .deploy-lane-inline[data-lane="live"] {
+        color: #efffef;
+        background: rgba(46, 204, 113, 0.35);
+      }
+      .deploy-lane-inline[data-lane="dev"] {
+        color: #061018;
+        background: linear-gradient(135deg, #00d7ff, #ff4fd8);
+        border-color: rgba(246, 224, 94, 0.78);
+      }
+      .deploy-lane-inline[data-lane="beta"] {
+        color: #dff7ff;
+        background: rgba(38, 169, 255, 0.42);
+        border-color: rgba(108, 206, 255, 0.72);
+      }
+      .deploy-lane-inline[data-lane="aday"] {
+        color: #f0e6ff;
+        background: rgba(176, 128, 255, 0.35);
+        border-color: rgba(200, 160, 255, 0.65);
+      }
+      @media (max-width: 760px) {
+        #deployMetaDock {
+          max-width: min(236px, calc(100vw - 20px)) !important;
+          font-size: 10px !important;
+          line-height: 1.35 !important;
+        }
+        #deployMetaDock[data-deploy-meta-mode="collapsed"] #deploySwitcherStrip {
+          display: none !important;
+        }
+        #deployMetaDock[data-deploy-meta-mode="collapsed"] #deployMetaBar {
+          padding: 5px 6px !important;
+        }
+        #deployMetaShowBtn {
+          padding: 5px 8px !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <div id="deployMetaDock" style="position:fixed;right:10px;bottom:10px;z-index:9999;max-width:min(420px,calc(100vw - 20px));font:11px/1.45 ui-monospace,Consolas,monospace;">
+      <div id="deployMetaRestore" hidden style="margin-bottom:6px;text-align:right;">
+        <button type="button" id="deployMetaShowBtn" style="font:inherit;cursor:pointer;padding:4px 10px;border:1px solid #4cff8a;background:rgba(0,0,0,.88);color:#b8ffd1;border-radius:3px;box-shadow:0 2px 10px rgba(0,0,0,.45);">build info</button>
+      </div>
+      <div id="deployMetaPanel" role="region" aria-label="Build metadata" style="border:1px solid #4cff8a;background:rgba(0,0,0,.92);color:#b8ffd1;box-sizing:border-box;border-radius:3px;box-shadow:0 4px 18px rgba(0,0,0,.55);">
+        <div id="deployMetaBar" tabindex="0" role="button" aria-expanded="false" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px;cursor:pointer;user-select:none;">
+          <span id="deployMetaSummary" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Loading...</span>
+          <span id="deployMetaExpandGlyph" style="opacity:.85;flex-shrink:0;font-weight:700;">[+]</span>
+          <button type="button" id="deployMetaHideBtn" style="flex-shrink:0;font:inherit;cursor:pointer;padding:2px 6px;margin:0;border:1px solid rgba(76,255,138,.55);background:transparent;color:#b8ffd1;border-radius:2px;">hide</button>
+        </div>
+        <div id="deploySwitcherStrip" style="border-top:1px solid rgba(76,255,138,.28);padding:6px 8px;background:rgba(0,0,0,.52);cursor:default;"></div>
+        <div id="deployMetaDetail" hidden style="padding:0 12px 10px;">
+          <div id="deployMetaTitle" style="font-weight:700;color:#fff;margin:0 0 6px;padding-bottom:4px;border-bottom:1px solid rgba(76,255,138,.35);letter-spacing:.06em;text-transform:uppercase;">build info</div>
+          <div id="deployMetaBody">Loading deploy metadata...</div>
+          <div style="margin-top:8px;">
+            <button type="button" id="deployMetaCollapseBtn" style="font:inherit;cursor:pointer;padding:3px 8px;border:1px solid rgba(76,255,138,.55);background:transparent;color:#b8ffd1;border-radius:2px;">collapse</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      (function () {
+        var META_URL = "/deploy-meta.json";
+        var LS_KEY = "deployMetaDock:" + (typeof location !== "undefined" ? location.hostname : "");
+        var bodyEl = document.getElementById("deployMetaBody");
+        var panel = document.getElementById("deployMetaPanel");
+        var dock = document.getElementById("deployMetaDock");
+        var bar = document.getElementById("deployMetaBar");
+        var summaryEl = document.getElementById("deployMetaSummary");
+        var detailEl = document.getElementById("deployMetaDetail");
+        var expandGlyph = document.getElementById("deployMetaExpandGlyph");
+        var hideBtn = document.getElementById("deployMetaHideBtn");
+        var collapseBtn = document.getElementById("deployMetaCollapseBtn");
+        var restoreWrap = document.getElementById("deployMetaRestore");
+        var showBtn = document.getElementById("deployMetaShowBtn");
+        var switcherStrip = document.getElementById("deploySwitcherStrip");
+        if (!bodyEl || !panel || !dock || !bar || !summaryEl || !detailEl || !expandGlyph || !hideBtn || !collapseBtn || !restoreWrap || !showBtn || !switcherStrip) return;
+        switcherStrip.addEventListener(
+          "click",
+          function (ev) {
+            ev.stopPropagation();
+          },
+          true
+        );
+        function uiLoad() {
+          try {
+            var v = localStorage.getItem(LS_KEY);
+            if (v === "hidden") return "hidden";
+            if (v === "expanded") return "expanded";
+            if (v === "collapsed") return "collapsed";
+          } catch (eU) {}
+          try {
+            if (window.matchMedia && window.matchMedia("(max-width: 760px)").matches) {
+              return "hidden";
+            }
+          } catch (eMobile) {}
+          return "collapsed";
+        }
+        function uiSave(mode) {
+          try { localStorage.setItem(LS_KEY, mode); } catch (eS) {}
+        }
+        function syncUi(mode) {
+          dock.setAttribute("data-deploy-meta-mode", mode);
+          if (mode === "hidden") {
+            restoreWrap.hidden = false;
+            panel.hidden = true;
+          } else {
+            restoreWrap.hidden = true;
+            panel.hidden = false;
+            if (mode === "expanded") {
+              detailEl.hidden = false;
+              bar.setAttribute("aria-expanded", "true");
+              expandGlyph.textContent = "[-]";
+            } else {
+              detailEl.hidden = true;
+              bar.setAttribute("aria-expanded", "false");
+              expandGlyph.textContent = "[+]";
+            }
+          }
+        }
+        function expand() {
+          uiSave("expanded");
+          syncUi("expanded");
+        }
+        function collapse() {
+          uiSave("collapsed");
+          syncUi("collapsed");
+        }
+        function hideDock() {
+          uiSave("hidden");
+          syncUi("hidden");
+        }
+        function showDock() {
+          uiSave("collapsed");
+          syncUi("collapsed");
+        }
+        bar.addEventListener("click", function (ev) {
+          if (ev.target && ev.target.closest && ev.target.closest("#deployMetaHideBtn")) return;
+          if (detailEl.hidden) expand(); else collapse();
+        });
+        bar.addEventListener("keydown", function (ev) {
+          if (ev.key !== "Enter" && ev.key !== " ") return;
+          if (ev.target && ev.target.closest && ev.target.closest("#deployMetaHideBtn")) return;
+          ev.preventDefault();
+          if (detailEl.hidden) expand(); else collapse();
+        });
+        hideBtn.addEventListener("click", function (ev) {
+          ev.stopPropagation();
+          hideDock();
+        });
+        collapseBtn.addEventListener("click", function (ev) {
+          ev.stopPropagation();
+          collapse();
+        });
+        showBtn.addEventListener("click", showDock);
+        syncUi(uiLoad());
+        function esc(s) {
+          return String(s === null || s === undefined ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+        }
+        function tzName() {
+          try {
+            return Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+          } catch (eTz) {
+            return "";
+          }
+        }
+        function fmt(iso) {
+          if (!iso) return "(unknown)";
+          try {
+            var d = new Date(iso);
+            if (Number.isNaN(d.getTime())) return String(iso);
+            var main = d.toLocaleString(undefined, {
+              dateStyle: "medium",
+              timeStyle: "short",
+              timeZoneName: "short",
+            });
+            var iana = tzName();
+            if (iana) return main + " (" + iana + ")";
+            return main;
+          } catch (err) {
+            return String(iso);
+          }
+        }
+        function age(iso, kind) {
+          if (!iso) return "";
+          var tag = kind === "deploy" ? "deploy" : "build";
+          var t = new Date(iso).getTime();
+          if (Number.isNaN(t)) return "";
+          var sec = Math.round((Date.now() - t) / 1000);
+          if (sec < -120) return "";
+          if (sec < 45) return "now";
+          if (sec < 3600) return Math.round(sec / 60) + "m since " + tag;
+          if (sec < 86400) return Math.round(sec / 3600) + "h since " + tag;
+          if (sec < 604800) return Math.round(sec / 86400) + "d since " + tag;
+          if (sec < 4233600) return Math.round(sec / 604800) + "wk since " + tag;
+          var mo = Math.round(sec / (30.4375 * 86400));
+          if (mo < 24) return mo + "mo since " + tag;
+          return Math.round(sec / (365.2425 * 86400)) + "yr since " + tag;
+        }
+        function canonicalDeployUrl(url) {
+          if (!url) return url;
+          try {
+            var u = new URL(url);
+            var h = u.hostname.toLowerCase();
+            if (h === "dev.macroverse.aday.net.au" || h === "macroverse-dev.aday.net.au") {
+              u.hostname = "macroverse-test.aday.net.au";
+            }
+            else if (h === "dev.artbastard.aday.net.au" || h === "artbastard-beta.aday.net.au") u.hostname = "artbastard-dev.aday.net.au";
+            return u.href;
+          } catch (eCanon) {
+            return url;
+          }
+        }
+        function resolvedSwitcher(ds, siteLc) {
+          if (ds && ds.live_url && ds.dev_url) {
+            var out = {
+              live_url: canonicalDeployUrl(ds.live_url),
+              dev_url: canonicalDeployUrl(ds.dev_url),
+            };
+            if (ds.aday_url) out.aday_url = canonicalDeployUrl(ds.aday_url);
+            return out;
+          }
+          if (siteLc.indexOf("artbastard") >= 0) {
+            return {
+              live_url: "https://artbastard.aday.net.au/",
+              dev_url: "https://artbastard-dev.aday.net.au/",
+            };
+          }
+          return {
+            live_url: "https://macroverse.aday.net.au/",
+            dev_url: "https://macroverse-test.aday.net.au/",
+            aday_url: "https://macroverse-aday.aday.net.au/",
+          };
+        }
+        function samePathHref(upstream) {
+          try {
+            var u = new URL(upstream);
+            u.pathname = location.pathname;
+            u.search = location.search;
+            u.hash = location.hash;
+            return u.href;
+          } catch (eL) {
+            return upstream;
+          }
+        }
+        function isDevDeployHost(hostn) {
+          var h = String(hostn || "").toLowerCase();
+          return (
+            /^(macroverse|artbastard)-dev\.aday\.net\.au$/.test(h) ||
+            /^dev\.(macroverse|artbastard)\.aday\.net\.au$/.test(h) ||
+            /^(macroverse|artbastard)-test\.aday\.net\.au$/.test(h) ||
+            /^test\.(macroverse|artbastard)\.aday\.net\.au$/.test(h)
+          );
+        }
+        function isBetaDeployHost(hostn) {
+          var h = String(hostn || "").toLowerCase();
+          return /^(macroverse|artbastard)-beta\.aday\.net\.au$/.test(h);
+        }
+        function isLiveDeployHost(hostn) {
+          var h = String(hostn || "").toLowerCase();
+          return /^macroverse\.aday\.net\.au$/.test(h) || /^artbastard\.aday\.net\.au$/.test(h);
+        }
+        function isLocalDeployHost(hostn) {
+          var h = String(hostn || "").toLowerCase();
+          return h === "localhost" || h === "127.0.0.1" || h === "::1" || h === "[::1]";
+        }
+        function laneDisplayName(lane) {
+          var k = String(lane || "live").toLowerCase();
+          if (k === "beta" || k === "dev") return "DEV";
+          if (k === "aday") return "ADAY";
+          return "LIVE";
+        }
+        function siteTitleBase(siteLc) {
+          if (siteLc && siteLc.indexOf("artbastard") >= 0) {
+            return "ArtBastard DMX512FTW - The Illuminated Canvas";
+          }
+          return "ArtBastard DMX512";
+        }
+        function applyDeployLaneUi(lane, siteLc) {
+          var k = String(lane || "live").toLowerCase();
+          var label = laneDisplayName(k);
+          try {
+            window.__deployLane = k;
+            window.__deployLaneLabel = label;
+          } catch (eLaneGlobal) {}
+          var badge = document.getElementById("appDeployLaneBadge");
+          var ghcrTrack = k === "beta" ? "dev" : k;
+          if (badge) {
+            badge.textContent = label;
+            badge.setAttribute("data-lane", k);
+            badge.title = "Deploy track: " + label + " (GHCR :" + ghcrTrack + " on Linode)";
+          }
+          var h1Lane = document.getElementById("appTitleDeployLane");
+          if (h1Lane) {
+            h1Lane.textContent = label;
+            h1Lane.setAttribute("data-lane", k);
+          }
+          document.querySelectorAll("#appTitleDeployLaneMobile").forEach(function (el) {
+            el.remove();
+          });
+          var badges = document.querySelectorAll("#appDeployLaneBadge");
+          if (badges.length > 1) {
+            for (var bi = 0; bi < badges.length - 1; bi++) badges[bi].remove();
+          }
+          document.title = siteTitleBase(siteLc) + " [" + label + "]";
+          try {
+            window.dispatchEvent(new CustomEvent("deploy-lane-updated"));
+          } catch (eEv) {}
+        }
+        function switcherLane(hostn, ds) {
+          try {
+            if (hostn === new URL(ds.live_url).hostname) return "live";
+          } catch (eA) {}
+          try {
+            if (hostn === new URL(ds.dev_url).hostname) return "dev";
+          } catch (eB) {}
+          if (ds.aday_url) {
+            try {
+              if (hostn === new URL(ds.aday_url).hostname) return "aday";
+            } catch (eC) {}
+          }
+          var hl = hostn.toLowerCase();
+          if (isLocalDeployHost(hostn) && ds && String(ds.live_url || "").indexOf("artbastard") >= 0) return "dev";
+          if (/macroverse-aday|^aday\.macroverse/i.test(hl)) return "aday";
+          if (isBetaDeployHost(hostn)) return "dev";
+          if (isDevDeployHost(hostn)) return "dev";
+          if (isLiveDeployHost(hostn)) return "live";
+          return "live";
+        }
+        
+      function bridgeMetaHtml(meta) {
+        if (!meta || !meta.bridge_doc_url) return "";
+        var linkSty =
+          "display:inline-block;border:1px solid rgba(76,255,138,.45);color:#b8ffd1;text-decoration:none;padding:2px 7px;border-radius:2px;font-size:10px";
+        var h =
+          '<div style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(76,255,138,.22)"><span style="opacity:.85;font-weight:700;font-size:10px">' +
+          esc(meta.bridge_title || "Raspberry Pi LAN bridge") +
+          '</span><span aria-hidden="true" style="opacity:.45"> | </span>';
+        h +=
+          '<a href="' +
+          esc(meta.bridge_doc_url) +
+          '" target="_blank" rel="noopener noreferrer" style="' +
+          linkSty +
+          '">setup guide</a>';
+        if (meta.bridge_agent_url) {
+          h +=
+            '<span aria-hidden="true" style="opacity:.45"> | </span><a href="' +
+            esc(meta.bridge_agent_url) +
+            '" target="_blank" rel="noopener noreferrer" style="' +
+            linkSty +
+            '">Pi agent source</a>';
+        }
+        h += "</div>";
+        return h;
+      }
+      function appendBridgeToSwitcher(meta) {
+        if (!meta || !meta.bridge_doc_url || !switcherStrip) return;
+        var row = bridgeMetaHtml(meta);
+        if (row) switcherStrip.innerHTML += row;
+      }
+
+      function renderSwitcher(ds, siteLc) {
+          var r = resolvedSwitcher(ds, siteLc);
+          var hostn = typeof location !== "undefined" ? location.hostname : "";
+          var cur = switcherLane(hostn, r);
+          var defs = [["live", "Live", "live_url"], ["dev", "Dev", "dev_url"], ["aday", "Aday", "aday_url"]];
+          var parts = [];
+          for (var ix = 0; ix < defs.length; ix++) {
+            var k = defs[ix][0];
+            var label = defs[ix][1];
+            var uk = defs[ix][2];
+            var raw = r[uk];
+            if (!raw || (k === "aday" && !r.aday_url)) continue;
+            var hrefRaw = samePathHref(raw);
+            var on = cur === k;
+            var sty = on
+              ? "display:inline-block;border:1px solid #4cff8a;background:rgba(76,255,138,.14);font-weight:700;color:#efffef;text-decoration:none;padding:3px 8px;border-radius:2px"
+              : "display:inline-block;border:1px solid rgba(76,255,138,.4);opacity:.92;color:#b8ffd1;text-decoration:none;padding:3px 8px;border-radius:2px";
+            parts.push(
+              '<a href="' +
+                esc(hrefRaw) +
+                '" rel="noopener noreferrer" style="' +
+                sty +
+                '" title="Same URL path on ' +
+                esc(label) +
+                '">' +
+                esc(label) +
+                "</a>"
+            );
+          }
+          applyDeployLaneUi(cur, siteLc);
+          if (!parts.length) {
+            switcherStrip.innerHTML = "";
+            return;
+          }
+          var curLabel = laneDisplayName(cur);
+          var hereSty =
+            "display:inline-block;font-weight:800;letter-spacing:.12em;padding:2px 7px;border-radius:2px;border:1px solid rgba(76,255,138,.55);";
+          if (cur === "dev") {
+            hereSty += "color:#fff4d6;background:rgba(232,160,32,.25);";
+          } else if (cur === "aday") {
+            hereSty += "color:#f0e6ff;background:rgba(176,128,255,.25);";
+          } else {
+            hereSty += "color:#efffef;background:rgba(76,255,138,.18);";
+          }
+          switcherStrip.innerHTML =
+            '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px"><span style="' +
+            hereSty +
+            '" title="Current deploy track">' +
+            esc(curLabel) +
+            '</span><span aria-hidden="true" style="opacity:.45">|</span><span style="opacity:.82;font-weight:700">Switch</span><span aria-hidden="true" style="opacity:.45">:</span>' +
+            parts.join('<span aria-hidden="true" style="opacity:.4"> </span>|<span aria-hidden="true" style="opacity:.4"> </span>') +
+            "</div>";
+        }
+        function laneSyncCounts(ls) {
+          if (!ls) return { ahead: 0, behind: 0, aligned: false, has: false, ls: null };
+          var ahead = Number(ls.dev_commits_ahead_of_live || 0);
+          var behind = Number(ls.dev_commits_behind_live || 0);
+          var aligned =
+            ls.branches_aligned === true || ls.aligned === true || (ahead === 0 && behind === 0);
+          return { ahead: ahead, behind: behind, aligned: aligned, has: true, ls: ls };
+        }
+        function laneSyncSummaryHtml(ls) {
+          var c = laneSyncCounts(ls);
+          if (!c.has) return "";
+          if (c.aligned) {
+            return ' <span style="color:#4cff8a;font-weight:800;letter-spacing:.06em" title="dev and main are the same">SYNC 0|0</span>';
+          }
+          var h = ' <span style="font-weight:800;letter-spacing:.04em" title="dev vs live (main)">';
+          if (c.ahead > 0) {
+            h += '<span style="color:#fff4d6;margin-left:4px">+' + c.ahead + " ahead</span>";
+          }
+          if (c.behind > 0) {
+            h += '<span style="color:#ffb4b4;margin-left:4px">-' + c.behind + " behind</span>";
+          }
+          return h + "</span>";
+        }
+        function formatLaneSync(ls) {
+          var c = laneSyncCounts(ls);
+          if (!c.has) return "";
+          var html =
+            '<div style="margin:0 0 10px;padding:10px 12px;border:2px solid rgba(76,255,138,.55);border-radius:4px;background:rgba(76,255,138,.1)">';
+          html +=
+            '<div style="font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;color:#efffef">Dev vs live (main)</div>';
+          html +=
+            '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:stretch;margin-bottom:6px">';
+          html +=
+            '<div style="flex:1;min-width:72px;text-align:center;padding:8px 10px;border-radius:3px;border:1px solid rgba(255,244,214,.45);background:rgba(232,160,32,.12)">' +
+            '<div style="font-size:26px;font-weight:800;line-height:1;color:#fff4d6">' +
+            c.ahead +
+            '</div><div style="font-size:10px;font-weight:700;letter-spacing:.1em;margin-top:4px;opacity:.9">AHEAD</div></div>';
+          html +=
+            '<div style="flex:1;min-width:72px;text-align:center;padding:8px 10px;border-radius:3px;border:1px solid rgba(255,180,180,.45);background:rgba(180,40,40,.15)">' +
+            '<div style="font-size:26px;font-weight:800;line-height:1;color:#ffb4b4">' +
+            c.behind +
+            '</div><div style="font-size:10px;font-weight:700;letter-spacing:.1em;margin-top:4px;opacity:.9">BEHIND</div></div></div>';
+          if (c.aligned) {
+            html +=
+              '<div style="color:#4cff8a;font-weight:700;font-size:12px">Branches aligned — same commits on dev and main.</div>';
+          } else {
+            if (c.ahead > 0 && c.behind === 0) {
+              html +=
+                '<div style="font-size:11px">Dev has <strong>' +
+                c.ahead +
+                "</strong> commit(s) not on live yet.</div>";
+            }
+            if (c.behind > 0) {
+              html +=
+                '<div style="color:#ffb4b4;font-size:11px;margin-top:4px">Dev is missing <strong>' +
+                c.behind +
+                "</strong> commit(s) from live — merge main into dev first.</div>";
+            }
+          }
+          if (c.ls.live_sha_short) {
+            html +=
+              '<div style="opacity:.82;font-size:10px;margin-top:6px">Live (main) at: <strong>' +
+              esc(c.ls.live_sha_short) +
+              "</strong></div>";
+          }
+          if (c.ls.promote_ready) {
+            html +=
+              '<div style="margin-top:8px;padding:6px 8px;border:1px solid rgba(76,255,138,.6);background:rgba(76,255,138,.12);font-size:11px;font-weight:700">Ready to promote: merge dev into main, push main.</div>';
+          }
+          if (c.ls.aday_image_tracks) {
+            html +=
+              '<div style="opacity:.82;font-size:10px;margin-top:6px">Aday image tracks: <strong>' +
+              esc(c.ls.aday_image_tracks) +
+              "</strong></div>";
+          }
+          html += "</div>";
+          return html;
+        }
+        function render(m) {
+          var siteLc = (m.site ? String(m.site) : "").toLowerCase();
+          var hostn0 = typeof location !== "undefined" ? location.hostname : "";
+          var laneFromMeta =
+            m.track && /^(live|dev|aday)$/i.test(String(m.track))
+              ? String(m.track).toLowerCase()
+              : switcherLane(hostn0, resolvedSwitcher(m.deploy_switcher, siteLc));
+          applyDeployLaneUi(laneFromMeta, siteLc);
+          renderSwitcher(m.deploy_switcher, siteLc);
+          appendBridgeToSwitcher(m);
+          var shaRaw = m.last_git_sha_short || m.version || "?";
+          var buildIso = m.last_build_at || m.build_date || "";
+          var depIso = m.last_deployed_at || m.last_build_at || m.build_date || "";
+          var ageB = age(buildIso, "build");
+          var ageD = age(depIso, "deploy");
+          var siteLab = (m.site ? String(m.site) : "").toUpperCase().replace(/\s+/g, "") || "SITE";
+          var sumParts = [laneDisplayName(laneFromMeta), siteLab, String(shaRaw)];
+          if (ageB) sumParts.push(ageB);
+          summaryEl.innerHTML = esc(sumParts.join(" | ")) + laneSyncSummaryHtml(m.lane_sync);
+          var sha = esc(shaRaw);
+          var gitHref = esc(m.last_git_url || m.changelog_url || "#");
+          var ch = m.changelog_url || "";
+          var hist = m.commits_history_url || "";
+          var md = m.changelog_md_url || "";
+          var rel = m.releases_url || "";
+          var run = m.workflow_run_url || "";
+          var gb = m.branch ? String(m.branch) : "";
+          var trk = m.track ? String(m.track) : "";
+          var note = m.deploy_note ? "<div style=\"opacity:.82;margin-top:6px;font-size:10px;\">" + esc(m.deploy_note) + "</div>" : "";
+          var title = document.getElementById("deployMetaTitle");
+          if (title) {
+            title.textContent =
+              (m.site ? String(m.site).toUpperCase() : "SITE") +
+              " // " +
+              laneDisplayName(laneFromMeta) +
+              " build info";
+          }
+          var html = formatLaneSync(m.lane_sync) + bridgeMetaHtml(m);
+          html += "<div style=\"margin:4px 0\"><strong>Last git:</strong> <a href=\"" + gitHref + "\" target=\"_blank\" rel=\"noopener noreferrer\">" + sha + "</a></div>";
+          html +=
+            "<div style=\"margin:4px 0\"><strong>Git branch (built by CI)</strong>: " +
+            esc(gb || "(unknown)") +
+            "</div>";
+          html +=
+            "<div style=\"margin:4px 0\"><strong>Image / deploy track</strong>: " +
+            esc(trk || "(unknown)") +
+            "</div>";
+          html +=
+            '<div style="opacity:.76;margin:-2px 0 6px;font-size:10px">Deploy track is the GHCR tag Linode pulls (:live or :dev).</div>';
+          var localTz = tzName();
+          if (localTz) html += "<div style=\"opacity:.78;margin:0 0 4px;font-size:10px\"><strong>Your timezone:</strong> " + esc(localTz) + "</div>";
+          html += "<div style=\"margin:4px 0\"><strong>Last build (CI):</strong> " + esc(fmt(buildIso));
+          if (ageB) html += " <span style=\"opacity:.82\">" + esc(ageB) + "</span>";
+          html += "</div>";
+          html += "<div style=\"margin:4px 0\"><strong>Last deployed (CI push):</strong> " + esc(fmt(depIso));
+          if (ageD) html += " <span style=\"opacity:.82\">" + esc(ageD) + "</span>";
+          if (run) html += " <a href=\"" + esc(run) + "\" target=\"_blank\" rel=\"noopener noreferrer\">workflow</a>";
+          html += "</div>";
+          var links = [];
+          if (ch) links.push("<a href=\"" + esc(ch) + "\" target=\"_blank\" rel=\"noopener noreferrer\">This commit</a>");
+          if (hist) links.push("<a href=\"" + esc(hist) + "\" target=\"_blank\" rel=\"noopener noreferrer\">Branch history</a>");
+          if (md) links.push("<a href=\"" + esc(md) + "\" target=\"_blank\" rel=\"noopener noreferrer\">CHANGELOG.md</a>");
+          if (rel) links.push("<a href=\"" + esc(rel) + "\" target=\"_blank\" rel=\"noopener noreferrer\">Releases</a>");
+          if (links.length) {
+            html += "<div style=\"margin:8px 0 0;padding-top:6px;border-top:1px solid rgba(76,255,138,.35)\"><strong>Changelog / history:</strong> " + links.join(" <span aria-hidden=\"true\">|</span> ") + "</div>";
+          }
+          html += note;
+          bodyEl.innerHTML = html;
+        }
+        var bootHostLc = String(location.hostname || "").toLowerCase();
+        var siteLcBoot =
+          bootHostLc.indexOf("macroverse") >= 0 && bootHostLc.indexOf("artbastard") < 0
+            ? "macroverse.aday.net.au"
+            : "artbastard.aday.net.au";
+        applyDeployLaneUi(
+          switcherLane(location.hostname || "", resolvedSwitcher(null, siteLcBoot)),
+          siteLcBoot
+        );
+        fetch(META_URL, { cache: "no-store" })
+          .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error("missing")); })
+          .then(render)
+          .catch(function () {
+            bodyEl.textContent = "Deploy metadata unavailable.";
+            summaryEl.textContent = "build meta unavailable";
+            renderSwitcher(null, siteLcBoot);
+          });
+      })();
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

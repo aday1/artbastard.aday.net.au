@@ -1,0 +1,167 @@
+.strip {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 4px 2px 0;
+  border-top: 1px solid rgba(71, 85, 105, 0.35);
+  min-width: 0;
+  max-width: 100%;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  justify-content: center;
+}
+
+.btn {
+  min-width: 0;
+  padding: 3px 5px;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  border-radius: 3px;
+  border: 1px solid rgba(71, 85, 105, 0.55);
+  background: rgba(15, 23, 42, 0.85);
+  color: #cbd5e1;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+
+  &:hover:not(:disabled) {
+    border-color: rgba(248, 221, 54, 0.55);
+    color: #f8fafc;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(248, 221, 54, 0.7);
+    outline-offset: 1px;
+  }
+}
+
+.btnPlay {
+  flex: 1 1 auto;
+  min-width: 2.4rem;
+}
+
+.btnActive {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+}
+
+.btnRunning {
+  border-color: #e74c3c;
+  background: rgba(231, 76, 60, 0.18);
+  color: #fca5a5;
+}
+
+.btnModeActive {
+  border-color: rgba(248, 221, 54, 0.75);
+  background: rgba(248, 221, 54, 0.12);
+  color: #fde68a;
+}
+
+.hint {
+  font-size: 8px;
+  text-align: center;
+  color: #64748b;
+  line-height: 1.2;
+}
+
+.quickEdit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 6px;
+  margin-top: 2px;
+  border-radius: 4px;
+  border: 1px solid rgba(71, 85, 105, 0.45);
+  background: rgba(0, 0, 0, 0.25);
+  max-height: min(72dvh, 34rem);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(245, 158, 11, 0.55) transparent;
+}
+
+.quickDraw {
+  height: auto;
+  min-height: clamp(13rem, 38dvh, 18rem);
+  overflow: visible;
+  border-radius: 3px;
+}
+
+.quickCanvas {
+  width: 100%;
+}
+
+.quickCanvas :global(.ab-workbench-panel__head) {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  align-items: stretch;
+  gap: 0.35rem;
+  padding: 0.35rem;
+}
+
+.quickCanvas :global(.ab-envelope-tools) {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  width: 100%;
+  margin-left: 0;
+}
+
+.quickCanvas :global(.ab-envelope-tools) button {
+  min-width: 0;
+  min-height: 34px;
+  padding-inline: 0.35rem;
+  font-size: 9px;
+}
+
+.quickLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 8px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  min-width: 0;
+  touch-action: pan-y;
+}
+
+@media (max-width: 640px) {
+  .row {
+    justify-content: stretch;
+  }
+
+  .btn {
+    min-height: 34px;
+  }
+
+  .quickEdit {
+    max-height: min(76dvh, 32rem);
+    margin-inline: -1px;
+    padding: 7px;
+  }
+
+  .quickDraw {
+    min-height: clamp(14rem, 44dvh, 20rem);
+  }
+
+  .quickCanvas :global(.ab-workbench-panel__head) {
+    position: static;
+  }
+}

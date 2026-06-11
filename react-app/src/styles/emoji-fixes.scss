@@ -1,0 +1,70 @@
+/* Emoji-specific CSS fixes for better cross-browser compatibility */
+
+/* Ensure emojis render properly across all browsers */
+.emoji-fix {
+  /* Force emoji fonts to be prioritized */
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif !important;
+  
+  /* Prevent text-transform from affecting emojis */
+  text-transform: none !important;
+  
+  /* Ensure proper font rendering */
+  font-variant-emoji: emoji !important;
+  
+  /* Fix font feature settings that might interfere */
+  font-feature-settings: "liga" off, "kern" off !important;
+  
+  /* Ensure proper line height for emojis */
+  line-height: 1.2;
+  
+  /* Prevent font-synthesis from interfering */
+  font-synthesis: none;
+  
+  /* Fix for some browsers that might try to convert emojis to text */
+  unicode-bidi: isolate;
+  
+  /* Ensure proper rendering mode */
+  text-rendering: optimizeSpeed;
+  
+  /* Prevent any CSS animations from affecting emoji rendering */
+  animation: none !important;
+  transition: none !important;
+}
+
+
+/* Specific fix for debug menu button */
+.toggleButton {
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+}
+
+/* Force emoji support detection and fallback */
+@supports (font-variant-emoji: emoji) {
+  .emoji-test::before {
+    content: "✅ Emoji support detected";
+    color: green;
+  }
+}
+
+@supports not (font-variant-emoji: emoji) {
+  .emoji-test::before {
+    content: "❌ Emoji support issues detected";
+    color: red;
+  }
+}
+
+/* Ensure no CSS is overriding emoji display */
+* {
+  /* Prevent any global font settings from breaking emojis */
+  font-variant-ligatures: none;
+}
+
+/* Debug: Show what font is actually being used */
+.font-debug {
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+
+.font-debug::after {
+  content: " (Font: " attr(data-font-family) ")";
+  font-size: 0.8em;
+  opacity: 0.7;
+}

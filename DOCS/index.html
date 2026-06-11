@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ArtBastard // Documentation hub</title>
+  <meta name="description" content="ArtBastard documentation index on the GitHub showcase - operator guides, reference pages, and the Luminary quote deck.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,600;0,700;1,500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../theatrical.css?v=20260609-mobile">
+  <link rel="stylesheet" href="../hub.css">
+  <link rel="stylesheet" href="../showcase-shell.css?v=20260609-mobile">
+  <style>
+    .theatre:not(.is-open) .curtain-l,
+    .theatre:not(.is-open) .curtain-r { width: calc(50% + 1px); }
+    .theatre:not(.is-open) .theatre-content { visibility: hidden; }
+    .docs-wrap { padding-top: 5.5rem; }
+  </style>
+</head>
+<body class="theatre-body">
+  <div class="theatre" id="theatre">
+    <div class="theatre-decor" aria-hidden="true">
+      <div class="curtain-l"></div>
+      <div class="curtain-r"></div>
+      <span class="curtain-label curtain-label-l">Coulisse // Exhibits B Through Infinity</span>
+      <span class="curtain-label curtain-label-r">Coulisse // Exhibits B Through Infinity</span>
+      <div class="rig-bar">
+        <span class="rig-label">Instruments of Photonic Supremacy</span>
+        <div class="rig-can"></div>
+        <div class="rig-can"></div>
+        <div class="rig-can"></div>
+        <div class="rig-can"></div>
+        <div class="rig-can"></div>
+        <div class="rig-can"></div>
+        <div class="rig-can"></div>
+      </div>
+      <div class="spotlight-wash"></div>
+      <div class="stage-floor"></div>
+      <div class="footlights">
+        <span class="footlights-label">Ligne de fosse // pour les connaisseurs seulement</span>
+        <div class="footlight"></div>
+        <div class="footlight"></div>
+        <div class="footlight"></div>
+        <div class="footlight"></div>
+        <div class="footlight"></div>
+        <div class="footlight"></div>
+        <div class="footlight"></div>
+        <div class="footlight"></div>
+        <div class="footlight"></div>
+      </div>
+    </div>
+
+    <div class="theatre-content proscenium">
+      <p id="theatre-whisper" class="theatre-whisper" aria-live="polite"></p>
+
+      <nav class="showcase-nav" aria-label="Showcase navigation">
+        <div class="showcase-nav-inner">
+          <a class="showcase-nav-brand" href="../">
+            <span class="brand-icon">DMX</span>
+            <span>ArtBastard</span>
+          </a>
+          <div class="showcase-nav-links">
+            <a href="../">Showcase</a>
+            <a href="../#luminary">Luminary</a>
+            <a href="../#tour">Tour</a>
+            <a href="../#features">Features</a>
+            <a href="../#download">Download</a>
+            <a href="./" aria-current="page">Docs</a>
+            <a href="https://artbastard.aday.net.au/">Try it live</a>
+            <a href="https://github.com/aday1/artbastard.aday.net.au" target="_blank" rel="noopener">GitHub</a>
+          </div>
+        </div>
+      </nav>
+
+      <div class="wrap docs-wrap">
+        <p class="showcase-banner">GitHub Showcase Page // not the primary live app</p>
+        <span class="showcase-banner-sub">Academie des Illuminations Pretentieuses</span>
+        <p class="tagline">Breath of Light Manuscripts // Photonic Supremacy</p>
+        <span class="tagline-secondary">Theatre des Photons // ruelle parisienne</span>
+        <h1 class="showcase-page-title">Documentation // Parametres Cognoscenti</h1>
+        <p class="canon-quote">
+          "Light belongs to no one; it is our honor merely to dance with it for a time."
+          &mdash; Grand Master Feng Zhi, Illuminating Wind Dancing Masters
+        </p>
+        <p class="small" style="margin-top:0;margin-bottom:1rem;">
+          v5.2.4.0 APC40 Deck A/B Edition. Static operator guides and reference pages for the showcase.
+          Production lighting control runs at
+          <a href="https://artbastard.aday.net.au">artbastard.aday.net.au</a>.
+        </p>
+
+        <div class="panel">
+          <strong>Deployment targets</strong>
+          <div class="dep-row">
+            <span class="dep-key">Live app</span>
+            <span class="dep-val"><a href="https://artbastard.aday.net.au">artbastard.aday.net.au</a> &mdash; cloud DMX control plane</span>
+          </div>
+          <div class="dep-row">
+            <span class="dep-key">Dev lane</span>
+            <span class="dep-val"><a href="https://artbastard-dev.aday.net.au">artbastard-dev.aday.net.au</a> &mdash; pre-prod ArtBastard build, image <code>:dev</code></span>
+          </div>
+          <div class="dep-row">
+            <span class="dep-key">Showcase</span>
+            <span class="dep-val"><a href="https://aday1.github.io/artbastard.aday.net.au/">aday1.github.io/artbastard.aday.net.au</a></span>
+          </div>
+          <div class="dep-row">
+            <span class="dep-key">Source</span>
+            <span class="dep-val"><a href="https://github.com/aday1/artbastard.aday.net.au">github.com/aday1/artbastard.aday.net.au</a></span>
+          </div>
+          <p class="dep-note">// this is the GitHub showcase page &mdash; the live runtime above serves the actual app</p>
+        </div>
+
+        <div id="luminary" class="panel hub-quote-panel coulisse-panel showcase-section">
+          <span class="luminary-chip">Exhibits B Through Infinity</span>
+          <strong>The Luminary Aristocracy</strong>
+          <p class="showcase-section-lede">
+            Pretentious lighting nonsense for the discerning cognoscenti.
+            Same quote deck as the in-app ArtSnob theme.
+          </p>
+          <div id="docs-luminary-stage" class="luminary-stage" role="status" aria-live="polite">
+            <q id="docs-quote-text">Loading the photonic manifesto...</q>
+            <div id="docs-quote-author" class="luminary-quote-author"></div>
+            <div class="luminary-toolbar">
+              <button type="button" id="btn-docs-next">Another quote</button>
+              <button type="button" id="btn-docs-random">Random aristocrat</button>
+              <button type="button" id="btn-docs-pause">Pause rotation</button>
+              <span class="luminary-meta" id="docs-quote-meta"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel showcase-section">
+          <strong>The Complete Luminary Quote Wall</strong>
+          <p class="hub-wall-lede">All <span id="docs-quote-wall-count">61</span> aristocrats. Each card tinted to their personal photonic wavelength.</p>
+          <div id="docs-quote-wall" class="quote-wall"></div>
+        </div>
+
+        <div id="docs" class="panel showcase-section">
+          <strong>Documentation</strong>
+          <p class="showcase-section-lede">Same index as the showcase docs section. Browse markdown and plain-text guides on GitHub Pages.</p>
+          <div class="docs-grid">
+            <a href="README.md" class="doc-card">
+              <h3>Getting Started</h3>
+              <p>Documentation index, current rebuild status, validation commands.</p>
+            </a>
+            <a href="INSTALL.md" class="doc-card">
+              <h3>Install &amp; Reset</h3>
+              <p>Environment setup, launch scripts, factory reset workflow.</p>
+            </a>
+            <a href="BRIDGE.md" class="doc-card">
+              <h3>LAN / Pi Bridge</h3>
+              <p>Cloud UI to home Art-Net, Ableton Link on Pi, concurrent operators.</p>
+            </a>
+            <a href="USAGE.md" class="doc-card">
+              <h3>Usage Guide</h3>
+              <p>Operator flow, routes, MIDI/OSC setup, timeline + clip launcher.</p>
+            </a>
+            <a href="ACT_TIMELINE.md" class="doc-card">
+              <h3>Act Timeline</h3>
+              <p>Scene clips, gaps, ACT triggers vs BPM vs Ableton Link.</p>
+            </a>
+            <a href="FEATURES.md" class="doc-card">
+              <h3>Features Guide</h3>
+              <p>Full feature inventory by subsystem after the v5.2.4.0 release.</p>
+            </a>
+            <a href="FIXTURES.md" class="doc-card">
+              <h3>Fixture Setup</h3>
+              <p>Profiles, canvas placement, addressing, groups, PDF address sheet.</p>
+            </a>
+            <a href="STAGE_CANVAS_TUTORIAL.md" class="doc-card">
+              <h3>Stage Canvas Tutorial</h3>
+              <p>Build a show from fixture placement through groups, seeds, Super Control, APC40, and debugging.</p>
+            </a>
+            <a href="HELP.md" class="doc-card">
+              <h3>Help (Offline Mirror)</h3>
+              <p>Plain-text mirror of the in-app HelpOverlay - read it anywhere.</p>
+            </a>
+            <a href="SHORTCUTS.md" class="doc-card">
+              <h3>Keyboard Shortcuts</h3>
+              <p>Master shortcut reference - timeline, scenes, faders, navigation.</p>
+            </a>
+            <a href="MIDI_TEMPLATES.md" class="doc-card">
+              <h3>MIDI Templates</h3>
+              <p>X-Touch Mackie + APC40 MK1 mapping reference and apply flow.</p>
+            </a>
+            <a href="APC40_CHEATSHEET.md" class="doc-card">
+              <h3>APC40 MK1 Cheatsheet</h3>
+              <p>Deck A/B grids, Record Arm scene saves, Device Control roles, FULL ON, LED legend.</p>
+            </a>
+            <a href="OSC_REFERENCE.md" class="doc-card">
+              <h3>OSC Reference</h3>
+              <p>Every SuperControl OSC address and value range, in one page.</p>
+            </a>
+            <a href="UI_UX_TOUR.txt" class="doc-card">
+              <h3>UI &amp; UX Tour</h3>
+              <p>Per-screen action notes for every major route in the app.</p>
+            </a>
+            <a href="HISTORY.md" class="doc-card">
+              <h3>Chronicles</h3>
+              <p>Wind Dancing Masters lineage through the Parisian warehouse era.</p>
+            </a>
+            <a href="SHOWCASE.md" class="doc-card">
+              <h3>Showcase Notes</h3>
+              <p>How this very page is built, recorded, and deployed.</p>
+            </a>
+            <a href="DEMO_RECORDING.txt" class="doc-card">
+              <h3>Demo Recording</h3>
+              <p>Capturing screenshots and WebM operator how-to clips.</p>
+            </a>
+            <a href="../#tour" class="doc-card">
+              <h3>Operator Videos</h3>
+              <p>Six refreshed how-to clips on the showcase home page.</p>
+            </a>
+          </div>
+        </div>
+
+        <p class="small">Return to the <a href="../">showcase home</a>.</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="showcase-quotes-data.js"></script>
+  <script src="../theatrical.js"></script>
+  <script src="../luminary-shared.js"></script>
+  <script src="../docs-quotes.js"></script>
+</body>
+</html>

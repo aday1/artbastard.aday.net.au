@@ -1,0 +1,211 @@
+@import '../../styles/variables';
+@use 'sass:color';
+
+.fixtureListContainer {
+  padding: $spacing-unit * 2;
+  background-color: $background-dark-primary;
+  border-radius: $border-radius;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.listHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-unit * 2;
+  padding-bottom: $spacing-unit * 1.5;
+  border-bottom: 1px solid $background-dark-tertiary;
+
+  h3 {
+    margin: 0;
+    color: $primary-color;
+    font-size: $font-size-lg;
+  }
+}
+
+.addButton, .addChannelButton, .saveButton, .cancelButton {
+  @extend .button-base; // Using base from theme.scss
+  padding: $spacing-unit $spacing-unit * 1.5;
+  font-size: $font-size-sm;
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-unit * 0.5;
+
+  svg {
+    margin-right: $spacing-unit * 0.5;
+  }
+}
+
+.addButton {
+  @extend .button-primary; // Use primary button style
+}
+
+.list {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding-right: $spacing-unit; // For scrollbar spacing
+
+  &::-webkit-scrollbar { // Already styled globally, but can be overridden
+    width: 8px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: $background-dark-tertiary;
+  }
+}
+
+.emptyMessage {
+  text-align: center;
+  color: $text-color-muted;
+  padding: $spacing-unit * 4;
+  font-style: italic;
+}
+
+// Modal Styles
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: $z-index-modal;
+}
+
+.modalContent {
+  background-color: $background-dark-secondary;
+  padding: $spacing-unit * 3;
+  border-radius: $border-radius * 2;
+  box-shadow: $box-shadow-lg;
+  width: 90%;
+  max-width: 600px; // Max width for the modal
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-unit * 2;
+  padding-bottom: $spacing-unit * 1.5;
+  border-bottom: 1px solid $background-dark-tertiary;
+
+  h3 {
+    margin: 0;
+    color: $primary-color;
+    font-size: $font-size-lg;
+  }
+}
+
+.modalCloseButton {
+  background: none;
+  border: none;
+  color: $text-color-muted;
+  font-size: $font-size-lg;
+  cursor: pointer;
+  padding: $spacing-unit * 0.5;
+
+  &:hover {
+    color: $secondary-color;
+  }
+}
+
+.modalBody {
+  overflow-y: auto;
+  flex-grow: 1;
+}
+
+.fixtureForm {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-unit * 2;
+
+  .formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-unit * 0.5;
+
+    label {
+      font-weight: 500;
+      color: $text-color-light;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+      @extend .input-base; // Using base from theme.scss
+    }
+  }
+
+  h4 {
+    margin-top: $spacing-unit * 1.5;
+    margin-bottom: $spacing-unit;
+    color: $text-color-muted;
+    font-size: $font-size-base;
+    border-bottom: 1px solid $background-dark-tertiary;
+    padding-bottom: $spacing-unit * 0.5;
+  }
+
+  .channelDefinition {
+    display: flex;
+    align-items: center;
+    gap: $spacing-unit;
+    margin-bottom: $spacing-unit;
+
+    .channelNameInput {
+      flex-grow: 1;
+      @extend .input-base;
+    }
+    .channelTypeSelect {
+      min-width: 120px;
+      @extend .input-base;
+    }
+    .removeChannelButton {
+      background: none;
+      border: none;
+      color: $text-color-muted;
+      font-size: $font-size-base;
+      cursor: pointer;
+      padding: $spacing-unit * 0.5;
+      &:hover { color: $error-color; }
+    }
+  }
+
+  .addChannelButton {
+    @extend .button-secondary;
+    align-self: flex-start;
+    margin-top: $spacing-unit;
+    background-color: $background-dark-tertiary;
+    color: $text-color-light;
+    &:hover {
+      background-color: color.scale($background-dark-tertiary, $lightness: 10%);
+    }
+  }
+}
+
+.modalActions {
+  margin-top: $spacing-unit * 3;
+  padding-top: $spacing-unit * 2;
+  border-top: 1px solid $background-dark-tertiary;
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-unit * 1.5;
+
+  .saveButton {
+    @extend .button-primary;
+  }
+  .cancelButton {
+    @extend .button-base;
+    background-color: $background-dark-tertiary;
+    color: $text-color-light;
+    &:hover {
+      background-color: color.scale($background-dark-tertiary, $lightness: 10%);
+    }
+  }
+}

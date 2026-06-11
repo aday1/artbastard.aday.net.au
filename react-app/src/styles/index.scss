@@ -1,0 +1,776 @@
+// Import font fallbacks for better loading performance
+@use './font-fallbacks.scss';
+@use './design-system.scss';
+@use './workbench-shell.scss';
+@use './reason-rack.scss';
+@use './metallic-range.scss';
+@use './seamless-scroll.scss';
+/* emoji-fixes removed to restore default icon and text rendering */
+
+// Base variables
+:root {  // Light mode colors - Orange-forward, warm palette
+  --color-background: #fff7ed; /* Orange 50 - subtle warm background */
+  --color-text: #5a4333; /* Warm brown for readability */
+  --color-primary: #f59e0b; /* Amber/Orange primary */
+  --color-secondary: #b45309; /* Deeper orange-brown secondary */
+  --color-accent: #fb923c; /* Bright orange accent */
+  --color-success: #2ecc71; // Keeping original success color
+  --color-warning: #f39c12; // Keeping original warning color
+  --color-error: #e74c3c;   // Keeping original error color
+  --color-card-bg: #fffbeb; /* Orange 50/100 card */
+  --color-card-border: #f3e8d3; /* Warm border */
+  --color-slider-track: #f3e8d3; /* Warm slider track */
+  --color-slider-thumb: var(--color-primary);
+  --color-button-bg: var(--color-primary);
+  --color-button-text: #fff7ed; /* Very light warm */
+  --color-nav-active: var(--color-primary);
+  --color-nav-inactive: #a16207; /* Muted amber */
+  --color-channel-bg: #fff7ed; /* Warm channel background */
+  --color-channel-border: #f3e8d3; /* Warm channel border */
+  --color-channel-selected: rgba(245, 158, 11, 0.12); /* Based on primary */
+  --color-status-connected: #2aa764; /* Slightly desaturated green */
+  --color-status-disconnected: #e24338; /* Slightly desaturated red */
+  --color-status-inactive: #c9c0b5; /* Warmer gray for inactive status */
+  --color-status-active: #2aa764; /* Matches connected status */
+    // Additional UI variables for components
+  --bg-primary: var(--color-background);
+  --bg-secondary: var(--color-card-bg);
+  --bg-tertiary: #ffedd5; /* Deeper warm layer */
+  --bg-hover: #fde8c9;
+  --text-primary: var(--color-text);
+  --text-secondary: var(--color-secondary);
+  --accent-color: #f97316; /* Vibrant orange */
+  --border-color: var(--color-card-border);
+  --header-bg: #ffedd5;
+  --input-bg: #fffbeb;
+  --error-color: var(--color-error);
+  --system-sans: var(--font-body);
+
+  /* Theme aliases — many components use these legacy names with hardcoded
+     dark hex fallbacks; defining them here means light/dark theme values
+     always win over the fallback so dark backgrounds stop leaking into
+     light mode. Mirror these in every [data-theme="*"] block below. */
+  --background-color: var(--color-background);
+  --card-background: var(--color-card-bg);
+  --panel-bg: var(--color-card-bg);
+  --panel-background: var(--color-card-bg);
+  --surface-color: var(--color-card-bg);
+  --color-surface: var(--color-card-bg);
+
+  /* Shadow utility — light mode uses very soft shadows; dark mode amps up.
+     Components can write box-shadow: 0 2px 8px rgb(var(--shadow-rgb) / 0.12)
+     for theme-aware depth without hardcoding rgba(0,0,0,...). */
+  --shadow-rgb: 60 72 88;
+  --shadow-strong: 0 4px 14px rgb(var(--shadow-rgb) / 0.10);
+  --shadow-soft: 0 1px 6px rgb(var(--shadow-rgb) / 0.06);
+  
+  // Fonts with emoji support
+  --emoji-fonts: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Segoe UI Symbol";
+  --font-body: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif, var(--emoji-fonts);
+  --font-heading: 'Playfair Display', Georgia, serif, var(--emoji-fonts);
+  --font-mono: 'Space Mono', SFMono-Regular, Menlo, Monaco, 'Courier New', monospace, var(--emoji-fonts);
+  
+  // UI Elements
+  --border-radius: 8px;
+  --card-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+  --transition-speed: 0.2s;
+}
+
+html.ab-touch-optimized {
+  --touch-target-min: 50px;
+  --touch-target-comfortable: 62px;
+  --touch-target-large: 80px;
+  --ab-touch-slider-thumb: 30px;
+  --ab-touch-slider-track: 12px;
+}
+
+html.ab-refresh-host[data-theme="dark"] {
+  color-scheme: dark;
+  --color-background: #090d14;
+  --color-text: #e8fbff;
+  --color-primary: #00d7ff;
+  --color-secondary: #7bdff2;
+  --color-accent: #ff4fd8;
+  --color-card-bg: #111827;
+  --color-card-border: #214158;
+  --color-slider-track: #152236;
+  --color-slider-thumb: #00d7ff;
+  --color-button-bg: #00d7ff;
+  --color-button-text: #061018;
+  --color-nav-active: #00d7ff;
+  --color-nav-inactive: #8aa2b2;
+  --color-channel-bg: #0d1420;
+  --color-channel-border: #214158;
+  --color-channel-selected: rgb(0 215 255 / 0.18);
+  --bg-primary: #090d14;
+  --bg-secondary: #111827;
+  --bg-tertiary: #0d1420;
+  --bg-hover: #17253a;
+  --text-primary: #e8fbff;
+  --text-secondary: #9fc6d6;
+  --accent-color: #ff4fd8;
+  --border-color: #214158;
+  --header-bg: #0b1220;
+  --input-bg: #0b1220;
+  --rk-bg: #070b12;
+  --rk-surface: #101827;
+  --rk-module: #162338;
+  --rk-module-edge: #264863;
+  --rk-bevel-hi: #568aa2;
+  --rk-bevel-lo: #02060a;
+  --rk-label: #d9fbff;
+  --rk-label-dim: #7fa2b4;
+  --rk-accent: #00d7ff;
+  --rk-accent-glow: rgb(0 215 255 / 0.62);
+  --rk-playhead: #ff4fd8;
+  --rk-grid-bg: #0a101a;
+  --rk-grid-line: #1f334b;
+  --rk-cell: #101827;
+  --rk-cell-active: #173955;
+
+  /* Theme aliases (see :root for rationale) */
+  --background-color: var(--color-background);
+  --card-background: var(--color-card-bg);
+  --panel-bg: var(--color-card-bg);
+  --panel-background: var(--color-card-bg);
+  --surface-color: var(--color-card-bg);
+  --color-surface: var(--color-card-bg);
+  --shadow-rgb: 0 0 0;
+  --shadow-strong: 0 4px 14px rgb(0 0 0 / 0.5);
+  --shadow-soft: 0 1px 6px rgb(0 0 0 / 0.35);
+}
+
+html.ab-refresh-host[data-theme="dark"] body {
+  background:
+    linear-gradient(180deg, rgb(0 215 255 / 0.08), transparent 34%),
+    repeating-linear-gradient(
+      90deg,
+      rgb(255 255 255 / 0.018) 0 1px,
+      transparent 1px 18px
+    ),
+    var(--color-background);
+}
+
+html.ab-refresh-host[data-theme="dark"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0 0 auto;
+  height: 4px;
+  z-index: 10002;
+  pointer-events: none;
+  background: linear-gradient(90deg, #00d7ff, #ff4fd8 42%, #f6e05e 72%, #00d7ff);
+  box-shadow: 0 0 18px rgb(0 215 255 / 0.72), 0 0 28px rgb(255 79 216 / 0.32);
+}
+
+html.ab-refresh-host[data-theme="light"] {
+  color-scheme: light;
+  --color-background: #eef2f4;
+  --color-text: #1f2933;
+  --color-primary: #0e8fb1;
+  --color-secondary: #425563;
+  --color-accent: #c76a18;
+  --color-card-bg: #ffffff;
+  --color-card-border: #c5d0d6;
+  --color-slider-track: #d9e2e7;
+  --color-slider-thumb: #0e8fb1;
+  --color-button-bg: #0e8fb1;
+  --color-button-text: #f7fbfd;
+  --color-nav-active: #0e8fb1;
+  --color-nav-inactive: #5f6f7a;
+  --color-channel-bg: #f8faf8;
+  --color-channel-border: #c5d0d6;
+  --color-channel-selected: rgb(14 143 177 / 0.16);
+  --bg-primary: #eef2f4;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #e4ebee;
+  --bg-hover: #dce8ee;
+  --text-primary: #1f2933;
+  --text-secondary: #52636e;
+  --accent-color: #c76a18;
+  --border-color: #c5d0d6;
+  --header-bg: #e5ecef;
+  --input-bg: #ffffff;
+  --wb-bg: #eef2f4;
+  --wb-surface: #e4ebee;
+  --wb-panel: #f8faf8;
+  --wb-bevel-light: #ffffff;
+  --wb-bevel-dark: #aab4ba;
+  --wb-text: #1f2933;
+  --wb-text-dim: #60707a;
+  --wb-accent: #0e8fb1;
+  --wb-copper: #c76a18;
+  --wb-amber: #c99920;
+  --rk-bg: #eef2f4;
+  --rk-surface: #e4ebee;
+  --rk-module: #f8faf8;
+  --rk-module-edge: #c5d0d6;
+  --rk-bevel-hi: #ffffff;
+  --rk-bevel-lo: #aab4ba;
+  --rk-screw: #87949c;
+  --rk-label: #1f2933;
+  --rk-label-dim: #60707a;
+  --rk-accent: #0e8fb1;
+  --rk-accent-glow: rgb(14 143 177 / 0.35);
+  --rk-playhead: #c76a18;
+  --rk-grid-bg: #e8eef1;
+  --rk-grid-line: #c5d0d6;
+  --rk-cell: #ffffff;
+  --rk-cell-active: #d9edf3;
+
+  /* Theme aliases (see :root for rationale) */
+  --background-color: var(--color-background);
+  --card-background: var(--color-card-bg);
+  --panel-bg: var(--color-card-bg);
+  --panel-background: var(--color-card-bg);
+  --surface-color: var(--color-card-bg);
+  --color-surface: var(--color-card-bg);
+  --shadow-rgb: 60 72 88;
+  --shadow-strong: 0 4px 14px rgb(60 72 88 / 0.14);
+  --shadow-soft: 0 1px 6px rgb(60 72 88 / 0.08);
+}
+
+html.ab-refresh-host[data-theme="light"] body {
+  background:
+    linear-gradient(180deg, rgb(14 143 177 / 0.11), transparent 32%),
+    repeating-linear-gradient(
+      90deg,
+      rgb(31 41 51 / 0.035) 0 1px,
+      transparent 1px 20px
+    ),
+    var(--color-background);
+}
+
+html.ab-refresh-host[data-theme="light"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0 0 auto;
+  height: 4px;
+  z-index: 10002;
+  pointer-events: none;
+  background: linear-gradient(90deg, #0e8fb1, #c76a18 42%, #6b5ca5 72%, #0e8fb1);
+  box-shadow: 0 1px 12px rgb(14 143 177 / 0.26);
+}
+
+// Dark mode colors - Enhanced for professional lighting environments
+[data-theme="dark"] {
+  --font-mono: var(--wb-mono, 'Share Tech Mono', 'Space Mono', Consolas, monospace);
+  --color-background: #1a1620; /* Deep theatrical purple-black */
+  --color-text: #e8e1d6; /* Warm white for readability */
+  --color-primary: #8b5cf6; /* Rich purple primary */
+  --color-secondary: #7c7089; /* Muted purple-gray */
+  --color-accent: #f59e0b; /* Warm amber accent */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --color-card-bg: #2a2635; /* Darker purple-tinted cards */
+  --color-card-border: #3f3b4a; /* Subtle borders */
+  --color-slider-track: #3f3b4a;
+  --color-slider-thumb: #8b5cf6;
+  --color-button-bg: #8b5cf6;
+  --color-button-text: #f8fafc;
+  --color-nav-active: #8b5cf6;
+  --color-nav-inactive: #7c7089;
+  --color-channel-bg: #2a2635;
+  --color-channel-border: #3f3b4a;
+  --color-channel-selected: rgba(139, 92, 246, 0.25);
+  --color-status-connected: #10b981;
+  --color-status-disconnected: #ef4444;
+  --color-status-inactive: #64748b;
+  --color-status-active: #10b981;
+  --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+  
+  // Enhanced UI variables for professional dark mode
+  --bg-primary: var(--color-background);
+  --bg-secondary: var(--color-card-bg);
+  --bg-tertiary: #1f1b26;
+  --bg-hover: #34303f;
+  --text-primary: var(--color-text);
+  --text-secondary: var(--color-secondary);
+  --accent-color: #f59e0b; /* Professional amber */
+  --border-color: var(--color-card-border);
+  --header-bg: #241f2e;
+  --input-bg: #1f1b26;
+  --error-color: var(--color-error);
+
+  /* Theme aliases (see :root for rationale) */
+  --background-color: var(--color-background);
+  --card-background: var(--color-card-bg);
+  --panel-bg: var(--color-card-bg);
+  --panel-background: var(--color-card-bg);
+  --surface-color: var(--color-card-bg);
+  --color-surface: var(--color-card-bg);
+  --shadow-rgb: 0 0 0;
+  --shadow-strong: 0 4px 14px rgb(0 0 0 / 0.5);
+  --shadow-soft: 0 1px 6px rgb(0 0 0 / 0.35);
+}
+
+html.ab-refresh-host[data-theme="dark"] {
+  --color-background: #090d14;
+  --color-text: #e8fbff;
+  --color-primary: #00d7ff;
+  --color-secondary: #7bdff2;
+  --color-accent: #ff4fd8;
+  --color-card-bg: #111827;
+  --color-card-border: #214158;
+  --color-slider-track: #152236;
+  --color-slider-thumb: #00d7ff;
+  --color-button-bg: #00d7ff;
+  --color-button-text: #061018;
+  --color-nav-active: #00d7ff;
+  --color-nav-inactive: #8aa2b2;
+  --color-channel-bg: #0d1420;
+  --color-channel-border: #214158;
+  --color-channel-selected: rgb(0 215 255 / 0.18);
+  --bg-primary: #090d14;
+  --bg-secondary: #111827;
+  --bg-tertiary: #0d1420;
+  --bg-hover: #17253a;
+  --text-primary: #e8fbff;
+  --text-secondary: #9fc6d6;
+  --accent-color: #ff4fd8;
+  --border-color: #214158;
+  --header-bg: #0b1220;
+  --input-bg: #0b1220;
+  --rk-bg: #070b12;
+  --rk-surface: #101827;
+  --rk-module: #162338;
+  --rk-module-edge: #264863;
+  --rk-bevel-hi: #568aa2;
+  --rk-bevel-lo: #02060a;
+  --rk-label: #d9fbff;
+  --rk-label-dim: #7fa2b4;
+  --rk-accent: #00d7ff;
+  --rk-accent-glow: rgb(0 215 255 / 0.62);
+  --rk-playhead: #ff4fd8;
+  --rk-grid-bg: #0a101a;
+  --rk-grid-line: #1f334b;
+  --rk-cell: #101827;
+  --rk-cell-active: #173955;
+}
+
+// Art Snob theme overrides
+body.artsnob {
+  --font-heading: 'Playfair Display', serif;
+  
+  h1, h2, h3, h4, h5 {
+    font-family: var(--font-heading);
+    font-style: italic;
+  }
+  
+  button {
+    font-family: var(--font-heading);
+  }
+}
+
+// Standard theme overrides
+body.standard {
+  --font-heading: 'Source Sans Pro', 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+  
+  h1, h2, h3, h4, h5 {
+    font-weight: 600;
+  }
+}
+
+// Minimal theme overrides
+body.minimal {
+  --font-heading: 'Source Sans Pro', 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+  --font-body: 'Source Sans Pro', 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+  
+  --border-radius: 4px;
+  --card-shadow: none;
+  
+  h1, h2, h3, h4, h5 {
+    font-weight: 300;
+  }
+}
+
+// Reset and base styles
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
+  font-size: 16px;
+}
+
+html {
+  background-color: var(--color-background);
+  // Use dynamic viewport height when supported so iOS Safari URL bar
+  // does not crop the bottom of the layout. Old browsers keep 100%.
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+body {
+  font-family: var(--ui-font-family, var(--font-body));
+  font-weight: var(--ui-font-weight, 400);
+  font-feature-settings: 'liga' 1, 'calt' 1, 'tnum' 1, 'case' 1;
+  /* font-variant-emoji: emoji; Removed to prevent numbers rendering as emojis */
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--color-background);
+  color: var(--color-text);
+  line-height: var(--ui-line-height, 1.5);
+  letter-spacing: var(--ui-letter-spacing, 0px);
+  font-size: calc(1rem * var(--ui-font-size, 1.0));
+  overflow: hidden;
+  min-height: 100vh;
+  min-height: 100dvh;
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cpath fill='%23f59e0b' stroke='%235a4333' stroke-width='1' d='M2 2 L2 18 L8 12 L11 18 L13 16 L10 10 L18 10 Z'/%3E%3C/svg%3E") 2 2, auto;
+}
+
+body *:not(input):not(textarea):not(select):not(button):not(a):not([role='button']):not(
+    label[for]
+  ) {
+  cursor: inherit;
+}
+
+input,
+textarea,
+select,
+button,
+a,
+[role='button'],
+label[for] {
+  cursor: auto;
+}
+
+input[type='range'] {
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
+html[data-theme="dark"] body {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cpath fill='%23a78bfa' stroke='%231a1620' stroke-width='1' d='M2 2 L2 18 L8 12 L11 18 L13 16 L10 10 L18 10 Z'/%3E%3C/svg%3E") 2 2, auto;
+}
+
+input[type="text"],
+input[type="search"],
+input[type="email"],
+input[type="password"],
+input[type="url"],
+input[type="number"],
+textarea,
+[contenteditable="true"] {
+  cursor: text;
+}
+
+@media (pointer: coarse) {
+  body,
+  body * {
+    cursor: auto !important;
+  }
+}
+
+// Body scroll lock used by the Drawer primitive when a drawer is open.
+body.ab-no-scroll {
+  overflow: hidden;
+  touch-action: none;
+}
+
+// The standalone mobile rack uses native document scrolling. The rest of the
+// desktop app keeps its single internal scroller through the default rules.
+html.ab-mobile-page {
+  height: auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: auto;
+
+  body {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  #root {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+}
+
+html.ab-fixture-scroll-page {
+  height: auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: auto;
+
+  body {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: visible;
+    touch-action: manipulation;
+  }
+
+  body.ab-no-scroll {
+    overflow: hidden;
+    touch-action: none;
+  }
+
+  #root {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--ui-font-family-heading, var(--font-heading));
+  font-weight: var(--ui-font-weight-heading, 600);
+}
+
+// Common element styles
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color var(--transition-speed) ease;
+  
+  &:hover {
+    color: var(--color-accent);
+  }
+}
+
+button {
+  border: none;
+  background: none;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  
+  &:focus {
+    outline: none;
+  }
+  
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+}
+
+// Common button styles
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  border-radius: var(--border-radius);
+  background-color: var(--color-button-bg);
+  color: var(--color-button-text);
+  font-weight: 600;
+  transition: all var(--transition-speed) ease;
+  
+  &:hover {
+    opacity: 0.9;
+  }
+  
+  &.primary {
+    background-color: var(--color-primary);
+  }
+  
+  &.secondary {
+    background-color: var(--color-secondary);
+  }
+  
+  &.success {
+    background-color: var(--color-success);
+  }
+  
+  &.danger {
+    background-color: var(--color-error);
+  }
+  
+  i {
+    margin-right: 0.5rem;
+  }
+}
+
+// Card styles
+.card {
+  background-color: var(--color-card-bg);
+  border-radius: var(--border-radius);
+  box-shadow: var(--card-shadow);
+  border: 1px solid var(--color-card-border);
+  overflow: hidden;
+  margin-bottom: 1rem;
+  
+  .card-header {
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--color-card-border);
+    
+    h3 {
+      margin: 0;
+      font-weight: 600;
+    }
+  }
+  
+  .card-body {
+    padding: 1rem;
+  }
+  
+  .card-footer {
+    padding: 1rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    border-top: 1px solid var(--color-card-border);
+  }
+}
+
+// Legacy slider styles (styled faders use ui/controls modules)
+input[type="range"]:not(.ab-styled-fader) {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background-color: var(--color-slider-track);
+  border-radius: 3px;
+  outline: none;
+  
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background-color: var(--color-slider-thumb);
+    cursor: pointer;
+  }
+  
+  &::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background-color: var(--color-slider-thumb);
+    cursor: pointer;
+    border: none;
+  }
+}
+
+html.ab-touch-optimized input[type="range"]:not(.ab-styled-fader) {
+  min-height: 44px;
+
+  &::-webkit-slider-runnable-track {
+    min-height: var(--ab-touch-slider-track);
+  }
+
+  &::-webkit-slider-thumb {
+    width: var(--ab-touch-slider-thumb);
+    height: var(--ab-touch-slider-thumb);
+    margin-top: calc((var(--ab-touch-slider-track) - var(--ab-touch-slider-thumb)) / 2);
+  }
+
+  &::-moz-range-track {
+    height: var(--ab-touch-slider-track);
+  }
+
+  &::-moz-range-thumb {
+    width: var(--ab-touch-slider-thumb);
+    height: var(--ab-touch-slider-thumb);
+  }
+}
+
+// Form control styles
+.form-row {
+  margin-bottom: 1rem;
+  
+  label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+  }
+  
+  input[type="text"],
+  input[type="number"],
+  input[type="password"],
+  select,
+  textarea {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--border-radius);
+    background-color: var(--color-card-bg);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    
+    &:focus {
+      outline: none;
+      border-color: var(--color-primary);
+    }
+  }
+}
+
+// Grid container
+.grid-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+// Responsive grid container
+@media (max-width: 768px) {
+  .grid-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+// Utility classes
+.text-center {
+  text-align: center;
+}
+
+.mt-1 {
+  margin-top: 0.5rem;
+}
+
+.mt-2 {
+  margin-top: 1rem;
+}
+
+.mb-1 {
+  margin-bottom: 0.5rem;
+}
+
+.mb-2 {
+  margin-bottom: 1rem;
+}
+
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+// Root container for React app — single scroll lives in main content, not body
+#root {
+  height: 100dvh;
+  min-height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+

@@ -1,0 +1,418 @@
+.actPlayer {
+  background: var(--card-background);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  margin-top: 20px;
+  overflow: hidden;
+
+  .playerHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background: var(--primary-color);
+    color: white;
+
+    h4 {
+      margin: 0;
+      font-size: 1.2rem;
+      font-weight: 500;
+
+      i {
+        margin-right: 8px;
+        color: var(--accent-color);
+      }
+    }
+
+    .playerStatus {
+      display: flex;
+      gap: 15px;
+      font-size: 0.9rem;
+
+      .loopCount {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 4px 8px;
+        border-radius: 4px;
+      }
+
+      .currentStep {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 4px 8px;
+        border-radius: 4px;
+      }
+    }
+  }
+
+  .playerContent {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .currentStepInfo {
+    background: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 15px;
+
+    .stepName {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 1.1rem;
+      font-weight: 500;
+      color: var(--text-color);
+      margin-bottom: 10px;
+
+      i {
+        color: var(--primary-color);
+      }
+    }
+
+    .stepTiming {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+
+      .timeDisplay {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--text-color);
+
+        .currentTime {
+          color: var(--primary-color);
+        }
+
+        .separator {
+          color: var(--text-muted-color);
+        }
+
+        .totalTime {
+          color: var(--text-muted-color);
+        }
+      }
+
+      .remainingTime {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        color: var(--text-muted-color);
+        font-size: 0.9rem;
+
+        i {
+          color: var(--warning-color);
+        }
+      }
+    }
+  }
+
+  .progressSection {
+    .progressBar {
+      width: 100%;
+      height: 8px;
+      background: var(--background-color);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 8px;
+
+      .progressFill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+        transition: width 0.1s ease;
+        border-radius: 4px;
+      }
+    }
+
+    .progressLabel {
+      text-align: center;
+      font-size: 0.9rem;
+      color: var(--text-muted-color);
+      font-weight: 500;
+    }
+  }
+
+  .controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+
+    .playbackControls {
+      display: flex;
+      gap: 10px;
+
+      button {
+        width: 40px;
+        height: 40px;
+        border: none;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        font-size: 1rem;
+
+        &:hover:not(:disabled) {
+          transform: scale(1.1);
+        }
+
+        &:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        &.previousButton {
+          background: var(--text-muted-color);
+          color: white;
+
+          &:hover:not(:disabled) {
+            background: var(--text-color);
+          }
+        }
+
+        &.playPauseButton {
+          background: var(--success-color);
+          color: white;
+          width: 50px;
+          height: 50px;
+          font-size: 1.2rem;
+
+          &:hover:not(:disabled) {
+            background: var(--success-hover-color);
+          }
+
+          &.playing {
+            background: var(--warning-color);
+
+            &:hover:not(:disabled) {
+              background: var(--warning-hover-color);
+            }
+          }
+        }
+
+        &.nextButton {
+          background: var(--text-muted-color);
+          color: white;
+
+          &:hover:not(:disabled) {
+            background: var(--text-color);
+          }
+        }
+
+        &.stopButton {
+          background: var(--danger-color);
+          color: white;
+
+          &:hover:not(:disabled) {
+            background: var(--danger-hover-color);
+          }
+        }
+      }
+    }
+
+    .speedControl {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+
+      label {
+        font-weight: 500;
+        color: var(--text-color);
+        font-size: 0.9rem;
+      }
+
+      .speedSlider {
+        width: 100px;
+        height: 4px;
+        background: var(--background-color);
+        border-radius: 2px;
+        outline: none;
+        cursor: pointer;
+
+        &::-webkit-slider-thumb {
+          appearance: none;
+          width: 40px;
+          height: 40px;
+          background: var(--primary-color);
+          border-radius: 50%;
+          cursor: grab;
+          border: 3px solid rgba(255, 255, 255, 0.4);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 0 3px rgba(var(--primary-color-rgb, 0, 123, 255), 0.2);
+          transition: all 0.2s ease;
+          
+          &:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6), 0 0 0 4px rgba(var(--primary-color-rgb, 0, 123, 255), 0.3);
+          }
+          
+          &:active {
+            cursor: grabbing;
+            transform: scale(1.05);
+          }
+        }
+
+        &::-moz-range-thumb {
+          width: 40px;
+          height: 40px;
+          background: var(--primary-color);
+          border-radius: 50%;
+          cursor: grab;
+          border: 3px solid rgba(255, 255, 255, 0.4);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 0 3px rgba(var(--primary-color-rgb, 0, 123, 255), 0.2);
+          transition: all 0.2s ease;
+          
+          &:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6), 0 0 0 4px rgba(var(--primary-color-rgb, 0, 123, 255), 0.3);
+          }
+          
+          &:active {
+            cursor: grabbing;
+            transform: scale(1.05);
+          }
+        }
+      }
+
+      .speedValue {
+        font-weight: 600;
+        color: var(--primary-color);
+        font-size: 0.9rem;
+        min-width: 30px;
+      }
+    }
+  }
+
+  .timeline {
+    h5 {
+      margin: 0 0 15px 0;
+      font-size: 1rem;
+      color: var(--text-color);
+    }
+
+    .stepsTimeline {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .timelineStep {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 15px;
+      background: var(--background-color);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+
+      &:hover {
+        border-color: var(--primary-color);
+        transform: translateX(5px);
+      }
+
+      &.current {
+        border-color: var(--primary-color);
+        background: var(--primary-color-alpha);
+        box-shadow: 0 0 0 2px var(--primary-color-alpha);
+      }
+
+      &.completed {
+        opacity: 0.7;
+        background: var(--success-color-alpha);
+        border-color: var(--success-color);
+      }
+
+      .timelineStepNumber {
+        background: var(--primary-color);
+        color: white;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        font-weight: 600;
+        flex-shrink: 0;
+      }
+
+      &.completed .timelineStepNumber {
+        background: var(--success-color);
+      }
+
+      .timelineStepInfo {
+        flex: 1;
+
+        .timelineStepName {
+          font-weight: 500;
+          color: var(--text-color);
+          font-size: 0.9rem;
+        }
+
+        .timelineStepDuration {
+          color: var(--text-muted-color);
+          font-size: 0.8rem;
+        }
+      }
+
+      .timelineProgress {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: var(--background-color);
+        border-radius: 0 0 8px 8px;
+        overflow: hidden;
+
+        .timelineProgressFill {
+          height: 100%;
+          background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+          transition: width 0.1s ease;
+        }
+      }
+    }
+  }
+
+  .loopInfo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 15px;
+    background: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    color: var(--text-color);
+
+    i {
+      color: var(--accent-color);
+    }
+
+    .loopIndicator {
+      margin-left: auto;
+      color: var(--text-muted-color);
+      font-size: 0.8rem;
+      font-style: italic;
+    }
+  }
+}
+
+// Dark mode adjustments
+@media (prefers-color-scheme: dark) {
+  .actPlayer {
+    .timelineStep {
+      &:hover {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      }
+    }
+  }
+}

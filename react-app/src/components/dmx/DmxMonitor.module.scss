@@ -1,0 +1,76 @@
+.timestamp {
+  width: 80px;
+  color: #aaa;
+  font-size: 0.8em;
+}
+
+.dmxValue {
+  flex: 1;
+  min-width: 0;
+  color: #ff66cc;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.repeatBadge {
+  background: rgba(14, 165, 233, 0.18);
+  border: 1px solid rgba(14, 165, 233, 0.38);
+  border-radius: 999px;
+  color: #7dd3fc;
+  flex: 0 0 auto;
+  font-size: 0.72em;
+  font-weight: 700;
+  padding: 1px 6px;
+}
+
+.detail {
+  color: #aaa;
+  font-size: 0.78em;
+  line-height: 1.35;
+  margin-left: 88px;
+  padding-top: 2px;
+  word-break: break-word;
+}
+
+.lastApc40Context {
+  align-items: center;
+  background: rgba(249, 115, 22, 0.12);
+  border-bottom: 1px solid rgba(249, 115, 22, 0.24);
+  color: #fed7aa;
+  display: flex;
+  gap: 8px;
+  padding: 5px 10px;
+}
+
+.lastApc40Context span {
+  color: #fb923c;
+  font-size: 0.72em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.lastApc40Context b {
+  color: #fff7ed;
+  font-size: 0.82em;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.footer {
+  border-top: 1px solid rgba(0, 255, 102, 0.2);
+  color: #aaa;
+  display: flex;
+  font-size: 0.8em;
+  justify-content: flex-end;
+  padding: 6px 10px;
+}
+
+.footer label {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+}

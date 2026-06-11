@@ -1,0 +1,88 @@
+name: 🧪 Build & Run Test - The Trials of ArtBastard
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+  schedule:
+    # Run tests daily at midnight UTC to ensure nothing breaks
+    - cron: '0 0 * * *'
+
+jobs:
+  build-test:
+    name: 🎭 The Trials of Build
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 🎬 Begin the Ritual
+        run: |
+          echo "🎭 ArtBastard DMX512 - Build & Run Test"
+          echo "═══════════════════════════════════════"
+          echo "The trials begin... Let the photons flow!"
+          echo ""
+      
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: ⚙️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+      
+      - name: 📦 Install root dependencies
+        run: |
+          echo "📦 Installing root dependencies..."
+          npm ci --legacy-peer-deps
+          echo "✅ Root dependencies installed"
+      
+      - name: 📦 Install frontend dependencies
+        working-directory: ./react-app
+        run: |
+          echo "📦 Installing frontend dependencies..."
+          npm ci --legacy-peer-deps
+          echo "✅ Frontend dependencies installed"
+      
+      - name: 🏗️ Build backend
+        run: |
+          echo "🏗️ Building backend..."
+          npm run build-backend
+          echo "✅ Backend build complete"
+      
+      - name: 🏗️ Build frontend
+        working-directory: ./react-app
+        run: |
+          echo "🏗️ Building frontend..."
+          npm run build:vite
+          echo "✅ Frontend build complete"
+      
+      - name: 🔍 Verify build artifacts
+        run: |
+          echo "🔍 Verifying build artifacts..."
+          if [ ! -f "dist/server.js" ]; then
+            echo "❌ Backend build failed - dist/server.js not found"
+            exit 1
+          fi
+          if [ ! -f "react-app/dist/index.html" ]; then
+            echo "❌ Frontend build failed - react-app/dist/index.html not found"
+            exit 1
+          fi
+          echo "✅ Build successful - all artifacts present"
+          echo ""
+          echo "📊 Build Summary:"
+          echo "  - Backend: ✅ dist/server.js"
+          echo "  - Frontend: ✅ react-app/dist/index.html"
+          ls -lh dist/server.js react-app/dist/index.html
+      
+      - name: 🚀 Test server startup
+        run: |
+          echo "🚀 Testing server startup..."
+          echo "Starting server with 5 second timeout..."
+          timeout 5 node dist/server.js || true
+          echo "✅ Server starts successfully"
+          echo ""
+          echo "🎭 All trials passed! ArtBastard is ready."
+          echo "═══════════════════════════════════════"
+

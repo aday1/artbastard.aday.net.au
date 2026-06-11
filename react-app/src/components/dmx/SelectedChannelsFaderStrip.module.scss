@@ -1,0 +1,62 @@
+.strip {
+  margin-bottom: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-sm);
+  gap: 8px;
+}
+
+.title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+}
+
+.overflow {
+  font-size: 11px;
+  color: var(--color-interactive);
+}
+
+.hint {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+}
+
+.faders {
+  display: flex;
+  gap: var(--space-sm);
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scroll-snap-type: x proximity;
+}
+
+.faderCell {
+  flex: 0 0 11.5rem;
+  scroll-snap-align: start;
+  min-width: 10rem;
+}
+
+.pinnedFader {
+  min-height: 11rem;
+
+  :global(.form) {
+    width: 100%;
+  }
+
+  :global(.input) {
+    width: 100%;
+    max-width: none;
+  }
+}

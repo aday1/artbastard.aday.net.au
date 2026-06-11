@@ -1,0 +1,598 @@
+// Skeuomorphic SMX / rack-mount style for DMX super-control (scene + MIDI).
+// Metallic faceplate, inset I/O strips, tactile buttons, LED indicators.
+
+$metal-dark: #0f1419;
+$metal-mid: #1a2332;
+$metal-light: #2a3548;
+$bevel-lit: rgba(255, 255, 255, 0.12);
+$bevel-shadow: rgba(0, 0, 0, 0.55);
+$mint: #2ecc71;
+$mint-dim: rgba(46, 204, 113, 0.35);
+$danger: #f87171;
+$amber: #fbbf24;
+
+.rackFrame {
+  position: relative;
+  border-radius: 10px;
+  padding: 3px;
+  background: linear-gradient(
+    165deg,
+    #252f3d 0%,
+    $metal-dark 35%,
+    #0b0f14 100%
+  );
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 $bevel-lit,
+    inset 0 -2px 6px $bevel-shadow;
+}
+
+.rackFaceplate {
+  position: relative;
+  border-radius: 8px;
+  padding: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, transparent 42%),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.06) 2px,
+      rgba(0, 0, 0, 0.06) 3px
+    ),
+    linear-gradient(160deg, #1e2836 0%, $metal-dark 48%, #10151d 100%);
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+    inset 0 18px 32px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.screw {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #5c677a, #1e2430);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.25),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.8),
+    0 1px 2px rgba(0, 0, 0, 0.6);
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+.screwTl {
+  top: 10px;
+  left: 10px;
+}
+.screwTr {
+  top: 10px;
+  right: 10px;
+}
+.screwBl {
+  bottom: 10px;
+  left: 10px;
+}
+.screwBr {
+  bottom: 10px;
+  right: 10px;
+}
+
+.rackHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 18px 10px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.45);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.2) 0%, transparent 100%);
+}
+
+.rackHeaderButton {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 18px 10px;
+  border: none;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.45);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.2) 0%, transparent 100%);
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+
+  &:hover {
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.28) 0%, rgba(0, 0, 0, 0.08) 100%);
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(46, 204, 113, 0.65);
+    outline-offset: -2px;
+  }
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.collapsedSummary {
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  color: rgba(148, 163, 184, 0.95);
+  white-space: nowrap;
+}
+
+.rackBodyCollapsed {
+  padding: 8px 18px 12px;
+}
+
+.expandHint {
+  font-size: 0.65rem;
+  color: rgba(148, 163, 184, 0.75);
+  letter-spacing: 0.04em;
+}
+
+.rackTitle {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.92);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
+
+  svg {
+    width: 20px;
+    height: 20px;
+    color: $mint;
+    filter: drop-shadow(0 0 6px $mint-dim);
+  }
+}
+
+.ledRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ledLabel {
+  font-size: 0.56rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.85);
+}
+
+.ledCluster {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.35);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.65);
+}
+
+.led {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #1e293b;
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.9),
+    0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: box-shadow 0.2s ease, background 0.2s ease;
+
+  &.ledOn {
+    background: radial-gradient(circle at 35% 30%, #86efac, $mint 45%, #047857);
+    box-shadow:
+      0 0 10px rgba(46, 204, 113, 0.75),
+      inset 0 -1px 2px rgba(0, 0, 0, 0.4);
+  }
+
+  &.ledWarn {
+    background: radial-gradient(circle at 35% 30%, #fde68a, #f59e0b 50%, #b45309);
+    box-shadow:
+      0 0 8px rgba(245, 158, 11, 0.6),
+      inset 0 -1px 2px rgba(0, 0, 0, 0.35);
+  }
+
+  &.ledErr {
+    background: radial-gradient(circle at 35% 30%, #fecaca, #ef4444 50%, #991b1b);
+    box-shadow:
+      0 0 8px rgba(248, 113, 113, 0.55),
+      inset 0 -1px 2px rgba(0, 0, 0, 0.35);
+  }
+}
+
+.rackBody {
+  padding: 14px 16px 16px;
+}
+
+.subPanel {
+  border-radius: 6px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.28);
+  box-shadow:
+    inset 0 2px 8px rgba(0, 0, 0, 0.55),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.ioToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.ioLabel {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.punchButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #e2e8f0;
+  cursor: pointer;
+  border-radius: 5px;
+  border: none;
+  background: linear-gradient(180deg, #3d4f63 0%, #2a3645 22%, #1a232e 100%);
+  box-shadow:
+    0 3px 0 #0d1118,
+    0 4px 8px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 $bevel-lit,
+    inset 0 -1px 0 rgba(0, 0, 0, 0.45);
+
+  &:hover {
+    filter: brightness(1.08);
+  }
+
+  &:active {
+    transform: translateY(2px);
+    box-shadow:
+      0 1px 0 #0d1118,
+      inset 0 2px 6px rgba(0, 0, 0, 0.45);
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+    opacity: 0.95;
+  }
+}
+
+.channelStripList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: min(220px, 40vh);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.channelStrip {
+  display: grid;
+  grid-template-columns: 22px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, rgba(40, 50, 64, 0.65) 0%, rgba(18, 24, 32, 0.9) 100%);
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.55),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 2px 4px rgba(0, 0, 0, 0.35);
+
+  &.stripHot {
+    box-shadow:
+      inset 0 0 0 1px rgba(46, 204, 113, 0.35),
+      inset 0 2px 6px rgba(0, 0, 0, 0.5),
+      0 0 14px rgba(46, 204, 113, 0.12);
+  }
+}
+
+.stripLadder {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 2px;
+  height: 40px;
+}
+
+.ladderSeg {
+  height: 5px;
+  border-radius: 1px;
+  background: rgba(15, 23, 42, 0.9);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.85);
+
+  &.segLit {
+    background: linear-gradient(90deg, #047857, $mint);
+    box-shadow: 0 0 6px rgba(46, 204, 113, 0.45);
+  }
+}
+
+.stripText {
+  min-width: 0;
+}
+
+.stripName {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 650;
+  color: #f1f5f9;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stripMeta {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.65rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: rgba(148, 163, 184, 0.85);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stripAction {
+  flex-shrink: 0;
+}
+
+.toggleConnect {
+  min-width: 118px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  cursor: pointer;
+  border: none;
+  transition: filter 0.15s ease, transform 0.08s ease;
+  color: #ecfdf5;
+  background: linear-gradient(180deg, #34d399 0%, #059669 40%, #065f46 100%);
+  box-shadow:
+    0 3px 0 #022c22,
+    0 4px 10px rgba(5, 150, 105, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+
+  &:hover {
+    filter: brightness(1.06);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.toggleDisconnect {
+  min-width: 118px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  cursor: pointer;
+  border: none;
+  transition: filter 0.15s ease, transform 0.08s ease;
+  color: #fff1f2;
+  background: linear-gradient(180deg, #fb7185 0%, #e11d48 45%, #9f1239 100%);
+  box-shadow:
+    0 3px 0 #4c0519,
+    0 4px 10px rgba(225, 29, 72, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+
+  &:hover {
+    filter: brightness(1.06);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.emptyState {
+  text-align: center;
+  padding: 18px 14px;
+  font-size: 0.8rem;
+  color: rgba(148, 163, 184, 0.95);
+  border-radius: 4px;
+  background: rgba(15, 23, 42, 0.45);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.45);
+}
+
+.alertErr {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  background: rgba(127, 29, 29, 0.35);
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  color: #fecaca;
+
+  svg {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin-top: 1px;
+  }
+}
+
+.alertWarn {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  background: rgba(120, 53, 15, 0.35);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  color: #fde68a;
+
+  svg {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin-top: 1px;
+  }
+}
+
+.privacyNote {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.65rem;
+  line-height: 1.4;
+  letter-spacing: 0.03em;
+  color: rgba(148, 163, 184, 0.85);
+}
+
+// Scene block: wide actuator + recall grid
+.sceneBody {
+  padding: 12px 16px 16px;
+}
+
+.sceneActuator {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #ecfdf5;
+  cursor: pointer;
+  border: none;
+  border-radius: 5px;
+  background: linear-gradient(180deg, #34d399 0%, #059669 38%, #065f46 100%);
+  box-shadow:
+    0 4px 0 #022c22,
+    0 8px 16px rgba(5, 150, 105, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+
+  &:hover {
+    filter: brightness(1.05);
+  }
+
+  &:active {
+    transform: translateY(2px);
+    box-shadow:
+      0 2px 0 #022c22,
+      inset 0 2px 8px rgba(0, 0, 0, 0.35);
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.recallGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.recallLabel {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.9);
+  margin-bottom: 4px;
+}
+
+.recallButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.recallButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #e2e8f0;
+  cursor: pointer;
+  border-radius: 4px;
+  border: none;
+  background: linear-gradient(180deg, #3b4b5f 0%, #273445 100%);
+  box-shadow:
+    0 2px 0 #0f141c,
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+
+  &:hover {
+    filter: brightness(1.08);
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+    opacity: 0.9;
+  }
+}

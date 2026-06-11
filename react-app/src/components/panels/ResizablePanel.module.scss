@@ -1,0 +1,429 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(78, 205, 196, 0.3);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  height: 100%;
+
+  &.dragOver {
+    border-color: rgba(78, 205, 196, 1);
+    border-width: 2px;
+    background: rgba(78, 205, 196, 0.15);
+    box-shadow: 
+      0 0 30px rgba(78, 205, 196, 0.5),
+      inset 0 0 30px rgba(78, 205, 196, 0.1);
+    transform: scale(1.01);
+    animation: dropZonePulse 1.5s ease-in-out infinite;
+
+    &::before {
+      content: 'Drop component here';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: var(--accent-color);
+      font-size: 1.2rem;
+      font-weight: 600;
+      z-index: 10;
+      pointer-events: none;
+      text-shadow: 0 0 10px rgba(78, 205, 196, 0.8);
+    }
+  }
+
+  @keyframes dropZonePulse {
+    0%, 100% { 
+      box-shadow: 
+        0 0 30px rgba(78, 205, 196, 0.5),
+        inset 0 0 30px rgba(78, 205, 196, 0.1);
+    }
+    50% { 
+      box-shadow: 
+        0 0 40px rgba(78, 205, 196, 0.7),
+        inset 0 0 40px rgba(78, 205, 196, 0.15);
+    }
+  }
+
+  &.touchOptimized {
+    border-radius: 12px;
+    border-width: 2px;
+    
+    .panelHeader {
+      min-height: 60px;
+      padding: 1rem 1.5rem;
+    }
+    
+    .componentWrapper {
+      border-radius: 10px;
+      margin-bottom: 1rem;
+      
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
+
+  .panelHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background: rgba(0, 0, 0, 0.9);
+    border-bottom: 1px solid rgba(78, 205, 196, 0.2);
+    min-height: 50px;
+
+    .panelTitle {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #4ecdc4;
+
+      i {
+        font-size: 0.9em;
+        opacity: 0.8;
+      }
+    }    .panelControls {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+
+      .componentCount {
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.6);
+        font-style: italic;
+      }
+
+      .panelManagement {
+        position: relative;
+
+        .panelControlButton {
+          background: transparent;
+          border: 1px solid rgba(78, 205, 196, 0.3);
+          border-radius: 4px;
+          color: rgba(78, 205, 196, 0.8);
+          cursor: pointer;
+          padding: 0.25rem 0.5rem;
+          transition: all 0.2s ease;
+          font-size: 0.8rem;
+
+          &:hover {
+            color: #4ecdc4;
+            border-color: rgba(78, 205, 196, 0.6);
+            background: rgba(78, 205, 196, 0.1);
+          }
+        }
+
+        .panelControlsDropdown {
+          position: absolute;
+          top: 100%;
+          right: 0;
+          background: rgba(0, 0, 0, 0.95);
+          border: 1px solid rgba(78, 205, 196, 0.3);
+          border-radius: 6px;
+          padding: 0.5rem;
+          min-width: 150px;
+          z-index: 1000;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+          .controlAction {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.8);
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            font-size: 0.8rem;
+            text-align: left;
+
+            &:hover {
+              background: rgba(78, 205, 196, 0.1);
+              color: #4ecdc4;
+            }
+
+            i {
+              font-size: 0.7rem;
+              width: 12px;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .panelContent {
+    flex: 1;
+    padding: 1rem;
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: rgba(78, 205, 196, 0.3);
+      border-radius: 3px;
+
+      &:hover {
+        background: rgba(78, 205, 196, 0.5);
+      }
+    }
+  }
+
+  .emptyPanel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.5);
+    border: 2px dashed rgba(78, 205, 196, 0.2);
+    border-radius: 8px;
+    transition: all 0.2s ease;
+
+    i {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      opacity: 0.3;
+    }
+
+    p {
+      font-size: 1.1rem;
+      margin: 0 0 0.5rem 0;
+      font-weight: 500;
+    }
+
+    small {
+      font-size: 0.9rem;
+      opacity: 0.7;
+    }
+  }
+
+  .componentGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .componentWrapper {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(78, 205, 196, 0.2);
+    border-radius: 6px;
+    overflow: hidden;
+    transition: all 0.2s ease;
+
+    &:hover {
+      border-color: rgba(78, 205, 196, 0.4);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    &.expanded {
+      border-color: rgba(78, 205, 196, 0.6);
+      box-shadow: 0 4px 16px rgba(78, 205, 196, 0.2);
+      
+      .componentContent {
+        min-height: 300px;
+      }
+    }
+
+    &.touchOptimized {
+      border-radius: 10px;
+      border-width: 2px;
+      
+      .componentHeader {
+        padding: 1rem;
+        min-height: 50px;
+      }
+      
+      .componentContent {
+        padding: 1rem;
+      }
+
+      .actionButton,
+      .removeButton {
+        min-width: 40px;
+        min-height: 40px;
+        border-radius: 8px;
+        
+        &.touchButton {
+          min-width: 50px;
+          min-height: 50px;
+          font-size: 1rem;
+        }
+      }
+    }
+
+    .componentHeader {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 0.75rem;
+      background: rgba(0, 0, 0, 0.7);
+      border-bottom: 1px solid rgba(78, 205, 196, 0.1);
+
+      .componentTitle {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #4ecdc4;
+        flex: 1;
+      }
+
+      .componentActions {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+
+        .actionButton {
+          background: transparent;
+          border: 1px solid rgba(78, 205, 196, 0.2);
+          border-radius: 3px;
+          color: rgba(78, 205, 196, 0.6);
+          cursor: pointer;
+          padding: 0.25rem;
+          transition: all 0.2s ease;
+          font-size: 0.7rem;
+          min-width: 28px;
+          min-height: 28px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          &:hover {
+            color: #4ecdc4;
+            border-color: rgba(78, 205, 196, 0.4);
+            background: rgba(78, 205, 196, 0.1);
+          }
+        }        .removeButton {
+          background: transparent;
+          border: 1px solid rgba(255, 107, 107, 0.2);
+          border-radius: 3px;
+          color: rgba(255, 255, 255, 0.5);
+          cursor: pointer;
+          padding: 0.25rem;
+          transition: all 0.2s ease;
+          font-size: 0.7rem;
+          min-width: 28px;
+          min-height: 28px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          touch-action: manipulation;
+          user-select: none;
+          -webkit-user-select: none;
+          -webkit-tap-highlight-color: transparent;
+          z-index: 100;
+
+          &:hover {
+            color: #ff6b6b;
+            border-color: rgba(255, 107, 107, 0.6);
+            background: rgba(255, 107, 107, 0.1);
+          }
+
+          &:active {
+            transform: scale(0.95);
+            background: rgba(255, 107, 107, 0.2);
+          }
+
+          &.touchButton {
+            min-width: 50px;
+            min-height: 50px;
+            border-radius: 8px;
+            border-width: 2px;
+            font-size: 1rem;
+            
+            &:hover {
+              transform: scale(1.05);
+            }
+            
+            &:active {
+              transform: scale(0.95);
+              background: rgba(255, 107, 107, 0.3);
+            }
+          }
+        }
+      }
+    }
+
+    .componentContent {
+      padding: 0.75rem;
+      transition: all 0.3s ease;
+      
+      &.expandedContent {
+        min-height: 200px;
+        max-height: 500px;
+        overflow-y: auto;
+      }
+      
+      // Reset any fixed positioning from components
+      * {
+        position: static !important;
+        transform: none !important;
+        z-index: auto !important;
+      }
+    }
+  }
+}
+
+.panelFullScreen {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 10000 !important;
+  border-radius: 0 !important;
+  border: none !important;
+
+  // Ensure content is scrollable if it overflows
+  .panelContent {
+    height: calc(100vh - 60px); // Adjust 60px if header height is different
+    overflow-y: auto;
+  }
+}
+
+// Panel-specific styling
+.topLeftPanel,
+.topRightPanel {
+  min-height: 300px;
+}
+
+.bottomPanel {
+  min-height: 150px;
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .panel {
+    .panelHeader {
+      padding: 0.5rem 0.75rem;
+      
+      .panelTitle {
+        font-size: 0.9rem;
+      }
+    }
+
+    .panelContent {
+      padding: 0.75rem;
+    }
+
+    .componentWrapper {
+      .componentContent {
+        padding: 0.5rem;
+      }
+    }
+  }
+}
