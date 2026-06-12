@@ -6,6 +6,7 @@ import { useGlobalBrowserMidi } from '../../hooks/useGlobalBrowserMidi'
 import { MIDI_CONTROLLER_TEMPLATES, detectTemplateForMidiInterface, MidiControllerTemplateId } from './midiControllerTemplates'
 import { Apc40Manual } from './Apc40Manual'
 import { Apc40SurfaceDiagram } from './Apc40SurfaceDiagram'
+import { Apc40Demoscene } from './Apc40Demoscene'
 import styles from './MidiOscSetup.module.scss'
 import { debugLog } from '../../utils/debugLog';
 
@@ -871,6 +872,11 @@ export const MidiOscSetup: React.FC = () => {
         {/* APC40 Surface Diagram — physical hardware layout with live bindings */}
         <div className={styles.card} style={{ gridColumn: '1 / -1' }}>
           <Apc40SurfaceDiagram mode="view" title="hardware surface" />
+        </div>
+
+        {/* APC40 Demoscene easter egg — LED animations for the clip grid */}
+        <div className={styles.card} style={{ gridColumn: '1 / -1' }}>
+          <Apc40Demoscene />
         </div>
 
         {/* APC40 Manual Card */}

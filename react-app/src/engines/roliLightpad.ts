@@ -1,11 +1,10 @@
 /**
- * Roli Lightpad Block engine (ArtBastard build).
+ * Roli Lightpad Block engine (ArtBastard build, multi-device).
  *
- * Adapted from Roliblocks-Remix/Macroverse engine. Provides:
- *  - Web MIDI + SysEx connection lifecycle
- *  - Touch parser (SysEx 0x11/0x13/0x15 -> normalized x,y,z,phase)
- *  - LED grid output via the BLOCKS DataChangeList protocol
- *  - 15x15 BGR565 pixel buffer composition helpers
+ * Adapted from Roliblocks-Remix/Macroverse. Supports an arbitrary number of
+ * connected ROLI Lightpad Blocks, each with its own handshake state, LED diff
+ * buffer, touch state, and assigned role ("primary" for the XY pad, "colour-
+ * wheel" for the second block, etc.).
  *
  * Pure module — no React. Wrap in `useRoliLightpad` for component use.
  */
@@ -21,29 +20,39 @@ const LED_SEND_INTERVAL_MS = 40;
 const MAX_PACKET_SIZE = 200;
 const PACKET_COUNTER_MAX = 0x03ff;
 
+const ROLE_STORAGE_KEY = 'roli-device-roles';
+
 export type TouchPhase = 'start' | 'move' | 'end';
+export type RoliRole = 'primary' | 'colour-wheel';
 
 export interface RoliTouchEvent {
   x: number; // 0..1
   y: number; // 0..1 (raw — top-origin like the device)
   z: number; // 0..1 pressure (approximate)
   phase: TouchPhase;
+  deviceId: string;
+  role: RoliRole;
+}
+
+export interface RoliDeviceInfo {
+  deviceId: string;
+  inputName: string | null;
+  outputName: string | null;
+  handshakeDone: boolean;
+  role: RoliRole;
 }
 
 export type RoliTouchCallback = (ev: RoliTouchEvent) => void;
-export type RoliDeviceChangeCallback = (info: {
-  connected: boolean;
-  inputName: string | null;
-  outputName: string | null;
-}) => void;
-export type RoliHandshakeCallback = (done: boolean) => void;
+export type RoliDeviceChangeCallback = (devices: RoliDeviceInfo[]) => void;
+export type RoliHandshakeCallback = (deviceId: string, done: boolean) => void;
 
-interface InternalState {
-  midiAccess: WebMidi.MIDIAccess | null;
+interface DeviceState {
+  deviceId: string; // == output name (canonical), or input name if no output
   input: WebMidi.MIDIInput | null;
   output: WebMidi.MIDIOutput | null;
   inputName: string | null;
   outputName: string | null;
+  role: RoliRole;
   handshakeDone: boolean;
   packetCounter: number;
   prevLedData: Uint8Array;
@@ -55,32 +64,66 @@ interface InternalState {
   lastZ: number;
   isTouching: boolean;
   needsFullRepaint: boolean;
+}
+
+interface EngineState {
+  midiAccess: WebMidi.MIDIAccess | null;
+  devices: Map<string, DeviceState>;
   onTouch: RoliTouchCallback | null;
   onDevice: RoliDeviceChangeCallback | null;
   onHandshake: RoliHandshakeCallback | null;
 }
 
-const s: InternalState = {
+const engine: EngineState = {
   midiAccess: null,
-  input: null,
-  output: null,
-  inputName: null,
-  outputName: null,
-  handshakeDone: false,
-  packetCounter: 0,
-  prevLedData: new Uint8Array(LED_BYTE_COUNT),
-  lastLedSend: 0,
-  ledFailCount: 0,
-  sysexBuf: [],
-  lastX: 0.5,
-  lastY: 0.5,
-  lastZ: 0,
-  isTouching: false,
-  needsFullRepaint: false,
+  devices: new Map(),
   onTouch: null,
   onDevice: null,
   onHandshake: null,
 };
+
+function loadRoleAssignments(): Record<string, RoliRole> {
+  if (typeof localStorage === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(ROLE_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return typeof parsed === 'object' && parsed != null ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveRoleAssignments(map: Record<string, RoliRole>): void {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem(ROLE_STORAGE_KEY, JSON.stringify(map));
+  } catch {
+    // ignore
+  }
+}
+
+function newDeviceState(deviceId: string, role: RoliRole): DeviceState {
+  return {
+    deviceId,
+    input: null,
+    output: null,
+    inputName: null,
+    outputName: null,
+    role,
+    handshakeDone: false,
+    packetCounter: 0,
+    prevLedData: new Uint8Array(LED_BYTE_COUNT),
+    lastLedSend: 0,
+    ledFailCount: 0,
+    sysexBuf: [],
+    lastX: 0.5,
+    lastY: 0.5,
+    lastZ: 0,
+    isTouching: false,
+    needsFullRepaint: false,
+  };
+}
 
 class Packed7BitBuilder {
   _data: number[] = [];
@@ -149,12 +192,12 @@ function buildBlockSysEx(deviceIndex: number, payload: number[]): Uint8Array {
   return d;
 }
 
-function sendSysEx(payload: number[]): void {
-  if (!s.output) return;
+function sendSysExTo(dev: DeviceState, payload: number[]): void {
+  if (!dev.output) return;
   try {
-    s.output.send(buildBlockSysEx(DEVICE_INDEX, payload));
+    dev.output.send(buildBlockSysEx(DEVICE_INDEX, payload));
   } catch {
-    s.ledFailCount++;
+    dev.ledFailCount++;
   }
 }
 
@@ -240,10 +283,14 @@ export function sampleRgbaToLedFrame(
   return out;
 }
 
-function buildDataChangeMessages(newData: Uint8Array, oldData: Uint8Array): number[][] {
+function buildDataChangeMessages(
+  dev: DeviceState,
+  newData: Uint8Array,
+  oldData: Uint8Array
+): number[][] {
   const b = new Packed7BitBuilder();
   const queued: number[][] = [];
-  let pktIdx = s.packetCounter;
+  let pktIdx = dev.packetCounter;
 
   function initPacket(): void {
     b._data = [];
@@ -321,7 +368,7 @@ function buildDataChangeMessages(newData: Uint8Array, oldData: Uint8Array): numb
   }
 
   flushPacket(true);
-  s.packetCounter = pktIdx;
+  dev.packetCounter = pktIdx;
   return queued;
 }
 
@@ -334,28 +381,26 @@ function parseDump(hex: string): number[] {
   return hex.trim().split(/\s+/).map((h) => parseInt(h, 16));
 }
 
-function doHandshake(): void {
-  if (!s.output) return;
-  sendSysEx([0x01, 0x02, 0x00]);
-  sendSysEx([0x01, 0x00, 0x00]);
+function doHandshake(dev: DeviceState): void {
+  if (!dev.output) return;
+  sendSysExTo(dev, [0x01, 0x02, 0x00]);
+  sendSysExTo(dev, [0x01, 0x00, 0x00]);
   setTimeout(() => {
-    sendSysEx([0x01, 0x00, 0x00]);
-    sendSysEx([0x01, 0x03, 0x00]);
-    sendSysEx([0x10, 0x02]);
+    sendSysExTo(dev, [0x01, 0x00, 0x00]);
+    sendSysExTo(dev, [0x01, 0x03, 0x00]);
+    sendSysExTo(dev, [0x10, 0x02]);
     setTimeout(() => {
-      sendSysEx([0x01, 0x03, 0x00]);
-      sendSysEx(parseDump(BITMAP_LED_DUMP_1));
-      sendSysEx(parseDump(BITMAP_LED_DUMP_2));
+      sendSysExTo(dev, [0x01, 0x03, 0x00]);
+      sendSysExTo(dev, parseDump(BITMAP_LED_DUMP_1));
+      sendSysExTo(dev, parseDump(BITMAP_LED_DUMP_2));
       setTimeout(() => {
-        sendSysEx([0x01, 0x05, 0x00]);
-        s.handshakeDone = true;
-        s.packetCounter = 1;
-        s.prevLedData = new Uint8Array(LED_BYTE_COUNT);
-        // The handshake's BITMAP_LED_DUMP_1/2 leaves a junk pattern on the
-        // grid. Force the next sendLedFrame to encode every pixel so the
-        // first user frame wipes that pattern in one shot.
-        s.needsFullRepaint = true;
-        s.onHandshake?.(true);
+        sendSysExTo(dev, [0x01, 0x05, 0x00]);
+        dev.handshakeDone = true;
+        dev.packetCounter = 1;
+        dev.prevLedData = new Uint8Array(LED_BYTE_COUNT);
+        dev.needsFullRepaint = true;
+        engine.onHandshake?.(dev.deviceId, true);
+        notifyDeviceChange();
       }, 100);
     }, 100);
   }, 100);
@@ -375,19 +420,19 @@ function read7BitBits(data: Uint8Array, bitPos: number, numBits: number): number
   return v;
 }
 
-function emitTouch(x: number, y: number, z: number, phase: TouchPhase): void {
-  s.lastX = x;
-  s.lastY = y;
-  s.lastZ = z;
-  if (phase === 'start') s.isTouching = true;
+function emitTouch(dev: DeviceState, x: number, y: number, z: number, phase: TouchPhase): void {
+  dev.lastX = x;
+  dev.lastY = y;
+  dev.lastZ = z;
+  if (phase === 'start') dev.isTouching = true;
   else if (phase === 'end') {
-    s.isTouching = false;
-    s.lastZ = 0;
+    dev.isTouching = false;
+    dev.lastZ = 0;
   }
-  s.onTouch?.({ x, y, z, phase });
+  engine.onTouch?.({ x, y, z, phase, deviceId: dev.deviceId, role: dev.role });
 }
 
-function parseRoliTouchSysex(data: Uint8Array): void {
+function parseRoliTouchSysex(dev: DeviceState, data: Uint8Array): void {
   if (data.length < 8) return;
   const msgData = data.subarray(5, data.length - 2);
   let bitPos = 39;
@@ -400,10 +445,8 @@ function parseRoliTouchSysex(data: Uint8Array): void {
       bitPos += 12;
       const y = read7BitBits(msgData, bitPos, 12);
       bitPos += 12 + 8;
-      // Only forward 'move' events while a touch is actually active.
-      // Pre-fix: stale `lastZ || 0.5` made idle/decay frames write pan/tilt.
-      if (!s.isTouching) return;
-      emitTouch(x / 4095, y / 4095, s.lastZ || 0.5, 'move');
+      if (!dev.isTouching) return;
+      emitTouch(dev, x / 4095, y / 4095, dev.lastZ || 0.5, 'move');
       return;
     }
     if (msgType === 0x13 || msgType === 0x15) {
@@ -413,53 +456,54 @@ function parseRoliTouchSysex(data: Uint8Array): void {
       const y = read7BitBits(msgData, bitPos, 12);
       bitPos += 8;
       if (msgType === 0x13) bitPos += 24;
-      emitTouch(x / 4095, y / 4095, msgType === 0x13 ? 0.7 : 0, msgType === 0x13 ? 'start' : 'end');
+      emitTouch(dev, x / 4095, y / 4095, msgType === 0x13 ? 0.7 : 0, msgType === 0x13 ? 'start' : 'end');
       return;
     }
     break;
   }
 }
 
-function onMidiMessage(event: WebMidi.MIDIMessageEvent): void {
-  const d = event.data;
-  if (!d || d.length < 1) return;
+function makeOnMidiMessage(dev: DeviceState): (e: WebMidi.MIDIMessageEvent) => void {
+  return (event: WebMidi.MIDIMessageEvent) => {
+    const d = event.data;
+    if (!d || d.length < 1) return;
 
-  if (d[0] === 0xf0) {
-    s.sysexBuf = Array.from(d);
-  } else if (s.sysexBuf.length > 0) {
-    s.sysexBuf.push(...Array.from(d as unknown as number[]));
-  }
-  if (s.sysexBuf.length > 0 && s.sysexBuf[s.sysexBuf.length - 1] === 0xf7) {
-    const full = new Uint8Array(s.sysexBuf);
-    if (
-      full.length >= 8 &&
-      full[1] === 0x00 &&
-      full[2] === 0x21 &&
-      full[3] === 0x10 &&
-      full[4] === 0x77
-    ) {
-      parseRoliTouchSysex(full);
+    if (d[0] === 0xf0) {
+      dev.sysexBuf = Array.from(d);
+    } else if (dev.sysexBuf.length > 0) {
+      dev.sysexBuf.push(...Array.from(d as unknown as number[]));
     }
-    s.sysexBuf = [];
-    return;
-  }
+    if (dev.sysexBuf.length > 0 && dev.sysexBuf[dev.sysexBuf.length - 1] === 0xf7) {
+      const full = new Uint8Array(dev.sysexBuf);
+      if (
+        full.length >= 8 &&
+        full[1] === 0x00 &&
+        full[2] === 0x21 &&
+        full[3] === 0x10 &&
+        full[4] === 0x77
+      ) {
+        parseRoliTouchSysex(dev, full);
+      }
+      dev.sysexBuf = [];
+      return;
+    }
 
-  // MPE fallback for Lightpad firmwares that emit MIDI rather than touch SysEx.
-  if (d[0] !== 0xf0 && s.sysexBuf.length === 0) {
-    const cmd = d[0] >> 4;
-    if (cmd === 0x09 && d.length >= 3 && d[2] > 0) {
-      emitTouch(s.lastX, s.lastY, d[2] / 127, 'start');
-    } else if (cmd === 0x08 && d.length >= 3) {
-      emitTouch(s.lastX, s.lastY, 0, 'end');
-    } else if (cmd === 0x0b && d.length >= 3 && d[1] === 74 && s.isTouching) {
-      emitTouch(s.lastX, d[2] / 127, s.lastZ, 'move');
-    } else if (cmd === 0x0e && d.length >= 3 && s.isTouching) {
-      const bend = (d[2] * 128 + d[1]) / 16383;
-      emitTouch(bend, s.lastY, s.lastZ, 'move');
-    } else if (cmd === 0x0d && d.length >= 2 && s.isTouching) {
-      emitTouch(s.lastX, s.lastY, d[1] / 127, 'move');
+    if (d[0] !== 0xf0 && dev.sysexBuf.length === 0) {
+      const cmd = d[0] >> 4;
+      if (cmd === 0x09 && d.length >= 3 && d[2] > 0) {
+        emitTouch(dev, dev.lastX, dev.lastY, d[2] / 127, 'start');
+      } else if (cmd === 0x08 && d.length >= 3) {
+        emitTouch(dev, dev.lastX, dev.lastY, 0, 'end');
+      } else if (cmd === 0x0b && d.length >= 3 && d[1] === 74 && dev.isTouching) {
+        emitTouch(dev, dev.lastX, d[2] / 127, dev.lastZ, 'move');
+      } else if (cmd === 0x0e && d.length >= 3 && dev.isTouching) {
+        const bend = (d[2] * 128 + d[1]) / 16383;
+        emitTouch(dev, bend, dev.lastY, dev.lastZ, 'move');
+      } else if (cmd === 0x0d && d.length >= 2 && dev.isTouching) {
+        emitTouch(dev, dev.lastX, dev.lastY, d[1] / 127, 'move');
+      }
     }
-  }
+  };
 }
 
 export function isRoliblockLike(name: string): boolean {
@@ -469,141 +513,265 @@ export function isRoliblockLike(name: string): boolean {
   );
 }
 
+function notifyDeviceChange(): void {
+  engine.onDevice?.(getRoliDevices());
+}
+
+function assignRoleForNewDevice(deviceId: string): RoliRole {
+  const stored = loadRoleAssignments();
+  if (stored[deviceId] === 'primary' || stored[deviceId] === 'colour-wheel') {
+    return stored[deviceId];
+  }
+  // First device gets primary, second gets colour-wheel, beyond that → primary.
+  const rolesInUse = new Set<RoliRole>();
+  engine.devices.forEach((d) => rolesInUse.add(d.role));
+  if (!rolesInUse.has('primary')) return 'primary';
+  if (!rolesInUse.has('colour-wheel')) return 'colour-wheel';
+  return 'primary';
+}
+
+function persistRole(deviceId: string, role: RoliRole): void {
+  const stored = loadRoleAssignments();
+  stored[deviceId] = role;
+  saveRoleAssignments(stored);
+}
+
 function refreshAndAutoMap(): void {
-  if (!s.midiAccess) return;
-  let chosenInput: WebMidi.MIDIInput | null = null;
-  let chosenOutput: WebMidi.MIDIOutput | null = null;
-  s.midiAccess.inputs.forEach((inp) => {
-    if (!chosenInput && isRoliblockLike(inp.name || '')) chosenInput = inp;
+  if (!engine.midiAccess) return;
+
+  // Collect every ROLI input + output the browser is offering right now.
+  const inputs: WebMidi.MIDIInput[] = [];
+  const outputs: WebMidi.MIDIOutput[] = [];
+  engine.midiAccess.inputs.forEach((inp) => {
+    if (isRoliblockLike(inp.name || '')) inputs.push(inp);
   });
-  s.midiAccess.outputs.forEach((out) => {
-    if (!chosenOutput && isRoliblockLike(out.name || '')) chosenOutput = out;
+  engine.midiAccess.outputs.forEach((out) => {
+    if (isRoliblockLike(out.name || '')) outputs.push(out);
   });
 
-  if (chosenInput && chosenInput !== s.input) {
-    if (s.input) s.input.onmidimessage = null;
-    s.input = chosenInput;
-    s.inputName = chosenInput.name || null;
-    chosenInput.onmidimessage = onMidiMessage;
-  } else if (!chosenInput && s.input) {
-    s.input.onmidimessage = null;
-    s.input = null;
-    s.inputName = null;
+  // Canonical device id = output port name (the LED target). Fall back to
+  // input name for input-only enumerations. Pair input + output by exact name
+  // match first, then by trimmed name (Windows sometimes appends/strips spaces).
+  const matchedOutputs = new Set<WebMidi.MIDIOutput>();
+  const newIds = new Set<string>();
+
+  for (const out of outputs) {
+    const outName = out.name || '';
+    const id = outName.trim() || `roli-${matchedOutputs.size}`;
+    newIds.add(id);
+    matchedOutputs.add(out);
+
+    let dev = engine.devices.get(id);
+    if (!dev) {
+      const role = assignRoleForNewDevice(id);
+      dev = newDeviceState(id, role);
+      engine.devices.set(id, dev);
+      persistRole(id, role);
+    }
+
+    if (dev.output !== out) {
+      dev.output = out;
+      dev.outputName = outName;
+      dev.handshakeDone = false;
+      dev.ledFailCount = 0;
+      doHandshake(dev);
+    }
+
+    // Pair this device with the input whose name matches best.
+    const matchedInput =
+      inputs.find((i) => (i.name || '').trim() === id) ||
+      inputs.find((i) => isRoliblockLike(i.name || '') && !engine.devices.has((i.name || '').trim())) ||
+      inputs[outputs.indexOf(out)] ||
+      null;
+    if (matchedInput && dev.input !== matchedInput) {
+      if (dev.input) dev.input.onmidimessage = null;
+      dev.input = matchedInput;
+      dev.inputName = matchedInput.name || null;
+      matchedInput.onmidimessage = makeOnMidiMessage(dev);
+    }
   }
 
-  if (chosenOutput && chosenOutput !== s.output) {
-    s.output = chosenOutput;
-    s.outputName = chosenOutput.name || null;
-    s.handshakeDone = false;
-    s.onHandshake?.(false);
-    s.ledFailCount = 0;
-    doHandshake();
-  } else if (!chosenOutput && s.output) {
-    s.output = null;
-    s.outputName = null;
-    s.handshakeDone = false;
-    s.onHandshake?.(false);
+  // Input-only devices (no LED output but still a touch source)
+  for (const inp of inputs) {
+    const inName = (inp.name || '').trim();
+    if (!inName) continue;
+    if (newIds.has(inName)) continue;
+    let dev = engine.devices.get(inName);
+    if (!dev) {
+      const role = assignRoleForNewDevice(inName);
+      dev = newDeviceState(inName, role);
+      engine.devices.set(inName, dev);
+      persistRole(inName, role);
+    }
+    newIds.add(inName);
+    if (dev.input !== inp) {
+      if (dev.input) dev.input.onmidimessage = null;
+      dev.input = inp;
+      dev.inputName = inp.name || null;
+      inp.onmidimessage = makeOnMidiMessage(dev);
+    }
   }
 
-  s.onDevice?.({
-    connected: !!(s.input || s.output),
-    inputName: s.inputName,
-    outputName: s.outputName,
-  });
+  // Drop devices that vanished from the MIDI list.
+  for (const id of Array.from(engine.devices.keys())) {
+    if (!newIds.has(id)) {
+      const dev = engine.devices.get(id);
+      if (dev?.input) dev.input.onmidimessage = null;
+      engine.devices.delete(id);
+    }
+  }
+
+  notifyDeviceChange();
 }
 
 export async function connectRoliLightpad(): Promise<boolean> {
-  if (s.midiAccess) {
+  if (engine.midiAccess) {
     refreshAndAutoMap();
-    return !!(s.input || s.output);
+    return engine.devices.size > 0;
   }
   if (typeof navigator === 'undefined' || !navigator.requestMIDIAccess) return false;
   try {
-    s.midiAccess = await navigator.requestMIDIAccess({ sysex: true });
-    s.midiAccess.onstatechange = () => refreshAndAutoMap();
+    engine.midiAccess = await navigator.requestMIDIAccess({ sysex: true });
+    engine.midiAccess.onstatechange = () => refreshAndAutoMap();
     refreshAndAutoMap();
-    return !!(s.input || s.output);
+    return engine.devices.size > 0;
   } catch {
     return false;
   }
 }
 
 export function disconnectRoliLightpad(): void {
-  if (s.input) s.input.onmidimessage = null;
-  if (s.midiAccess) s.midiAccess.onstatechange = null;
-  s.input = null;
-  s.output = null;
-  s.inputName = null;
-  s.outputName = null;
-  s.handshakeDone = false;
-  s.midiAccess = null;
-  s.sysexBuf = [];
-  s.onTouch = null;
-  s.onDevice = null;
+  engine.devices.forEach((dev) => {
+    if (dev.input) dev.input.onmidimessage = null;
+  });
+  engine.devices.clear();
+  if (engine.midiAccess) engine.midiAccess.onstatechange = null;
+  engine.midiAccess = null;
+  engine.onTouch = null;
+  engine.onDevice = null;
+  engine.onHandshake = null;
 }
 
 export function setOnTouch(cb: RoliTouchCallback | null): void {
-  s.onTouch = cb;
+  engine.onTouch = cb;
 }
 
 export function setOnDeviceChange(cb: RoliDeviceChangeCallback | null): void {
-  s.onDevice = cb;
+  engine.onDevice = cb;
 }
 
 export function setOnHandshakeDone(cb: RoliHandshakeCallback | null): void {
-  s.onHandshake = cb;
+  engine.onHandshake = cb;
 }
 
-export function getRoliStatus(): { connected: boolean; inputName: string | null; outputName: string | null; handshakeDone: boolean } {
-  return {
-    connected: !!(s.input || s.output),
-    inputName: s.inputName,
-    outputName: s.outputName,
-    handshakeDone: s.handshakeDone,
-  };
+export function getRoliDevices(): RoliDeviceInfo[] {
+  return Array.from(engine.devices.values()).map((d) => ({
+    deviceId: d.deviceId,
+    inputName: d.inputName,
+    outputName: d.outputName,
+    handshakeDone: d.handshakeDone,
+    role: d.role,
+  }));
 }
 
 /**
- * Send a 15x15 RGBA pixel buffer to the Lightpad LEDs.
- * `pixels` must be ROLI_GRID_COLS * ROLI_GRID_ROWS * 4 bytes (RGBA).
- * Throttled to LED_SEND_INTERVAL_MS — call frequently; older frames are dropped.
+ * Legacy single-device shim. Returns info about the primary device, or the
+ * first device if there is no primary yet.
  */
-export function sendLedFrame(pixels: Uint8ClampedArray | Uint8Array): boolean {
-  if (!s.output || !s.handshakeDone) return false;
-  if (s.ledFailCount > 20) return false;
+export function getRoliStatus(): {
+  connected: boolean;
+  inputName: string | null;
+  outputName: string | null;
+  handshakeDone: boolean;
+} {
+  const devices = getRoliDevices();
+  const primary = devices.find((d) => d.role === 'primary') ?? devices[0];
+  return {
+    connected: devices.length > 0,
+    inputName: primary?.inputName ?? null,
+    outputName: primary?.outputName ?? null,
+    handshakeDone: primary?.handshakeDone ?? false,
+  };
+}
+
+export function setRoliDeviceRole(deviceId: string, role: RoliRole): void {
+  const dev = engine.devices.get(deviceId);
+  if (!dev) return;
+  dev.role = role;
+  persistRole(deviceId, role);
+  notifyDeviceChange();
+}
+
+function pickDevice(opts?: { role?: RoliRole; deviceId?: string }): DeviceState | null {
+  if (!opts) {
+    // Default: primary (back-compat with the old single-device API).
+    for (const d of engine.devices.values()) if (d.role === 'primary') return d;
+    return engine.devices.values().next().value ?? null;
+  }
+  if (opts.deviceId) return engine.devices.get(opts.deviceId) ?? null;
+  if (opts.role) {
+    for (const d of engine.devices.values()) if (d.role === opts.role) return d;
+  }
+  return null;
+}
+
+function sendRawLedFrame(dev: DeviceState, newLed: Uint8Array): boolean {
+  if (!dev.output || !dev.handshakeDone) return false;
+  if (dev.ledFailCount > 20) return false;
   const now = Date.now();
-  if (now - s.lastLedSend < LED_SEND_INTERVAL_MS) return false;
-  s.lastLedSend = now;
+  if (now - dev.lastLedSend < LED_SEND_INTERVAL_MS) return false;
+  dev.lastLedSend = now;
 
-  if (pixels.length < LED_PIXEL_COUNT * 4) return false;
-  const newLed = rgbaFrameToRoliLedData(pixels);
-
-  // After handshake (or any reconnect) the device's LED state is the dump
-  // pattern, not zeros. Force every byte to look different from prev so the
-  // diff encoder emits a full frame and wipes the pattern.
-  let prevForDiff = s.prevLedData;
-  if (s.needsFullRepaint) {
+  let prevForDiff = dev.prevLedData;
+  if (dev.needsFullRepaint) {
     prevForDiff = new Uint8Array(LED_BYTE_COUNT);
     for (let i = 0; i < LED_BYTE_COUNT; i++) prevForDiff[i] = newLed[i] ^ 0xff;
-    s.needsFullRepaint = false;
+    dev.needsFullRepaint = false;
   }
-  const messages = buildDataChangeMessages(newLed, prevForDiff);
+  const messages = buildDataChangeMessages(dev, newLed, prevForDiff);
   for (const msg of messages) {
     try {
-      s.output.send(buildBlockSysEx(DEVICE_INDEX, msg));
+      dev.output.send(buildBlockSysEx(DEVICE_INDEX, msg));
     } catch {
-      s.ledFailCount++;
+      dev.ledFailCount++;
       return false;
     }
   }
-  s.ledFailCount = 0;
-  s.prevLedData = newLed;
+  dev.ledFailCount = 0;
+  dev.prevLedData = newLed;
   return true;
 }
 
 /**
+ * Send a 15x15 RGBA pixel buffer to the chosen Lightpad's LEDs. Defaults to
+ * the primary device. Pass `{ role: 'colour-wheel' }` or `{ deviceId }` to
+ * target a specific block.
+ */
+export function sendLedFrame(
+  pixels: Uint8ClampedArray | Uint8Array,
+  opts?: { role?: RoliRole; deviceId?: string }
+): boolean {
+  if (pixels.length < LED_PIXEL_COUNT * 4) return false;
+  const dev = pickDevice(opts);
+  if (!dev) return false;
+  return sendRawLedFrame(dev, rgbaFrameToRoliLedData(pixels));
+}
+
+/**
+ * Blank the LEDs on a target device. Bypasses the throttle so touch-end
+ * releases are visually instantaneous.
+ */
+export function clearLeds(opts?: { role?: RoliRole; deviceId?: string }): boolean {
+  const dev = pickDevice(opts);
+  if (!dev || !dev.output || !dev.handshakeDone) return false;
+  dev.lastLedSend = 0;
+  const blank = new Uint8Array(LED_BYTE_COUNT);
+  return sendRawLedFrame(dev, blank);
+}
+
+/**
  * Helper: build a 15x15 RGBA frame from a normalized path (0..1 coords) plus a
- * bright cursor dot. Trail pixels use `trailColor`, cursor uses `cursorColor`.
+ * bright cursor dot. Kept for back-compat; prefer `composeFrameFromCanvas`.
  */
 export function composeLedFrame(opts: {
   path?: Array<{ x: number; y: number }>;
@@ -620,9 +788,6 @@ export function composeLedFrame(opts: {
     pixels[i * 4 + 2] = bg[2];
     pixels[i * 4 + 3] = bg[3];
   }
-  // Bright trail so a single-pixel path is actually readable on the 15x15
-  // BGR565 grid (the old [60,20,80,160] quantised down to ~r5=4 / b5=12 — a
-  // hint at best). [110,40,210,255] keeps the violet identity but lights up.
   const trail = opts.trailColor ?? [110, 40, 210, 255];
   const cursorC = opts.cursorColor ?? [255, 120, 255, 255];
 
@@ -675,8 +840,6 @@ export function composeLedFrame(opts: {
   if (opts.cursor) {
     const { x, y } = opts.cursor;
     const cursorCell = toCell(x, y);
-    // Draw halo first and skip out-of-bounds neighbours. Clamping halo points
-    // into the edge cell makes edge touches dimmer than centre touches.
     const halo: LedRgba = [
       Math.round(cursorC[0] / 2),
       Math.round(cursorC[1] / 2),
@@ -691,12 +854,6 @@ export function composeLedFrame(opts: {
   }
   return pixels;
 }
-
-// -- High-quality canvas → 15x15 LED sampler ------------------------------
-// Ported from Macroverse roliblock.ts. The browser's drawImage with
-// imageSmoothingQuality='high' produces Lanczos-quality downscaling, which is
-// far more legible on the 15x15 grid than manually plotting cells with
-// Bresenham. Source canvas can be any resolution.
 
 let _scratchCanvas: HTMLCanvasElement | null = null;
 let _scratchCtx: CanvasRenderingContext2D | null = null;
@@ -721,12 +878,6 @@ export function sampleCanvasToLedFrame(canvas: HTMLCanvasElement): Uint8ClampedA
   return _scratchCtx.getImageData(0, 0, ROLI_GRID_COLS, ROLI_GRID_ROWS).data;
 }
 
-/**
- * Build a 15x15 RGBA frame by downsampling a source canvas and overlaying a
- * crisp single-pixel cursor (and optional crosshair) on top of the smoothed
- * trail. This is the high-quality replacement for `composeLedFrame` — use it
- * whenever a screen-side canvas is available.
- */
 export function composeFrameFromCanvas(
   canvas: HTMLCanvasElement | null,
   opts: {

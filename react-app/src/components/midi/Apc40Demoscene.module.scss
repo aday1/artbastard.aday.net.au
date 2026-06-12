@@ -1,0 +1,136 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(20, 18, 36, 0.85), rgba(8, 6, 18, 0.95));
+  border: 1px dashed rgba(248, 113, 113, 0.45);
+  color: rgba(226, 232, 240, 0.95);
+  font-size: 0.78rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(248, 113, 113, 0.18), transparent 50%),
+    radial-gradient(circle at 80% 100%, rgba(34, 197, 94, 0.12), transparent 55%);
+  pointer-events: none;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  position: relative;
+
+  .title {
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    color: rgba(254, 226, 226, 0.95);
+
+    .sparkle {
+      margin-right: 0.4em;
+    }
+  }
+
+  .status {
+    font-size: 0.65rem;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.2);
+    color: rgba(226, 232, 240, 0.9);
+
+    &.live {
+      background: rgba(248, 113, 113, 0.3);
+      color: rgba(254, 226, 226, 0.98);
+      box-shadow: 0 0 8px rgba(248, 113, 113, 0.4);
+    }
+  }
+}
+
+.subtitle {
+  position: relative;
+  font-size: 0.72rem;
+  color: rgba(203, 213, 225, 0.8);
+  font-style: italic;
+}
+
+.patterns {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+  gap: 0.4rem;
+
+  button {
+    padding: 0.45rem 0.5rem;
+    border-radius: 6px;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    background: rgba(30, 41, 59, 0.6);
+    color: rgba(226, 232, 240, 0.92);
+    cursor: pointer;
+    font-size: 0.72rem;
+    text-align: left;
+    transition: background 120ms ease, border-color 120ms ease;
+
+    &:hover {
+      background: rgba(51, 65, 85, 0.85);
+    }
+
+    &.active {
+      background: rgba(248, 113, 113, 0.25);
+      border-color: rgba(248, 113, 113, 0.7);
+      color: rgba(254, 226, 226, 0.98);
+      box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.55), 0 0 10px rgba(248, 113, 113, 0.25);
+    }
+  }
+}
+
+.actions {
+  position: relative;
+  display: flex;
+  gap: 0.4rem;
+
+  button {
+    flex: 1;
+    padding: 0.35rem 0.5rem;
+    font-size: 0.72rem;
+    border-radius: 6px;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    background: rgba(15, 23, 42, 0.6);
+    color: rgba(226, 232, 240, 0.92);
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: rgba(30, 41, 59, 0.85);
+    }
+
+    &.danger {
+      border-color: rgba(248, 113, 113, 0.45);
+      color: rgba(254, 226, 226, 0.95);
+
+      &:hover:not(:disabled) {
+        background: rgba(248, 113, 113, 0.2);
+      }
+    }
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.note {
+  position: relative;
+  font-size: 0.7rem;
+  color: rgba(148, 163, 184, 0.8);
+  line-height: 1.4;
+}

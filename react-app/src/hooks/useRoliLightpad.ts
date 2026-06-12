@@ -1,10 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  RoliDeviceInfo,
+  RoliRole,
   RoliTouchCallback,
+  clearLeds,
   composeFrameFromCanvas,
   composeLedFrame,
   connectRoliLightpad,
   disconnectRoliLightpad,
+  getRoliDevices,
   getRoliStatus,
   sendLedFrame,
   setOnDeviceChange,
@@ -18,95 +22,156 @@ import {
   dispatchConnectedMidiController,
 } from '../midi/detectedMidiController';
 
-export interface UseRoliLightpadResult {
-  connected: boolean;
-  deviceName: string | null;
-  handshakeDone: boolean;
-  /** Subscribe to touch events from the Lightpad. Replaces any prior handler. */
-  onTouch: (cb: RoliTouchCallback | null) => void;
-  /** Build + send a 15x15 LED frame (throttled to ~25Hz). */
-  sendFrame: typeof composeLedFrame extends (...a: any) => infer R
-    ? (opts: Parameters<typeof composeLedFrame>[0]) => boolean
-    : never;
+export interface UseRoliLightpadOptions {
   /**
-   * High-quality LED frame: downsample the given screen canvas to 15x15 using
-   * the browser's smooth resampler, then overlay a crisp cursor (and optional
-   * crosshair) on top. Use this instead of `sendFrame` whenever a screen
-   * canvas already draws the trail — matches the Macroverse rendering pipeline.
+   * Role of the physical block this hook instance cares about. When set, touch
+   * events from other roles are filtered out, and LED sends route to the
+   * matching block. Defaults to 'primary' (back-compat with single-device use).
    */
-  sendCanvasFrame: (canvas: HTMLCanvasElement | null, opts?: Parameters<typeof composeFrameFromCanvas>[1]) => boolean;
+  role?: RoliRole;
+}
+
+export interface UseRoliLightpadResult {
+  /** True when at least one block matching the requested role is connected. */
+  connected: boolean;
+  /** Name of the matched block's input/output port, or null. */
+  deviceName: string | null;
+  /** Handshake state of the matched block. */
+  handshakeDone: boolean;
+  /** Every ROLI block currently visible to the engine (regardless of role). */
+  devices: RoliDeviceInfo[];
+  /** Subscribe to touch events from the matched block. Replaces prior handler. */
+  onTouch: (cb: RoliTouchCallback | null) => void;
+  /** Build + send a 15x15 LED frame to the matched block (throttled to ~25Hz). */
+  sendFrame: (opts: Parameters<typeof composeLedFrame>[0]) => boolean;
+  /** Downsample a screen canvas to 15x15 and send it to the matched block. */
+  sendCanvasFrame: (
+    canvas: HTMLCanvasElement | null,
+    opts?: Parameters<typeof composeFrameFromCanvas>[1]
+  ) => boolean;
+  /** Send a raw RGBA 15x15 buffer (typed) to the matched block. */
+  sendRawFrame: (pixels: Uint8ClampedArray | Uint8Array) => boolean;
+  /** Blank the matched block's LEDs immediately (bypasses throttle). */
+  clearFrame: () => boolean;
 }
 
 /**
- * Subscribes to Roli Lightpad state and connects only after user approval.
- * Exposes touch input + LED output after the detected-device prompt is accepted.
+ * Subscribes to a Roli Lightpad block of a given role and exposes touch +
+ * LED output. Multiple instances can coexist (e.g. one for the primary XY
+ * pad and one for the colour-wheel block).
  *
  * SysEx is requested via a *separate* MIDI access call (the global
  * `useGlobalBrowserMidi` hook does not enable SysEx).
  */
-export function useRoliLightpad(): UseRoliLightpadResult {
-  const [connected, setConnected] = useState<boolean>(false);
-  const [deviceName, setDeviceName] = useState<string | null>(null);
-  const [handshakeDone, setHandshakeDone] = useState<boolean>(false);
+export function useRoliLightpad(options: UseRoliLightpadOptions = {}): UseRoliLightpadResult {
+  const role: RoliRole = options.role ?? 'primary';
+  const [devices, setDevices] = useState<RoliDeviceInfo[]>(() => getRoliDevices());
   const touchRef = useRef<RoliTouchCallback | null>(null);
+
+  const matched = useMemo(
+    () => devices.find((d) => d.role === role) ?? null,
+    [devices, role]
+  );
 
   useEffect(() => {
     let cancelled = false;
-    setOnDeviceChange((info) => {
+
+    // setOnDeviceChange / setOnHandshakeDone / setOnTouch are singletons on the
+    // engine — mounting multiple hook instances must NOT clobber each other.
+    // We register fanout callbacks here per-mount; the engine itself only
+    // remembers the most recent. To support multiple instances, the engine
+    // delivers events to a single listener and we re-fan them via window
+    // events so every hook instance can hear them.
+    const handleDeviceChange = () => {
       if (cancelled) return;
-      setConnected(info.connected);
-      setDeviceName(info.inputName ?? info.outputName ?? null);
-      // Don't trust the polling alone — clear the flag immediately on
-      // device-change so we don't keep sending into a stale handshake state.
-      setHandshakeDone(getRoliStatus().handshakeDone);
-    });
-    setOnHandshakeDone((done) => {
+      setDevices(getRoliDevices());
+    };
+    const handleTouchEvent = (e: Event) => {
+      const ev = (e as CustomEvent).detail as Parameters<RoliTouchCallback>[0];
+      if (!ev || ev.role !== role) return;
+      touchRef.current?.(ev);
+    };
+
+    setOnDeviceChange((list) => {
       if (cancelled) return;
-      setHandshakeDone(done);
+      setDevices(list);
+      window.dispatchEvent(new CustomEvent('roli-device-change'));
     });
-    setOnTouch((ev) => touchRef.current?.(ev));
+    setOnHandshakeDone(() => {
+      if (cancelled) return;
+      setDevices(getRoliDevices());
+      window.dispatchEvent(new CustomEvent('roli-device-change'));
+    });
+    setOnTouch((ev) => {
+      window.dispatchEvent(new CustomEvent('roli-touch', { detail: ev }));
+    });
+
+    window.addEventListener('roli-device-change', handleDeviceChange);
+    window.addEventListener('roli-touch', handleTouchEvent);
+
     const connectApprovedRoli = () => {
-      connectRoliLightpad().then((ok) => {
+      connectRoliLightpad().then(() => {
         if (cancelled) return;
+        setDevices(getRoliDevices());
         const status = getRoliStatus();
-        setConnected(ok || status.connected);
-        setDeviceName(status.inputName ?? status.outputName ?? null);
-        setHandshakeDone(status.handshakeDone);
-        const controller = describeDetectedMidiController(status.inputName ?? status.outputName ?? 'ROLI Lightpad BLOCK', 'browser');
-        if (controller && (ok || status.connected)) dispatchConnectedMidiController(controller);
+        const controller = describeDetectedMidiController(
+          status.inputName ?? status.outputName ?? 'ROLI Lightpad BLOCK',
+          'browser'
+        );
+        if (controller && status.connected) dispatchConnectedMidiController(controller);
       });
     };
 
     const handleConnectRoli = () => connectApprovedRoli();
     window.addEventListener(MIDI_CONNECT_ROLI_EVENT, handleConnectRoli);
     if (localStorage.getItem(ROLI_LIGHTPAD_CONNECT_APPROVED_KEY) === 'true') connectApprovedRoli();
+
     return () => {
       cancelled = true;
-      setOnTouch(null);
-      setOnDeviceChange(null);
-      setOnHandshakeDone(null);
+      window.removeEventListener('roli-device-change', handleDeviceChange);
+      window.removeEventListener('roli-touch', handleTouchEvent);
       window.removeEventListener(MIDI_CONNECT_ROLI_EVENT, handleConnectRoli);
-      // Keep the MIDI access alive in case another mount wants it; only release
-      // listeners. Full disconnect on full app teardown happens implicitly.
+      // Leave engine-level callbacks installed — other mounts may still rely
+      // on them. Full teardown happens via disconnectRoliLightpad().
     };
-  }, []);
+  }, [role]);
 
   const onTouch = useCallback((cb: RoliTouchCallback | null) => {
     touchRef.current = cb;
   }, []);
 
-  const sendFrame = useCallback((opts: Parameters<typeof composeLedFrame>[0]) => {
-    return sendLedFrame(composeLedFrame(opts));
-  }, []);
+  const sendFrame = useCallback(
+    (opts: Parameters<typeof composeLedFrame>[0]) => {
+      return sendLedFrame(composeLedFrame(opts), { role });
+    },
+    [role]
+  );
 
   const sendCanvasFrame = useCallback(
     (canvas: HTMLCanvasElement | null, opts?: Parameters<typeof composeFrameFromCanvas>[1]) => {
-      return sendLedFrame(composeFrameFromCanvas(canvas, opts));
+      return sendLedFrame(composeFrameFromCanvas(canvas, opts), { role });
     },
-    []
+    [role]
   );
 
-  return { connected, deviceName, handshakeDone, onTouch, sendFrame, sendCanvasFrame } as UseRoliLightpadResult;
+  const sendRawFrame = useCallback(
+    (pixels: Uint8ClampedArray | Uint8Array) => sendLedFrame(pixels, { role }),
+    [role]
+  );
+
+  const clearFrame = useCallback(() => clearLeds({ role }), [role]);
+
+  return {
+    connected: matched != null,
+    deviceName: matched?.inputName ?? matched?.outputName ?? null,
+    handshakeDone: matched?.handshakeDone ?? false,
+    devices,
+    onTouch,
+    sendFrame,
+    sendCanvasFrame,
+    sendRawFrame,
+    clearFrame,
+  };
 }
 
 export { disconnectRoliLightpad };

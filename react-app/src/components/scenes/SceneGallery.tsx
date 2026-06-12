@@ -9,7 +9,7 @@ const SceneTimelineEditor = lazy(() =>
 import { LucideIcon } from '../ui/LucideIcon'
 import { HorizontalFader } from '../ui/controls';
 import { SceneChannelValueEditor } from './SceneChannelValueEditor';
-import { SceneCardMap } from './SceneCardMap';
+import { SceneSignature } from './SceneSignature';
 import { SceneDiffBadge } from './SceneDiffBadge';
 import { computeSceneDiff } from '../../selectors/sceneDiff';
 import { Apc40SceneLaunchStrip } from '../midi/Apc40SceneLaunchStrip';
@@ -704,10 +704,11 @@ export const SceneGallery: React.FC = () => {
               </div>
             </div>
 
-            <SceneCardMap
-              sceneName={scene.seed?.label || scene.name}
-              channelValues={scene.channelValues}
-              activeChannelCount={getActiveChannelCount(scene.channelValues)}
+            <SceneSignature
+              scene={scene}
+              previousScene={index > 0 ? scenes[index - 1] : null}
+              fixtures={fixtures}
+              channelNames={channelNames}
             />
 
             {activeSceneId === scene.name && activeSceneDiff && (

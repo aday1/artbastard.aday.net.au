@@ -1,0 +1,82 @@
+.signature {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  padding: 0.55rem 0.6rem 0.6rem;
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(15, 23, 42, 0.65), rgba(2, 6, 23, 0.85));
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  min-height: 96px;
+}
+
+.placeholder {
+  composes: signature;
+  border-style: dashed;
+  opacity: 0.5;
+}
+
+.changes {
+  font-size: 0.72rem;
+  line-height: 1.25;
+  color: rgba(226, 232, 240, 0.85);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.45rem;
+
+  .label {
+    color: rgba(148, 163, 184, 0.85);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.65rem;
+  }
+
+  .none {
+    color: rgba(148, 163, 184, 0.5);
+    font-style: italic;
+  }
+}
+
+.heatmap {
+  width: 100%;
+  height: 28px;
+  display: block;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.45);
+  image-rendering: pixelated;
+}
+
+.values {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr));
+  gap: 0.2rem 0.45rem;
+  font-size: 0.7rem;
+  color: rgba(226, 232, 240, 0.8);
+  font-variant-numeric: tabular-nums;
+
+  .pair {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.05rem 0.35rem;
+    background: rgba(15, 23, 42, 0.55);
+    border-radius: 3px;
+    border: 1px solid rgba(148, 163, 184, 0.08);
+  }
+
+  .channel {
+    color: rgba(148, 163, 184, 0.85);
+  }
+
+  .value {
+    color: rgba(248, 250, 252, 0.95);
+    font-weight: 600;
+  }
+
+  .empty {
+    grid-column: 1 / -1;
+    color: rgba(148, 163, 184, 0.5);
+    font-style: italic;
+    text-align: center;
+  }
+}

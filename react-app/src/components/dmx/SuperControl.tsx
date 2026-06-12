@@ -19,6 +19,7 @@ import {
 } from '../ui/controls';
 import { PATH_SLOT_IDS, PathSlotId, PathSlotSummary, ArtbastardXYPadHandle } from '../ui/controls/ArtbastardXYPad';
 import { useRoliLightpad } from '../../hooks/useRoliLightpad';
+import { RoliColourWheel } from './RoliColourWheel';
 import { SkeuoButton } from '../ui/SkeuoButton';
 import { SelectedChannelsFaderStrip } from './SelectedChannelsFaderStrip';
 import { SuperControlMidiBindingsBar } from './SuperControlMidiBindingsBar';
@@ -1353,6 +1354,21 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         ev.phase === 'end' ? null : { x: ev.x, y: ev.y };
       setLiveTouchVersion((v) => (v + 1) & 0xffff);
 
+      // LED feedback: paint *only* under the finger. On touch-end blank the
+      // pad immediately. We push LED frames directly from the touch handler
+      // (NOT a useEffect) so autopilot DMX polling can't redraw the pad while
+      // the user isn't touching it.
+      if (ev.phase === 'end') {
+        roli.clearFrame();
+      } else {
+        const xyCanvas = xyPadHandleRef.current?.getCanvas?.() ?? null;
+        if (xyCanvas) {
+          roli.sendCanvasFrame(xyCanvas, { cursor: { x: ev.x, y: ev.y } });
+        } else {
+          roli.sendFrame({ cursor: { x: ev.x, y: ev.y } });
+        }
+      }
+
       // Route into the XY pad's path state so the canvas draws the touch
       // and onPathChange / onPathSaved fire just like a mouse pencil stroke.
       const pad = xyPadHandleRef.current;
@@ -1403,48 +1419,13 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     });
   }, [roli]);
 
-  // LED feedback: push the active slot trail + current cursor to the Lightpad.
-  // Throttling lives inside the engine; we just re-render on state changes.
+  // Ensure the pad is blanked on unmount / route-away so it doesn't keep
+  // showing the last touch trail when the user navigates elsewhere.
   useEffect(() => {
-    if (!roli.handshakeDone) return;
-    const activeSlot = pathSlots.activeSlotId
-      ? pathSlots.slots.find((s) => s.id === pathSlots.activeSlotId)
-      : null;
-    // While the autopilot is playing back a custom path the user just drew,
-    // show that path lit on the device so the loop is visible. Slot trail
-    // wins if a slot is active; otherwise prefer the running autopilot loop;
-    // otherwise fall back to the live pencil path.
-    const autopilotLoop =
-      panTiltAutopilot.enabled &&
-      panTiltAutopilot.pathType === 'custom' &&
-      panTiltAutopilot.customPath &&
-      panTiltAutopilot.customPath.length > 1
-        ? panTiltAutopilot.customPath.map((p) => ({ x: p.x / 255, y: 1 - p.y / 255 }))
-        : null;
-    const trail =
-      activeSlot && activeSlot.path.length > 1
-        ? activeSlot.path.map((p) => ({ x: p.x / 255, y: 1 - p.y / 255 }))
-        : autopilotLoop ?? livePathRef.current;
-    // Prefer the live Roli touch as the cursor source so finger-on-pad always
-    // lights an LED; fall back to pan/tilt-derived cursor for autopilot etc.
-    const cursor = liveTouchRef.current
-      ? { x: liveTouchRef.current.x, y: liveTouchRef.current.y }
-      : { x: panValue / 255, y: 1 - tiltValue / 255 };
-    // When the screen-side XY pad canvas is available, downsample it
-    // (Macroverse-style high-quality resize) instead of plotting LED cells by
-    // hand. Crosshair overlays when autopilot is running so the user sees the
-    // tracked position clearly. Falls back to the old composer if the pad
-    // isn't mounted (e.g. SuperControl tab open but XY pad hidden).
-    const xyCanvas = xyPadHandleRef.current?.getCanvas?.() ?? null;
-    if (xyCanvas) {
-      roli.sendCanvasFrame(xyCanvas, {
-        cursor,
-        crosshair: panTiltAutopilot.enabled,
-      });
-    } else {
-      roli.sendFrame({ path: trail, cursor });
-    }
-  }, [roli, panValue, tiltValue, pathSlots, livePathVersion, liveTouchVersion, panTiltAutopilot.enabled, panTiltAutopilot.pathType, panTiltAutopilot.customPath]);
+    return () => {
+      try { roli.clearFrame(); } catch { /* engine may be torn down already */ }
+    };
+  }, [roli]);
 
   // XY Pad handlers
   const handleXYPadMouseDown = (e: React.MouseEvent) => {
@@ -3134,6 +3115,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                   Reset to Center
                 </button>
               </div>
+              <RoliColourWheel />
               <EnvelopePlaybackControls
                 repeatMode={panTiltAutopilot.repeatMode ?? 'loop'}
                 loopDirection={panTiltAutopilot.loopDirection ?? 'forward'}

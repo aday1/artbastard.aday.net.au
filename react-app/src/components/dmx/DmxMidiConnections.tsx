@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { LucideIcon } from '../ui/LucideIcon';
 import smx from './SmxSuperPanel.module.scss';
+import { getRoliDevices, type RoliDeviceInfo } from '../../engines/roliLightpad';
 
 interface MidiInputDevice {
   id: string;
@@ -15,6 +16,60 @@ interface DmxMidiConnectionsProps {
   onRefreshMidiDevices: () => void;
   onConnectMidiDevice: (inputId: string) => void;
   onDisconnectMidiDevice: (inputId: string) => void;
+}
+
+type DeviceCategory = 'lighting' | 'daw' | 'network' | 'other';
+
+const CATEGORY_LABEL: Record<DeviceCategory, string> = {
+  lighting: 'Lighting Controllers',
+  daw: 'DAW & Loopback',
+  network: 'Network MIDI',
+  other: 'Other Inputs',
+};
+
+const CATEGORY_ORDER: DeviceCategory[] = ['lighting', 'daw', 'network', 'other'];
+
+function categorize(name: string): DeviceCategory {
+  const n = (name || '').toLowerCase();
+  if (
+    n.includes('roli') ||
+    n.includes('lightpad') ||
+    n.includes('seaboard') ||
+    n.includes('block') ||
+    n.includes('apc') ||
+    n.includes('launch') ||
+    n.includes('x-touch') ||
+    n.includes('xtouch') ||
+    n.includes('mackie')
+  ) return 'lighting';
+  if (
+    n.includes('loopmidi') ||
+    n.includes('loopback') ||
+    n.includes('iac') ||
+    n.includes('virtual') ||
+    n.includes('loop midi')
+  ) return 'daw';
+  if (
+    n.includes('rtp') ||
+    n.includes('network') ||
+    n.includes('ethernet') ||
+    n.includes('bonjour') ||
+    n.includes('udp')
+  ) return 'network';
+  return 'other';
+}
+
+function labelForRoli(name: string, devices: RoliDeviceInfo[]): string | null {
+  const trimmed = (name || '').trim();
+  const dev = devices.find(
+    (d) =>
+      (d.inputName && d.inputName.trim() === trimmed) ||
+      (d.outputName && d.outputName.trim() === trimmed)
+  );
+  if (!dev) return null;
+  const roleLabel = dev.role === 'primary' ? 'Primary (XY pad)' : 'Colour Wheel';
+  const handshake = dev.handshakeDone ? 'ready' : 'handshake…';
+  return `${roleLabel} · ${handshake}`;
 }
 
 function SegmentLadder({ litCount }: { litCount: number }) {
@@ -52,6 +107,96 @@ export const DmxMidiConnections: React.FC<DmxMidiConnectionsProps> = ({
   const summary = browserMidiSupported
     ? `${browserInputs.length} input${browserInputs.length === 1 ? '' : 's'}, ${activeCount} linked`
     : 'Web MIDI unavailable';
+
+  const roliDevices = getRoliDevices();
+
+  const grouped = useMemo(() => {
+    const groups: Record<DeviceCategory, MidiInputDevice[]> = {
+      lighting: [],
+      daw: [],
+      network: [],
+      other: [],
+    };
+    for (const input of browserInputs) {
+      groups[categorize(input.name || '')].push(input);
+    }
+    // Within each group, sort: ROLI primary first, then colour-wheel, then alpha.
+    const roliPriority = (name: string) => {
+      const l = (name || '').toLowerCase();
+      if (l.includes('lightpad') || l.includes('roli')) return 0;
+      if (l.includes('apc')) return 1;
+      return 2;
+    };
+    for (const k of CATEGORY_ORDER) {
+      groups[k].sort((a, b) => {
+        const pa = roliPriority(a.name || '');
+        const pb = roliPriority(b.name || '');
+        if (pa !== pb) return pa - pb;
+        return (a.name || '').localeCompare(b.name || '');
+      });
+    }
+    return groups;
+  }, [browserInputs]);
+
+  const renderStrip = (input: MidiInputDevice) => {
+    const isConnected = activeBrowserInputs.includes(input.id);
+    const lit = isConnected ? 5 : 0;
+    const roleLabel = labelForRoli(input.name || '', roliDevices);
+    return (
+      <div
+        key={input.id}
+        className={`${smx.channelStrip} ${isConnected ? smx.stripHot : ''}`}
+      >
+        <SegmentLadder litCount={lit} />
+        <div className={smx.stripText}>
+          <span className={smx.stripName}>
+            {input.name || 'MIDI input'}
+            {roleLabel && (
+              <span
+                style={{
+                  marginLeft: 8,
+                  fontSize: '0.7em',
+                  padding: '1px 6px',
+                  borderRadius: 999,
+                  background: 'rgba(34, 197, 94, 0.22)',
+                  color: 'rgba(187, 247, 208, 0.95)',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                {roleLabel}
+              </span>
+            )}
+          </span>
+          <span className={smx.stripMeta} title={input.id}>
+            {input.id}
+          </span>
+        </div>
+        <div className={smx.stripAction}>
+          {isConnected ? (
+            <button
+              type="button"
+              className={smx.toggleDisconnect}
+              onClick={() => onDisconnectMidiDevice(input.id)}
+              title="Disconnect this input"
+            >
+              <LucideIcon name="X" />
+              Off
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={smx.toggleConnect}
+              onClick={() => onConnectMidiDevice(input.id)}
+              title="Arm this input for MIDI learn and DMX"
+            >
+              <LucideIcon name="Link" />
+              Link
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className={smx.rackFrame}>
@@ -134,46 +279,30 @@ export const DmxMidiConnections: React.FC<DmxMidiConnectionsProps> = ({
                     No inputs detected. Connect a controller or virtual cable, then Scan.
                   </div>
                 ) : (
-                  <div className={smx.channelStripList}>
-                    {browserInputs.map((input) => {
-                      const isConnected = activeBrowserInputs.includes(input.id);
-                      const lit = isConnected ? 5 : 0;
+                  <div
+                    className={smx.channelStripList}
+                    style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
+                  >
+                    {CATEGORY_ORDER.map((cat) => {
+                      const items = grouped[cat];
+                      if (items.length === 0) return null;
                       return (
-                        <div
-                          key={input.id}
-                          className={`${smx.channelStrip} ${isConnected ? smx.stripHot : ''}`}
-                        >
-                          <SegmentLadder litCount={lit} />
-                          <div className={smx.stripText}>
-                            <span className={smx.stripName}>
-                              {input.name || 'MIDI input'}
-                            </span>
-                            <span className={smx.stripMeta} title={input.id}>
-                              {input.id}
-                            </span>
+                        <div key={cat} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          <div
+                            style={{
+                              fontSize: '0.62rem',
+                              fontWeight: 700,
+                              letterSpacing: '0.18em',
+                              textTransform: 'uppercase',
+                              color: 'rgba(148, 163, 184, 0.9)',
+                              borderBottom: '1px solid rgba(148, 163, 184, 0.18)',
+                              paddingBottom: 4,
+                            }}
+                          >
+                            {CATEGORY_LABEL[cat]} · {items.length}
                           </div>
-                          <div className={smx.stripAction}>
-                            {isConnected ? (
-                              <button
-                                type="button"
-                                className={smx.toggleDisconnect}
-                                onClick={() => onDisconnectMidiDevice(input.id)}
-                                title="Disconnect this input"
-                              >
-                                <LucideIcon name="X" />
-                                Off
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                className={smx.toggleConnect}
-                                onClick={() => onConnectMidiDevice(input.id)}
-                                title="Arm this input for MIDI learn and DMX"
-                              >
-                                <LucideIcon name="Link" />
-                                Link
-                              </button>
-                            )}
+                          <div className={smx.channelStripList}>
+                            {items.map(renderStrip)}
                           </div>
                         </div>
                       );
