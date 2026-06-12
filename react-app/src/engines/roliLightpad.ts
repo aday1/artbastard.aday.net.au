@@ -44,6 +44,7 @@ export interface RoliDeviceInfo {
   lastY: number;
   lastZ: number;
   isTouching: boolean;
+  lastError: string | null;
 }
 
 export type RoliTouchCallback = (ev: RoliTouchEvent) => void;
@@ -68,6 +69,7 @@ interface DeviceState {
   lastZ: number;
   isTouching: boolean;
   needsFullRepaint: boolean;
+  lastError: string | null;
   // ACK-driven handshake state. Reference: blocks-playground BlocksDevice.js:234-320.
   ackResolver: (() => void) | null;
   ackRejecter: ((err: Error) => void) | null;
@@ -166,6 +168,7 @@ function newDeviceState(deviceId: string, role: RoliRole): DeviceState {
     lastZ: 0,
     isTouching: false,
     needsFullRepaint: false,
+    lastError: null,
     ackResolver: null,
     ackRejecter: null,
     ackTimer: null,
@@ -478,9 +481,14 @@ function startPingTimer(dev: DeviceState): void {
 }
 
 async function doHandshake(dev: DeviceState): Promise<void> {
-  if (!dev.output) return;
+  if (!dev.output) {
+    dev.lastError = 'No output port';
+    notifyDeviceChange();
+    return;
+  }
   clearPingTimer(dev);
   dev.handshakeDone = false;
+  dev.lastError = null;
   pushDebugEvent({ ts: Date.now(), kind: 'handshake', deviceId: dev.deviceId, note: 'begin' });
   try {
     sendSysExTo(dev, [0x01, 0x02, 0x00], 'endAPIMode');
@@ -508,6 +516,7 @@ async function doHandshake(dev: DeviceState): Promise<void> {
     await waitForDeviceAck(dev);
 
     dev.handshakeDone = true;
+    dev.lastError = null;
     dev.prevLedData = new Uint8Array(LED_BYTE_COUNT);
     dev.needsFullRepaint = true;
     pushDebugEvent({ ts: Date.now(), kind: 'handshake', deviceId: dev.deviceId, note: 'done' });
@@ -516,6 +525,7 @@ async function doHandshake(dev: DeviceState): Promise<void> {
     notifyDeviceChange();
   } catch (err) {
     dev.handshakeDone = false;
+    dev.lastError = (err as Error).message || 'Handshake failed';
     pushDebugEvent({
       ts: Date.now(),
       kind: 'error',
@@ -805,6 +815,26 @@ export async function connectRoliLightpad(): Promise<boolean> {
   }
 }
 
+/**
+ * Hand the engine an existing MIDIAccess (e.g. from useGlobalBrowserMidi),
+ * avoiding a second requestMIDIAccess prompt. Caller is responsible for having
+ * requested it with `{ sysex: true }` — without SysEx, ROLI handshake fails.
+ */
+export function setRoliMidiAccess(access: WebMidi.MIDIAccess | null): void {
+  if (!access) return;
+  if (engine.midiAccess === access) {
+    refreshAndAutoMap();
+    return;
+  }
+  engine.midiAccess = access;
+  access.onstatechange = () => refreshAndAutoMap();
+  refreshAndAutoMap();
+}
+
+export function isRoliSysExEnabled(): boolean {
+  return Boolean(engine.midiAccess?.sysexEnabled);
+}
+
 export function disconnectRoliLightpad(): void {
   engine.devices.forEach((dev) => {
     if (dev.input) dev.input.onmidimessage = null;
@@ -845,6 +875,7 @@ export function getRoliDevices(): RoliDeviceInfo[] {
     lastY: d.lastY,
     lastZ: d.lastZ,
     isTouching: d.isTouching,
+    lastError: d.lastError,
   }));
 }
 

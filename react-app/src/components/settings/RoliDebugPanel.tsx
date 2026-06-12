@@ -6,6 +6,8 @@ import {
   forceRoliHandshake,
   sendLedFrame,
   clearLeds,
+  setRoliDeviceRole,
+  isRoliSysExEnabled,
   ROLI_GRID_COLS,
   ROLI_GRID_ROWS,
   type RoliDeviceInfo,
@@ -76,6 +78,14 @@ export const RoliDebugPanel: React.FC = () => {
     clearLeds({ deviceId });
   }, []);
 
+  const handleSwapRole = useCallback((dev: RoliDeviceInfo) => {
+    const next = dev.role === 'primary' ? 'colour-wheel' : 'primary';
+    setRoliDeviceRole(dev.deviceId, next);
+    setDevices(getRoliDevices());
+  }, []);
+
+  const sysexOk = isRoliSysExEnabled();
+
   return (
     <div className={styles.panel}>
       <div className={styles.header}>
@@ -85,11 +95,22 @@ export const RoliDebugPanel: React.FC = () => {
         <span className={styles.count}>
           {devices.length} block{devices.length === 1 ? '' : 's'} connected
         </span>
+        <span
+          className={styles.sysexBadge}
+          title={
+            sysexOk
+              ? 'SysEx granted — ROLI handshake can run'
+              : 'SysEx NOT granted — ROLI handshake will fail. Click the URL-bar lock icon → Reset permissions → reload, then accept the MIDI + SysEx prompt.'
+          }
+          style={{ color: sysexOk ? '#7cffaf' : '#ff7777', marginLeft: 8 }}
+        >
+          SysEx {sysexOk ? '✓' : '✗'}
+        </span>
       </div>
 
       <div className={styles.subtitle}>
-        Live touch + handshake state per Lightpad. Force handshake re-runs the
-        ACK-driven SysEx sequence; Paint test lights the full grid red for 600 ms.
+        Live touch + handshake state per Lightpad. Primary block drives PAN/TILT;
+        Colour block drives the colour wheel. Swap to flip the assignment.
       </div>
 
       <div className={styles.deviceList}>
@@ -116,17 +137,38 @@ export const RoliDebugPanel: React.FC = () => {
                   <span className={styles.deviceId} title={dev.deviceId}>
                     {shortId(dev.deviceId)}
                   </span>
+                  {dev.lastError && (
+                    <span
+                      style={{ color: '#ff7777', fontSize: '0.78em', marginLeft: 6 }}
+                      title={dev.lastError}
+                    >
+                      ⚠ {dev.lastError}
+                    </span>
+                  )}
                 </div>
 
-                <span className={styles.rolePill}>
-                  {dev.role === 'primary' ? 'Primary' : 'Colour'}
-                </span>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
+                  <span className={styles.rolePill}>
+                    {dev.role === 'primary' ? 'Primary' : 'Colour'}
+                  </span>
+                  <span style={{ fontSize: '0.7em', color: '#9aa', whiteSpace: 'nowrap' }}>
+                    → {dev.role === 'primary' ? 'PAN / TILT' : 'COLOR WHEEL'}
+                  </span>
+                </div>
 
                 <span className={`${styles.touchReadout} ${touching ? styles.live : ''}`}>
                   {touchText}
                 </span>
 
                 <div className={styles.rowActions}>
+                  <button
+                    type="button"
+                    className={styles.actionButton}
+                    onClick={() => handleSwapRole(dev)}
+                    title="Swap PAN/TILT ↔ COLOR WHEEL between the two blocks"
+                  >
+                    Swap
+                  </button>
                   <button
                     type="button"
                     className={styles.actionButton}

@@ -31,6 +31,11 @@ export interface SmartController {
   browserInput?: WebMidi.MIDIInput;
   isConnectedServer: boolean;
   isConnectedBrowser: boolean;
+  // Hint surfaced when this physical unit appears in only one transport. Most
+  // hardware shows up in both (Server via RtMidi + Browser via Web MIDI). When
+  // one side is missing it usually means Chrome hasn't enumerated the port
+  // (needs hard refresh) or the backend can't reach it (needs reconnect).
+  transportHint: 'browser-only' | 'server-only' | 'both';
 }
 
 // Pick a short prefix from a base name. Looks for known controller families
@@ -121,6 +126,12 @@ export function buildSmartControllers(
         browserInput,
         isConnectedServer: !!serverPort && activeInterfaces.includes(serverPort),
         isConnectedBrowser: !!browserInput && activeBrowserInputs.includes(browserInput.id),
+        transportHint:
+          serverPort && browserInput
+            ? 'both'
+            : serverPort
+              ? 'server-only'
+              : 'browser-only',
       });
     }
   }

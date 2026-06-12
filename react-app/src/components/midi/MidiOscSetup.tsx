@@ -10,6 +10,7 @@ import { Apc40Demoscene } from './Apc40Demoscene'
 import { RoliDebugPanel } from '../settings/RoliDebugPanel'
 import { groupMidiInterfaces, BUCKET_LABELS, BUCKET_ORDER, type MidiBucket, bucketFor } from '../../midi/midiInterfaceGrouping'
 import { buildSmartControllers } from '../../midi/smartControllers'
+import { isRoliblockLike } from '../../engines/roliLightpad'
 import styles from './MidiOscSetup.module.scss'
 import { debugLog } from '../../utils/debugLog';
 
@@ -345,10 +346,14 @@ export const MidiOscSetup: React.FC = () => {
 
   const groupedServerMidi = useMemo(() => groupMidiInterfaces(midiInterfaces), [midiInterfaces])
   const groupedBrowserMidi = useMemo(() => {
-    const names = browserInputs.map((i) => i.name || '(unnamed)')
+    // ROLI Lightpads are owned by the roliLightpad engine — hide them from the
+    // generic Browser MIDI list so the user doesn't try to Connect them here
+    // (which would steal the engine's onmidimessage handler).
+    const nonRoli = browserInputs.filter((i) => !isRoliblockLike(i.name || ''))
+    const names = nonRoli.map((i) => i.name || '(unnamed)')
     const groups = groupMidiInterfaces(names)
     const byName = new Map<string, WebMidi.MIDIInput[]>()
-    for (const input of browserInputs) {
+    for (const input of nonRoli) {
       const name = input.name || '(unnamed)'
       const arr = byName.get(name) || []
       arr.push(input)
@@ -356,6 +361,10 @@ export const MidiOscSetup: React.FC = () => {
     }
     return { groups, byName }
   }, [browserInputs])
+  const hasRoliBlock = useMemo(
+    () => browserInputs.some((i) => isRoliblockLike(i.name || '')),
+    [browserInputs],
+  )
   const smartControllers = useMemo(
     () => buildSmartControllers(midiInterfaces, activeInterfaces, browserInputs, activeBrowserInputs),
     [midiInterfaces, activeInterfaces, browserInputs, activeBrowserInputs],
@@ -399,6 +408,21 @@ export const MidiOscSetup: React.FC = () => {
             <p className={styles.cardDescription} style={{ fontSize: '0.78rem', margin: '0 0 0.5rem' }}>
               One row per physical box. On Windows, pick ONE transport per device — the OS won't let Server and Browser MIDI hold the same port at once. Use <b>Release</b> on a browser row to hand a device back to Server MIDI.
             </p>
+            {hasRoliBlock && (
+              <p
+                style={{
+                  fontSize: '0.72rem',
+                  margin: '0 0 0.5rem',
+                  padding: '0.4rem 0.55rem',
+                  background: 'rgba(99,102,241,0.12)',
+                  border: '1px solid rgba(99,102,241,0.3)',
+                  borderRadius: 4,
+                  color: 'rgba(199,210,254,0.95)',
+                }}
+              >
+                <b>ROLI Lightpad:</b> routed through the ROLI engine — use the <b>ROLI Debug</b> panel below to assign Primary (PAN/TILT) vs Colour (COLOR WHEEL) roles. Don't Connect them via the Browser MIDI list.
+              </p>
+            )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {smartControllers.map((ctrl) => {
                 const isAnyConnected = ctrl.isConnectedServer || ctrl.isConnectedBrowser
@@ -446,6 +470,13 @@ export const MidiOscSetup: React.FC = () => {
                         {ctrl.serverPort && ctrl.browserInput && ' · '}
                         {ctrl.browserInput && <>Browser id: <code>{ctrl.browserInput.id.slice(0, 8)}…</code></>}
                       </span>
+                      {ctrl.transportHint !== 'both' && (
+                        <span style={{ fontSize: '0.68rem', color: 'rgba(251,191,36,0.85)' }}>
+                          {ctrl.transportHint === 'browser-only'
+                            ? '⚠ Only visible on Browser — backend may not have enumerated this port. Restart server if you need Server access.'
+                            : '⚠ Only visible on Server — Chrome may not have enumerated this port. Hard-refresh after granting MIDI/SysEx.'}
+                        </span>
+                      )}
                     </span>
                     <span
                       style={{

@@ -3,6 +3,7 @@ import { useStore } from '../store';
 import { detectTemplateForMidiInterface, getTemplateById } from '../components/midi/midiControllerTemplates';
 import { debugLog } from '../utils/debugLog';
 import { recordBrowserMidiMessage } from '../midi/midiTransportDedupe';
+import { setRoliMidiAccess, isRoliblockLike } from '../engines/roliLightpad';
 import {
   DetectedMidiController,
   MIDI_CONNECT_BROWSER_EVENT,
@@ -106,10 +107,16 @@ export const useGlobalBrowserMidi = () => {
     const initMidi = async () => {
       try {
         if (navigator.requestMIDIAccess) {
-          const access = await navigator.requestMIDIAccess({ sysex: false });
+          // SysEx is required for ROLI Lightpad handshake. We request it once
+          // up-front and hand the same MIDIAccess to the ROLI engine to avoid
+          // a second prompt (Chrome treats SysEx as a separate permission, so
+          // a second requestMIDIAccess with a different sysex flag silently
+          // fails when the engine later tries to connect).
+          const access = await navigator.requestMIDIAccess({ sysex: true });
           if (cancelled) return;
           setMidiAccess(access);
           setBrowserMidiEnabled(true);
+          setRoliMidiAccess(access);
           
           // Update inputs list
           const inputList = Array.from(access.inputs.values());
@@ -131,9 +138,27 @@ export const useGlobalBrowserMidi = () => {
           console.warn('[GlobalBrowserMidi] Web MIDI API not supported');
         }
       } catch (err: unknown) {
-        console.error('[GlobalBrowserMidi] Failed to initialize Web MIDI:', err);
-        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-        setError(errorMessage);
+        console.error('[GlobalBrowserMidi] Failed to initialize Web MIDI with SysEx:', err);
+        // SysEx may have been denied (browser policy or user refusal). Retry
+        // without it so non-SysEx devices (APC40, generic CCs, etc.) still
+        // work. ROLI handshake will fail visibly in the ROLI debug panel.
+        try {
+          const access = await navigator.requestMIDIAccess({ sysex: false });
+          if (cancelled) return;
+          setMidiAccess(access);
+          setBrowserMidiEnabled(true);
+          const inputList = Array.from(access.inputs.values());
+          setInputs(inputList);
+          const handleStateChange = () => {
+            setInputs(Array.from(access.inputs.values()));
+          };
+          access.addEventListener('statechange', handleStateChange);
+          stateChangeCleanup = () => access.removeEventListener('statechange', handleStateChange);
+          setError('SysEx denied — ROLI Lightpad will not work. Re-grant via site permissions.');
+        } catch (retryErr: unknown) {
+          const errorMessage = retryErr instanceof Error ? retryErr.message : 'Unknown error';
+          setError(errorMessage);
+        }
       }
     };
 
@@ -150,6 +175,15 @@ export const useGlobalBrowserMidi = () => {
 
     const input = midiAccess.inputs.get(inputId);
     if (!input) return;
+
+    // ROLI Lightpad inputs are owned by the roliLightpad engine. Attaching a
+    // generic listener here breaks the engine's onmidimessage handler (the two
+    // mechanisms cannot coexist on the same input). Skip — the engine handles
+    // its own connect/disconnect via setRoliMidiAccess.
+    if (isRoliblockLike(input.name || '')) {
+      debugLog.log('[GlobalBrowserMidi] Skipping ROLI input (managed by roliLightpad engine):', input.name);
+      return;
+    }
 
     // Once a user (or the auto-effect) has touched this id, the auto-effect
     // must back off — see autoConnectAttemptedRef comment.
@@ -331,6 +365,10 @@ export const useGlobalBrowserMidi = () => {
 
     inputs.forEach((input) => {
       if (input.state === 'disconnected') return;
+
+      // ROLI Lightpad inputs are engine-owned (see connectBrowserInput).
+      // Don't dispatch detection events or auto-attach generic listeners.
+      if (isRoliblockLike(input.name || '')) return;
 
       // Re-attach listener for any input we previously connected (this session
       // or persisted in localStorage) but no longer have a live handler for —

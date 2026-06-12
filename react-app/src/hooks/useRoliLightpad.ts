@@ -17,7 +17,6 @@ import {
 } from '../engines/roliLightpad';
 import {
   MIDI_CONNECT_ROLI_EVENT,
-  ROLI_LIGHTPAD_CONNECT_APPROVED_KEY,
   describeDetectedMidiController,
   dispatchConnectedMidiController,
 } from '../midi/detectedMidiController';
@@ -124,7 +123,11 @@ export function useRoliLightpad(options: UseRoliLightpadOptions = {}): UseRoliLi
 
     const handleConnectRoli = () => connectApprovedRoli();
     window.addEventListener(MIDI_CONNECT_ROLI_EVENT, handleConnectRoli);
-    if (localStorage.getItem(ROLI_LIGHTPAD_CONNECT_APPROVED_KEY) === 'true') connectApprovedRoli();
+    // Auto-connect on mount. SysEx is now granted by useGlobalBrowserMidi at
+    // app load and the MIDIAccess object is shared via setRoliMidiAccess, so
+    // no separate user approval is needed for the engine to enumerate ROLI
+    // ports. The detection banner remains as a manual re-handshake trigger.
+    connectApprovedRoli();
 
     return () => {
       cancelled = true;
