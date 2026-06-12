@@ -109,12 +109,18 @@ function makeLastChange(
 }
 
 export function useApc40Workflow() {
-  const latestMessage = useStore((state) => state.midiMessages[state.midiMessages.length - 1]);
+  // Subscribe via the window 'midiMessage' event below instead of selecting
+  // `state.midiMessages[length-1]`. React 18 batches multiple set() calls into
+  // a single render, so when SHIFT noteon + clip noteon arrive in the same
+  // tick the selector only delivers the last one — losing SHIFT and breaking
+  // both single-tap clip launch and SHIFT+clip Deck B targeting. The window
+  // event fires synchronously inside addMidiMessage, one per message.
   const fixturesForRoles = useStore((state) => state.fixtures);
   const selectedForRoles = useStore((state) => state.selectedFixtures);
   const setApc40StatePatch = useStore((state) => state.setApc40StatePatch);
 
   const lastSignature = useRef('');
+  const handleApc40MessageRef = useRef<(message: any) => void>(() => {});
   const shiftHeldRef = useRef(false);
   const sceneRefs = useRef<Record<Apc40Deck, string | null>>({ A: null, B: null });
   const slotRefs = useRef<Record<Apc40Deck, number | null>>({ A: null, B: null });
@@ -251,6 +257,15 @@ export function useApc40Workflow() {
   }, [fixturesForRoles, selectedForRoles]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    const listener = (event: Event) => {
+      const message = (event as CustomEvent).detail;
+      handleApc40MessageRef.current(message);
+    };
+    window.addEventListener('midiMessage', listener);
+    return () => window.removeEventListener('midiMessage', listener);
+  }, []);
+
+  handleApc40MessageRef.current = (latestMessage: any) => {
     if (!latestMessage || !isApc40Source(latestMessage.source)) return;
 
     const signature = JSON.stringify(latestMessage);
@@ -1154,7 +1169,7 @@ export function useApc40Workflow() {
       state.deselectAllFixtures();
       publishSurfaceState();
     }
-  }, [latestMessage]); // eslint-disable-line react-hooks/exhaustive-deps
+  };
 
   useEffect(() => {
     const interval = window.setInterval(() => {

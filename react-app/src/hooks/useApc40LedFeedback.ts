@@ -143,7 +143,11 @@ export function useApc40LedFeedback() {
         const index = row * GRID_COLS + column;
         const name = apc40DeckSceneName(deck, index);
         const saved = scenes.some((scene) => scene.name === name);
-        let velocity: number = saved ? LED_GREEN : LED_OFF;
+        // While SHIFT is held the grid previews Deck B — paint saved pads RED
+        // (instead of GREEN) so the operator can tell at a glance they're
+        // about to load from Deck B rather than the active Deck A.
+        const savedColor = crossfaderState.shiftLatched ? LED_RED : LED_GREEN;
+        let velocity: number = saved ? savedColor : LED_OFF;
         if (name === activeDeckName) velocity = LED_ORANGE_BLINK;
         if (armedColumns.has(column)) velocity = LED_RED_BLINK;
         sendLed(out, column, CLIP_ROW_BASE + row, velocity);
