@@ -693,3 +693,50 @@ export const Apc40SurfaceDiagram: React.FC<Props> = ({
 };
 
 export default Apc40SurfaceDiagram;
+
+// Shared visibility flag for the surface diagram across pages. Default hidden;
+// any page can toggle via the returned setter and other mounted consumers will
+// re-render via the custom event.
+const APC40_VISIBLE_KEY = 'artbastard.showApc40Diagram';
+const APC40_VISIBLE_EVENT = 'artbastard:apc40-visible';
+
+export function useApc40DiagramVisible(): [boolean, (next: boolean | ((prev: boolean) => boolean)) => void] {
+  const [visible, setVisible] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(APC40_VISIBLE_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    const sync = () => {
+      try {
+        setVisible(localStorage.getItem(APC40_VISIBLE_KEY) === '1');
+      } catch {
+        /* ignore */
+      }
+    };
+    window.addEventListener('storage', sync);
+    window.addEventListener(APC40_VISIBLE_EVENT, sync);
+    return () => {
+      window.removeEventListener('storage', sync);
+      window.removeEventListener(APC40_VISIBLE_EVENT, sync);
+    };
+  }, []);
+
+  const update = useCallback((next: boolean | ((prev: boolean) => boolean)) => {
+    setVisible((prev) => {
+      const resolved = typeof next === 'function' ? (next as (p: boolean) => boolean)(prev) : next;
+      try {
+        localStorage.setItem(APC40_VISIBLE_KEY, resolved ? '1' : '0');
+        window.dispatchEvent(new Event(APC40_VISIBLE_EVENT));
+      } catch {
+        /* ignore */
+      }
+      return resolved;
+    });
+  }, []);
+
+  return [visible, update];
+}

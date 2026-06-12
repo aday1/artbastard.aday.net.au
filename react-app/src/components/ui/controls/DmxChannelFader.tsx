@@ -24,6 +24,8 @@ export interface DmxChannelFaderProps {
   vertical?: boolean;
   className?: string;
   faderSize?: DmxFaderSize;
+  /** Hide the main horizontal value slider (use when an external triple-handle slider owns value). */
+  hideMainSlider?: boolean;
 }
 
 export const DmxChannelFader: React.FC<DmxChannelFaderProps> = ({
@@ -39,6 +41,7 @@ export const DmxChannelFader: React.FC<DmxChannelFaderProps> = ({
   vertical = true,
   className = '',
   faderSize = 'default',
+  hideMainSlider = false,
 }) => {
   const useTicks = shouldUseTickFader(ticksOnly, fixtureRanges);
   const ranges = fixtureRanges ?? [];
@@ -54,6 +57,10 @@ export const DmxChannelFader: React.FC<DmxChannelFaderProps> = ({
   const showFullFader = !onToggleAuxFullRange || auxFullRange;
 
   if (!vertical) {
+    // If main slider hidden and no tick notches to show, render nothing
+    if (hideMainSlider && (!ticksOnly || tickSteps.length === 0)) {
+      return null;
+    }
     const tickMarks = tickSteps.flatMap((step) => [
       {
         value: step.min,
@@ -71,14 +78,16 @@ export const DmxChannelFader: React.FC<DmxChannelFaderProps> = ({
 
     return (
       <div className={`${styles.horizontal} ${className}`}>
-        <MasterStyledSlider
-          value={value}
-          min={min}
-          max={max}
-          disabled={disabled}
-          ticks={tickMarks}
-          onChange={onChange}
-        />
+        {hideMainSlider ? null : (
+          <MasterStyledSlider
+            value={value}
+            min={min}
+            max={max}
+            disabled={disabled}
+            ticks={tickMarks}
+            onChange={onChange}
+          />
+        )}
         {ticksOnly && tickSteps.length > 0 ? (
           <div className={styles.horizontalTicks} aria-label="Fixture range notches">
             {tickSteps.slice(0, 12).map((step, index) => {

@@ -3,10 +3,15 @@ import { useStore } from '../../store';
 import { isApc40Source } from '../../midi/apc40';
 import { LucideIcon } from '../ui/LucideIcon';
 import { StageMapDashboard } from './StageMapDashboard';
-import { Apc40SurfaceDiagram } from '../midi/Apc40SurfaceDiagram';
+import { Apc40SurfaceDiagram, useApc40DiagramVisible } from '../midi/Apc40SurfaceDiagram';
 import styles from './FixtureSetup.module.scss';
 
-export const Apc40WorkflowPanel: React.FC = () => {
+interface Apc40WorkflowBodyProps {
+  /** When true, omit the embedded StageMapDashboard (caller provides the map). */
+  withoutMap?: boolean;
+}
+
+export const Apc40WorkflowBody: React.FC<Apc40WorkflowBodyProps> = ({ withoutMap = false }) => {
   const { midiMessages, scenes, fixtures, groups, fixtureTemplates, apc40State } = useStore((state) => ({
     midiMessages: state.midiMessages,
     scenes: state.scenes,
@@ -15,6 +20,7 @@ export const Apc40WorkflowPanel: React.FC = () => {
     fixtureTemplates: state.fixtureTemplates,
     apc40State: state.apc40CrossfaderState,
   }));
+  const [showApc40Diagram] = useApc40DiagramVisible();
 
   const lastApcSource = useMemo(() => {
     const recent = [...midiMessages].reverse().find((message) => isApc40Source(message.source));
@@ -29,7 +35,7 @@ export const Apc40WorkflowPanel: React.FC = () => {
     : null;
 
   return (
-    <section className={styles.apcPanel} aria-label="Akai APC40 remote workflow">
+    <>
       <div className={styles.apcHeader}>
         <div>
           <span className={styles.stepKicker}>Remote control</span>
@@ -42,21 +48,25 @@ export const Apc40WorkflowPanel: React.FC = () => {
         </div>
       </div>
 
-      <StageMapDashboard
-        title="APC40 live stage map"
-        subtitle={
-          highlightedGroup
-            ? `APC track ${(lastTrackSelectIndex ?? 0) + 1} -> ${highlightedGroup.name} (${highlightedGroup.fixtureIndices.length} fixtures)`
-            : apc40State.activeTargetLabel
-              ? `APC target -> ${apc40State.activeTargetLabel}`
-              : `${fixtures.length} fixtures · ${groups.length} groups · tap to target the surface`
-        }
-        highlightGroupId={highlightedGroupId}
-        highlightFixtureIds={apc40State.activeFixtureIds}
-        highlightLabel={apc40State.activeTargetLabel}
-      />
+      {!withoutMap && (
+        <StageMapDashboard
+          title="APC40 live stage map"
+          subtitle={
+            highlightedGroup
+              ? `APC track ${(lastTrackSelectIndex ?? 0) + 1} -> ${highlightedGroup.name} (${highlightedGroup.fixtureIndices.length} fixtures)`
+              : apc40State.activeTargetLabel
+                ? `APC target -> ${apc40State.activeTargetLabel}`
+                : `${fixtures.length} fixtures · ${groups.length} groups · tap to target the surface`
+          }
+          highlightGroupId={highlightedGroupId}
+          highlightFixtureIds={apc40State.activeFixtureIds}
+          highlightLabel={apc40State.activeTargetLabel}
+        />
+      )}
 
-      <Apc40SurfaceDiagram mode="fixtures" showBothDecks title="track select → groups" />
+      {showApc40Diagram && (
+        <Apc40SurfaceDiagram mode="fixtures" showBothDecks title="track select → groups" />
+      )}
 
       <div className={styles.apcMapGrid}>
         <div title="Clip Launch / Session View is the scene grid. Default is Deck A; hold SHIFT for Deck B.">
@@ -86,6 +96,12 @@ export const Apc40WorkflowPanel: React.FC = () => {
           Open tablet remote
         </a>
       </div>
-    </section>
+    </>
   );
 };
+
+export const Apc40WorkflowPanel: React.FC = () => (
+  <section className={styles.apcPanel} aria-label="Akai APC40 remote workflow">
+    <Apc40WorkflowBody />
+  </section>
+);

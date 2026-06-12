@@ -15,9 +15,12 @@ export interface RangeWindowControlProps {
   dense?: boolean;
   onChange: (minValue: number, maxValue: number) => void;
   className?: string;
+  /** Optional 3rd handle representing the current channel value (clamped to [minValue,maxValue]). */
+  value?: number;
+  onValueChange?: (value: number) => void;
 }
 
-type DragMode = 'min' | 'max' | 'window' | null;
+type DragMode = 'min' | 'max' | 'window' | 'value' | null;
 
 function clamp(n: number, lo: number, hi: number) {
   return Math.max(lo, Math.min(hi, n));
@@ -40,17 +43,22 @@ export const RangeWindowControl: React.FC<RangeWindowControlProps> = ({
   dense = false,
   onChange,
   className = '',
+  value,
+  onValueChange,
 }) => {
   const inputId = useId();
   const trackRef = useRef<HTMLDivElement>(null);
   const [dragMode, setDragMode] = useState<DragMode>(null);
-  const dragStartRef = useRef({ x: 0, minV: 0, maxV: 0 });
+  const dragStartRef = useRef({ x: 0, minV: 0, maxV: 0, valV: 0 });
 
   const span = max - min || 1;
   const lo = clamp(Math.min(minValue, maxValue), min, max);
   const hi = clamp(Math.max(minValue, maxValue), min, max);
   const leftPct = ((lo - min) / span) * 100;
   const widthPct = ((hi - lo) / span) * 100;
+  const showValueHandle = typeof value === 'number' && typeof onValueChange === 'function';
+  const clampedValue = showValueHandle ? clamp(value as number, lo, hi) : 0;
+  const valuePct = showValueHandle ? ((clampedValue - min) / span) * 100 : 0;
 
   const valueFromClientX = useCallback(
     (clientX: number) => {
@@ -69,7 +77,7 @@ export const RangeWindowControl: React.FC<RangeWindowControlProps> = ({
     e.stopPropagation();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     setDragMode(mode);
-    dragStartRef.current = { x: e.clientX, minV: lo, maxV: hi };
+    dragStartRef.current = { x: e.clientX, minV: lo, maxV: hi, valV: clampedValue };
   };
 
   const onPointerMove = useCallback(
@@ -89,9 +97,12 @@ export const RangeWindowControl: React.FC<RangeWindowControlProps> = ({
         let nextMin = snap(dragStartRef.current.minV + deltaVal, step);
         nextMin = clamp(nextMin, min, max - windowSize);
         onChange(nextMin, nextMin + windowSize);
+      } else if (dragMode === 'value' && onValueChange) {
+        const next = clamp(snap(dragStartRef.current.valV + deltaVal, step), lo, hi);
+        onValueChange(next);
       }
     },
-    [dragMode, disabled, span, step, min, max, lo, hi, onChange]
+    [dragMode, disabled, span, step, min, max, lo, hi, onChange, onValueChange]
   );
 
   const endDrag = (e: React.PointerEvent) => {
@@ -109,6 +120,11 @@ export const RangeWindowControl: React.FC<RangeWindowControlProps> = ({
     if (disabled || dragMode) return;
     if ((e.target as HTMLElement).dataset.handle) return;
     const v = valueFromClientX(e.clientX);
+    // If value handle is enabled and click is inside the current window, move value
+    if (showValueHandle && onValueChange && v >= lo && v <= hi) {
+      onValueChange(clamp(v, lo, hi));
+      return;
+    }
     if (Math.abs(v - lo) <= Math.abs(v - hi)) {
       onChange(clamp(v, min, hi), hi);
     } else {
@@ -128,17 +144,19 @@ export const RangeWindowControl: React.FC<RangeWindowControlProps> = ({
     onChange(Math.min(lo, nextMax), nextMax);
   };
 
-  const onKeyDown = (handle: 'min' | 'max') => (e: React.KeyboardEvent) => {
+  const onKeyDown = (handle: 'min' | 'max' | 'value') => (e: React.KeyboardEvent) => {
     if (disabled) return;
     const delta = (e.shiftKey ? 10 : 1) * step;
     if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
       e.preventDefault();
       if (handle === 'min') onChange(clamp(lo - delta, min, hi), hi);
-      else onChange(lo, clamp(hi - delta, lo, max));
+      else if (handle === 'max') onChange(lo, clamp(hi - delta, lo, max));
+      else if (handle === 'value' && onValueChange) onValueChange(clamp(clampedValue - delta, lo, hi));
     } else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
       e.preventDefault();
       if (handle === 'min') onChange(clamp(lo + delta, min, hi), hi);
-      else onChange(lo, clamp(hi + delta, lo, max));
+      else if (handle === 'max') onChange(lo, clamp(hi + delta, lo, max));
+      else if (handle === 'value' && onValueChange) onValueChange(clamp(clampedValue + delta, lo, hi));
     }
   };
 
@@ -152,6 +170,11 @@ export const RangeWindowControl: React.FC<RangeWindowControlProps> = ({
         <span className={styles.valueSep}>-</span>
         <span className={styles.valueMax}>{hi}</span>
         <span className={styles.valueSpan}>({hi - lo})</span>
+        {showValueHandle ? (
+          <span className={styles.valueCurrent} title="Current value">
+            = {clampedValue}
+          </span>
+        ) : null}
       </div>
       {showNumericInputs ? (
         <div className={styles.numericRow}>
@@ -226,6 +249,19 @@ export const RangeWindowControl: React.FC<RangeWindowControlProps> = ({
           onPointerDown={onPointerDown('max')}
           onKeyDown={onKeyDown('max')}
         />
+        {showValueHandle ? (
+          <button
+            type="button"
+            className={`${styles.handle} ${styles.valueHandle}`}
+            style={{ left: `${valuePct}%` }}
+            data-handle="value"
+            disabled={disabled}
+            aria-label="Value"
+            title={`Value ${clampedValue}`}
+            onPointerDown={onPointerDown('value')}
+            onKeyDown={onKeyDown('value')}
+          />
+        ) : null}
       </div>
     </div>
   );

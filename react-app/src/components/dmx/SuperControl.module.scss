@@ -2399,13 +2399,14 @@ $color-wheel-checker: repeating-conic-gradient(
   100% { opacity: 1; }
 }
 
-// Auto-layout container for SuperControl panels
+// Auto-layout container for SuperControl panels.
+// Uses CSS multi-column layout so panels pack into the shortest column (true
+// masonry). When the user pins a column count via the header picker we set
+// --sc-column-count; otherwise --sc-column-width drives responsive breakpoints.
 .autoLayoutContainer {
-  display: grid;
-  // --sc-columns lets the user override the column count from the header chrome.
-  // Falls back to responsive auto-fit when unset (the "Auto" choice).
-  grid-template-columns: var(--sc-columns, repeat(auto-fit, minmax(400px, 1fr)));
-  gap: 20px;
+  column-count: var(--sc-column-count, auto);
+  column-width: var(--sc-column-width, 400px);
+  column-gap: 20px;
   width: 100%;
   padding: 20px 0;
 
@@ -2427,21 +2428,30 @@ $color-wheel-checker: repeating-conic-gradient(
     display: none !important;
   }
 
-  // Only apply the responsive fallbacks when no explicit column count is set.
   @media (max-width: 1400px) {
-    grid-template-columns: var(--sc-columns, repeat(auto-fit, minmax(350px, 1fr)));
+    --sc-column-width: 350px;
   }
 
   @media (max-width: 1200px) {
-    grid-template-columns: var(--sc-columns, 1fr);
+    column-count: var(--sc-column-count, 1);
   }
 }
 
 .gridItem {
   padding: 0;
   min-height: 200px;
+  // Cap panel height so tall content (e.g. 40+ saved scenes) scrolls inside the
+  // panel via .gridItemContent's overflow:auto, instead of stretching the page.
+  // User can still drag-resize via `resize: vertical`.
+  max-height: calc(100vh - 12rem);
   display: flex;
   flex-direction: column;
+  // Required for multi-column masonry: prevents the panel from being split
+  // across columns, and stacks panels with a consistent gap.
+  break-inside: avoid;
+  page-break-inside: avoid;
+  width: 100%;
+  margin-bottom: 20px;
   border-radius: 3px;
   border: 1px solid var(--wb-bevel-dark, #110a25);
   background: var(--wb-panel, #2d2350);
@@ -2564,6 +2574,19 @@ $color-wheel-checker: repeating-conic-gradient(
   cursor: grab;
 
   &:active { cursor: grabbing; }
+}
+
+// Visual feedback while a panel is being dragged or hovered as a drop target.
+.gridItemDragging {
+  opacity: 0.55;
+  outline: 2px dashed color-mix(in srgb, var(--wb-copper, #ffa044) 70%, transparent);
+  outline-offset: -2px;
+}
+
+.gridItemDropTarget {
+  outline: 2px solid var(--wb-copper, #ffa044);
+  outline-offset: -2px;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--wb-copper, #ffa044) 25%, transparent);
 }
 
 .envelopePanelStack {

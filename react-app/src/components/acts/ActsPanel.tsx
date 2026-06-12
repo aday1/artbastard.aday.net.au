@@ -6,7 +6,7 @@ import { ActPlayer } from './ActPlayer';
 import { ActSeedButton } from './ActSeedButton';
 import { LucideIcon } from '../ui/LucideIcon';
 import { Apc40SceneLaunchStrip } from '../midi/Apc40SceneLaunchStrip';
-import { Apc40SurfaceDiagram } from '../midi/Apc40SurfaceDiagram';
+import { Apc40SurfaceDiagram, useApc40DiagramVisible } from '../midi/Apc40SurfaceDiagram';
 import styles from './ActsPanel.module.scss';
 
 export const ActsPanel: React.FC = () => {
@@ -17,6 +17,7 @@ export const ActsPanel: React.FC = () => {
   const [newActName, setNewActName] = useState('');
   const [newActDescription, setNewActDescription] = useState('');
   const [pendingCreatedActName, setPendingCreatedActName] = useState<string | null>(null);
+  const [showApc40Diagram] = useApc40DiagramVisible();
 
   const selectedAct = acts.find(act => act.id === selectedActId);
   const isPlaying = actPlaybackState.isPlaying && actPlaybackState.currentActId === selectedActId;
@@ -94,7 +95,9 @@ export const ActsPanel: React.FC = () => {
 
       <Apc40SceneLaunchStrip />
 
-      <Apc40SurfaceDiagram mode="acts" compact title="scene launch → acts" />
+      {showApc40Diagram && (
+        <Apc40SurfaceDiagram mode="acts" compact title="scene launch → acts" />
+      )}
 
       <div className={styles.workflowStrip} aria-label="Acts workflow model">
         <div className={styles.workflowItem}>

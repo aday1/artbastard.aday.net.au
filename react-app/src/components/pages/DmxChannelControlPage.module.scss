@@ -2515,6 +2515,10 @@
   padding: 16px;
   transition: all 0.2s ease;
   scroll-margin-top: 100px; // Space for smooth scrolling
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: visible;
+  box-sizing: border-box;
   
   &:hover {
     border-color: rgba(16, 185, 129, 0.4);

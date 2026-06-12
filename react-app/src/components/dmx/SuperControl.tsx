@@ -22,7 +22,7 @@ import { useRoliLightpad } from '../../hooks/useRoliLightpad';
 import { SkeuoButton } from '../ui/SkeuoButton';
 import { SelectedChannelsFaderStrip } from './SelectedChannelsFaderStrip';
 import { SuperControlMidiBindingsBar } from './SuperControlMidiBindingsBar';
-import { Apc40SurfaceDiagram } from '../midi/Apc40SurfaceDiagram';
+import { Apc40SurfaceDiagram, useApc40DiagramVisible } from '../midi/Apc40SurfaceDiagram';
 import { debugLog } from '../../utils/debugLog';
 import { rangesToTickSteps } from '../../utils/fixtureChannelTicks';
 import type { FixtureChannelRange } from '../../store/types';
@@ -403,10 +403,12 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
   // Removed layout state and template functions - using CSS auto-layout instead
 
   // Selection state
-  const [selectionMode, setSelectionMode] = useState<SelectionMode>('channels');
+  const [selectionMode, setSelectionMode] = useState<SelectionMode>('fixtures');
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
   const [selectedCapabilities, setSelectedCapabilities] = useState<string[]>([]);
   const [panelLayout, setPanelLayout] = useState<SuperControlPanelLayoutState>(loadSuperControlPanelLayout);
+  // APC40 surface diagram is opt-in (hidden by default, shared across pages).
+  const [showApc40Diagram, setShowApc40Diagram] = useApc40DiagramVisible();
   // Control values state
   const [dimmer, setDimmer] = useState(255);
   const [panValue, setPanValue] = useState(127);
@@ -540,14 +542,23 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     ]
   );
 
+  // Drag state lifted here so panelClass below can reflect dragging/drop-target.
+  const dragIdRef = useRef<SuperControlPanelId | null>(null);
+  const [draggingPanelId, setDraggingPanelId] = useState<SuperControlPanelId | null>(null);
+  const [dragOverPanelId, setDragOverPanelId] = useState<SuperControlPanelId | null>(null);
+
   const panelClass = useCallback(
     (panelId: SuperControlPanelId) => {
       const classes = [styles.gridItem];
       if (panelLayout.collapsed[panelId]) classes.push(styles.gridItemCollapsed);
       if (panelLayout.fullscreen === panelId) classes.push(styles.gridItemFullscreen);
+      if (draggingPanelId === panelId) classes.push(styles.gridItemDragging);
+      if (dragOverPanelId === panelId && draggingPanelId && draggingPanelId !== panelId) {
+        classes.push(styles.gridItemDropTarget);
+      }
       return classes.join(' ');
     },
-    [panelLayout.collapsed, panelLayout.fullscreen]
+    [panelLayout.collapsed, panelLayout.fullscreen, draggingPanelId, dragOverPanelId]
   );
 
   // Spread onto each panel root: className + style + data-panel-id (for the
@@ -622,8 +633,6 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
   }, []);
 
   // Drag-and-drop reordering: the header acts as the drag handle.
-  const dragIdRef = useRef<SuperControlPanelId | null>(null);
-
   const handlePanelDragStart = useCallback(
     (panelId: SuperControlPanelId, event: React.DragEvent<HTMLElement>) => {
       // Ignore drags initiated on header buttons (they have their own onClick).
@@ -633,27 +642,41 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         return;
       }
       dragIdRef.current = panelId;
+      setDraggingPanelId(panelId);
       event.dataTransfer.effectAllowed = 'move';
       try {
         event.dataTransfer.setData('text/x-supercontrol-panel', panelId);
       } catch {
-        /* some browsers reject custom mime types — fall back below */
+        /* some browsers reject custom mime types — ref-based fallback still works */
       }
     },
     []
   );
 
-  const handlePanelDragOver = useCallback((event: React.DragEvent<HTMLElement>) => {
-    if (!dragIdRef.current) return;
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
-  }, []);
+  const handlePanelDragOver = useCallback(
+    (panelId: SuperControlPanelId, event: React.DragEvent<HTMLElement>) => {
+      if (!dragIdRef.current) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+      if (panelId !== dragOverPanelId) setDragOverPanelId(panelId);
+    },
+    [dragOverPanelId]
+  );
+
+  const handlePanelDragLeave = useCallback(
+    (panelId: SuperControlPanelId) => {
+      if (dragOverPanelId === panelId) setDragOverPanelId(null);
+    },
+    [dragOverPanelId]
+  );
 
   const handlePanelDrop = useCallback(
     (targetId: SuperControlPanelId, event: React.DragEvent<HTMLElement>) => {
       event.preventDefault();
       const sourceId = dragIdRef.current;
       dragIdRef.current = null;
+      setDraggingPanelId(null);
+      setDragOverPanelId(null);
       if (!sourceId || sourceId === targetId) return;
       setPanelLayout((prev) => {
         const order = [...prev.order];
@@ -661,7 +684,10 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         const to = order.indexOf(targetId);
         if (from === -1 || to === -1) return prev;
         order.splice(from, 1);
-        order.splice(to, 0, sourceId);
+        // After removing source, indices > from shift left by one. Insert at the
+        // adjusted target index so the source visually takes the target's slot.
+        const insertAt = from < to ? to - 1 : to;
+        order.splice(insertAt, 0, sourceId);
         return { ...prev, order };
       });
     },
@@ -670,6 +696,8 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
 
   const handlePanelDragEnd = useCallback(() => {
     dragIdRef.current = null;
+    setDraggingPanelId(null);
+    setDragOverPanelId(null);
   }, []);
 
   // ESC exits fullscreen when active.
@@ -711,7 +739,8 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         className={styles.gridItemHeader}
         draggable={!isFullscreen}
         onDragStart={(e) => handlePanelDragStart(panelId, e)}
-        onDragOver={handlePanelDragOver}
+        onDragOver={(e) => handlePanelDragOver(panelId, e)}
+        onDragLeave={() => handlePanelDragLeave(panelId)}
         onDrop={(e) => handlePanelDrop(panelId, e)}
         onDragEnd={handlePanelDragEnd}
         title={isFullscreen ? undefined : 'Drag to reorder'}
@@ -789,6 +818,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
   }, [
     adjustPanelSpan,
     handlePanelDragEnd,
+    handlePanelDragLeave,
     handlePanelDragOver,
     handlePanelDragStart,
     handlePanelDrop,
@@ -2277,6 +2307,16 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                 <span>{hiddenPanelCount} hidden</span>
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => setShowApc40Diagram((v) => !v)}
+              title={showApc40Diagram ? 'Hide APC40 surface diagram' : 'Show APC40 surface diagram'}
+              aria-pressed={showApc40Diagram}
+              className={showApc40Diagram ? styles.columnPickerActive : ''}
+            >
+              <LucideIcon name="Sliders" />
+              <span>APC40</span>
+            </button>
             <button type="button" onClick={resetPanelLayout} title="Reset card order, hidden cards, sizes, spans, and column layout back to defaults">
               <LucideIcon name="RotateCcw" />
               <span>Reset</span>
@@ -2287,7 +2327,9 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
 
       <SuperControlMidiBindingsBar />
 
-      <Apc40SurfaceDiagram mode="superControl" compact title="SuperControl bindings" />
+      {showApc40Diagram && (
+        <Apc40SurfaceDiagram mode="superControl" compact title="SuperControl bindings" />
+      )}
 
       {touchLayout && selectionMode === 'channels' && (
         <SelectedChannelsFaderStrip maxVisible={10} />
@@ -2299,7 +2341,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         data-fullscreen={panelLayout.fullscreen ?? undefined}
         style={
           panelLayout.columns > 0
-            ? ({ ['--sc-columns' as any]: `repeat(${panelLayout.columns}, minmax(0, 1fr))` } as React.CSSProperties)
+            ? ({ ['--sc-column-count' as any]: panelLayout.columns } as React.CSSProperties)
             : undefined
         }
       >

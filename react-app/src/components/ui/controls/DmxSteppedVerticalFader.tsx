@@ -49,7 +49,7 @@ export const DmxSteppedVerticalFader: React.FC<DmxSteppedVerticalFaderProps> = (
 
   return (
     <div
-      className={`${styles.wrap} ${size === 'touch' ? styles.sizeTouch : ''} ${className} ${disabled ? styles.disabled : ''}`}
+      className={`${styles.wrap} ${size === 'touch' ? styles.sizeTouch : ''} ${size === 'strip' ? styles.sizeStrip : ''} ${className} ${disabled ? styles.disabled : ''}`}
       style={{ ['--steps' as string]: stepCount }}
     >
       <span className={styles.label}>{label}</span>

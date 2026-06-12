@@ -185,3 +185,35 @@ $thumb-d: $form-h;
     height: 3rem;
   }
 }
+
+.sizeStrip {
+  min-height: 10rem;
+
+  .label {
+    font-size: 0.55rem;
+    margin-bottom: 0.15rem;
+  }
+
+  .faderShell {
+    width: 100%;
+    min-width: 0;
+    min-height: 8rem;
+  }
+
+  .tickName {
+    font-size: 0.6rem;
+  }
+
+  .tickMeta {
+    font-size: 0.52rem;
+  }
+
+  .tickButtons {
+    max-height: 3.5rem;
+  }
+
+  .tickBtn {
+    padding: 0.15rem 0.25rem;
+    font-size: 0.55rem;
+  }
+}

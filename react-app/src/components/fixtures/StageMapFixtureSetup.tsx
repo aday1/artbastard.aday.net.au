@@ -20,8 +20,7 @@ import { STAGE_RIG_PRESETS, buildRigFromPreset, type StageRigPreset } from '../.
 import { getTemplateMode } from '../../fixtures/showBuilder/showPlan';
 import { SceneSeedButton } from '../scenes/SceneSeedButton';
 import { ActSeedButton } from '../acts/ActSeedButton';
-import { ShowBuilderPanel } from './ShowBuilderPanel';
-import { Apc40WorkflowPanel } from './Apc40WorkflowPanel';
+import { UnifiedStageWorkbench } from './UnifiedStageWorkbench';
 import { LucideIcon } from '../ui/LucideIcon';
 import styles from './StageMapFixtureSetup.module.scss';
 
@@ -112,8 +111,6 @@ export const StageMapFixtureSetup: React.FC = () => {
   const [selectionBox, setSelectionBox] = useState<SelectionBox | null>(null);
   const [newGroupName, setNewGroupName] = useState('Map Group');
   const [isGiddyUp, setIsGiddyUp] = useState(false);
-  const [showBatchPlanner, setShowBatchPlanner] = useState(false);
-  const [showApc40, setShowApc40] = useState(false);
   const [showAutoAdd, setShowAutoAdd] = useState(false);
   const [autoAddBusy, setAutoAddBusy] = useState<string | null>(null);
 
@@ -1021,26 +1018,7 @@ export const StageMapFixtureSetup: React.FC = () => {
       </div>
 
       <div className={styles.drawerStack}>
-        <div className={styles.drawerToggles}>
-          <button
-            type="button"
-            className={`${styles.drawerToggle} ${showBatchPlanner ? styles.drawerToggleActive : ''}`}
-            onClick={() => setShowBatchPlanner((value) => !value)}
-          >
-            <LucideIcon name="Rows3" size={15} />
-            {showBatchPlanner ? 'Hide' : 'Show'} batch show builder
-          </button>
-          <button
-            type="button"
-            className={`${styles.drawerToggle} ${showApc40 ? styles.drawerToggleActive : ''}`}
-            onClick={() => setShowApc40((value) => !value)}
-          >
-            <LucideIcon name="Cable" size={15} />
-            {showApc40 ? 'Hide' : 'Show'} APC40 workflow
-          </button>
-        </div>
-        {showBatchPlanner && <ShowBuilderPanel />}
-        {showApc40 && <Apc40WorkflowPanel />}
+        <UnifiedStageWorkbench />
       </div>
     </section>
   );

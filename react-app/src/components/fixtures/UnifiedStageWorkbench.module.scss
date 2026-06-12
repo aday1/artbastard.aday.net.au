@@ -1,0 +1,85 @@
+.workbench {
+  margin: 1rem;
+  padding: 1rem;
+  background: color-mix(in srgb, var(--bg-secondary, #2c2c34) 92%, #111 8%);
+  border: 1px solid var(--border-color, #444);
+  border-radius: 10px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.tabStrip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.5rem;
+  padding: 0.35rem;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid var(--border-color, #444);
+  border-radius: 8px;
+}
+
+.tab {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 0.55rem;
+  row-gap: 0.1rem;
+  align-items: center;
+  padding: 0.55rem 0.85rem;
+  background: transparent;
+  color: var(--text-secondary, #b8b8c4);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-primary, #fff);
+  }
+
+  > :global(svg) {
+    grid-row: 1 / span 2;
+  }
+}
+
+.tabActive {
+  background: color-mix(in srgb, var(--accent-color, #ff9b3a) 22%, transparent 78%);
+  color: var(--text-primary, #fff);
+  border-color: color-mix(in srgb, var(--accent-color, #ff9b3a) 55%, transparent 45%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-color, #ff9b3a) 35%, transparent 65%) inset;
+}
+
+.tabLabel {
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.tabSub {
+  font-size: 0.72rem;
+  opacity: 0.78;
+  line-height: 1.15;
+}
+
+.mapWrap {
+  min-height: 0;
+}
+
+.patchHint {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+  color: var(--text-secondary, #b8b8c4);
+  opacity: 0.85;
+  padding: 0.35rem 0.55rem;
+}
+
+.bodySlot {
+  display: flex;
+  flex-direction: column;
+}

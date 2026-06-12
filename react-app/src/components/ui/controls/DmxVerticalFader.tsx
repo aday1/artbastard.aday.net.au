@@ -3,7 +3,7 @@ import { useRangeTouchGuard } from './useRangeTouchGuard';
 import { useVerticalFaderLength } from './useVerticalFaderLength';
 import styles from './DmxVerticalFader.module.scss';
 
-export type DmxFaderSize = 'default' | 'touch' | 'channel' | 'pinned';
+export type DmxFaderSize = 'default' | 'touch' | 'channel' | 'pinned' | 'strip';
 
 export interface DmxVerticalFaderProps {
   value: number;
@@ -53,7 +53,7 @@ export const DmxVerticalFader: React.FC<DmxVerticalFaderProps> = ({
 
   return (
     <div
-      className={`${styles.wrap} ${size === 'touch' ? styles.sizeTouch : ''} ${size === 'channel' ? styles.sizeChannel : ''} ${size === 'pinned' ? styles.sizePinned : ''} ${className} ${disabled ? styles.disabled : ''}`}
+      className={`${styles.wrap} ${size === 'touch' ? styles.sizeTouch : ''} ${size === 'channel' ? styles.sizeChannel : ''} ${size === 'pinned' ? styles.sizePinned : ''} ${size === 'strip' ? styles.sizeStrip : ''} ${className} ${disabled ? styles.disabled : ''}`}
     >
       <form
         ref={formRef}

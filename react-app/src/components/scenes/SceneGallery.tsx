@@ -13,7 +13,7 @@ import { SceneCardMap } from './SceneCardMap';
 import { SceneDiffBadge } from './SceneDiffBadge';
 import { computeSceneDiff } from '../../selectors/sceneDiff';
 import { Apc40SceneLaunchStrip } from '../midi/Apc40SceneLaunchStrip';
-import { Apc40SurfaceDiagram } from '../midi/Apc40SurfaceDiagram';
+import { Apc40SurfaceDiagram, useApc40DiagramVisible } from '../midi/Apc40SurfaceDiagram';
 import styles from './SceneGallery.module.scss'
 import { useSceneCapture } from '../../hooks/useSceneCapture'
 import { SceneSeedButton } from './SceneSeedButton'
@@ -56,6 +56,7 @@ export const SceneGallery: React.FC = () => {
   const [editSceneName, setEditSceneName] = useState('')
   const [editingChannelValues, setEditingChannelValues] = useState<string | null>(null)
   const [channelValues, setChannelValues] = useState<number[]>([])
+  const [showApc40Diagram] = useApc40DiagramVisible()
   const [editingTimelineScene, setEditingTimelineScene] = useState<string | null>(null)
   const [openMenuScene, setOpenMenuScene] = useState<string | null>(null)
   const [expandedTables, setExpandedTables] = useState<Set<string>>(() => new Set())
@@ -299,7 +300,9 @@ export const SceneGallery: React.FC = () => {
 
       <Apc40SceneLaunchStrip />
 
-      <Apc40SurfaceDiagram mode="scenes" compact title="clip grid → scenes" />
+      {showApc40Diagram && (
+        <Apc40SurfaceDiagram mode="scenes" compact title="clip grid → scenes" />
+      )}
 
       {/* Scene creation form */}
       <div className={styles.card}>

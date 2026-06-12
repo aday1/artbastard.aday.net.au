@@ -152,6 +152,30 @@
   pointer-events: none;
 }
 
+.sizeStrip {
+  --fader-form-h: 2.25rem;
+  --fader-thumb-d: 2rem;
+  --fader-track-extra-w: 0.65rem;
+  min-width: 0;
+  min-height: 11rem;
+
+  .form {
+    padding: 0.25rem 0.1rem;
+    min-height: 11rem;
+  }
+
+  .trackHost {
+    min-width: 0;
+    width: 100%;
+    min-height: 10rem;
+    padding: 0.3rem 0.25rem;
+
+    &::after {
+      display: none;
+    }
+  }
+}
+
 .input {
   position: absolute;
   left: 50%;

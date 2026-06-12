@@ -189,6 +189,7 @@ export const DmxChannelCard: React.FC<DmxChannelCardProps> = ({
           ticksOnly={ticksOnly}
           auxFullRange={auxFullRange}
           onToggleAuxFullRange={onToggleAuxFullRange}
+          hideMainSlider={!verticalFader}
         />
       </div>
 
@@ -204,6 +205,8 @@ export const DmxChannelCard: React.FC<DmxChannelCardProps> = ({
           minValue={getChannelRange(channelIndex).min}
           maxValue={getChannelRange(channelIndex).max}
           onChange={(newMin, newMax) => setChannelRange(channelIndex, newMin, newMax)}
+          value={value}
+          onValueChange={(v) => setDmxChannel(channelIndex, v)}
         />
       </div>
 
