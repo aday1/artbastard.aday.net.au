@@ -431,6 +431,54 @@ export const useGlobalBrowserMidi = () => {
     }
   }, [midiAccess]);
 
+  // Release the OS-level lock on a browser MIDI input. On Windows, Chrome's
+  // Web MIDI claims every device exclusively the moment requestMIDIAccess
+  // resolves, which blocks the backend's RtMidi from opening the same port.
+  // Calling input.close() drops our claim; once released, the user can
+  // connect the device via Server MIDI instead. The Connect button on this
+  // row will become unresponsive until the user refreshes (the input may
+  // still appear in the list because the MIDIAccess object retains it).
+  const releaseBrowserInput = useCallback(async (inputId: string) => {
+    if (!midiAccess) return;
+    const input = midiAccess.inputs.get(inputId);
+    if (!input) return;
+
+    // Detach any handler we own first so messages don't fire during close.
+    const handler = handlerRefs.current.get(inputId);
+    if (handler) {
+      input.removeEventListener('midimessage', handler);
+      handlerRefs.current.delete(inputId);
+    }
+    if (input.onmidimessage) input.onmidimessage = null;
+
+    setActiveInputs(prev => {
+      if (!prev.has(inputId)) return prev;
+      const newSet = new Set(prev);
+      newSet.delete(inputId);
+      saveActiveInputs(newSet);
+      return newSet;
+    });
+    // Block the auto-effect from re-opening this id behind the user's back.
+    autoConnectAttemptedRef.current.add(inputId);
+
+    try {
+      await input.close();
+      debugLog.log('[GlobalBrowserMidi] Released input:', input.name);
+      addNotification({
+        message: `Released ${input.name} from browser — backend can now use it via Server MIDI`,
+        type: 'info',
+        priority: 'normal',
+      });
+    } catch (err) {
+      console.error('[GlobalBrowserMidi] Failed to release input:', err);
+      addNotification({
+        message: `Could not release ${input.name}: ${err instanceof Error ? err.message : 'unknown error'}`,
+        type: 'error',
+        priority: 'high',
+      });
+    }
+  }, [midiAccess, addNotification]);
+
   // Periodic cleanup of stale pending messages (every 100ms)
   useEffect(() => {
     const cleanupInterval = setInterval(() => {
@@ -531,6 +579,7 @@ export const useGlobalBrowserMidi = () => {
     activeBrowserInputs: Array.from(activeInputs),
     connectBrowserInput,
     disconnectBrowserInput,
+    releaseBrowserInput,
     refreshDevices,
   };
 };

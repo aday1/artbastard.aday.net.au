@@ -860,6 +860,12 @@ export const StageMapFixtureSetup: React.FC = () => {
               const color = getFixtureTypeColor(type);
               const icon = getFixtureTypeIcon(type) as any;
               const isSelected = selectedTemplateId === template.id;
+              const mode = template.modes?.[0];
+              const channelCount = mode?.channels || template.channels?.length || 1;
+              const channelList: Array<{ name: string; type?: string }> = mode?.channelData
+                ? mode.channelData.map((c) => ({ name: c.name, type: c.type }))
+                : (template.channels || []).map((c) => ({ name: c.name, type: c.type }));
+              const makeModel = [template.manufacturer, template.model].filter(Boolean).join(' · ');
               return (
                 <button
                   key={template.id}
@@ -871,7 +877,6 @@ export const StageMapFixtureSetup: React.FC = () => {
                     event.dataTransfer.setData('application/x-artbastard-fixture-template', template.id);
                     event.dataTransfer.effectAllowed = 'copy';
                   }}
-                  title="Drag to the stage or click then tap the stage"
                   style={{ ['--fixture-accent' as any]: color }}
                 >
                   {template.photoUrl ? (
@@ -886,8 +891,33 @@ export const StageMapFixtureSetup: React.FC = () => {
                   )}
                   <span>
                     <strong>{template.templateName}</strong>
-                    <small>{type} · {template.modes?.[0]?.channels || template.channels?.length || 1}ch</small>
+                    <small>{type} · {channelCount}ch</small>
                   </span>
+                  <div className={styles.templateTooltip} role="tooltip">
+                    <span className={styles.templateTooltipTitle}>{template.templateName}</span>
+                    {makeModel && <span className={styles.templateTooltipMake}>{makeModel}</span>}
+                    <span className={styles.templateTooltipChannelsHeader}>
+                      {channelCount} channel{channelCount === 1 ? '' : 's'}
+                      {mode?.name ? ` · ${mode.name}` : ''}
+                    </span>
+                    {channelList.length > 0 ? (
+                      <ul className={styles.templateTooltipChannels}>
+                        {channelList.slice(0, 24).map((ch, idx) => (
+                          <li key={idx}>
+                            <span>{idx + 1}</span>
+                            <span>{ch.name}{ch.type ? ` (${ch.type})` : ''}</span>
+                          </li>
+                        ))}
+                        {channelList.length > 24 && (
+                          <li>
+                            <span>…</span>
+                            <span>+{channelList.length - 24} more</span>
+                          </li>
+                        )}
+                      </ul>
+                    ) : null}
+                    <span className={styles.templateTooltipHint}>Drag to the stage, or click then tap the stage.</span>
+                  </div>
                 </button>
               );
             })}

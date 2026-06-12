@@ -235,6 +235,7 @@
 
 .templateButton {
   --fixture-accent: #2dd4bf;
+  position: relative;
   width: 100%;
   min-height: 128px;
   display: grid;
@@ -285,6 +286,97 @@
 .selectedTemplate {
   border-color: rgba(45, 212, 191, 0.7);
   background: rgba(22, 78, 99, 0.68);
+}
+
+.templateTooltip {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 10px);
+  z-index: 50;
+  min-width: 280px;
+  max-width: 360px;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid rgba(45, 212, 191, 0.5);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.96);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  color: #f1f5f9;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(-6px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.templateButton:hover .templateTooltip,
+.templateButton:focus-visible .templateTooltip {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.templateTooltipTitle {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin-bottom: 0.15rem;
+}
+
+.templateTooltipMake {
+  display: block;
+  font-size: 0.72rem;
+  color: rgba(148, 163, 184, 0.95);
+  margin-bottom: 0.4rem;
+  font-style: italic;
+}
+
+.templateTooltipChannelsHeader {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(45, 212, 191, 0.9);
+  margin: 0.35rem 0 0.2rem;
+}
+
+.templateTooltipChannels {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0 0.5rem;
+  max-height: 220px;
+  overflow: hidden;
+
+  li {
+    display: contents;
+    font-size: 0.74rem;
+
+    span:first-child {
+      color: rgba(45, 212, 191, 0.85);
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      text-align: right;
+    }
+    span:last-child {
+      color: #e2e8f0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+}
+
+.templateTooltipHint {
+  display: block;
+  margin-top: 0.5rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+  font-size: 0.7rem;
+  color: rgba(148, 163, 184, 0.9);
+  font-style: italic;
 }
 
 .stageViewport {

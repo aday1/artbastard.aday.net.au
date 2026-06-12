@@ -8,7 +8,8 @@ import { Apc40Manual } from './Apc40Manual'
 import { Apc40SurfaceDiagram } from './Apc40SurfaceDiagram'
 import { Apc40Demoscene } from './Apc40Demoscene'
 import { RoliDebugPanel } from '../settings/RoliDebugPanel'
-import { groupMidiInterfaces, BUCKET_LABELS, BUCKET_ORDER, type MidiBucket } from '../../midi/midiInterfaceGrouping'
+import { groupMidiInterfaces, BUCKET_LABELS, BUCKET_ORDER, type MidiBucket, bucketFor } from '../../midi/midiInterfaceGrouping'
+import { buildSmartControllers } from '../../midi/smartControllers'
 import styles from './MidiOscSetup.module.scss'
 import { debugLog } from '../../utils/debugLog';
 
@@ -34,6 +35,7 @@ export const MidiOscSetup: React.FC = () => {
     activeBrowserInputs,
     connectBrowserInput,
     disconnectBrowserInput,
+    releaseBrowserInput,
     refreshDevices
   } = useGlobalBrowserMidi()
 
@@ -354,6 +356,10 @@ export const MidiOscSetup: React.FC = () => {
     }
     return { groups, byName }
   }, [browserInputs])
+  const smartControllers = useMemo(
+    () => buildSmartControllers(midiInterfaces, activeInterfaces, browserInputs, activeBrowserInputs),
+    [midiInterfaces, activeInterfaces, browserInputs, activeBrowserInputs],
+  )
   const totalConnected = activeInterfaces.length + activeBrowserInputs.length
 
   return (
@@ -377,6 +383,160 @@ export const MidiOscSetup: React.FC = () => {
           <b> {totalConnected}</b> connected
         </span>
       </div>
+
+      {smartControllers.length > 0 && (
+        <div className={styles.card} style={{ marginBottom: '0.75rem' }}>
+          <div className={styles.cardHeaderToggle} style={{ cursor: 'default' }}>
+            <h3 title="Physical hardware controllers detected across Server MIDI and Browser MIDI">
+              <i className="fas fa-bolt" style={{ marginRight: 6, color: 'rgba(34,197,94,0.9)' }} />
+              Smart Controllers
+            </h3>
+            <span className={styles.cardHeaderMeta}>
+              {smartControllers.length} physical device{smartControllers.length === 1 ? '' : 's'} detected
+            </span>
+          </div>
+          <div className={styles.cardBody}>
+            <p className={styles.cardDescription} style={{ fontSize: '0.78rem', margin: '0 0 0.5rem' }}>
+              One row per physical box. On Windows, pick ONE transport per device — the OS won't let Server and Browser MIDI hold the same port at once. Use <b>Release</b> on a browser row to hand a device back to Server MIDI.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {smartControllers.map((ctrl) => {
+                const isAnyConnected = ctrl.isConnectedServer || ctrl.isConnectedBrowser
+                const transportLabel = ctrl.isConnectedServer && ctrl.isConnectedBrowser
+                  ? 'Server + Browser'
+                  : ctrl.isConnectedServer
+                  ? 'Server'
+                  : ctrl.isConnectedBrowser
+                  ? 'Browser'
+                  : '—'
+                return (
+                  <div
+                    key={`${ctrl.tag}:${ctrl.serverPort || ''}:${ctrl.browserInput?.id || ''}`}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      padding: '0.5rem 0.65rem',
+                      border: '1px solid rgba(148,163,184,0.2)',
+                      borderRadius: 4,
+                      background: isAnyConnected ? 'rgba(34,197,94,0.08)' : 'rgba(0,0,0,0.15)',
+                    }}
+                  >
+                    <span
+                      title={`Session tag for ${ctrl.baseName}`}
+                      style={{
+                        fontFamily: 'monospace',
+                        fontSize: '0.78rem',
+                        fontWeight: 700,
+                        letterSpacing: '0.05em',
+                        padding: '0.2rem 0.5rem',
+                        borderRadius: 3,
+                        background: 'rgba(99,102,241,0.18)',
+                        color: 'rgba(199,210,254,0.95)',
+                        minWidth: 80,
+                        textAlign: 'center',
+                      }}
+                    >
+                      {ctrl.tag}
+                    </span>
+                    <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{ctrl.baseName}</span>
+                      <span style={{ fontSize: '0.7rem', opacity: 0.75 }}>
+                        {ctrl.serverPort && <>Server port: <code>{ctrl.serverPort}</code></>}
+                        {ctrl.serverPort && ctrl.browserInput && ' · '}
+                        {ctrl.browserInput && <>Browser id: <code>{ctrl.browserInput.id.slice(0, 8)}…</code></>}
+                      </span>
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '0.65rem',
+                        fontWeight: 700,
+                        letterSpacing: '0.1em',
+                        textTransform: 'uppercase',
+                        padding: '0.15rem 0.5rem',
+                        borderRadius: 999,
+                        background: isAnyConnected ? 'rgba(34,197,94,0.25)' : 'rgba(148,163,184,0.2)',
+                        color: isAnyConnected ? 'rgba(187,247,208,0.95)' : 'rgba(148,163,184,0.9)',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {transportLabel}
+                    </span>
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                      {ctrl.serverPort && (
+                        ctrl.isConnectedServer ? (
+                          <button
+                            className={`${styles.actionButton} ${styles.disconnectButton}`}
+                            onClick={() => handleDisconnectMidi(ctrl.serverPort!)}
+                            title={`Disconnect ${ctrl.serverPort} from backend`}
+                          >
+                            <i className="fas fa-unlink"></i>Server
+                          </button>
+                        ) : (
+                          <button
+                            className={`${styles.actionButton} ${styles.connectButton}`}
+                            onClick={() => handleConnectMidi(ctrl.serverPort!)}
+                            disabled={connectingInterfaces.has(ctrl.serverPort)}
+                            title={ctrl.isConnectedBrowser
+                              ? `${ctrl.serverPort} is held by Browser MIDI — click Release first`
+                              : `Connect ${ctrl.serverPort} to backend (RtMidi)`}
+                          >
+                            <i className="fas fa-link"></i>Server
+                          </button>
+                        )
+                      )}
+                      {ctrl.browserInput && (
+                        ctrl.isConnectedBrowser ? (
+                          <>
+                            <button
+                              className={`${styles.actionButton} ${styles.disconnectButton}`}
+                              onClick={() => disconnectBrowserInput(ctrl.browserInput!.id)}
+                              title="Disconnect this device from Browser MIDI"
+                            >
+                              <i className="fas fa-unlink"></i>Browser
+                            </button>
+                            <button
+                              className={styles.actionButton}
+                              onClick={() => releaseBrowserInput(ctrl.browserInput!.id)}
+                              title="Release the OS lock so Server MIDI can claim this device"
+                              style={{ background: 'rgba(234,179,8,0.18)', borderColor: 'rgba(234,179,8,0.35)' }}
+                            >
+                              <i className="fas fa-eject"></i>Release
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            className={`${styles.actionButton} ${styles.connectButton}`}
+                            onClick={() => connectBrowserInput(ctrl.browserInput!.id)}
+                            title={`Connect ${ctrl.browserInput.name} to Browser MIDI`}
+                          >
+                            <i className="fas fa-link"></i>Browser
+                          </button>
+                        )
+                      )}
+                      {ctrl.templateId && (
+                        <button
+                          className={styles.actionButton}
+                          onClick={() => handleApplyControllerTemplate(ctrl.templateId!)}
+                          disabled={applyingTemplateId === ctrl.templateId}
+                          title="Apply the default mapping template for this controller"
+                          style={{ background: 'rgba(99,102,241,0.18)', borderColor: 'rgba(99,102,241,0.35)' }}
+                        >
+                          {applyingTemplateId === ctrl.templateId ? (
+                            <><i className="fas fa-spinner fa-spin"></i>Applying</>
+                          ) : (
+                            <><i className="fas fa-magic"></i>Map</>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className={styles.setupGrid}>
         {/* Server MIDI Interface Card */}
@@ -806,6 +966,7 @@ export const MidiOscSetup: React.FC = () => {
                                   </div>
                                   {expanded && inputs.map((input) => {
                                     const isActive = activeBrowserInputs.includes(input.id)
+                                    const isHardware = bucketFor(input.name || '') === 'hardware'
                                     return (
                                       <div
                                         key={input.id}
@@ -837,6 +998,17 @@ export const MidiOscSetup: React.FC = () => {
                                             >
                                               <i className="fas fa-link"></i>
                                               {theme !== 'minimal' && 'Connect'}
+                                            </button>
+                                          )}
+                                          {isHardware && (
+                                            <button
+                                              className={styles.actionButton}
+                                              onClick={() => releaseBrowserInput(input.id)}
+                                              title="Release the Windows MIDI lock so the backend / other apps can use this device"
+                                              style={{ background: 'rgba(234,179,8,0.18)', borderColor: 'rgba(234,179,8,0.35)' }}
+                                            >
+                                              <i className="fas fa-eject"></i>
+                                              {theme !== 'minimal' && 'Release'}
                                             </button>
                                           )}
                                         </div>
