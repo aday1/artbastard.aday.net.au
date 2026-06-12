@@ -22,7 +22,12 @@ const ensureFixturesDir = () => {
 export const saveFixtureFile = (fixture: any) => {
   try {
     ensureFixturesDir();
-    const fixtureFile = path.join(FIXTURES_DIR, `${fixture.id}.json`);
+    const category = fixture.category || 'Generic';
+    const categoryDir = path.join(FIXTURES_DIR, category);
+    if (!fs.existsSync(categoryDir)) {
+      fs.mkdirSync(categoryDir, { recursive: true });
+    }
+    const fixtureFile = path.join(categoryDir, `${fixture.id}.json`);
     fs.writeFileSync(fixtureFile, JSON.stringify(fixture, null, 2));
     return true;
   } catch (error) {
@@ -33,26 +38,58 @@ export const saveFixtureFile = (fixture: any) => {
 
 export const deleteFixtureFile = (fixtureId: string) => {
   try {
-    const fixtureFile = path.join(FIXTURES_DIR, `${fixtureId}.json`);
-    if (fs.existsSync(fixtureFile)) {
-      fs.unlinkSync(fixtureFile);
-      return true;
-    }
+    ensureFixturesDir();
+
+    const searchAndDelete = (dir: string): boolean => {
+      try {
+        const entries = fs.readdirSync(dir);
+        for (const entry of entries) {
+          const fullPath = path.join(dir, entry);
+          const stat = fs.statSync(fullPath);
+          if (stat.isDirectory()) {
+            if (searchAndDelete(fullPath)) return true;
+          } else if (entry === `${fixtureId}.json`) {
+            fs.unlinkSync(fullPath);
+            return true;
+          }
+        }
+      } catch (error) {
+        log('Error searching for fixture file', 'WARN', { error, fixtureId });
+      }
+      return false;
+    };
+
+    searchAndDelete(FIXTURES_DIR);
     return true;
   } catch (error) {
     log('Error deleting fixture file', 'ERROR', { error, fixtureId });
-    return false;
+    return true;
   }
 };
 
 export const loadFixtureFile = (fixtureId: string) => {
   try {
-    const fixtureFile = path.join(FIXTURES_DIR, `${fixtureId}.json`);
-    if (fs.existsSync(fixtureFile)) {
-      const data = fs.readFileSync(fixtureFile, 'utf-8');
-      return JSON.parse(data);
-    }
-    return null;
+    const searchDir = (dir: string): any => {
+      try {
+        const entries = fs.readdirSync(dir);
+        for (const entry of entries) {
+          const fullPath = path.join(dir, entry);
+          const stat = fs.statSync(fullPath);
+          if (stat.isDirectory()) {
+            const result = searchDir(fullPath);
+            if (result) return result;
+          } else if (entry === `${fixtureId}.json`) {
+            const data = fs.readFileSync(fullPath, 'utf-8');
+            return JSON.parse(data);
+          }
+        }
+      } catch (error) {
+        log('Error searching for fixture file', 'WARN', { error, fixtureId });
+      }
+      return null;
+    };
+
+    return searchDir(FIXTURES_DIR);
   } catch (error) {
     log('Error loading fixture file', 'ERROR', { error, fixtureId });
     return null;
@@ -63,23 +100,33 @@ const loadAllFixtures = (): any[] => {
   try {
     ensureFixturesDir();
     const fixtures: any[] = [];
-    const files = fs.readdirSync(FIXTURES_DIR);
 
-    for (const file of files) {
-      if (file.endsWith('.json')) {
-        try {
-          const filePath = path.join(FIXTURES_DIR, file);
-          const data = fs.readFileSync(filePath, 'utf-8');
-          const fixture = JSON.parse(data);
-          if (fixture && fixture.id) {
-            fixtures.push(fixture);
+    const scanDir = (dir: string): void => {
+      try {
+        const entries = fs.readdirSync(dir);
+        for (const entry of entries) {
+          const fullPath = path.join(dir, entry);
+          const stat = fs.statSync(fullPath);
+          if (stat.isDirectory()) {
+            scanDir(fullPath);
+          } else if (entry.endsWith('.json')) {
+            try {
+              const data = fs.readFileSync(fullPath, 'utf-8');
+              const fixture = JSON.parse(data);
+              if (fixture && fixture.id) {
+                fixtures.push(fixture);
+              }
+            } catch (error) {
+              log('Error loading fixture file', 'WARN', { error, file: entry });
+            }
           }
-        } catch (error) {
-          log('Error loading fixture file', 'WARN', { error, file });
         }
+      } catch (error) {
+        log('Error scanning fixtures directory', 'WARN', { error, dir });
       }
-    }
+    };
 
+    scanDir(FIXTURES_DIR);
     return fixtures;
   } catch (error) {
     log('Error loading fixtures directory', 'ERROR', { error });
@@ -187,8 +234,28 @@ export const saveFixturesData = (data: FixturesDataBundle) => {
       ensureFixturesDir();
 
       const currentFixtureIds = new Set(data.fixtures.map(fixture => fixture.id));
-      const files = fs.readdirSync(FIXTURES_DIR).filter(file => file.endsWith('.json'));
-      for (const file of files) {
+
+      const findJsonFiles = (dir: string): string[] => {
+        const files: string[] = [];
+        try {
+          const entries = fs.readdirSync(dir);
+          for (const entry of entries) {
+            const fullPath = path.join(dir, entry);
+            const stat = fs.statSync(fullPath);
+            if (stat.isDirectory()) {
+              files.push(...findJsonFiles(fullPath));
+            } else if (entry.endsWith('.json')) {
+              files.push(entry);
+            }
+          }
+        } catch (error) {
+          log('Error scanning for JSON files', 'WARN', { error, dir });
+        }
+        return files;
+      };
+
+      const jsonFiles = findJsonFiles(FIXTURES_DIR);
+      for (const file of jsonFiles) {
         const fixtureId = file.replace(/\.json$/u, '');
         if (!currentFixtureIds.has(fixtureId)) {
           deleteFixtureFile(fixtureId);

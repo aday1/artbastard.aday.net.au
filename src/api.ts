@@ -1313,8 +1313,8 @@ apiRouter.post('/import', importHandler);
 // ============================================================================
 import { stringify as yamlStringify, parse as yamlParse } from 'yaml';
 
-type ProjectSection = 'fixtures' | 'groups' | 'scenes' | 'acts' | 'bindings';
-const PROJECT_SECTIONS: ProjectSection[] = ['fixtures', 'groups', 'scenes', 'acts', 'bindings'];
+type ProjectSection = 'fixtures' | 'groups' | 'scenes' | 'acts' | 'bindings' | 'config' | 'layout';
+const PROJECT_SECTIONS: ProjectSection[] = ['fixtures', 'groups', 'scenes', 'acts', 'bindings', 'config', 'layout'];
 
 function buildSectionYaml(section: ProjectSection): string {
   const opts = { indent: 2, lineWidth: 0 } as const;
@@ -1337,6 +1337,21 @@ function buildSectionYaml(section: ProjectSection): string {
   if (section === 'bindings') {
     const config = loadConfig();
     return yamlStringify({ midiMappings: config.midiMappings || {} }, opts);
+  }
+  if (section === 'config') {
+    const configPath = path.join(DATA_DIR, 'config.json');
+    const raw = fs.existsSync(configPath)
+      ? JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+      : {};
+    const { midiMappings: _drop, ...rest } = raw;
+    return yamlStringify({ config: rest }, opts);
+  }
+  if (section === 'layout') {
+    const fx = loadFixturesData();
+    return yamlStringify({
+      fixtureLayout: fx.fixtureLayout || [],
+      masterSliders: fx.masterSliders || [],
+    }, opts);
   }
   throw new Error(`unknown section: ${section}`);
 }
@@ -1433,6 +1448,32 @@ apiRouter.post('/project/import', (req, res) => {
       saveConfig();
       global.io.emit('midiMappingsUpdate', config.midiMappings);
       applied = Object.keys(parsed.midiMappings).length;
+    } else if (section === 'config') {
+      const incoming = parsed?.config;
+      if (!incoming || typeof incoming !== 'object') {
+        throw new Error('expected top-level "config" object');
+      }
+      const configPath = path.join(DATA_DIR, 'config.json');
+      const existing = fs.existsSync(configPath)
+        ? JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+        : {};
+      const merged = { ...existing, ...incoming, midiMappings: existing.midiMappings || {} };
+      fs.writeFileSync(configPath, JSON.stringify(merged, null, 2));
+      const reloaded = loadConfig();
+      global.io.emit('configUpdated', reloaded);
+      applied = Object.keys(incoming).length;
+    } else if (section === 'layout') {
+      const fx = loadFixturesData();
+      if (Array.isArray(parsed?.fixtureLayout)) {
+        fx.fixtureLayout = parsed.fixtureLayout;
+      }
+      if (Array.isArray(parsed?.masterSliders)) {
+        fx.masterSliders = parsed.masterSliders;
+      }
+      saveFixturesData(fx);
+      global.io.emit('fixtureLayoutUpdate', fx.fixtureLayout);
+      global.io.emit('masterSlidersUpdate', fx.masterSliders);
+      applied = (fx.fixtureLayout?.length || 0) + (fx.masterSliders?.length || 0);
     }
 
     res.json({ success: true, applied, warnings });

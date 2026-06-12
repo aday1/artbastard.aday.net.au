@@ -1,6 +1,6 @@
 # AB-FIX-002: MiniBeam Moving Head Spot
 
-![MiniBeam Moving Head Spot](../../react-app/public/fixtures/ab-fix-002-minibeam-moving-head.jpg)
+![MiniBeam Moving Head Spot](../../../react-app/public/fixtures/ab-fix-002-minibeam-moving-head.jpg)
 
 ## Identification
 

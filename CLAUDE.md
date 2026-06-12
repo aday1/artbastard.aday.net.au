@@ -24,12 +24,14 @@ domain. Do not hand-edit the `generated/*.ts` files.
 
 ## Project YAML round-trip
 
-Live rig state (`fixtures`, `groups`, `scenes`, `acts`, `bindings`) is exposed
-via per-section YAML import/export at `Settings → Project YAML` and the
-backend `/api/project/export?section=…` + `/api/project/import` endpoints. See
-`DOCS/PROJECT_IO.md`. Groups reference fixtures by stable `id`, not positional
-index — the legacy `fixtureIndices` is kept as a runtime mirror for the
-existing socket paths but YAML is id-based.
+Live rig state (`fixtures`, `groups`, `scenes`, `acts`, `bindings`, `config`,
+`layout`, `presets`) is exposed via per-section YAML import/export at
+`Settings → Project YAML` and the backend `/api/project/export?section=…` +
+`/api/project/import` endpoints. `presets` is client-only (Zustand
+localStorage); the other seven are server-backed and re-broadcast live on
+import. See `DOCS/PROJECT_IO.md`. Groups reference fixtures by stable `id`,
+not positional index — the legacy `fixtureIndices` is kept as a runtime
+mirror for the existing socket paths but YAML is id-based.
 
 ## Build
 

@@ -9,7 +9,7 @@ category: Generic Control
 manufacturer: Generic
 model: 1-channel intensity profile
 modelConfidence: confirmed
-documentationPath: DOCS/fixtures/AB-FIX-010-generic-dimmer.md
+documentationPath: DOCS/fixtures/PAR/PAR-generic-dimmer.md
 tags: [DIMMER, GENERIC, INTENSITY]
 notes: Canonical fallback profile for a single DMX dimmer or intensity-only fixture.
 ---

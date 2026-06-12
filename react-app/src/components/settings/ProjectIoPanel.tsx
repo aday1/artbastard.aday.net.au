@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { stringify as yamlStringify, parse as yamlParse } from 'yaml';
 import { useStore } from '../../store';
 import styles from './SettingsPanel.module.scss';
 
@@ -8,8 +9,48 @@ const SECTIONS = [
   { id: 'scenes', label: 'Scenes' },
   { id: 'acts', label: 'ACTS' },
   { id: 'bindings', label: 'MIDI bindings' },
+  { id: 'config', label: 'Network & OSC' },
+  { id: 'layout', label: 'Stage layout & masters' },
+  { id: 'presets', label: 'Presets & favourites' },
 ] as const;
 type SectionId = (typeof SECTIONS)[number]['id'];
+
+const PRESETS_KEY = 'artbastard-presets';
+const CLIENT_ONLY: SectionId[] = ['presets'];
+
+const readPresetsYaml = (): string => {
+  const raw = localStorage.getItem(PRESETS_KEY);
+  if (!raw) return yamlStringify({ presets: [], categories: [] }, { indent: 2, lineWidth: 0 });
+  try {
+    const parsed = JSON.parse(raw);
+    const state = parsed?.state || parsed;
+    return yamlStringify(
+      { presets: state.presets || [], categories: state.categories || [] },
+      { indent: 2, lineWidth: 0 }
+    );
+  } catch {
+    return yamlStringify({ presets: [], categories: [] }, { indent: 2, lineWidth: 0 });
+  }
+};
+
+const writePresetsYaml = (yamlText: string): number => {
+  const parsed: any = yamlParse(yamlText);
+  if (!parsed || typeof parsed !== 'object') throw new Error('invalid presets YAML');
+  const presets = Array.isArray(parsed.presets) ? parsed.presets : [];
+  const categories = Array.isArray(parsed.categories) ? parsed.categories : [];
+  const existingRaw = localStorage.getItem(PRESETS_KEY);
+  let envelope: any = { state: { presets, categories }, version: 0 };
+  if (existingRaw) {
+    try {
+      const existing = JSON.parse(existingRaw);
+      envelope = { ...existing, state: { ...(existing.state || {}), presets, categories } };
+    } catch {
+      // fall through to fresh envelope
+    }
+  }
+  localStorage.setItem(PRESETS_KEY, JSON.stringify(envelope));
+  return presets.length;
+};
 
 const ProjectIoPanel: React.FC = () => {
   const addNotification = useStore((s) => s.addNotification);
@@ -32,9 +73,14 @@ const ProjectIoPanel: React.FC = () => {
   const handleExport = async (section: SectionId) => {
     setBusy(section);
     try {
-      const res = await fetch(`/api/project/export?section=${section}`);
-      if (!res.ok) throw new Error(`export failed: ${res.status}`);
-      const text = await res.text();
+      let text: string;
+      if (CLIENT_ONLY.includes(section)) {
+        text = readPresetsYaml();
+      } else {
+        const res = await fetch(`/api/project/export?section=${section}`);
+        if (!res.ok) throw new Error(`export failed: ${res.status}`);
+        text = await res.text();
+      }
       const stamp = new Date().toISOString().slice(0, 10);
       downloadText(`artbastard-${section}-${stamp}.yaml`, text);
       addNotification({ message: `Exported ${section}.yaml`, type: 'success' });
@@ -51,11 +97,13 @@ const ProjectIoPanel: React.FC = () => {
       const res = await fetch('/api/project/export/bundle');
       if (!res.ok) throw new Error(`bundle export failed: ${res.status}`);
       const bundle = (await res.json()) as Record<string, string>;
+      bundle.presets = readPresetsYaml();
       const stamp = new Date().toISOString().slice(0, 10);
       Object.entries(bundle).forEach(([section, text]) =>
         downloadText(`artbastard-${section}-${stamp}.yaml`, text)
       );
-      addNotification({ message: 'Exported full project bundle (5 files)', type: 'success' });
+      const count = Object.keys(bundle).length;
+      addNotification({ message: `Exported full project bundle (${count} files)`, type: 'success' });
     } catch (err) {
       addNotification({ message: `Bundle export failed: ${(err as Error).message}`, type: 'error' });
     } finally {
@@ -75,20 +123,32 @@ const ProjectIoPanel: React.FC = () => {
     setBusy(importTarget);
     try {
       const yamlText = await file.text();
-      const res = await fetch('/api/project/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ section: importTarget, yamlText }),
-      });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body?.error || `import failed: ${res.status}`);
-      const warnings: string[] = body?.warnings || [];
-      const applied = body?.applied ?? 0;
+      let applied = 0;
+      let warnings: string[] = [];
+      if (CLIENT_ONLY.includes(importTarget)) {
+        applied = writePresetsYaml(yamlText);
+      } else {
+        const res = await fetch('/api/project/import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ section: importTarget, yamlText }),
+        });
+        const body = await res.json();
+        if (!res.ok) throw new Error(body?.error || `import failed: ${res.status}`);
+        warnings = body?.warnings || [];
+        applied = body?.applied ?? 0;
+      }
       addNotification({
         message: `Imported ${applied} ${importTarget} entr${applied === 1 ? 'y' : 'ies'}${warnings.length ? ` (${warnings.length} warnings)` : ''}`,
         type: warnings.length ? 'warning' : 'success',
       });
       warnings.slice(0, 5).forEach((w) => addNotification({ message: w, type: 'warning' }));
+      if (CLIENT_ONLY.includes(importTarget)) {
+        addNotification({
+          message: 'Reload the page to see imported presets in the UI.',
+          type: 'info',
+        });
+      }
     } catch (err) {
       addNotification({ message: `Import failed: ${(err as Error).message}`, type: 'error' });
     } finally {
@@ -127,7 +187,7 @@ const ProjectIoPanel: React.FC = () => {
             onClick={handleExportBundle}
             style={{ fontWeight: 600 }}
           >
-            {busy === 'bundle' ? 'Bundling…' : 'Download all 5'}
+            {busy === 'bundle' ? 'Bundling…' : 'Download all (full backup)'}
           </button>
         </div>
       </div>

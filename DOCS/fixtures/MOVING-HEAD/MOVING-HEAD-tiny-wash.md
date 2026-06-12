@@ -1,6 +1,6 @@
 # AB-FIX-007: Tiny LED Moving Head Wash
 
-![Tiny LED Moving Head Wash](../../react-app/public/fixtures/ab-fix-007-tiny-led-moving-head-wash.jpg)
+![Tiny LED Moving Head Wash](../../../react-app/public/fixtures/ab-fix-007-tiny-led-moving-head-wash.jpg)
 
 ## Identification
 

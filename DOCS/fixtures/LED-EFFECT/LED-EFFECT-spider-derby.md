@@ -1,6 +1,6 @@
 # AB-FIX-008: Mini Spider Light
 
-![Mini Spider Light](../../react-app/public/fixtures/ab-fix-008-mini-spider-light.jpg)
+![Mini Spider Light](../../../react-app/public/fixtures/ab-fix-008-mini-spider-light.jpg)
 
 ## Identification
 

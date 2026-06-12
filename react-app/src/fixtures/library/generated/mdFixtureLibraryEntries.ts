@@ -38,8 +38,767 @@ export const mdFixtureLibraryEntries: FixtureLibraryEntry[] = [
     ],
     "model": "1-channel intensity profile",
     "modelConfidence": "confirmed",
-    "documentationPath": "DOCS/fixtures/AB-FIX-010-generic-dimmer.md",
+    "documentationPath": "DOCS/fixtures/PAR/PAR-generic-dimmer.md",
     "notes": "Canonical fallback profile for a single DMX dimmer or intensity-only fixture."
+  },
+  {
+    "id": "mini-moving-head-9-11ch",
+    "catalogId": "AB-FIX-015",
+    "name": "Mini Moving Head Gobo Spot (9/11ch)",
+    "defaultNamePrefix": "Mini MH Spot",
+    "type": "Moving Head",
+    "category": "Moving head / Mini gobo spot with colour wheel",
+    "manufacturer": "Generic",
+    "modes": [
+      {
+        "name": "9-channel mode",
+        "channels": 9,
+        "channelData": [
+          {
+            "name": "Pan",
+            "type": "pan",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "X-Pan"
+              }
+            ]
+          },
+          {
+            "name": "Tilt",
+            "type": "tilt",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Y-Tilt"
+              }
+            ]
+          },
+          {
+            "name": "Colour",
+            "type": "color",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "0-7 white, 8-56 colours 1-7, 57-127 colour 8 / half, 128-255 rotation"
+              }
+            ]
+          },
+          {
+            "name": "Gobo",
+            "type": "gobo",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "0-63 gobos 1-8, 64-127 gobo jitter 1-8, 128-255 rotation / on"
+              }
+            ]
+          },
+          {
+            "name": "Strobe",
+            "type": "strobe",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Multi-mode strobe with pulse and dimming bands"
+              }
+            ]
+          },
+          {
+            "name": "Dimmer",
+            "type": "dimmer",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Master dimmer"
+              }
+            ]
+          },
+          {
+            "name": "Speed",
+            "type": "speed",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Pan/Tilt speed, fast to slow"
+              }
+            ]
+          },
+          {
+            "name": "Macro",
+            "type": "macro",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Automatic / sound-effects programs"
+              }
+            ]
+          },
+          {
+            "name": "Dim Mode",
+            "type": "other",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Standard / Stage / TV / Building / Theatre / Reset"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "11-channel mode",
+        "channels": 11,
+        "channelData": [
+          {
+            "name": "Pan",
+            "type": "pan",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "X-Pan"
+              }
+            ]
+          },
+          {
+            "name": "Tilt",
+            "type": "tilt",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Y-Tilt"
+              }
+            ]
+          },
+          {
+            "name": "Pan Fine",
+            "type": "pan",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "X-Pan fine"
+              }
+            ]
+          },
+          {
+            "name": "Tilt Fine",
+            "type": "tilt",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Y-Tilt fine"
+              }
+            ]
+          },
+          {
+            "name": "Colour",
+            "type": "color",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "0-7 white, 8-56 colours 1-7, 57-127 colour 8 / half, 128-255 rotation"
+              }
+            ]
+          },
+          {
+            "name": "Gobo",
+            "type": "gobo",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "0-63 gobos 1-8, 64-127 gobo jitter 1-8, 128-255 rotation / on"
+              }
+            ]
+          },
+          {
+            "name": "Strobe",
+            "type": "strobe",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Multi-mode strobe with pulse and dimming bands"
+              }
+            ]
+          },
+          {
+            "name": "Dimmer",
+            "type": "dimmer",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Master dimmer"
+              }
+            ]
+          },
+          {
+            "name": "Speed",
+            "type": "speed",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Pan/Tilt speed, fast to slow"
+              }
+            ]
+          },
+          {
+            "name": "Macro",
+            "type": "macro",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Automatic / sound-effects programs"
+              }
+            ]
+          },
+          {
+            "name": "Dim Mode",
+            "type": "other",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Standard / Stage / TV / Building / Theatre / Reset"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "tags": [
+      "MOVING-HEAD",
+      "GOBO",
+      "COLOR",
+      "MINI",
+      "SPOT"
+    ],
+    "model": "9/11-channel mini moving head with 8-colour and 8-gobo wheels",
+    "modelConfidence": "probable",
+    "documentationPath": "DOCS/fixtures/MOVING-HEAD/MOVING-HEAD-mini-9-11ch.md",
+    "notes": "Small generic moving head with 8-position colour wheel, 8-position gobo wheel with jitter and rotation, strobe, dimmer, motor speed, built-in automatic programs and selectable dim curves. Selectable 9- or 11-channel DMX mode via on-fixture LCD menu."
+  },
+  {
+    "id": "mini-moving-head-gobo-strips",
+    "catalogId": "AB-FIX-014",
+    "name": "Mini Moving Head Gobo Light (with strips)",
+    "defaultNamePrefix": "Mini Gobo MH",
+    "type": "Moving Head",
+    "category": "Moving head / Mini gobo spot with decorative light strips",
+    "manufacturer": "Generic",
+    "modes": [
+      {
+        "name": "12-channel mode",
+        "channels": 12,
+        "channelData": [
+          {
+            "name": "Pan",
+            "type": "pan",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Horizontal operation"
+              }
+            ]
+          },
+          {
+            "name": "Pan Fine",
+            "type": "pan",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Horizontal fine-tune"
+              }
+            ]
+          },
+          {
+            "name": "Tilt",
+            "type": "tilt",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Vertical operation"
+              }
+            ]
+          },
+          {
+            "name": "Tilt Fine",
+            "type": "tilt",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Vertical fine-tune"
+              }
+            ]
+          },
+          {
+            "name": "Colour",
+            "type": "color",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "0-9 white, 10-139 colour selection, 140-255 auto colour change"
+              }
+            ]
+          },
+          {
+            "name": "Gobo",
+            "type": "gobo",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "0-7 white, 8-63 fixed gobo, 64-127 shaking gobo, 128-255 auto change"
+              }
+            ]
+          },
+          {
+            "name": "Strobe",
+            "type": "strobe",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Strobe"
+              }
+            ]
+          },
+          {
+            "name": "Dimmer",
+            "type": "dimmer",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Master dimmer"
+              }
+            ]
+          },
+          {
+            "name": "Speed",
+            "type": "speed",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Motor speed, fast to slow"
+              }
+            ]
+          },
+          {
+            "name": "Macro",
+            "type": "macro",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Other / automatic / voice-control programs"
+              }
+            ]
+          },
+          {
+            "name": "Reset",
+            "type": "reset",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "250-255 reset (5 s)"
+              }
+            ]
+          },
+          {
+            "name": "Light Strip",
+            "type": "other",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "5-109 colour selection, 110-255 auto colour cycle"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "10-channel mode",
+        "channels": 10,
+        "channelData": [
+          {
+            "name": "Pan",
+            "type": "pan",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Horizontal operation"
+              }
+            ]
+          },
+          {
+            "name": "Tilt",
+            "type": "tilt",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Vertical operation"
+              }
+            ]
+          },
+          {
+            "name": "Colour",
+            "type": "color",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "0-9 white, 10-139 colour selection, 140-255 auto colour change"
+              }
+            ]
+          },
+          {
+            "name": "Gobo",
+            "type": "gobo",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "0-7 white, 8-63 fixed gobo, 64-127 shaking gobo, 128-255 auto change"
+              }
+            ]
+          },
+          {
+            "name": "Strobe",
+            "type": "strobe",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Strobe"
+              }
+            ]
+          },
+          {
+            "name": "Dimmer",
+            "type": "dimmer",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Master dimmer"
+              }
+            ]
+          },
+          {
+            "name": "Speed",
+            "type": "speed",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Motor speed"
+              }
+            ]
+          },
+          {
+            "name": "Macro",
+            "type": "macro",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "0-59 other channels, 60-159 automatic, 160-255 voice-control"
+              }
+            ]
+          },
+          {
+            "name": "Reset",
+            "type": "reset",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "250-255 reset (5 s)"
+              }
+            ]
+          },
+          {
+            "name": "Light Strip",
+            "type": "other",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "5-109 colour selection, 110-255 auto colour cycle"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "tags": [
+      "MOVING-HEAD",
+      "GOBO",
+      "COLOR",
+      "MINI",
+      "LED",
+      "STRIPS"
+    ],
+    "model": "10/12-channel mini moving head gobo with LED light strips",
+    "modelConfidence": "probable",
+    "documentationPath": "DOCS/fixtures/MOVING-HEAD/MOVING-HEAD-mini-gobo-with-strips.md",
+    "notes": "Small LED moving head with colour wheel, gobo wheel, strobe, dimmer, motor speed, built-in automatic and sound-active modes, and a secondary LED light-strip channel. Selectable 10- or 12-channel DMX mode via on-fixture LCD menu."
+  },
+  {
+    "id": "minibeam-moving-head",
+    "catalogId": "AB-FIX-002",
+    "name": "MINIBEAM Moving Head Spot",
+    "defaultNamePrefix": "MINIBEAM",
+    "type": "Moving Head",
+    "category": "Moving head / Beam spot with gobos",
+    "manufacturer": "Generic",
+    "modes": [
+      {
+        "name": "18-channel mode",
+        "channels": 18,
+        "channelData": [
+          {
+            "name": "Colour",
+            "type": "color",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "0-3 white, 4-127 14 colours / split, 128-191 rotate fwd, 192-255 rotate rev"
+              }
+            ]
+          },
+          {
+            "name": "Strobe",
+            "type": "strobe",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Pulse, open, random strobe bands"
+              }
+            ]
+          },
+          {
+            "name": "Dimmer",
+            "type": "dimmer",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Master dimmer"
+              }
+            ]
+          },
+          {
+            "name": "Gobo",
+            "type": "gobo",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "0-7 open, 8-127 14 gobos, 128-191 reverse rotation, 192-255 forward rotation"
+              }
+            ]
+          },
+          {
+            "name": "Prism",
+            "type": "prism",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "0-127 none, 128-255 insert prism"
+              }
+            ]
+          },
+          {
+            "name": "Prism Rotation",
+            "type": "other",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "0-127 indexed angle, 128-190 fwd rotation, 191-192 stop, 193-255 rev rotation"
+              }
+            ]
+          },
+          {
+            "name": "Effect",
+            "type": "other",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "0-127 none, 128-255 colourful effect insert"
+              }
+            ]
+          },
+          {
+            "name": "Frost",
+            "type": "other",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "0-127 none, 128-255 frost insert"
+              }
+            ]
+          },
+          {
+            "name": "Focus",
+            "type": "focus",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Lens focus, far to near"
+              }
+            ]
+          },
+          {
+            "name": "Pan",
+            "type": "pan",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Coarse pan, 0-540 degrees"
+              }
+            ]
+          },
+          {
+            "name": "Pan Fine",
+            "type": "pan",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Fine pan, 0-2 degrees"
+              }
+            ]
+          },
+          {
+            "name": "Tilt",
+            "type": "tilt",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Coarse tilt, 0-270 degrees"
+              }
+            ]
+          },
+          {
+            "name": "Tilt Fine",
+            "type": "tilt",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Fine tilt, 0-1 degree"
+              }
+            ]
+          },
+          {
+            "name": "Macro",
+            "type": "macro",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "0-14 none, 15-255 effects in 5-value steps"
+              }
+            ]
+          },
+          {
+            "name": "Reset",
+            "type": "reset",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Effect/pan-tilt/fixture reset bands (3 s)"
+              }
+            ]
+          },
+          {
+            "name": "Lamp",
+            "type": "other",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "0-25 none, 26-100 lamp off (3 s), 101-255 lamp on (3 s)"
+              }
+            ]
+          },
+          {
+            "name": "Pan/Tilt Speed",
+            "type": "speed",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Pan/tilt movement speed, fast to slow"
+              }
+            ]
+          },
+          {
+            "name": "Effect Speed",
+            "type": "speed",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Colour / effect speed"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "tags": [
+      "MOVING-HEAD",
+      "BEAM",
+      "SPOT",
+      "GOBO",
+      "PRISM",
+      "FROST",
+      "MINIBEAM"
+    ],
+    "model": "MiniBeam",
+    "modelConfidence": "confirmed",
+    "documentationPath": "DOCS/fixtures/MOVING-HEAD/MOVING-HEAD-MINIBEAM.md",
+    "notes": "18-channel MiniBeam moving head beam/spot with 14-colour wheel, 14-gobo wheel, prism with rotation, frost, focus, fine pan/tilt, macro, reset and lamp control."
   },
   {
     "id": "rgbw-par-can",
@@ -121,7 +880,7 @@ export const mdFixtureLibraryEntries: FixtureLibraryEntry[] = [
     ],
     "model": "5-channel RGBW plus dimmer profile",
     "modelConfidence": "confirmed",
-    "documentationPath": "DOCS/fixtures/AB-FIX-012-rgbw-par-can.md",
+    "documentationPath": "DOCS/fixtures/PAR/PAR-rgbw.md",
     "notes": "Generic starter profile for RGBW par cans using direct RGBW plus master dimmer."
   },
   {
@@ -192,7 +951,7 @@ export const mdFixtureLibraryEntries: FixtureLibraryEntry[] = [
     ],
     "model": "4-channel RGB plus dimmer profile",
     "modelConfidence": "confirmed",
-    "documentationPath": "DOCS/fixtures/AB-FIX-011-simple-rgb-par.md",
+    "documentationPath": "DOCS/fixtures/PAR/PAR-simple-rgb.md",
     "notes": "Generic starter profile for RGB par cans using direct RGB plus master dimmer."
   }
 ];

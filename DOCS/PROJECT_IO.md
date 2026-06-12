@@ -1,33 +1,38 @@
 # Project YAML Round-Trip
 
-ArtBastard stores the live rig in JSON server-side (`data/fixtures.json`,
-`data/groups.json`, `data/scenes.json`, `data/acts.json`, plus MIDI mappings in
+ArtBastard stores the live rig in JSON server-side (`data/fixtures/<Category>/*.json`,
+`data/fixture-data.json`, `data/scenes.json`, `data/acts.json`, and
 `data/config.json`). The **Project YAML** panel in Settings exposes the same
-state as five hand-editable YAML files so you can diff a rig in git, edit it in
-any text editor, and share setups losslessly.
+state as eight hand-editable YAML files so you can diff a rig in git, edit it in
+any text editor, and share setups losslessly — including a full clean-install
+restore.
 
 ## TL;DR
 
 Open `Settings → Project YAML`:
 
-- **Download fixtures.yaml / groups.yaml / scenes.yaml / acts.yaml / bindings.yaml** —
+- **Download fixtures / groups / scenes / acts / bindings / config / layout / presets** —
   each is a single section of the rig.
-- **Download all 5** — convenience: fires all five downloads in sequence.
-- **Import &lt;section&gt; YAML** — picks a file and replaces the matching server-side
-  state. Re-emits live updates to all connected clients.
+- **Download all (full backup)** — convenience: fires all eight downloads in sequence.
+- **Import &lt;section&gt; YAML** — picks a file and replaces the matching state.
+  Server-side sections re-emit live updates to all connected clients;
+  `presets` writes the browser localStorage envelope and asks you to reload.
 
 Or use the backend directly:
 
 ```bash
 # Export
 curl http://localhost:3030/api/project/export?section=fixtures > fixtures.yaml
-curl http://localhost:3030/api/project/export/bundle | jq .   # all 5 as JSON map
+curl http://localhost:3030/api/project/export/bundle | jq .   # all server sections as JSON map
 
 # Import
 curl -X POST http://localhost:3030/api/project/import \
   -H 'Content-Type: application/json' \
   -d "$(jq -Rs --arg s fixtures '{section: $s, yamlText: .}' < fixtures.yaml)"
 ```
+
+`presets` is browser-side only (Zustand-persisted localStorage) and has no
+backend endpoint — the Settings UI handles it directly.
 
 ## Sections
 
@@ -48,6 +53,10 @@ fixtures:
       # ...
     tags: [front, mover]
 ```
+
+Saved fixtures are written to `data/fixtures/<Category>/<id>.json`. The loader
+scans subdirectories recursively, so categories can be reorganised on disk
+without code changes.
 
 ### `groups.yaml`
 Groups reference fixtures by **id** (not positional index). Re-imports
@@ -88,11 +97,61 @@ acts:
 ```
 
 ### `bindings.yaml`
-DMX channel → MIDI input mapping.
+DMX channel → MIDI input mapping (subset of `data/config.json`).
 ```yaml
 midiMappings:
   '1': { channel: 0, note: 36 }
   '2': { channel: 0, controller: 7 }
+```
+
+### `config.yaml`
+The rest of `data/config.json` — Art-Net output, OSC routing, per-channel
+ranges, auto-connect MIDI device list. MIDI mappings are excluded (they live
+in `bindings.yaml`) so the two sections stay orthogonal.
+```yaml
+config:
+  artNetConfig:
+    ip: 192.168.1.199
+    subnet: 0
+    universe: 0
+    port: 6454
+  oscConfig:
+    host: 127.0.0.1
+    port: 8000
+  oscAssignments:
+    - /1/dmx1
+    - /1/dmx2
+    # ...
+  channelRanges:
+    - { min: 0, max: 255 }
+    # ... 512 entries
+  autoConnectMidiDevices: []
+```
+
+### `layout.yaml`
+Stage map and master sliders from `data/fixture-data.json`.
+```yaml
+fixtureLayout:
+  - { id: fx-mover-01, x: 120, y: 80 }
+masterSliders:
+  - { id: master-1, name: FOH Master, value: 200, targetType: group, targetId: grp-movers }
+```
+
+### `presets.yaml`
+Browser-side preset library (the same data the Preset panel manages). Stored
+as the Zustand `artbastard-presets` localStorage envelope. Import writes the
+envelope back; reload the page so the store re-hydrates.
+```yaml
+presets:
+  - id: pst-warm-wash
+    name: Warm Wash
+    category: looks
+    dmxValues: { 1: 200, 2: 180, 3: 100 }
+    isFavorite: true
+    tags: [warm]
+categories:
+  - favorites
+  - looks
 ```
 
 ## Hand-editing rules
@@ -107,6 +166,8 @@ midiMappings:
    channels are treated as 0). Each value is 0-255.
 4. **Imports are full-section replaces**, not merges. Export the section, edit,
    re-import. The server re-broadcasts the new state to all clients live.
+5. **Presets need a reload.** The Zustand store only re-reads localStorage on
+   mount; the import notification will remind you.
 
 ## Why YAML and not JSON
 
@@ -117,3 +178,4 @@ block-mapping syntax is easier to skim and edit at scale. The same preference
 drives `DOCS/midi/*.md`, `DOCS/fixtures/library/*.md`, `DOCS/scenes/packs/*.md`,
 `DOCS/acts/packs/*.md` → all generate TypeScript at build time via
 `scripts/buildSpecs.mjs`.
+

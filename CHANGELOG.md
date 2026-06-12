@@ -6,6 +6,10 @@ All notable changes to this project are documented here.
 
 ### Added
 
+- Project YAML round-trip extended to a full backup/restore: new `config.yaml` (Art-Net/OSC), `layout.yaml` (stage map + master sliders), and `presets.yaml` (browser preset library) sections. `Download all (full backup)` button bundles all eight files so a clean install can be losslessly restored.
+- Fixture docs reorganised by category (`DOCS/fixtures/{LASER,LED-EFFECT,MOVING-HEAD,PAR,UV}/`) so the catalog can be browsed by type. Favourites unaffected — they reference stable fixture id.
+- New fixture profiles: **AB-FIX-014** Mini Moving Head Gobo Light (light strips, 10/12-channel) and **AB-FIX-015** Mini Moving Head Gobo Spot (9/11-channel).
+- Backend fixture loader/saver now recursively scans `data/fixtures/<Category>/` subdirectories so fixtures can be organised on disk without code changes.
 - APC40 out-of-box mapping behavior now auto-applies the APC40 template on controller detection when SuperControl mappings are empty, so first connect is immediately usable.
 - SuperControl MIDI mappings now persist in local storage and survive refresh/restart.
 - APC40 Manual now includes a one-click `Reset to APC defaults` action.

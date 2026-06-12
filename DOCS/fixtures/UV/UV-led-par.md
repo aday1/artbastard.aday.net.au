@@ -1,6 +1,6 @@
 # AB-FIX-004: UV DMX LED Par
 
-![UV DMX LED Par](../../react-app/public/fixtures/ab-fix-004-uv-dmx-led-par.jpg)
+![UV DMX LED Par](../../../react-app/public/fixtures/ab-fix-004-uv-dmx-led-par.jpg)
 
 ## Identification
 

@@ -1,6 +1,6 @@
 # AB-FIX-001: Twinkling Laser Series RGY
 
-![Twinkling Laser Series RGY](../../react-app/public/fixtures/ab-fix-001-twinkling-laser-rgy.jpg)
+![Twinkling Laser Series RGY](../../../react-app/public/fixtures/ab-fix-001-twinkling-laser-rgy.jpg)
 
 ## Identification
 

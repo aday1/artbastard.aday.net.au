@@ -1,6 +1,6 @@
 # AB-FIX-003: Mini LED Moving Head Wash
 
-![Mini LED Moving Head Wash](../../react-app/public/fixtures/ab-fix-003-mini-led-moving-head-wash.jpg)
+![Mini LED Moving Head Wash](../../../react-app/public/fixtures/ab-fix-003-mini-led-moving-head-wash.jpg)
 
 ## Identification
 
