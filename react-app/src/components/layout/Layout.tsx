@@ -27,6 +27,13 @@ import { useAppContextMenu } from '../../context/ContextMenuContext'
 import { SiteBrandingLink } from '../ui/SiteBrandingLink'
 import { DetectedMidiControllerPrompt } from '../midi/DetectedMidiControllerPrompt'
 import { useRouter } from '../../context/RouterContext'
+import {
+  MIDI_CONNECT_ROLI_EVENT,
+  ROLI_LIGHTPAD_CONNECT_APPROVED_KEY,
+  describeDetectedMidiController,
+  dispatchConnectedMidiController,
+} from '../../midi/detectedMidiController'
+import { connectRoliLightpad, getRoliStatus } from '../../engines/roliLightpad'
 
 interface LayoutProps {
   children?: React.ReactNode
@@ -46,6 +53,26 @@ const LayoutBody: React.FC<LayoutProps> = ({ children }) => {
   // Setup auto-save on exit
   useEffect(() => {
     StateManager.setupAutoSaveOnExit();
+  }, []);
+
+  // Global ROLI Lightpad connect listener — the prompt button lives at this
+  // layout level, but useRoliLightpad() only mounts inside SuperControl. Without
+  // this, clicking "Connect ROLI" from any other page does nothing.
+  useEffect(() => {
+    const tryConnect = () => {
+      connectRoliLightpad().then((ok) => {
+        const status = getRoliStatus();
+        if (!ok && !status.connected) return;
+        const controller = describeDetectedMidiController(
+          status.inputName ?? status.outputName ?? 'ROLI Lightpad BLOCK',
+          'browser',
+        );
+        if (controller) dispatchConnectedMidiController(controller);
+      });
+    };
+    window.addEventListener(MIDI_CONNECT_ROLI_EVENT, tryConnect);
+    if (localStorage.getItem(ROLI_LIGHTPAD_CONNECT_APPROVED_KEY) === 'true') tryConnect();
+    return () => window.removeEventListener(MIDI_CONNECT_ROLI_EVENT, tryConnect);
   }, []);
 
   // If a drawer closed without cleanup, body scroll can stay locked.
