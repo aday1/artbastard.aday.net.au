@@ -817,25 +817,42 @@ apiRouter.post('/factory-reset', (_req, res) => {
       'FIXTURE_DATA.json',
     ].forEach(safeUnlink);
 
-    // Wipe per-fixture files saved under data/fixtures/*.json (current
-    // fixture persistence model). If these remain, stage fixtures can appear
-    // again after reload even though fixture-data.json was removed.
+    // Wipe per-fixture files saved under data/fixtures/. Fixtures live in
+    // category subdirectories (data/fixtures/<Category>/<id>.json), so we
+    // recurse — a flat readdir loop misses them and the next /api/state load
+    // re-hydrates the rig. Keep the templates/ subtree (handled separately).
     const fixturesDir = path.join(DATA_DIR, 'fixtures');
-    try {
-      if (fs.existsSync(fixturesDir)) {
-        for (const entry of fs.readdirSync(fixturesDir)) {
-          if (entry.endsWith('.json')) {
+    const templatesDirAbs = path.join(fixturesDir, 'templates');
+    const wipeFixtureTree = (dir: string) => {
+      try {
+        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+          const full = path.join(dir, entry.name);
+          if (entry.isDirectory()) {
+            if (full === templatesDirAbs) continue;
+            wipeFixtureTree(full);
+            try { fs.rmdirSync(full); } catch { /* non-empty or vanished */ }
+          } else if (entry.isFile() && entry.name.endsWith('.json')) {
             try {
-              fs.unlinkSync(path.join(fixturesDir, entry));
-              deleted.push(`fixtures/${entry}`);
+              fs.unlinkSync(full);
+              deleted.push(`fixtures/${path.relative(fixturesDir, full).replace(/\\/g, '/')}`);
             } catch (error) {
               failed.push({
-                file: `fixtures/${entry}`,
+                file: `fixtures/${path.relative(fixturesDir, full).replace(/\\/g, '/')}`,
                 error: error instanceof Error ? error.message : String(error),
               });
             }
           }
         }
+      } catch (error) {
+        failed.push({
+          file: `fixtures/${path.relative(fixturesDir, dir).replace(/\\/g, '/') || ''}`,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    };
+    try {
+      if (fs.existsSync(fixturesDir)) {
+        wipeFixtureTree(fixturesDir);
       }
     } catch (error) {
       failed.push({
