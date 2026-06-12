@@ -2,6 +2,8 @@
 
 ![Tiny LED Moving Head Wash](../../../react-app/public/fixtures/ab-fix-007-tiny-led-moving-head-wash.jpg)
 
+![Tiny LED Moving Head Wash — line-art](../../../react-app/public/fixtures/ab-fix-007-tiny-led-moving-head-wash-lineart.png)
+
 ## Identification
 
 - Type: Toy-size LED moving-head wash

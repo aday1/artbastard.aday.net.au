@@ -1,5 +1,7 @@
 # AB-FIX-011 - Simple RGB Par Can
 
+![Simple RGB Par Can — line-art (shared chassis with AB-FIX-004)](../../../react-app/public/fixtures/ab-fix-004-uv-dmx-led-par-lineart.png)
+
 Generic RGB par profile for direct red, green, blue, and master dimmer control.
 
 ## DMX Mode

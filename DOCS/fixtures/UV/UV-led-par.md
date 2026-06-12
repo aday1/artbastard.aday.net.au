@@ -2,6 +2,8 @@
 
 ![UV DMX LED Par](../../../react-app/public/fixtures/ab-fix-004-uv-dmx-led-par.jpg)
 
+![UV / RGB LED Par — line-art](../../../react-app/public/fixtures/ab-fix-004-uv-dmx-led-par-lineart.png)
+
 ## Identification
 
 - Type: UV/purple LED par wash

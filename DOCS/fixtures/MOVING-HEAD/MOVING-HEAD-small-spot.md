@@ -1,5 +1,7 @@
 # AB-FIX-005: Small Moving Head Spot
 
+![Small Moving Head Spot — line-art](../../../react-app/public/fixtures/ab-fix-005-small-moving-head-spot-lineart.png)
+
 ## Identification
 
 - Type: Small moving-head spot

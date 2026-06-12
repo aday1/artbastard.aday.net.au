@@ -1,5 +1,7 @@
 # Mini Moving Head Gobo Spot (9/11-channel)
 
+![Mini Moving Head 9/11-CH — line-art](../../../react-app/public/fixtures/ab-fix-009-mini-moving-head-9-11ch-lineart.png)
+
 ## Identification
 
 - Manufacturer: Generic / not marked

@@ -113,6 +113,7 @@ export const StageMapFixtureSetup: React.FC = () => {
   const [isGiddyUp, setIsGiddyUp] = useState(false);
   const [showAutoAdd, setShowAutoAdd] = useState(false);
   const [autoAddBusy, setAutoAddBusy] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ fixtureId: string; x: number; y: number } | null>(null);
 
   const layout = useMemo(() => normalizeFixtureLayout(fixtures, fixtureLayout), [fixtures, fixtureLayout]);
   const layoutByFixtureId = useMemo(() => new Map(layout.map((item) => [item.fixtureId, item])), [layout]);
@@ -499,12 +500,17 @@ export const StageMapFixtureSetup: React.FC = () => {
 
   const handleStagePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (event.target !== event.currentTarget) return;
+    if (contextMenu) setContextMenu(null);
+    // Right-click on empty stage: just close any open menu, don't start anything.
+    if (event.button === 2) return;
     const point = stagePointFromEvent(event);
     if (selectedTemplateId && tool === 'select') {
       placeTemplateAt(selectedTemplateId, point);
       return;
     }
-    if (tool === 'box') {
+    // Drag-marquee on the default Select tool (no template chosen) as well as
+    // the explicit Box tool — operators don't have to switch modes to lasso.
+    if (tool === 'box' || (tool === 'select' && !selectedTemplateId)) {
       setSelectionBox({ start: point, current: point });
       event.currentTarget.setPointerCapture(event.pointerId);
       return;
@@ -524,10 +530,17 @@ export const StageMapFixtureSetup: React.FC = () => {
     const right = Math.max(selectionBox.start.x, selectionBox.current.x);
     const top = Math.min(selectionBox.start.y, selectionBox.current.y);
     const bottom = Math.max(selectionBox.start.y, selectionBox.current.y);
-    const selected = layout
-      .filter((item) => item.x >= left && item.x <= right && item.y >= top && item.y <= bottom)
-      .map((item) => item.fixtureId);
-    setSelectedFixtures(selected);
+    const dragged = Math.abs(selectionBox.current.x - selectionBox.start.x) > 2
+      || Math.abs(selectionBox.current.y - selectionBox.start.y) > 2;
+    if (dragged) {
+      const selected = layout
+        .filter((item) => item.x >= left && item.x <= right && item.y >= top && item.y <= bottom)
+        .map((item) => item.fixtureId);
+      setSelectedFixtures(selected);
+    } else {
+      // Click on empty stage without dragging — treat as deselect.
+      setSelectedFixtures([]);
+    }
     setSelectionBox(null);
   };
 
@@ -553,6 +566,31 @@ export const StageMapFixtureSetup: React.FC = () => {
     });
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
   };
+
+  const handleFixtureContextMenu = (event: React.MouseEvent, fixtureId: string) => {
+    event.preventDefault();
+    event.stopPropagation();
+    // Right-click selects the fixture if it wasn't already in the selection so
+    // group operations from the menu act on the expected target.
+    if (!selectedFixtures.includes(fixtureId)) {
+      setSelectedFixtures([fixtureId]);
+    }
+    setContextMenu({ fixtureId, x: event.clientX, y: event.clientY });
+  };
+
+  useEffect(() => {
+    if (!contextMenu) return;
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setContextMenu(null);
+    };
+    const handleClick = () => setContextMenu(null);
+    window.addEventListener('keydown', handleKey);
+    window.addEventListener('pointerdown', handleClick);
+    return () => {
+      window.removeEventListener('keydown', handleKey);
+      window.removeEventListener('pointerdown', handleClick);
+    };
+  }, [contextMenu]);
 
   useEffect(() => {
     if (!dragState) return;
@@ -821,6 +859,7 @@ export const StageMapFixtureSetup: React.FC = () => {
                       transform: `translate(-50%, -50%) rotate(${(item as any).rotation || 0}deg) scale(${item.scale || 1})`,
                     }}
                     onPointerDown={(event) => handleFixturePointerDown(event, fixture.id)}
+                    onContextMenu={(event) => handleFixtureContextMenu(event, fixture.id)}
                     title={`${fixture.name} DMX ${fixture.startAddress}-${fixtureEndAddress(fixture)}`}
                   >
                     <span className={styles.nodeIcon}><LucideIcon name={icon} size={18} /></span>
@@ -839,6 +878,97 @@ export const StageMapFixtureSetup: React.FC = () => {
             </div>
           </div>
         </main>
+
+        {contextMenu && (() => {
+          const target = fixtures.find((f) => f.id === contextMenu.fixtureId);
+          const targetIndex = target ? fixtures.findIndex((f) => f.id === target.id) : -1;
+          const memberOf = target
+            ? groups.filter((g) => g.fixtureIndices.includes(targetIndex))
+            : [];
+          const memberIds = new Set(memberOf.map((g) => g.id));
+          const notMemberOf = groups.filter((g) => !memberIds.has(g.id));
+          const selectionCount = selectedFixtures.length;
+          return (
+            <div
+              className={styles.contextMenu}
+              style={{ left: contextMenu.x, top: contextMenu.y }}
+              role="menu"
+              onPointerDown={(event) => event.stopPropagation()}
+              onContextMenu={(event) => event.preventDefault()}
+            >
+              <div className={styles.contextHeader}>
+                {selectionCount > 1
+                  ? `${selectionCount} fixtures selected`
+                  : target?.name ?? 'Fixture'}
+              </div>
+
+              {notMemberOf.length > 0 && (
+                <>
+                  <div className={styles.contextSection}>Add to group</div>
+                  {notMemberOf.map((group) => (
+                    <button
+                      key={`add-${group.id}`}
+                      type="button"
+                      className={styles.contextItem}
+                      onClick={() => {
+                        void toggleSelectionInGroup(group);
+                        setContextMenu(null);
+                      }}
+                    >
+                      <LucideIcon name="Plus" size={13} />
+                      <span>{group.name}</span>
+                    </button>
+                  ))}
+                </>
+              )}
+
+              {memberOf.length > 0 && (
+                <>
+                  <div className={styles.contextSection}>Remove from group</div>
+                  {memberOf.map((group) => (
+                    <button
+                      key={`remove-${group.id}`}
+                      type="button"
+                      className={styles.contextItem}
+                      onClick={() => {
+                        void toggleSelectionInGroup(group);
+                        setContextMenu(null);
+                      }}
+                    >
+                      <LucideIcon name="Minus" size={13} />
+                      <span>{group.name}</span>
+                    </button>
+                  ))}
+                </>
+              )}
+
+              <div className={styles.contextDivider} />
+              <button
+                type="button"
+                className={styles.contextItem}
+                onClick={() => {
+                  void createGroupFromSelection();
+                  setContextMenu(null);
+                }}
+                disabled={!selectionCount}
+              >
+                <LucideIcon name="FolderPlus" size={13} />
+                <span>New group from selection ({selectionCount})</span>
+              </button>
+              <button
+                type="button"
+                className={`${styles.contextItem} ${styles.contextDanger}`}
+                onClick={() => {
+                  void deleteSelectedFixtures();
+                  setContextMenu(null);
+                }}
+              >
+                <LucideIcon name="Trash2" size={13} />
+                <span>Delete {selectionCount > 1 ? `${selectionCount} fixtures` : 'fixture'}</span>
+              </button>
+            </div>
+          );
+        })()}
 
         <aside className={styles.inspectorPane} aria-label="Stage map inspector">
           <div className={styles.paneHeader}>

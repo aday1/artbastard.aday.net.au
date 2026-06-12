@@ -1,5 +1,7 @@
 # AB-FIX-012 - RGBW Par Can
 
+![RGBW Par Can — line-art (shared chassis with AB-FIX-004)](../../../react-app/public/fixtures/ab-fix-004-uv-dmx-led-par-lineart.png)
+
 Generic RGBW par profile for direct red, green, blue, white, and master dimmer control.
 
 ## DMX Mode
