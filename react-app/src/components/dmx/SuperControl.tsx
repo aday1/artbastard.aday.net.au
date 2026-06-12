@@ -1330,6 +1330,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     panTiltAutopilotEnabled: boolean;
     hasSelection: boolean;
     addNotification: (n: { message: string; type?: string; priority?: string }) => void;
+    autoplayOnRelease: boolean;
   }>({
     apply: () => {},
     setPanValue: () => {},
@@ -1340,7 +1341,21 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     panTiltAutopilotEnabled: false,
     hasSelection: false,
     addNotification: () => {},
+    autoplayOnRelease: false,
   });
+
+  // User preference: when finger leaves the ROLI pad, should the path the
+  // user just drew immediately start looping as a pan/tilt autopilot? Default
+  // OFF — finger up = nothing happens. Toggle lives next to the XY pad.
+  const ROLI_AUTOPLAY_KEY = 'roli-autoplay-on-release';
+  const [roliAutoplayOnRelease, setRoliAutoplayOnRelease] = useState<boolean>(() => {
+    if (typeof localStorage === 'undefined') return false;
+    return localStorage.getItem(ROLI_AUTOPLAY_KEY) === 'true';
+  });
+  useEffect(() => {
+    if (typeof localStorage === 'undefined') return;
+    localStorage.setItem(ROLI_AUTOPLAY_KEY, roliAutoplayOnRelease ? 'true' : 'false');
+  }, [roliAutoplayOnRelease]);
   // Mirrors the most recent Roli touch position so the LED effect always has
   // a cursor source even when no fixture is selected (touch feedback first,
   // DMX writes second).
@@ -1389,6 +1404,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
           // fixture's pan/tilt.
           pad.endExternalPath();
           if (
+            roliApplyRef.current.autoplayOnRelease &&
             roliApplyRef.current.hasSelection &&
             livePathRef.current.length >= 2
           ) {
@@ -3101,6 +3117,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                   panTiltAutopilotEnabled: panTiltAutopilot.enabled,
                   hasSelection,
                   addNotification,
+                  autoplayOnRelease: roliAutoplayOnRelease,
                 };
                 return null;
               })()}
@@ -3113,6 +3130,23 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                 >
                   <LucideIcon name="Target" />
                   Reset to Center
+                </button>
+                <button
+                  className={styles.centerResetBtn}
+                  onClick={() => setRoliAutoplayOnRelease((v) => !v)}
+                  title={
+                    roliAutoplayOnRelease
+                      ? 'Lifting your finger from the ROLI starts the drawn path looping on pan/tilt. Click to disable.'
+                      : 'Lifting your finger from the ROLI does nothing extra (current behaviour). Click to enable autoplay on release.'
+                  }
+                  style={{
+                    background: roliAutoplayOnRelease
+                      ? 'linear-gradient(135deg, rgba(82, 196, 26, 0.35), rgba(56, 158, 13, 0.25))'
+                      : undefined,
+                  }}
+                >
+                  <LucideIcon name={roliAutoplayOnRelease ? 'Play' : 'Pause'} />
+                  Auto-play on release: {roliAutoplayOnRelease ? 'ON' : 'OFF'}
                 </button>
               </div>
               <RoliColourWheel />
