@@ -691,3 +691,87 @@ export function composeLedFrame(opts: {
   }
   return pixels;
 }
+
+// -- High-quality canvas → 15x15 LED sampler ------------------------------
+// Ported from Macroverse roliblock.ts. The browser's drawImage with
+// imageSmoothingQuality='high' produces Lanczos-quality downscaling, which is
+// far more legible on the 15x15 grid than manually plotting cells with
+// Bresenham. Source canvas can be any resolution.
+
+let _scratchCanvas: HTMLCanvasElement | null = null;
+let _scratchCtx: CanvasRenderingContext2D | null = null;
+
+export function sampleCanvasToLedFrame(canvas: HTMLCanvasElement): Uint8ClampedArray {
+  if (typeof document === 'undefined') return new Uint8ClampedArray(LED_PIXEL_COUNT * 4);
+  if (!_scratchCanvas) {
+    _scratchCanvas = document.createElement('canvas');
+    _scratchCanvas.width = ROLI_GRID_COLS;
+    _scratchCanvas.height = ROLI_GRID_ROWS;
+    _scratchCtx = _scratchCanvas.getContext('2d');
+    if (_scratchCtx) {
+      _scratchCtx.imageSmoothingEnabled = true;
+      _scratchCtx.imageSmoothingQuality = 'high';
+    }
+  }
+  if (!_scratchCtx || canvas.width < 1 || canvas.height < 1) {
+    return new Uint8ClampedArray(LED_PIXEL_COUNT * 4);
+  }
+  _scratchCtx.clearRect(0, 0, ROLI_GRID_COLS, ROLI_GRID_ROWS);
+  _scratchCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, ROLI_GRID_COLS, ROLI_GRID_ROWS);
+  return _scratchCtx.getImageData(0, 0, ROLI_GRID_COLS, ROLI_GRID_ROWS).data;
+}
+
+/**
+ * Build a 15x15 RGBA frame by downsampling a source canvas and overlaying a
+ * crisp single-pixel cursor (and optional crosshair) on top of the smoothed
+ * trail. This is the high-quality replacement for `composeLedFrame` — use it
+ * whenever a screen-side canvas is available.
+ */
+export function composeFrameFromCanvas(
+  canvas: HTMLCanvasElement | null,
+  opts: {
+    cursor?: { x: number; y: number } | null;
+    cursorColor?: LedRgba;
+    crosshair?: boolean;
+    crosshairColor?: LedRgba;
+  } = {}
+): Uint8ClampedArray {
+  const sampled = canvas
+    ? sampleCanvasToLedFrame(canvas)
+    : new Uint8ClampedArray(LED_PIXEL_COUNT * 4);
+  const out = new Uint8ClampedArray(sampled);
+
+  const cursorColor: LedRgba = opts.cursorColor ?? [255, 120, 255, 255];
+  const crossColor: LedRgba = opts.crosshairColor ?? [60, 180, 255, 180];
+
+  const set = (x: number, y: number, c: LedRgba, brighten = false) => {
+    if (x < 0 || y < 0 || x >= ROLI_GRID_COLS || y >= ROLI_GRID_ROWS) return;
+    const idx = (y * ROLI_GRID_COLS + x) * 4;
+    if (brighten) {
+      out[idx] = Math.max(out[idx], c[0]);
+      out[idx + 1] = Math.max(out[idx + 1], c[1]);
+      out[idx + 2] = Math.max(out[idx + 2], c[2]);
+      out[idx + 3] = Math.max(out[idx + 3], c[3]);
+    } else {
+      out[idx] = c[0];
+      out[idx + 1] = c[1];
+      out[idx + 2] = c[2];
+      out[idx + 3] = c[3];
+    }
+  };
+
+  if (opts.crosshair && opts.cursor) {
+    const cx = Math.round(clamp01(opts.cursor.x) * (ROLI_GRID_COLS - 1));
+    const cy = Math.round(clamp01(opts.cursor.y) * (ROLI_GRID_ROWS - 1));
+    for (let x = 0; x < ROLI_GRID_COLS; x++) set(x, cy, crossColor, true);
+    for (let y = 0; y < ROLI_GRID_ROWS; y++) set(cx, y, crossColor, true);
+  }
+
+  if (opts.cursor) {
+    const cx = Math.round(clamp01(opts.cursor.x) * (ROLI_GRID_COLS - 1));
+    const cy = Math.round(clamp01(opts.cursor.y) * (ROLI_GRID_ROWS - 1));
+    set(cx, cy, cursorColor);
+  }
+
+  return out;
+}

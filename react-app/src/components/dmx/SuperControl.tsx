@@ -1430,10 +1430,20 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     const cursor = liveTouchRef.current
       ? { x: liveTouchRef.current.x, y: liveTouchRef.current.y }
       : { x: panValue / 255, y: 1 - tiltValue / 255 };
-    roli.sendFrame({
-      path: trail,
-      cursor,
-    });
+    // When the screen-side XY pad canvas is available, downsample it
+    // (Macroverse-style high-quality resize) instead of plotting LED cells by
+    // hand. Crosshair overlays when autopilot is running so the user sees the
+    // tracked position clearly. Falls back to the old composer if the pad
+    // isn't mounted (e.g. SuperControl tab open but XY pad hidden).
+    const xyCanvas = xyPadHandleRef.current?.getCanvas?.() ?? null;
+    if (xyCanvas) {
+      roli.sendCanvasFrame(xyCanvas, {
+        cursor,
+        crosshair: panTiltAutopilot.enabled,
+      });
+    } else {
+      roli.sendFrame({ path: trail, cursor });
+    }
   }, [roli, panValue, tiltValue, pathSlots, livePathVersion, liveTouchVersion, panTiltAutopilot.enabled, panTiltAutopilot.pathType, panTiltAutopilot.customPath]);
 
   // XY Pad handlers

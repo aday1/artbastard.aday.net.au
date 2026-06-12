@@ -52,6 +52,8 @@ export interface ArtbastardXYPadHandle {
   extendExternalPath: (nx: number, ny: number) => void;
   /** Finalize the path and fire onPathSaved if it has any meaningful length. */
   endExternalPath: () => void;
+  /** Returns the path-drawing canvas so the Roli engine can sample it for LED feedback. */
+  getCanvas: () => HTMLCanvasElement | null;
 }
 
 type ToolMode = 'live' | 'pencil';
@@ -395,6 +397,9 @@ export const ArtbastardXYPad = forwardRef<ArtbastardXYPadHandle, ArtbastardXYPad
           }
           return prev;
         });
+      },
+      getCanvas() {
+        return canvasRef.current;
       },
     }),
     [normToPx, stopPlayback]

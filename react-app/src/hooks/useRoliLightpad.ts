@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   RoliTouchCallback,
+  composeFrameFromCanvas,
   composeLedFrame,
   connectRoliLightpad,
   disconnectRoliLightpad,
@@ -27,6 +28,13 @@ export interface UseRoliLightpadResult {
   sendFrame: typeof composeLedFrame extends (...a: any) => infer R
     ? (opts: Parameters<typeof composeLedFrame>[0]) => boolean
     : never;
+  /**
+   * High-quality LED frame: downsample the given screen canvas to 15x15 using
+   * the browser's smooth resampler, then overlay a crisp cursor (and optional
+   * crosshair) on top. Use this instead of `sendFrame` whenever a screen
+   * canvas already draws the trail — matches the Macroverse rendering pipeline.
+   */
+  sendCanvasFrame: (canvas: HTMLCanvasElement | null, opts?: Parameters<typeof composeFrameFromCanvas>[1]) => boolean;
 }
 
 /**
@@ -91,7 +99,14 @@ export function useRoliLightpad(): UseRoliLightpadResult {
     return sendLedFrame(composeLedFrame(opts));
   }, []);
 
-  return { connected, deviceName, handshakeDone, onTouch, sendFrame } as UseRoliLightpadResult;
+  const sendCanvasFrame = useCallback(
+    (canvas: HTMLCanvasElement | null, opts?: Parameters<typeof composeFrameFromCanvas>[1]) => {
+      return sendLedFrame(composeFrameFromCanvas(canvas, opts));
+    },
+    []
+  );
+
+  return { connected, deviceName, handshakeDone, onTouch, sendFrame, sendCanvasFrame } as UseRoliLightpadResult;
 }
 
 export { disconnectRoliLightpad };
