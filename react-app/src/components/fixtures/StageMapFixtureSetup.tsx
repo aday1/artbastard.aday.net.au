@@ -116,6 +116,14 @@ export const StageMapFixtureSetup: React.FC = () => {
   const [isLoadingStandardShow, setIsLoadingStandardShow] = useState(false);
   const [showAutoAdd, setShowAutoAdd] = useState(false);
   const [autoAddBusy, setAutoAddBusy] = useState<string | null>(null);
+  const [stageToolsOpen, setStageToolsOpen] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem('stage-map-tools-open') === '1';
+  });
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem('stage-map-tools-open', stageToolsOpen ? '1' : '0');
+  }, [stageToolsOpen]);
   const [contextMenu, setContextMenu] = useState<{ fixtureId: string; x: number; y: number } | null>(null);
 
   const layout = useMemo(() => normalizeFixtureLayout(fixtures, fixtureLayout), [fixtures, fixtureLayout]);
@@ -743,67 +751,80 @@ export const StageMapFixtureSetup: React.FC = () => {
           </button>
         </div>
         <div className={styles.toolbarGroup}>
-          <div className={styles.autoAddWrapper}>
-            <button
-              type="button"
-              className={showAutoAdd ? styles.active : ''}
-              onClick={() => setShowAutoAdd((value) => !value)}
-              title="Auto-add a preset rig"
-            >
-              <LucideIcon name="Wand2" size={16} />
-              Auto-Add
-            </button>
-            {showAutoAdd && (
-              <div className={styles.autoAddMenu} role="menu">
-                <div className={styles.autoAddHeader}>
-                  <strong>Quick Rig Presets</strong>
-                  <span>Build a stage in one click</span>
-                </div>
-                {STAGE_RIG_PRESETS.map((preset) => (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    className={styles.autoAddItem}
-                    onClick={() => runAutoAddPreset(preset)}
-                    disabled={autoAddBusy !== null}
-                  >
-                    <LucideIcon name={preset.icon as any} size={18} />
-                    <span>
-                      <strong>{preset.name}</strong>
-                      <small>{preset.description}</small>
-                    </span>
-                    {autoAddBusy === preset.id && <em>Adding...</em>}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          <button type="button" onClick={applySmartGroups} disabled={!fixtures.length}>
-            <LucideIcon name="Sparkles" size={16} />
-            Smart Groups
-          </button>
           <button
             type="button"
-            onClick={loadStandardShow}
-            disabled={isLoadingStandardShow}
-            title="One-click reset to Aday's 9-fixture standard rig (MINI LED MH, LED MH Spot, Mini MH Gobo w/Strips, UV PAR, LED BAR, Full Color Laser, EL1000RGB, MINI BEAM, LED Toy Mover) patched at their physical DMX addresses. Replaces current fixtures."
+            className={stageToolsOpen ? styles.active : ''}
+            onClick={() => setStageToolsOpen((v) => !v)}
+            title="Show / hide stage tools (Auto-Add, Smart Groups, Standard Show, seeds, Giddy Up)"
           >
-            <LucideIcon name="LayoutDashboard" size={16} />
-            {isLoadingStandardShow ? 'Loading...' : 'Standard Show'}
-          </button>
-          <SceneSeedButton compact />
-          <ActSeedButton />
-          <button
-            type="button"
-            className={styles.giddyButton}
-            onClick={runGiddyUp}
-            disabled={!fixtures.length || isGiddyUp}
-            title="One-shot starter: auto-builds smart fixture groups from the stage layout, seeds the smart-starter-40 scene pack on Deck A (with automation), and seeds the starter-acts ACT pack (with triggers). Requires fixtures already placed on the stage."
-          >
-            <LucideIcon name="Rocket" size={16} />
-            {isGiddyUp ? 'Working...' : 'Giddy Up'}
+            <LucideIcon name={stageToolsOpen ? 'ChevronUp' : 'ChevronDown'} size={16} />
+            Stage Tools
           </button>
         </div>
+        {stageToolsOpen && (
+          <div className={styles.toolbarGroup}>
+            <div className={styles.autoAddWrapper}>
+              <button
+                type="button"
+                className={showAutoAdd ? styles.active : ''}
+                onClick={() => setShowAutoAdd((value) => !value)}
+                title="Auto-add a preset rig"
+              >
+                <LucideIcon name="Wand2" size={16} />
+                Auto-Add
+              </button>
+              {showAutoAdd && (
+                <div className={styles.autoAddMenu} role="menu">
+                  <div className={styles.autoAddHeader}>
+                    <strong>Quick Rig Presets</strong>
+                    <span>Build a stage in one click</span>
+                  </div>
+                  {STAGE_RIG_PRESETS.map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      className={styles.autoAddItem}
+                      onClick={() => runAutoAddPreset(preset)}
+                      disabled={autoAddBusy !== null}
+                    >
+                      <LucideIcon name={preset.icon as any} size={18} />
+                      <span>
+                        <strong>{preset.name}</strong>
+                        <small>{preset.description}</small>
+                      </span>
+                      {autoAddBusy === preset.id && <em>Adding...</em>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button type="button" onClick={applySmartGroups} disabled={!fixtures.length}>
+              <LucideIcon name="Sparkles" size={16} />
+              Smart Groups
+            </button>
+            <button
+              type="button"
+              onClick={loadStandardShow}
+              disabled={isLoadingStandardShow}
+              title="One-click reset to Aday's 9-fixture standard rig (MINI LED MH, LED MH Spot, Mini MH Gobo w/Strips, UV PAR, LED BAR, Full Color Laser, EL1000RGB, MINI BEAM, LED Toy Mover) patched at their physical DMX addresses. Replaces current fixtures."
+            >
+              <LucideIcon name="LayoutDashboard" size={16} />
+              {isLoadingStandardShow ? 'Loading...' : 'Standard Show'}
+            </button>
+            <SceneSeedButton compact />
+            <ActSeedButton />
+            <button
+              type="button"
+              className={styles.giddyButton}
+              onClick={runGiddyUp}
+              disabled={!fixtures.length || isGiddyUp}
+              title="One-shot starter: auto-builds smart fixture groups from the stage layout, seeds the smart-starter-40 scene pack on Deck A (with automation), and seeds the starter-acts ACT pack (with triggers). Requires fixtures already placed on the stage."
+            >
+              <LucideIcon name="Rocket" size={16} />
+              {isGiddyUp ? 'Working...' : 'Giddy Up'}
+            </button>
+          </div>
+        )}
       </header>
 
       <div className={styles.workspace}>

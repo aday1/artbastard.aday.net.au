@@ -878,6 +878,86 @@ export function sampleCanvasToLedFrame(canvas: HTMLCanvasElement): Uint8ClampedA
   return _scratchCtx.getImageData(0, 0, ROLI_GRID_COLS, ROLI_GRID_ROWS).data;
 }
 
+/**
+ * Paint a glowing trail along a sequence of normalised points (Bresenham
+ * between successive points). Overlay-style: uses Math.max so it brightens
+ * whatever's underneath. Exported so callers and tests can reuse it.
+ */
+export function drawTrailOnRgba(
+  buf: Uint8ClampedArray,
+  path: Array<{ x: number; y: number }>,
+  color: LedRgba = [110, 40, 210, 255],
+): void {
+  if (!path || path.length === 0) return;
+  const toCell = (nx: number, ny: number) => ({
+    x: Math.round(clamp01(nx) * (ROLI_GRID_COLS - 1)),
+    y: Math.round(clamp01(ny) * (ROLI_GRID_ROWS - 1)),
+  });
+  const putCell = (x: number, y: number) => {
+    if (x < 0 || y < 0 || x >= ROLI_GRID_COLS || y >= ROLI_GRID_ROWS) return;
+    const idx = (y * ROLI_GRID_COLS + x) * 4;
+    buf[idx] = Math.max(buf[idx], color[0]);
+    buf[idx + 1] = Math.max(buf[idx + 1], color[1]);
+    buf[idx + 2] = Math.max(buf[idx + 2], color[2]);
+    buf[idx + 3] = Math.max(buf[idx + 3], color[3]);
+  };
+  const line = (a: { x: number; y: number }, b: { x: number; y: number }) => {
+    let { x: x0, y: y0 } = toCell(a.x, a.y);
+    const { x: x1, y: y1 } = toCell(b.x, b.y);
+    const dx = Math.abs(x1 - x0);
+    const sx = x0 < x1 ? 1 : -1;
+    const dy = -Math.abs(y1 - y0);
+    const sy = y0 < y1 ? 1 : -1;
+    let err = dx + dy;
+    while (true) {
+      putCell(x0, y0);
+      if (x0 === x1 && y0 === y1) break;
+      const e2 = 2 * err;
+      if (e2 >= dy) { err += dy; x0 += sx; }
+      if (e2 <= dx) { err += dx; y0 += sy; }
+    }
+  };
+  if (path.length === 1) {
+    const c = toCell(path[0].x, path[0].y);
+    putCell(c.x, c.y);
+  } else {
+    for (let i = 1; i < path.length; i++) line(path[i - 1], path[i]);
+  }
+}
+
+/**
+ * Paint a bright cursor (center pixel + 4 halo pixels at half-brightness) at
+ * a normalised (0..1) position. Overlay-style: uses Math.max so it brightens
+ * whatever's underneath.
+ */
+export function drawCursorOnRgba(
+  buf: Uint8ClampedArray,
+  cursor: { x: number; y: number },
+  color: LedRgba = [255, 120, 255, 255],
+): void {
+  const cx = Math.round(clamp01(cursor.x) * (ROLI_GRID_COLS - 1));
+  const cy = Math.round(clamp01(cursor.y) * (ROLI_GRID_ROWS - 1));
+  const halo: LedRgba = [
+    Math.round(color[0] / 2),
+    Math.round(color[1] / 2),
+    Math.round(color[2] / 2),
+    Math.round(color[3] / 2),
+  ];
+  const put = (x: number, y: number, c: LedRgba) => {
+    if (x < 0 || y < 0 || x >= ROLI_GRID_COLS || y >= ROLI_GRID_ROWS) return;
+    const idx = (y * ROLI_GRID_COLS + x) * 4;
+    buf[idx] = Math.max(buf[idx], c[0]);
+    buf[idx + 1] = Math.max(buf[idx + 1], c[1]);
+    buf[idx + 2] = Math.max(buf[idx + 2], c[2]);
+    buf[idx + 3] = Math.max(buf[idx + 3], c[3]);
+  };
+  put(cx + 1, cy, halo);
+  put(cx - 1, cy, halo);
+  put(cx, cy + 1, halo);
+  put(cx, cy - 1, halo);
+  put(cx, cy, color);
+}
+
 export function composeFrameFromCanvas(
   canvas: HTMLCanvasElement | null,
   opts: {
@@ -885,6 +965,8 @@ export function composeFrameFromCanvas(
     cursorColor?: LedRgba;
     crosshair?: boolean;
     crosshairColor?: LedRgba;
+    path?: Array<{ x: number; y: number }>;
+    trailColor?: LedRgba;
   } = {}
 ): Uint8ClampedArray {
   const sampled = canvas
@@ -894,6 +976,11 @@ export function composeFrameFromCanvas(
 
   const cursorColor: LedRgba = opts.cursorColor ?? [255, 120, 255, 255];
   const crossColor: LedRgba = opts.crosshairColor ?? [60, 180, 255, 180];
+
+  // Trail goes UNDER cursor + crosshair so the cursor stays readable on top.
+  if (opts.path && opts.path.length > 0) {
+    drawTrailOnRgba(out, opts.path, opts.trailColor);
+  }
 
   const set = (x: number, y: number, c: LedRgba, brighten = false) => {
     if (x < 0 || y < 0 || x >= ROLI_GRID_COLS || y >= ROLI_GRID_ROWS) return;

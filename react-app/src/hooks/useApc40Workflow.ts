@@ -452,6 +452,13 @@ export function useApc40Workflow() {
 
       setDeckScene(deck, action.index, scene.name);
       state.loadScene(scene.name);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('apc40:clip-launch', {
+            detail: { row: action.row, col: action.column, sceneName: scene.name },
+          })
+        );
+      }
       publishSurfaceState({
         mode: null,
         lastChange: makeLastChange(

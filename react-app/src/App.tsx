@@ -10,6 +10,7 @@ import { useGlobalMidiManager } from './hooks/useGlobalMidiManager'
 import { useGlobalBrowserMidi } from './hooks/useGlobalBrowserMidi'
 import { useApc40Workflow } from './hooks/useApc40Workflow'
 import { useApc40LedFeedback } from './hooks/useApc40LedFeedback'
+import { useApc40FlourishOrchestrator } from './hooks/useApc40FlourishOrchestrator'
 import { useApc40Health } from './hooks/useApc40Health'
 import { useActsPlaybackEngine } from './hooks/useActsPlaybackEngine'
 import { useActsOscProcessor } from './hooks/useActsOscProcessor'
@@ -83,6 +84,8 @@ function App() {
   useApc40Health();
   // Push LED state back to APC40 so the device surface mirrors scene + selection state.
   useApc40LedFeedback();
+  // Fire short LED flourishes on meaningful app events (fixture select, crossfade, blackout, tab change, etc.)
+  useApc40FlourishOrchestrator();
   
   // Initialize ACTS playback engine
   useActsPlaybackEngine();

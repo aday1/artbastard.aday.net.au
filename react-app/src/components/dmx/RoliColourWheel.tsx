@@ -30,6 +30,9 @@ export const RoliColourWheel: React.FC = () => {
 
   const [colour, setColour] = useState<ColourTriplet>(null);
   const lastTouchAtRef = useRef<number>(0);
+  // The last touched point on the wheel — keeps the bright cursor painted at
+  // the released spot as a "locked colour" indicator until the next touch.
+  const lockedCursorRef = useRef<{ x: number; y: number } | null>(null);
 
   // Selected fixtures resolved to objects that actually have RGB channels.
   const rgbTargets = useMemo(() => {
@@ -49,17 +52,26 @@ export const RoliColourWheel: React.FC = () => {
   // reports a new device list (e.g. the colour-wheel block reconnected).
   useEffect(() => {
     if (!roli.handshakeDone) return;
-    paintColourWheel();
+    paintColourWheel({ cursor: lockedCursorRef.current });
   }, [roli.handshakeDone, roli.devices]);
 
   // Touch handler — convert touch coords to HSV colour and write RGB DMX.
+  // Also tracks a live cursor on the wheel: bright pixel follows the finger
+  // while pressed, and stays painted at the release spot ("locked colour").
   useEffect(() => {
     roli.onTouch((ev) => {
-      if (ev.phase === 'end') return; // wheel stays painted; no clear on lift
+      if (ev.phase === 'end') {
+        // Wheel stays painted; locked cursor remains at last touched point.
+        paintColourWheel({ cursor: lockedCursorRef.current });
+        return;
+      }
       if (ev.z < 0.05) return;
       const c = colourFromTouch(ev.x, ev.y, 1);
       lastTouchAtRef.current = Date.now();
+      lockedCursorRef.current = { x: ev.x, y: ev.y };
       setColour({ r: c.r, g: c.g, b: c.b, hex: c.hex });
+      // Repaint wheel with the live cursor on top. This is cheap (225 px).
+      paintColourWheel({ cursor: lockedCursorRef.current });
       for (const t of rgbTargets) {
         if (t.r != null) setDmxChannelValue(t.r, c.r);
         if (t.g != null) setDmxChannelValue(t.g, c.g);
@@ -70,7 +82,7 @@ export const RoliColourWheel: React.FC = () => {
   }, [roli, rgbTargets, setDmxChannelValue]);
 
   const handleRepaint = useCallback(() => {
-    paintColourWheel();
+    paintColourWheel({ cursor: lockedCursorRef.current });
   }, []);
 
   // Render a small 1:1 preview of the wheel pattern in the panel so the user

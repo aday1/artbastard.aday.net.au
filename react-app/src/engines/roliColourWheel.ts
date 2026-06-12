@@ -11,8 +11,11 @@
 import {
   ROLI_GRID_COLS,
   ROLI_GRID_ROWS,
+  drawCursorOnRgba,
   sendLedFrame,
 } from './roliLightpad';
+
+type LedRgba = [number, number, number, number];
 
 const PIXEL_COUNT = ROLI_GRID_COLS * ROLI_GRID_ROWS;
 
@@ -62,7 +65,10 @@ function toHex(r: number, g: number, b: number): string {
 }
 
 /** Build a 15x15 RGBA buffer rendering a hue/saturation wheel. */
-export function composeColourWheelFrame(): Uint8ClampedArray {
+export function composeColourWheelFrame(opts?: {
+  cursor?: { x: number; y: number } | null;
+  cursorColor?: LedRgba;
+}): Uint8ClampedArray {
   const out = new Uint8ClampedArray(PIXEL_COUNT * 4);
   const cx = (ROLI_GRID_COLS - 1) / 2;
   const cy = (ROLI_GRID_ROWS - 1) / 2;
@@ -93,12 +99,18 @@ export function composeColourWheelFrame(): Uint8ClampedArray {
       out[idx + 3] = 255;
     }
   }
+  if (opts?.cursor) {
+    drawCursorOnRgba(out, opts.cursor, opts.cursorColor ?? [255, 255, 255, 255]);
+  }
   return out;
 }
 
 /** Paint the colour wheel onto the colour-wheel-role device. One-shot. */
-export function paintColourWheel(): boolean {
-  return sendLedFrame(composeColourWheelFrame(), { role: 'colour-wheel' });
+export function paintColourWheel(opts?: {
+  cursor?: { x: number; y: number } | null;
+  cursorColor?: LedRgba;
+}): boolean {
+  return sendLedFrame(composeColourWheelFrame(opts), { role: 'colour-wheel' });
 }
 
 /**

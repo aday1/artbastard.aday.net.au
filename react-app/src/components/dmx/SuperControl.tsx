@@ -1360,6 +1360,11 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
   // a cursor source even when no fixture is selected (touch feedback first,
   // DMX writes second).
   const liveTouchRef = useRef<{ x: number; y: number } | null>(null);
+  // Accumulated points of the current touch stroke so the LED layer can
+  // paint the *whole* path the user has sketched, not just the cursor. Reset
+  // on touch-start, cleared on touch-end. Capped to bound memory on slow
+  // strokes / dropped touch-end events.
+  const trailRef = useRef<Array<{ x: number; y: number }>>([]);
   const [liveTouchVersion, setLiveTouchVersion] = useState(0);
   useEffect(() => {
     roli.onTouch((ev) => {
@@ -1369,18 +1374,34 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         ev.phase === 'end' ? null : { x: ev.x, y: ev.y };
       setLiveTouchVersion((v) => (v + 1) & 0xffff);
 
+      // Maintain the persistent trail for this stroke.
+      if (ev.phase === 'start') {
+        trailRef.current = [{ x: ev.x, y: ev.y }];
+      } else if (ev.phase === 'move') {
+        if (trailRef.current.length < 200) {
+          trailRef.current.push({ x: ev.x, y: ev.y });
+        }
+      }
+
       // LED feedback: paint *only* under the finger. On touch-end blank the
       // pad immediately. We push LED frames directly from the touch handler
       // (NOT a useEffect) so autopilot DMX polling can't redraw the pad while
       // the user isn't touching it.
       if (ev.phase === 'end') {
         roli.clearFrame();
+        trailRef.current = [];
       } else {
         const xyCanvas = xyPadHandleRef.current?.getCanvas?.() ?? null;
         if (xyCanvas) {
-          roli.sendCanvasFrame(xyCanvas, { cursor: { x: ev.x, y: ev.y } });
+          roli.sendCanvasFrame(xyCanvas, {
+            cursor: { x: ev.x, y: ev.y },
+            path: trailRef.current,
+          });
         } else {
-          roli.sendFrame({ cursor: { x: ev.x, y: ev.y } });
+          roli.sendFrame({
+            cursor: { x: ev.x, y: ev.y },
+            path: trailRef.current,
+          });
         }
       }
 

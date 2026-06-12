@@ -100,6 +100,26 @@ export const DmxMidiConnections: React.FC<DmxMidiConnectionsProps> = ({
   onDisconnectMidiDevice,
 }) => {
   const [expanded, setExpanded] = useState(false);
+  const [categoryOpen, setCategoryOpen] = useState<Record<DeviceCategory, boolean>>(() => {
+    if (typeof window === 'undefined') {
+      return { lighting: true, daw: true, network: true, other: true };
+    }
+    const next: Record<DeviceCategory, boolean> = { lighting: true, daw: true, network: true, other: true };
+    for (const cat of CATEGORY_ORDER) {
+      const raw = window.localStorage.getItem(`midi-group-open:${cat}`);
+      if (raw === '0') next[cat] = false;
+    }
+    return next;
+  });
+  const toggleCategory = (cat: DeviceCategory) => {
+    setCategoryOpen((prev) => {
+      const next = { ...prev, [cat]: !prev[cat] };
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(`midi-group-open:${cat}`, next[cat] ? '1' : '0');
+      }
+      return next;
+    });
+  };
   const activeCount = activeBrowserInputs.length;
   const linkLed =
     browserMidiSupported && browserInputs.length > 0 && activeCount > 0;
@@ -286,24 +306,42 @@ export const DmxMidiConnections: React.FC<DmxMidiConnectionsProps> = ({
                     {CATEGORY_ORDER.map((cat) => {
                       const items = grouped[cat];
                       if (items.length === 0) return null;
+                      const open = categoryOpen[cat];
                       return (
                         <div key={cat} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                          <div
+                          <button
+                            type="button"
+                            onClick={() => toggleCategory(cat)}
                             style={{
                               fontSize: '0.62rem',
                               fontWeight: 700,
                               letterSpacing: '0.18em',
                               textTransform: 'uppercase',
-                              color: 'rgba(148, 163, 184, 0.9)',
+                              color: 'rgba(148, 163, 184, 0.95)',
                               borderBottom: '1px solid rgba(148, 163, 184, 0.18)',
                               paddingBottom: 4,
+                              background: 'transparent',
+                              border: 'none',
+                              borderBottomStyle: 'solid',
+                              textAlign: 'left',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 6,
+                              padding: '0 0 4px 0',
                             }}
+                            aria-expanded={open}
                           >
+                            <span style={{ width: 12, display: 'inline-block' }}>
+                              {open ? '▼' : '▶'}
+                            </span>
                             {CATEGORY_LABEL[cat]} · {items.length}
-                          </div>
-                          <div className={smx.channelStripList}>
-                            {items.map(renderStrip)}
-                          </div>
+                          </button>
+                          {open && (
+                            <div className={smx.channelStripList}>
+                              {items.map(renderStrip)}
+                            </div>
+                          )}
                         </div>
                       );
                     })}

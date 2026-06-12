@@ -130,6 +130,9 @@ export const RouterProvider: React.FC<RouterProviderProps> = ({ children }) => {
   const handleSetCurrentView = (view: ViewType) => {
     setCurrentView(view)
     setNavigationHistory(prev => [...prev, view])
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('router:view-change', { detail: { view } }))
+    }
   }
 
   const goBack = () => {

@@ -12,7 +12,6 @@ import { MidiLearnButton } from '../midi/MidiLearnButton'
 import { getVersionDisplay, getBuildInfo } from '../../utils/version';
 import { isDebugEnabled, setDebugEnabled } from '../../utils/debugLog';
 import { ReleaseNotes } from './ReleaseNotes'
-import SettingsPanel from './SettingsPanel'
 import ProjectIoPanel from './ProjectIoPanel'
 import { MidiOscSetup } from '../midi/MidiOscSetup'
 import { DebugMenu } from '../debug/DebugMenu'
@@ -123,7 +122,7 @@ export const UnifiedSettings: React.FC = () => {
   const [localNavVisibility, setLocalNavVisibility] = useState(navVisibility);
   const [localDebugTools, setLocalDebugTools] = useState(debugTools);
   const [consoleDebugEnabled, setConsoleDebugEnabled] = useState(() => isDebugEnabled());
-  const [activeSection, setActiveSection] = useState<string>('general');
+  const [activeSection, setActiveSection] = useState<string>('midiOsc');
   
   // Preview state for theme settings (not saved until user clicks Save)
   const [previewThemeColors, setPreviewThemeColors] = useState({
@@ -683,7 +682,6 @@ export const UnifiedSettings: React.FC = () => {
     { id: 'debug', label: 'Debug & Diagnostics', icon: 'fas fa-bug' },
     { id: 'help', label: 'Help & Documentation', icon: 'fas fa-question-circle' },
     { id: 'advanced', label: 'Advanced', icon: 'fas fa-tools' },
-    { id: 'state', label: 'State Management', icon: 'fas fa-database' },
     { id: 'projectIo', label: 'Project YAML', icon: 'fas fa-file-code' }
   ];
 
@@ -717,7 +715,7 @@ export const UnifiedSettings: React.FC = () => {
       icon: 'fas fa-palette',
     },
     {
-      id: 'state',
+      id: 'projectIo',
       title: 'Rig Data',
       summary: `${fixtures.length} fixtures`,
       detail: `${masterSliders.length} master sliders`,
@@ -2009,12 +2007,7 @@ export const UnifiedSettings: React.FC = () => {
               </div>
             )}
 
-            {/* State Management */}
-            {activeSection === 'state' && (
-              <div className={styles.settingsSection}>
-                <SettingsPanel />
-              </div>
-            )}
+            {/* State Management — merged into Project YAML below */}
 
             {activeSection === 'projectIo' && (
               <div className={styles.settingsSection}>

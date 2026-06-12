@@ -57,6 +57,7 @@ const ProjectIoPanel: React.FC = () => {
   const [busy, setBusy] = useState<SectionId | 'bundle' | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importTarget, setImportTarget] = useState<SectionId>('fixtures');
+  const [preview, setPreview] = useState<{ section: SectionId | 'bundle'; text: string } | null>(null);
 
   const downloadText = (filename: string, text: string) => {
     const blob = new Blob([text], { type: 'text/yaml;charset=utf-8' });
@@ -70,19 +71,50 @@ const ProjectIoPanel: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
+  const fetchSectionYaml = async (section: SectionId): Promise<string> => {
+    if (CLIENT_ONLY.includes(section)) return readPresetsYaml();
+    const res = await fetch(`/api/project/export?section=${section}`);
+    if (!res.ok) throw new Error(`export failed: ${res.status}`);
+    return res.text();
+  };
+
+  const handlePreview = async (section: SectionId) => {
+    setBusy(section);
+    try {
+      const text = await fetchSectionYaml(section);
+      setPreview({ section, text });
+      addNotification({ message: `Loaded ${section}.yaml preview`, type: 'info' });
+    } catch (err) {
+      addNotification({ message: `Preview failed: ${(err as Error).message}`, type: 'error' });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleDownloadPreview = () => {
+    if (!preview) return;
+    const stamp = new Date().toISOString().slice(0, 10);
+    downloadText(`artbastard-${preview.section}-${stamp}.yaml`, preview.text);
+    addNotification({ message: `Downloaded ${preview.section}.yaml`, type: 'success' });
+  };
+
+  const handleCopyPreview = async () => {
+    if (!preview) return;
+    try {
+      await navigator.clipboard.writeText(preview.text);
+      addNotification({ message: 'YAML copied to clipboard', type: 'success' });
+    } catch (err) {
+      addNotification({ message: `Copy failed: ${(err as Error).message}`, type: 'error' });
+    }
+  };
+
   const handleExport = async (section: SectionId) => {
     setBusy(section);
     try {
-      let text: string;
-      if (CLIENT_ONLY.includes(section)) {
-        text = readPresetsYaml();
-      } else {
-        const res = await fetch(`/api/project/export?section=${section}`);
-        if (!res.ok) throw new Error(`export failed: ${res.status}`);
-        text = await res.text();
-      }
+      const text = await fetchSectionYaml(section);
       const stamp = new Date().toISOString().slice(0, 10);
       downloadText(`artbastard-${section}-${stamp}.yaml`, text);
+      setPreview({ section, text });
       addNotification({ message: `Exported ${section}.yaml`, type: 'success' });
     } catch (err) {
       addNotification({ message: `Export failed: ${(err as Error).message}`, type: 'error' });
@@ -169,17 +201,30 @@ const ProjectIoPanel: React.FC = () => {
 
       <div className={styles.section}>
         <h4>Export</h4>
-        <p className={styles.hint}>Downloads the current server-side state as YAML.</p>
+        <p className={styles.hint}>
+          Preview the YAML in the panel below, or download directly. Files are saved
+          as <code>artbastard-&lt;section&gt;-&lt;date&gt;.yaml</code>.
+        </p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {SECTIONS.map((s) => (
-            <button
-              key={s.id}
-              className={styles.actionButton ?? ''}
-              disabled={busy !== null}
-              onClick={() => handleExport(s.id)}
-            >
-              {busy === s.id ? '…' : `Download ${s.id}.yaml`}
-            </button>
+            <div key={s.id} style={{ display: 'flex', gap: 4 }}>
+              <button
+                className={styles.actionButton ?? ''}
+                disabled={busy !== null}
+                onClick={() => handlePreview(s.id)}
+                title={`Preview ${s.label} as YAML in the pane below`}
+              >
+                {busy === s.id ? '…' : `Preview ${s.label}`}
+              </button>
+              <button
+                className={styles.actionButton ?? ''}
+                disabled={busy !== null}
+                onClick={() => handleExport(s.id)}
+                title={`Download ${s.id}.yaml`}
+              >
+                <i className="fas fa-download" />
+              </button>
+            </div>
           ))}
           <button
             className={styles.actionButton ?? ''}
@@ -190,6 +235,56 @@ const ProjectIoPanel: React.FC = () => {
             {busy === 'bundle' ? 'Bundling…' : 'Download all (full backup)'}
           </button>
         </div>
+
+        {preview && (
+          <div style={{ marginTop: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+              <strong style={{ flex: 1 }}>
+                Preview: {preview.section}.yaml ({preview.text.split('\n').length} lines,{' '}
+                {preview.text.length.toLocaleString()} chars)
+              </strong>
+              <button
+                className={styles.actionButton ?? ''}
+                onClick={handleCopyPreview}
+                title="Copy YAML to clipboard"
+              >
+                <i className="fas fa-copy" /> Copy
+              </button>
+              <button
+                className={styles.actionButton ?? ''}
+                onClick={handleDownloadPreview}
+                title="Download the previewed YAML to a file"
+              >
+                <i className="fas fa-download" /> Download
+              </button>
+              <button
+                className={styles.actionButton ?? ''}
+                onClick={() => setPreview(null)}
+                title="Clear preview"
+              >
+                <i className="fas fa-times" />
+              </button>
+            </div>
+            <pre
+              style={{
+                margin: 0,
+                padding: 12,
+                background: 'rgba(0,0,0,0.35)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 6,
+                maxHeight: 380,
+                overflow: 'auto',
+                fontSize: 12,
+                lineHeight: 1.4,
+                fontFamily:
+                  'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                whiteSpace: 'pre',
+              }}
+            >
+              {preview.text}
+            </pre>
+          </div>
+        )}
       </div>
 
       <div className={styles.section}>
