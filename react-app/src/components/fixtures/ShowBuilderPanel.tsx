@@ -3,6 +3,7 @@ import axios from 'axios';
 import { type Fixture, type Group, useStore } from '../../store';
 import useStoreUtils from '../../store/storeUtils';
 import { LucideIcon } from '../ui/LucideIcon';
+import { HoverZoomImage } from '../ui/HoverZoomImage';
 import { ActSeedButton } from '../acts/ActSeedButton';
 import { SceneSeedButton } from '../scenes/SceneSeedButton';
 import { mergeSmartFixtureGroups, suggestFixtureGroups } from '../../fixtures/autoGroups';
@@ -640,7 +641,7 @@ export const ShowBuilderPanel: React.FC = () => {
             >
               <div className={styles.showTemplateImage}>
                 {template.photoUrl ? (
-                  <img src={template.photoUrl} alt={template.templateName} loading="lazy" decoding="async" />
+                  <HoverZoomImage src={template.photoUrl} alt={template.templateName} zoomSize={280} />
                 ) : (
                   <LucideIcon name="Package" />
                 )}

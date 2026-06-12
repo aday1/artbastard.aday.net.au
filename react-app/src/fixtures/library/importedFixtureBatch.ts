@@ -115,7 +115,7 @@ export const uvDmxLedPar: FixtureLibraryEntry = {
   category: 'UV / LED par wash',
   manufacturer: 'Generic',
   modelConfidence: 'unknown',
-  photoUrl: '/fixtures/ab-fix-004-uv-dmx-led-par.jpg',
+  photoUrl: '/fixtures/ab-fix-004-uv-dmx-led-par-lineart.png',
   documentationPath: 'DOCS/fixtures/AB-FIX-004-uv-dmx-led-par.md',
   notes:
     'Purple/UV LED par-style wash. Manual documents one 7-channel DMX mode plus local menu programs for colour select, shade, pulse, transition, strobe and sound.',
@@ -373,7 +373,7 @@ export const tinyLedMovingHeadWash: FixtureLibraryEntry = {
   manufacturer: 'Generic',
   model: 'LED Stage Lighting',
   modelConfidence: 'probable',
-  photoUrl: '/fixtures/ab-fix-007-tiny-led-moving-head-wash.jpg',
+  photoUrl: '/fixtures/ab-fix-007-tiny-led-moving-head-wash-lineart.png',
   documentationPath: 'DOCS/fixtures/AB-FIX-007-tiny-led-moving-head-wash.md',
   notes:
     'Small toy-grade LED pan/tilt light. Manual documents 11-channel and 13-channel modes plus local auto, sound, motor direction and reset menus.',

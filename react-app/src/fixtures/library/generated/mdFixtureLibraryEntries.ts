@@ -398,6 +398,7 @@ export const mdFixtureLibraryEntries: FixtureLibraryEntry[] = [
     ],
     "model": "9/11-channel mini moving head with 8-colour and 8-gobo wheels",
     "modelConfidence": "probable",
+    "photoUrl": "/fixtures/ab-fix-009-mini-moving-head-9-11ch-lineart.png",
     "documentationPath": "DOCS/fixtures/MOVING-HEAD/MOVING-HEAD-mini-9-11ch.md",
     "notes": "Small generic moving head with 8-position colour wheel, 8-position gobo wheel with jitter and rotation, strobe, dimmer, motor speed, built-in automatic programs and selectable dim curves. Selectable 9- or 11-channel DMX mode via on-fixture LCD menu."
   },

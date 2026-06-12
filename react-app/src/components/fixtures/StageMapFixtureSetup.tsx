@@ -23,6 +23,7 @@ import { SceneSeedButton } from '../scenes/SceneSeedButton';
 import { ActSeedButton } from '../acts/ActSeedButton';
 import { UnifiedStageWorkbench } from './UnifiedStageWorkbench';
 import { LucideIcon } from '../ui/LucideIcon';
+import { HoverZoomImage } from '../ui/HoverZoomImage';
 import styles from './StageMapFixtureSetup.module.scss';
 
 type StageTool = 'select' | 'box';
@@ -853,7 +854,7 @@ export const StageMapFixtureSetup: React.FC = () => {
                   style={{ ['--fixture-accent' as any]: color }}
                 >
                   {template.photoUrl ? (
-                    <img src={template.photoUrl} alt="" />
+                    <HoverZoomImage src={template.photoUrl} alt={template.templateName} zoomSize={240} />
                   ) : (
                     <span className={styles.templateIcon}><LucideIcon name={icon} size={18} /></span>
                   )}

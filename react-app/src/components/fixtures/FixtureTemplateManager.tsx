@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useStore, FixtureTemplate } from '../../store';
 import { useTheme } from '../../context/ThemeContext';
 import { LucideIcon } from '../ui/LucideIcon';
+import { HoverZoomImage } from '../ui/HoverZoomImage';
 import styles from './FixtureTemplateManager.module.scss';
 
 interface FixtureTemplateManagerProps {
@@ -253,7 +254,7 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
                 <div key={template.id} className={`${styles.templateCard} ${styles.builtIn}`}>
                   {template.photoUrl && (
                     <div className={styles.templatePhoto}>
-                      <img src={template.photoUrl} alt={template.templateName} loading="lazy" decoding="async" />
+                      <HoverZoomImage src={template.photoUrl} alt={template.templateName} zoomSize={300} />
                     </div>
                   )}
                   <div className={styles.templateHeader}>
@@ -306,7 +307,7 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
                   <div key={template.id} className={styles.templateCard}>
                     {template.photoUrl && (
                       <div className={styles.templatePhoto}>
-                        <img src={template.photoUrl} alt={template.templateName} loading="lazy" decoding="async" />
+                        <HoverZoomImage src={template.photoUrl} alt={template.templateName} zoomSize={300} />
                       </div>
                     )}
                     <div className={styles.templateHeader}>
