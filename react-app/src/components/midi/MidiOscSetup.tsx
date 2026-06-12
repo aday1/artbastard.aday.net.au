@@ -325,8 +325,10 @@ export const MidiOscSetup: React.FC = () => {
   }
 
   const getPreferredTemplateDevice = (templateId: MidiControllerTemplateId): string | undefined => {
-    const detected = activeInterfaces.find((interfaceName) => detectTemplateForMidiInterface(interfaceName) === templateId)
-    return detected
+    const detectedServer = activeInterfaces.find((interfaceName) => detectTemplateForMidiInterface(interfaceName) === templateId)
+    if (detectedServer) return detectedServer
+    const detectedBrowser = browserInputs.find((input) => detectTemplateForMidiInterface(input.name || '') === templateId)
+    return detectedBrowser?.name || undefined
   }
 
   const handleApplyControllerTemplate = async (templateId: MidiControllerTemplateId) => {
@@ -340,6 +342,18 @@ export const MidiOscSetup: React.FC = () => {
   }
 
   const groupedServerMidi = useMemo(() => groupMidiInterfaces(midiInterfaces), [midiInterfaces])
+  const groupedBrowserMidi = useMemo(() => {
+    const names = browserInputs.map((i) => i.name || '(unnamed)')
+    const groups = groupMidiInterfaces(names)
+    const byName = new Map<string, WebMidi.MIDIInput[]>()
+    for (const input of browserInputs) {
+      const name = input.name || '(unnamed)'
+      const arr = byName.get(name) || []
+      arr.push(input)
+      byName.set(name, arr)
+    }
+    return { groups, byName }
+  }, [browserInputs])
   const totalConnected = activeInterfaces.length + activeBrowserInputs.length
 
   return (
@@ -643,7 +657,7 @@ export const MidiOscSetup: React.FC = () => {
           {browserMidiExpanded && (
           <div className={styles.cardBody}>
             <p className={styles.cardDescription} style={{ fontSize: '0.78rem', margin: '0 0 0.5rem' }}>
-              Web MIDI API — Chrome/Edge only. Connections auto-restore across navigation.
+              Web MIDI API — Chrome/Edge only. Hardware controllers (APC40, ROLI, etc.) are pinned to the top. Connections auto-restore across navigation.
             </p>
             <div className={styles.interfaceList}>
               {!browserMidiSupported ? (
@@ -672,44 +686,171 @@ export const MidiOscSetup: React.FC = () => {
                 </div>
               ) : (
                 <>
-                  <div className={styles.interfaceHeader}>
-                    <span className={styles.interfaceName}>Device Name</span>
-                    <span className={styles.interfaceStatus}>Status</span>
-                    <span className={styles.interfaceActions}>Actions</span>
-                  </div>
+                  {BUCKET_ORDER.map((bucket) => {
+                    const groups = groupedBrowserMidi.groups[bucket]
+                    if (groups.length === 0) return null
+                    const open = bucketOpen[bucket]
+                    const groupInputs = (g: typeof groups[number]): WebMidi.MIDIInput[] =>
+                      g.ports.flatMap((portName) => groupedBrowserMidi.byName.get(portName) || [])
+                    const totalPorts = groups.reduce((acc, g) => acc + groupInputs(g).length, 0)
+                    const activeInBucket = groups.reduce(
+                      (acc, g) => acc + groupInputs(g).filter((i) => activeBrowserInputs.includes(i.id)).length,
+                      0,
+                    )
+                    return (
+                      <div key={`browser-${bucket}`} style={{ marginBottom: '0.5rem' }}>
+                        <button
+                          type="button"
+                          onClick={() => toggleBucket(bucket)}
+                          style={{
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '0.35rem 0.55rem',
+                            background: bucket === 'hardware'
+                              ? 'rgba(34, 197, 94, 0.12)'
+                              : 'rgba(148, 163, 184, 0.08)',
+                            border: '1px solid rgba(148, 163, 184, 0.2)',
+                            borderRadius: 4,
+                            color: 'inherit',
+                            cursor: 'pointer',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            letterSpacing: '0.12em',
+                            textTransform: 'uppercase',
+                          }}
+                          aria-expanded={open}
+                        >
+                          <span>
+                            {BUCKET_LABELS[bucket]} · {groups.length} group{groups.length === 1 ? '' : 's'} ({totalPorts} port{totalPorts === 1 ? '' : 's'})
+                          </span>
+                          <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                            <span style={{
+                              fontSize: '0.65rem',
+                              padding: '0.05rem 0.4rem',
+                              borderRadius: 999,
+                              background: activeInBucket > 0
+                                ? 'rgba(34, 197, 94, 0.3)'
+                                : 'rgba(148, 163, 184, 0.2)',
+                            }}>
+                              {activeInBucket} active
+                            </span>
+                            <i className={`fas fa-chevron-${open ? 'up' : 'down'}`} />
+                          </span>
+                        </button>
 
-                  {browserInputs.map((input) => (
-                    <div key={input.id} className={styles.interfaceItem}>
-                      <span className={styles.interfaceName}>
-                        {input.name}
-                        <span className={styles.interfaceManufacturer}>{input.manufacturer}</span>
-                      </span>
-                      <span className={`${styles.interfaceStatus} ${activeBrowserInputs.includes(input.id) ? styles.active : ''}`}>
-                        {activeBrowserInputs.includes(input.id) ? 'Connected' : 'Disconnected'}
-                      </span>
-                      <div className={styles.interfaceActions}>
-                        {activeBrowserInputs.includes(input.id) ? (
-                          <button
-                            className={`${styles.actionButton} ${styles.disconnectButton}`}
-                            onClick={() => disconnectBrowserInput(input.id)}
-                            title={`Disconnect from ${input.name} - Browser MIDI data will stop flowing`}
-                          >
-                            <i className="fas fa-unlink"></i>
-                            {theme !== 'minimal' && 'Disconnect'}
-                          </button>
-                        ) : (
-                          <button
-                            className={`${styles.actionButton} ${styles.connectButton}`}
-                            onClick={() => connectBrowserInput(input.id)}
-                            title={`Connect to ${input.name} - Enable browser MIDI data flow`}
-                          >
-                            <i className="fas fa-link"></i>
-                            {theme !== 'minimal' && 'Connect'}
-                          </button>
+                        {open && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 6 }}>
+                            {groups.map((group) => {
+                              const inputs = groupInputs(group)
+                              const groupKey = `browser:${bucket}:${group.baseName}`
+                              const expanded = expandedGroups.has(groupKey) || inputs.length === 1
+                              return (
+                                <div
+                                  key={groupKey}
+                                  style={{
+                                    border: '1px solid rgba(148, 163, 184, 0.15)',
+                                    borderRadius: 4,
+                                    background: 'rgba(0,0,0,0.15)',
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'space-between',
+                                      gap: 6,
+                                      padding: '0.35rem 0.5rem',
+                                      fontSize: '0.78rem',
+                                    }}
+                                  >
+                                    <button
+                                      type="button"
+                                      onClick={() => inputs.length > 1 && toggleGroup(groupKey)}
+                                      style={{
+                                        flex: 1,
+                                        textAlign: 'left',
+                                        background: 'transparent',
+                                        border: 'none',
+                                        color: 'inherit',
+                                        cursor: inputs.length > 1 ? 'pointer' : 'default',
+                                        padding: 0,
+                                        fontSize: '0.78rem',
+                                      }}
+                                    >
+                                      {inputs.length > 1 && (
+                                        <i className={`fas fa-chevron-${expanded ? 'down' : 'right'}`} style={{ marginRight: 6, fontSize: '0.65rem', opacity: 0.7 }} />
+                                      )}
+                                      <span style={{ fontWeight: 600 }}>{group.baseName}</span>
+                                      {inputs.length > 1 && (
+                                        <span style={{
+                                          marginLeft: 8,
+                                          fontSize: '0.65rem',
+                                          padding: '0.05rem 0.4rem',
+                                          borderRadius: 999,
+                                          background: 'rgba(148, 163, 184, 0.25)',
+                                        }}>
+                                          ×{inputs.length}
+                                        </span>
+                                      )}
+                                    </button>
+                                    {inputs.length > 1 && (
+                                      <span style={{
+                                        fontSize: '0.65rem',
+                                        color: inputs.some((i) => activeBrowserInputs.includes(i.id)) ? 'rgba(187,247,208,0.95)' : 'rgba(148,163,184,0.8)',
+                                      }}>
+                                        {inputs.filter((i) => activeBrowserInputs.includes(i.id)).length} of {inputs.length} active
+                                      </span>
+                                    )}
+                                  </div>
+                                  {expanded && inputs.map((input) => {
+                                    const isActive = activeBrowserInputs.includes(input.id)
+                                    return (
+                                      <div
+                                        key={input.id}
+                                        className={styles.interfaceItem}
+                                        style={inputs.length > 1 ? { paddingLeft: '1.4rem', borderTop: '1px solid rgba(148,163,184,0.1)' } : undefined}
+                                      >
+                                        <span className={styles.interfaceName}>
+                                          {input.name}
+                                          <span className={styles.interfaceManufacturer}>{input.manufacturer}</span>
+                                        </span>
+                                        <span className={`${styles.interfaceStatus} ${isActive ? styles.active : ''}`}>
+                                          {isActive ? 'Connected' : 'Disconnected'}
+                                        </span>
+                                        <div className={styles.interfaceActions}>
+                                          {isActive ? (
+                                            <button
+                                              className={`${styles.actionButton} ${styles.disconnectButton}`}
+                                              onClick={() => disconnectBrowserInput(input.id)}
+                                              title={`Disconnect from ${input.name} - Browser MIDI data will stop flowing`}
+                                            >
+                                              <i className="fas fa-unlink"></i>
+                                              {theme !== 'minimal' && 'Disconnect'}
+                                            </button>
+                                          ) : (
+                                            <button
+                                              className={`${styles.actionButton} ${styles.connectButton}`}
+                                              onClick={() => connectBrowserInput(input.id)}
+                                              title={`Connect to ${input.name} - Enable browser MIDI data flow`}
+                                            >
+                                              <i className="fas fa-link"></i>
+                                              {theme !== 'minimal' && 'Connect'}
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              )
+                            })}
+                          </div>
                         )}
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
 
                   <button
                     className={styles.refreshButton}

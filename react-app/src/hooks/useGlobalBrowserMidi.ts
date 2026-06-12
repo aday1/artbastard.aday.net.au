@@ -45,6 +45,12 @@ export const useGlobalBrowserMidi = () => {
   // Store handler references so we can remove them properly
   const handlerRefs = useRef<Map<string, (event: WebMidi.MIDIMessageEvent) => void>>(new Map());
   const templateApplyInFlightRef = useRef<Set<string>>(new Set());
+  // Input ids we have already auto-connected (or attempted to) in this session.
+  // Once an id is in here, the auto-effect must not touch it again — manual
+  // Connect/Disconnect owns it. Prevents the effect re-firing on activeInputs
+  // changes and racing with a user click (which would strip the just-attached
+  // handler and leave the device silently broken).
+  const autoConnectAttemptedRef = useRef<Set<string>>(new Set());
   
   // Throttling for MIDI messages to reduce lag
   const lastMessageTimeRef = useRef<Map<string, number>>(new Map());
@@ -59,7 +65,7 @@ export const useGlobalBrowserMidi = () => {
   }));
 
   const maybeAutoApplyTemplate = useCallback(
-    async (deviceName: string) => {
+    async (deviceName: string, inputId?: string) => {
       const templateId = detectTemplateForMidiInterface(deviceName);
       if (!templateId) return;
 
@@ -79,7 +85,9 @@ export const useGlobalBrowserMidi = () => {
         : Object.keys(state.midiMappings).length > 0;
       if (hasExistingTemplate) return;
 
-      const key = `${templateId}:${deviceName}`;
+      // Key by inputId too so a 2nd ROLI block (same name, different id) is
+      // not blocked by the 1st block's in-flight apply.
+      const key = `${templateId}:${deviceName}:${inputId ?? ''}`;
       if (templateApplyInFlightRef.current.has(key)) return;
       templateApplyInFlightRef.current.add(key);
       try {
@@ -143,12 +151,24 @@ export const useGlobalBrowserMidi = () => {
     const input = midiAccess.inputs.get(inputId);
     if (!input) return;
 
-    // Remove existing listener if one exists (prevent duplicates)
-    const existingHandler = handlerRefs.current.get(inputId);
-    if (existingHandler) {
-      input.removeEventListener('midimessage', existingHandler);
-      handlerRefs.current.delete(inputId);
-      debugLog.log('[GlobalBrowserMidi] Removed existing listener for:', input.name);
+    // Once a user (or the auto-effect) has touched this id, the auto-effect
+    // must back off — see autoConnectAttemptedRef comment.
+    autoConnectAttemptedRef.current.add(inputId);
+
+    // Idempotent: if we already own a live handler for this id, do nothing.
+    // The previous strip-then-reattach pattern was racy — a concurrent caller
+    // (manual click + auto-effect) could wipe the just-attached handler and
+    // leave activeInputs out of sync with handlerRefs, which is the "Connected
+    // but no MIDI flowing / Connect button does nothing" symptom.
+    if (handlerRefs.current.has(inputId)) {
+      debugLog.log('[GlobalBrowserMidi] Already connected to:', input.name);
+      setActiveInputs(prev => {
+        if (prev.has(inputId)) return prev;
+        const newSet = new Set([...prev, inputId]);
+        saveActiveInputs(newSet);
+        return newSet;
+      });
+      return;
     }
 
     // Clear onmidimessage property to prevent conflicts with useBrowserMidi hook
@@ -323,10 +343,19 @@ export const useGlobalBrowserMidi = () => {
 
       // Also auto-reconnect any input whose name matches a known template
       // (APC40, ROLI, Lightpad, etc.) even on first appearance, restoring the
-      // pre-prompt behavior for recognised controllers.
+      // pre-prompt behavior for recognised controllers. We only attempt this
+      // ONCE per input id per session — the autoConnectAttemptedRef guard
+      // prevents the effect re-firing on activeInputs changes and racing
+      // with a user-initiated Connect/Disconnect click.
       const templateId = detectTemplateForMidiInterface(input.name || '');
-      if (templateId && !activeInputs.has(input.id) && !handlerRefs.current.has(input.id)) {
-        void maybeAutoApplyTemplate(input.name || '');
+      if (
+        templateId &&
+        !activeInputs.has(input.id) &&
+        !handlerRefs.current.has(input.id) &&
+        !autoConnectAttemptedRef.current.has(input.id)
+      ) {
+        autoConnectAttemptedRef.current.add(input.id);
+        void maybeAutoApplyTemplate(input.name || '', input.id);
         connectBrowserInput(input.id);
       }
 
@@ -345,7 +374,7 @@ export const useGlobalBrowserMidi = () => {
       const controller = (event as CustomEvent<DetectedMidiController>).detail;
       if (!midiAccess || !controller || controller.transport !== 'browser') return;
       if (!midiAccess.inputs.has(controller.id)) return;
-      if (controller.templateId) void maybeAutoApplyTemplate(controller.name);
+      if (controller.templateId) void maybeAutoApplyTemplate(controller.name, controller.id);
       connectBrowserInput(controller.id);
       dispatchConnectedMidiController(controller);
     };
@@ -359,6 +388,10 @@ export const useGlobalBrowserMidi = () => {
 
     const input = midiAccess.inputs.get(inputId);
     if (!input) return;
+
+    // Mark as user-touched so the auto-effect won't reconnect against the
+    // user's explicit disconnect intent.
+    autoConnectAttemptedRef.current.add(inputId);
 
     // Remove the event listener using the stored handler reference
     const handler = handlerRefs.current.get(inputId);
