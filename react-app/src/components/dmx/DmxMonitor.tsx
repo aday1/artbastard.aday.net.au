@@ -154,13 +154,9 @@ export const DmxMonitor: React.FC = () => {
       maxWidth={640}
       minHeight={120}
       maxHeight={480}
-      anchor="bottom-left"
+      anchor="top-right"
       className={monitorClasses}
-      style={
-        isCollapsed
-          ? { width: 'auto', height: 'auto', left: 632 }
-          : { left: 632 }
-      }
+      style={isCollapsed ? { width: 'auto', height: 'auto' } : undefined}
     >
       <div className={styles.monitorInner}>
         <div className={`${styles.header} handle`}>

@@ -455,13 +455,9 @@ export const OscMonitor: React.FC = () => {
         maxWidth={640}
         minHeight={120}
         maxHeight={480}
-        anchor="bottom-left"
+        anchor="bottom-right"
         className={monitorClasses}
-        style={
-          isCollapsed
-            ? { width: 'auto', height: 'auto', bottom: 374 }
-            : { bottom: 374 }
-        }
+        style={isCollapsed ? { width: 'auto', height: 'auto' } : undefined}
       >
         <div ref={monitorRef} className={styles.monitorInner}>
         {renderHeader()}

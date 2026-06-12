@@ -1,6 +1,5 @@
 .shell {
   position: fixed;
-  bottom: 20px;
   z-index: 1050;
   display: flex;
   flex-direction: column;
@@ -12,13 +11,33 @@
   @media (max-width: 1279px) {
     display: none !important;
   }
+
+  // Any element inside the shell marked as a drag handle gets the grab cursor
+  :global(.handle) {
+    cursor: grab;
+  }
+  :global(.handle):active {
+    cursor: grabbing;
+  }
 }
 
-.anchorLeft {
+.anchorBottomLeft {
+  bottom: 20px;
   left: 20px;
 }
 
-.anchorRight {
+.anchorBottomRight {
+  bottom: 20px;
+  right: 20px;
+}
+
+.anchorTopLeft {
+  top: 20px;
+  left: 20px;
+}
+
+.anchorTopRight {
+  top: 20px;
   right: 20px;
 }
 
@@ -30,9 +49,28 @@
   overflow: hidden;
 }
 
-.gripRight {
+.gripTop {
   position: absolute;
   top: 0;
+  left: 8px;
+  right: 8px;
+  height: 4px;
+  cursor: grab;
+  z-index: 5;
+  background: transparent;
+  transition: background 120ms ease;
+
+  &:hover {
+    background: color-mix(in srgb, var(--color-primary, #d68706) 50%, transparent);
+  }
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.gripRight {
+  position: absolute;
+  top: 4px;
   right: 0;
   width: 8px;
   bottom: 8px;
