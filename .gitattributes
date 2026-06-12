@@ -1,16 +1,10 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+# Auto detect text files, normalize to LF in repo AND on checkout (cross-platform consistency)
+* text=auto eol=lf
 
-# Specific file types
-*.css           text
-*.js            text
-*.json          text
-*.html          text
-*.md            text
-*.ts            text
-*.tsx           text
+# Platform-native scripts must stay CRLF
 *.ps1           text eol=crlf
 *.bat           text eol=crlf
+*.cmd           text eol=crlf
 
 # Binary files
 *.woff          binary
