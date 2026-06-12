@@ -3,22 +3,30 @@ import { LucideIcon } from '../ui/LucideIcon';
 import { ResizableFloatingPanel } from '../ui/ResizableFloatingPanel';
 import { useStore } from '../../store';
 import { useMonitorAutoPop } from '../../hooks/useMonitorAutoPop';
+import { useGlobalBrowserMidi } from '../../hooks/useGlobalBrowserMidi';
+import { buildSmartControllers } from '../../midi/smartControllers';
+import { stripPortSuffix } from '../../midi/midiInterfaceGrouping';
 import styles from './MidiMonitor.module.scss';
 
 export const MidiMonitor: React.FC = () => {
-  const { 
-    midiMessages, 
-    midiMappings, 
+  const {
+    midiMessages,
+    midiMappings,
     channelNames,
     dmxChannels,
-    debugTools 
+    debugTools,
+    midiInterfaces,
+    activeInterfaces,
   } = useStore(state => ({
     midiMessages: state.midiMessages,
     midiMappings: state.midiMappings,
     channelNames: state.channelNames,
     dmxChannels: state.dmxChannels,
-    debugTools: state.debugTools
+    debugTools: state.debugTools,
+    midiInterfaces: state.midiInterfaces,
+    activeInterfaces: state.activeInterfaces,
   }));
+  const { browserInputs, activeBrowserInputs } = useGlobalBrowserMidi();
   const [lastMessages, setLastMessages] = useState<Array<any>>([]);
   const [autoScroll, setAutoScroll] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
@@ -97,6 +105,39 @@ export const MidiMonitor: React.FC = () => {
     });
     return Array.from(sources).sort();
   }, [midiMessages]);
+
+  // Build live Connected Devices roster with stable A/B tags. Pairs server
+  // and browser views of the same physical box, filtered to only those
+  // currently attached. Each pill shows the tag, a message counter, and
+  // doubles as a one-click source filter.
+  const connectedDevices = React.useMemo(() => {
+    const smart = buildSmartControllers(
+      midiInterfaces || [],
+      activeInterfaces || [],
+      browserInputs || [],
+      activeBrowserInputs || [],
+    ).filter((c) => c.isConnectedServer || c.isConnectedBrowser);
+    const messageCountByBase = new Map<string, number>();
+    for (const msg of midiMessages) {
+      const src = msg.source || '';
+      if (!src) continue;
+      const key = stripPortSuffix(src).toLowerCase();
+      messageCountByBase.set(key, (messageCountByBase.get(key) || 0) + 1);
+    }
+    return smart.map((c) => {
+      const key = c.baseName.toLowerCase();
+      const transport = c.isConnectedServer
+        ? c.isConnectedBrowser ? 'Server + Browser' : 'Server'
+        : 'Browser';
+      const filterMatch = c.serverPort || c.browserInput?.name || c.baseName;
+      return {
+        controller: c,
+        transport,
+        messageCount: messageCountByBase.get(key) || 0,
+        filterSource: filterMatch,
+      };
+    });
+  }, [midiInterfaces, activeInterfaces, browserInputs, activeBrowserInputs, midiMessages]);
 
   // Update displayed messages based on scrollback setting and filter
   useEffect(() => {
@@ -453,6 +494,32 @@ export const MidiMonitor: React.FC = () => {
       >
         <div ref={monitorRef} className={styles.monitorInner}>
         {renderHeader()}
+        {!isCollapsed && connectedDevices.length > 0 && (
+          <div className={styles.connectedDevices} aria-label="Connected MIDI devices">
+            <span className={styles.connectedDevicesLabel}>Live:</span>
+            {connectedDevices.map((device) => {
+              const isActive = filterSource === device.filterSource;
+              return (
+                <button
+                  key={device.controller.tag}
+                  type="button"
+                  className={`${styles.devicePill} ${isActive ? styles.devicePillActive : ''}`.trim()}
+                  onClick={() => {
+                    const next = isActive ? 'all' : device.filterSource;
+                    setFilterSource(next);
+                    localStorage.setItem('midiMonitorFilterSource', next);
+                  }}
+                  title={`${device.controller.baseName} (${device.transport}) — click to filter monitor by this device`}
+                >
+                  <span className={styles.devicePillTag}>{device.controller.tag}</span>
+                  <span className={styles.devicePillName}>{device.controller.baseName}</span>
+                  <span className={styles.devicePillTransport}>{device.transport}</span>
+                  <span className={styles.devicePillCount}>{device.messageCount} msg</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
         {showFilter && !isCollapsed && (
           <div className={styles.filterPanel} onClick={(e) => e.stopPropagation()}>
             <div className={styles.filterHeader}>

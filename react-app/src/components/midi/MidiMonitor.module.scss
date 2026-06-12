@@ -40,7 +40,7 @@
   padding: 6px 10px; /* Adjusted padding */
   /* cursor: grab; */ /* Indicate draggable - REMOVED */
   user-select: none;
-  
+
   &:hover {
     background-color: #444;
   }
@@ -393,4 +393,79 @@
   font-size: 0.85em;
   padding: 8px;
   text-align: center;
+}
+
+.connectedDevices {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: #1f1f1f;
+  border-bottom: 1px solid #3a3a3a;
+  font-family: monospace;
+  font-size: 0.72rem;
+}
+
+.connectedDevicesLabel {
+  color: #00ff66;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.68rem;
+  margin-right: 4px;
+}
+
+.devicePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border: 1px solid #555;
+  border-radius: 999px;
+  background: #2a2a2a;
+  color: #eaeaea;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: 1.2;
+  white-space: nowrap;
+
+  &:hover {
+    border-color: #4ecdc4;
+    background: #1f2f2e;
+  }
+}
+
+.devicePillActive {
+  border-color: #4ecdc4 !important;
+  background: rgba(78, 205, 196, 0.15) !important;
+  color: #a7f3d0;
+}
+
+.devicePillTag {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(78, 205, 196, 0.2);
+  color: #a7f3d0;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.devicePillName {
+  max-width: 16ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.devicePillTransport {
+  color: #b8c0cc;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.devicePillCount {
+  color: #fcd34d;
+  font-variant-numeric: tabular-nums;
 }
