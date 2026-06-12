@@ -131,7 +131,7 @@
   min-height: 0;
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(200px, 260px) minmax(420px, 1fr) minmax(260px, 320px);
+  grid-template-columns: minmax(260px, 320px) minmax(420px, 1fr) minmax(260px, 320px);
   gap: 0.75rem;
 }
 
@@ -236,12 +236,12 @@
 .templateButton {
   --fixture-accent: #2dd4bf;
   width: 100%;
-  min-height: 84px;
+  min-height: 128px;
   display: grid;
-  grid-template-columns: 72px minmax(0, 1fr);
-  gap: 0.65rem;
+  grid-template-columns: 124px minmax(0, 1fr);
+  gap: 0.75rem;
   align-items: center;
-  padding: 0.55rem;
+  padding: 0.6rem;
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-left: 4px solid var(--fixture-accent);
   border-radius: 7px;
@@ -252,8 +252,8 @@
 
   img,
   .templateIcon {
-    width: 68px;
-    height: 68px;
+    width: 120px;
+    height: 120px;
     border-radius: 8px;
     object-fit: cover;
     display: flex;
@@ -395,16 +395,16 @@
   --fixture-color: #2dd4bf;
   position: absolute;
   z-index: 3;
-  width: clamp(70px, 8vw, 96px);
-  min-height: 70px;
+  width: clamp(96px, 10vw, 132px);
+  min-height: 110px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.12rem;
-  padding: 0.4rem;
+  gap: 0.2rem;
+  padding: 0.45rem;
   border: 2px solid var(--fixture-color);
-  border-radius: 8px;
+  border-radius: 10px;
   background: rgba(15, 23, 42, 0.92);
   color: #f8fafc;
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
@@ -412,12 +412,13 @@
   touch-action: none;
 
   .nodeIcon {
-    width: 30px;
-    height: 30px;
+    width: 72px;
+    height: 72px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 50%;
+    border-radius: 8px;
+    object-fit: cover;
     background: color-mix(in srgb, var(--fixture-color) 34%, #0f172a);
   }
 }
@@ -739,7 +740,7 @@
 
 @media (max-width: 1080px) {
   .workspace {
-    grid-template-columns: minmax(200px, 240px) minmax(380px, 1fr);
+    grid-template-columns: minmax(240px, 280px) minmax(380px, 1fr);
   }
 
   .inspectorPane {

@@ -1,0 +1,68 @@
+# Hardware controller patterns for the MIDI/OSC settings page.
+#
+# Names are matched case-insensitively against the substring set in
+# `patterns`. Any matching MIDI port lands in the "hardware" bucket and is
+# rendered at the top of the list. Add new entries when a new physical
+# controller shows up — no TypeScript change required.
+#
+# Buckets:
+#   hardware = physical controllers (top of the list, always expanded)
+#   virtual  = loopback / IAC / virtual cables
+#   network  = rtpMIDI / Ethernet MIDI
+
+hardware:
+  patterns:
+    - apc40
+    - apc20
+    - apc mini
+    - apc key
+    - lightpad
+    - roli
+    - seaboard
+    - launchpad
+    - launchkey
+    - launch control
+    - push
+    - bcr2000
+    - bcf2000
+    - x-touch
+    - xtouch
+    - midi fighter
+    - "midi fighter twister"
+    - nanokey
+    - nanopad
+    - nanokontrol
+    - microkey
+    - microkontrol
+    - maschine
+    - keylab
+    - xkey
+    - komplete kontrol
+    - s-series
+    - axiom
+    - oxygen
+    - mpk
+    - mpd
+    - novation
+    - korg
+    - akai
+
+virtual:
+  patterns:
+    - loopbe
+    - loopmidi
+    - loop midi
+    - iac
+    - midiyoke
+    - midi yoke
+    - virtual midi
+    - virtualmidi
+
+network:
+  patterns:
+    - rtpmidi
+    - rtp midi
+    - ethernet midi
+    - ethernet
+    - network midi
+    - bonjour

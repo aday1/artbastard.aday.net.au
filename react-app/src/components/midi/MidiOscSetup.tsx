@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useStore } from '../../store'
 import { useSocket } from '../../context/SocketContext'
 import { useTheme } from '../../context/ThemeContext'
@@ -7,8 +7,22 @@ import { MIDI_CONTROLLER_TEMPLATES, detectTemplateForMidiInterface, MidiControll
 import { Apc40Manual } from './Apc40Manual'
 import { Apc40SurfaceDiagram } from './Apc40SurfaceDiagram'
 import { Apc40Demoscene } from './Apc40Demoscene'
+import { RoliDebugPanel } from '../settings/RoliDebugPanel'
+import { groupMidiInterfaces, BUCKET_LABELS, BUCKET_ORDER, type MidiBucket } from '../../midi/midiInterfaceGrouping'
 import styles from './MidiOscSetup.module.scss'
 import { debugLog } from '../../utils/debugLog';
+
+const readStoredBool = (key: string, fallback: boolean): boolean => {
+  if (typeof localStorage === 'undefined') return fallback;
+  const raw = localStorage.getItem(key);
+  if (raw == null) return fallback;
+  return raw === '1';
+};
+
+const writeStoredBool = (key: string, value: boolean): void => {
+  if (typeof localStorage === 'undefined') return;
+  try { localStorage.setItem(key, value ? '1' : '0'); } catch { /* ignore quota */ }
+};
 
 export const MidiOscSetup: React.FC = () => {
   const { theme } = useTheme()
@@ -36,9 +50,36 @@ export const MidiOscSetup: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [connectingInterfaces, setConnectingInterfaces] = useState<Set<string>>(new Set())
   const [applyingTemplateId, setApplyingTemplateId] = useState<MidiControllerTemplateId | null>(null)
-  const [serverMidiExpanded, setServerMidiExpanded] = useState(false)
-  const [browserMidiExpanded, setBrowserMidiExpanded] = useState(false)
+  const [serverMidiExpanded, setServerMidiExpanded] = useState(() => readStoredBool('midi-osc-server-expanded', true))
+  const [browserMidiExpanded, setBrowserMidiExpanded] = useState(() => readStoredBool('midi-osc-browser-expanded', true))
   const [apc40ManualExpanded, setApc40ManualExpanded] = useState(false)
+  const [oscExpanded, setOscExpanded] = useState(() => readStoredBool('midi-osc-osc-expanded', false))
+  const [bucketOpen, setBucketOpen] = useState<Record<MidiBucket, boolean>>(() => ({
+    hardware: readStoredBool('midi-osc-bucket-hardware', true),
+    virtual: readStoredBool('midi-osc-bucket-virtual', false),
+    network: readStoredBool('midi-osc-bucket-network', false),
+    other: readStoredBool('midi-osc-bucket-other', false),
+  }))
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
+
+  useEffect(() => writeStoredBool('midi-osc-server-expanded', serverMidiExpanded), [serverMidiExpanded])
+  useEffect(() => writeStoredBool('midi-osc-browser-expanded', browserMidiExpanded), [browserMidiExpanded])
+  useEffect(() => writeStoredBool('midi-osc-osc-expanded', oscExpanded), [oscExpanded])
+
+  const toggleBucket = (b: MidiBucket) => {
+    setBucketOpen((prev) => {
+      const next = { ...prev, [b]: !prev[b] };
+      writeStoredBool(`midi-osc-bucket-${b}`, next[b])
+      return next
+    })
+  }
+  const toggleGroup = (key: string) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key); else next.add(key)
+      return next
+    })
+  }
 
   const {
     midiMessages,
@@ -298,16 +339,29 @@ export const MidiOscSetup: React.FC = () => {
     }
   }
 
+  const groupedServerMidi = useMemo(() => groupMidiInterfaces(midiInterfaces), [midiInterfaces])
+  const totalConnected = activeInterfaces.length + activeBrowserInputs.length
+
   return (
     <div className={styles.midiOscSetup}>
-      <h2 className={styles.sectionTitle}>
-        {theme === 'artsnob' && 'MIDI/OSC Atelier: The Digital Orchestration'}
-        {theme === 'standard' && 'MIDI/OSC Setup'}
-        {theme === 'minimal' && 'MIDI/OSC'}
-      </h2>
-
-      <div className={styles.connectedDevicesSummary}>
-        Connected MIDI Devices: Server (<b>{activeInterfaces.length}</b>), Browser (<b>{activeBrowserInputs.length}</b>)
+      <div
+        className={styles.connectedDevicesSummary}
+        style={{
+          display: 'flex',
+          gap: '1rem',
+          flexWrap: 'wrap',
+          alignItems: 'baseline',
+          justifyContent: 'space-between',
+        }}
+      >
+        <h2 className={styles.sectionTitle} style={{ margin: 0, fontSize: '1.1rem' }}>
+          {theme === 'artsnob' ? 'MIDI/OSC Atelier' : 'MIDI / OSC'}
+        </h2>
+        <span style={{ fontSize: '0.85rem' }}>
+          Server <b>{activeInterfaces.length}</b>/<b>{midiInterfaces.length}</b> ·
+          Browser <b>{activeBrowserInputs.length}</b>/<b>{browserInputs.length}</b> ·
+          <b> {totalConnected}</b> connected
+        </span>
       </div>
 
       <div className={styles.setupGrid}>
@@ -319,10 +373,8 @@ export const MidiOscSetup: React.FC = () => {
             onClick={() => setServerMidiExpanded((v) => !v)}
             aria-expanded={serverMidiExpanded}
           >
-            <h3 title="MIDI interfaces connected to the server - useful for external controllers and hardware devices">
-              {theme === 'artsnob' && 'Server MIDI Interfaces: The Distant Muses'}
-              {theme === 'standard' && 'Server MIDI Interfaces'}
-              {theme === 'minimal' && 'Server MIDI'}
+            <h3 title="MIDI interfaces visible to the backend server">
+              Server MIDI
             </h3>
             <span className={styles.cardHeaderMeta}>
               {midiInterfaces.length} found, {activeInterfaces.length} connected
@@ -331,15 +383,9 @@ export const MidiOscSetup: React.FC = () => {
           </button>
           {serverMidiExpanded && (
           <div className={styles.cardBody}>
-            <p className={styles.cardDescription}>
-              Server MIDI interfaces are external MIDI devices connected to the computer running ArtBastard.
-              These provide stable connections for professional MIDI controllers and hardware.
-              <br /><br />
-              <strong>Important:</strong> Server MIDI and Browser MIDI are separate systems, but on Windows they
-              cannot use the same device simultaneously. If Browser MIDI is connected to a device, you must
-              disconnect it before connecting Server MIDI to the same device.
-              <br /><br />
-              <strong>Windows Note:</strong> If connection fails, try running as Administrator: <code>.\start.ps1 -Admin</code>
+            <p className={styles.cardDescription} style={{ fontSize: '0.78rem', margin: '0 0 0.5rem' }}>
+              Hardware controllers (APC40, ROLI, etc.) are pinned to the top. Virtual + network MIDI are collapsed; click to expand.
+              On Windows, Server MIDI and Browser MIDI can't share the same device — disconnect one before the other.
             </p>
             <div className={styles.interfaceList}>
               {midiInterfaces.length === 0 ? (
@@ -362,51 +408,201 @@ export const MidiOscSetup: React.FC = () => {
                 </div>
               ) : (
                 <>
-                  <div className={styles.interfaceHeader}>
-                    <span className={styles.interfaceName}>Interface Name</span>
-                    <span className={styles.interfaceStatus}>Status</span>
-                    <span className={styles.interfaceActions}>Actions</span>
-                  </div>
+                  {BUCKET_ORDER.map((bucket) => {
+                    const groups = groupedServerMidi[bucket]
+                    if (groups.length === 0) return null
+                    const open = bucketOpen[bucket]
+                    const totalPorts = groups.reduce((acc, g) => acc + g.ports.length, 0)
+                    const activeInBucket = groups.reduce(
+                      (acc, g) => acc + g.ports.filter((p) => activeInterfaces.includes(p)).length,
+                      0,
+                    )
+                    return (
+                      <div key={bucket} style={{ marginBottom: '0.5rem' }}>
+                        <button
+                          type="button"
+                          onClick={() => toggleBucket(bucket)}
+                          style={{
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '0.35rem 0.55rem',
+                            background: bucket === 'hardware'
+                              ? 'rgba(34, 197, 94, 0.12)'
+                              : 'rgba(148, 163, 184, 0.08)',
+                            border: '1px solid rgba(148, 163, 184, 0.2)',
+                            borderRadius: 4,
+                            color: 'inherit',
+                            cursor: 'pointer',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            letterSpacing: '0.12em',
+                            textTransform: 'uppercase',
+                          }}
+                          aria-expanded={open}
+                        >
+                          <span>
+                            {BUCKET_LABELS[bucket]} · {groups.length} group{groups.length === 1 ? '' : 's'} ({totalPorts} port{totalPorts === 1 ? '' : 's'})
+                          </span>
+                          <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                            <span style={{
+                              fontSize: '0.65rem',
+                              padding: '0.05rem 0.4rem',
+                              borderRadius: 999,
+                              background: activeInBucket > 0
+                                ? 'rgba(34, 197, 94, 0.3)'
+                                : 'rgba(148, 163, 184, 0.2)',
+                            }}>
+                              {activeInBucket} active
+                            </span>
+                            <i className={`fas fa-chevron-${open ? 'up' : 'down'}`} />
+                          </span>
+                        </button>
 
-                  {midiInterfaces.map((interfaceName) => (
-                    <div key={interfaceName} className={styles.interfaceItem}>
-                      <span className={styles.interfaceName}>{interfaceName}</span>
-                      <span className={`${styles.interfaceStatus} ${activeInterfaces.includes(interfaceName) ? styles.active : ''}`}>
-                        {activeInterfaces.includes(interfaceName) ? 'Connected' : 'Disconnected'}
-                      </span>
-                      <div className={styles.interfaceActions}>
-                        {activeInterfaces.includes(interfaceName) ? (
-                          <button
-                            className={`${styles.actionButton} ${styles.disconnectButton}`}
-                            onClick={() => handleDisconnectMidi(interfaceName)}
-                            title={`Disconnect from ${interfaceName} - MIDI data will stop flowing from this device`}
-                          >
-                            <i className="fas fa-unlink"></i>
-                            {theme !== 'minimal' && 'Disconnect'}
-                          </button>
-                        ) : (
-                          <button
-                            className={`${styles.actionButton} ${styles.connectButton}`}
-                            onClick={() => handleConnectMidi(interfaceName)}
-                            disabled={connectingInterfaces.has(interfaceName)}
-                            title={`Connect to ${interfaceName} - Enable MIDI data flow from this device`}
-                          >
-                            {connectingInterfaces.has(interfaceName) ? (
-                              <>
-                                <i className="fas fa-spinner fa-spin"></i>
-                                {theme !== 'minimal' && 'Connecting...'}
-                              </>
-                            ) : (
-                              <>
-                                <i className="fas fa-link"></i>
-                                {theme !== 'minimal' && 'Connect'}
-                              </>
-                            )}
-                          </button>
+                        {open && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 6 }}>
+                            {groups.map((group) => {
+                              const groupKey = `${bucket}:${group.baseName}`
+                              const expanded = expandedGroups.has(groupKey) || group.ports.length === 1
+                              const groupActive = group.ports.some((p) => activeInterfaces.includes(p))
+                              return (
+                                <div
+                                  key={groupKey}
+                                  style={{
+                                    border: '1px solid rgba(148, 163, 184, 0.15)',
+                                    borderRadius: 4,
+                                    background: 'rgba(0,0,0,0.15)',
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'space-between',
+                                      gap: 6,
+                                      padding: '0.35rem 0.5rem',
+                                      fontSize: '0.78rem',
+                                    }}
+                                  >
+                                    <button
+                                      type="button"
+                                      onClick={() => group.ports.length > 1 && toggleGroup(groupKey)}
+                                      style={{
+                                        flex: 1,
+                                        textAlign: 'left',
+                                        background: 'transparent',
+                                        border: 'none',
+                                        color: 'inherit',
+                                        cursor: group.ports.length > 1 ? 'pointer' : 'default',
+                                        padding: 0,
+                                        fontSize: '0.78rem',
+                                      }}
+                                    >
+                                      {group.ports.length > 1 && (
+                                        <i className={`fas fa-chevron-${expanded ? 'down' : 'right'}`} style={{ marginRight: 6, fontSize: '0.65rem', opacity: 0.7 }} />
+                                      )}
+                                      <span style={{ fontWeight: 600 }}>{group.baseName}</span>
+                                      {group.ports.length > 1 && (
+                                        <span style={{
+                                          marginLeft: 8,
+                                          fontSize: '0.65rem',
+                                          padding: '0.05rem 0.4rem',
+                                          borderRadius: 999,
+                                          background: 'rgba(148, 163, 184, 0.25)',
+                                        }}>
+                                          ×{group.ports.length}
+                                        </span>
+                                      )}
+                                    </button>
+                                    {group.ports.length === 1 && (() => {
+                                      const interfaceName = group.ports[0]
+                                      const isActive = activeInterfaces.includes(interfaceName)
+                                      return (
+                                        <div className={styles.interfaceActions}>
+                                          {isActive ? (
+                                            <button
+                                              className={`${styles.actionButton} ${styles.disconnectButton}`}
+                                              onClick={() => handleDisconnectMidi(interfaceName)}
+                                              title={`Disconnect ${interfaceName}`}
+                                            >
+                                              <i className="fas fa-unlink"></i>
+                                              {theme !== 'minimal' && 'Disconnect'}
+                                            </button>
+                                          ) : (
+                                            <button
+                                              className={`${styles.actionButton} ${styles.connectButton}`}
+                                              onClick={() => handleConnectMidi(interfaceName)}
+                                              disabled={connectingInterfaces.has(interfaceName)}
+                                              title={`Connect ${interfaceName}`}
+                                            >
+                                              {connectingInterfaces.has(interfaceName) ? (
+                                                <><i className="fas fa-spinner fa-spin"></i>{theme !== 'minimal' && 'Connecting...'}</>
+                                              ) : (
+                                                <><i className="fas fa-link"></i>{theme !== 'minimal' && 'Connect'}</>
+                                              )}
+                                            </button>
+                                          )}
+                                        </div>
+                                      )
+                                    })()}
+                                    {group.ports.length > 1 && (
+                                      <span style={{
+                                        fontSize: '0.65rem',
+                                        color: groupActive ? 'rgba(187,247,208,0.95)' : 'rgba(148,163,184,0.8)',
+                                      }}>
+                                        {group.ports.filter((p) => activeInterfaces.includes(p)).length} of {group.ports.length} active
+                                      </span>
+                                    )}
+                                  </div>
+                                  {expanded && group.ports.length > 1 && (
+                                    <div style={{ borderTop: '1px solid rgba(148,163,184,0.1)' }}>
+                                      {group.ports.map((interfaceName) => {
+                                        const isActive = activeInterfaces.includes(interfaceName)
+                                        return (
+                                          <div key={interfaceName} className={styles.interfaceItem} style={{ paddingLeft: '1.4rem' }}>
+                                            <span className={styles.interfaceName}>{interfaceName}</span>
+                                            <span className={`${styles.interfaceStatus} ${isActive ? styles.active : ''}`}>
+                                              {isActive ? 'Connected' : 'Disconnected'}
+                                            </span>
+                                            <div className={styles.interfaceActions}>
+                                              {isActive ? (
+                                                <button
+                                                  className={`${styles.actionButton} ${styles.disconnectButton}`}
+                                                  onClick={() => handleDisconnectMidi(interfaceName)}
+                                                  title={`Disconnect ${interfaceName}`}
+                                                >
+                                                  <i className="fas fa-unlink"></i>
+                                                  {theme !== 'minimal' && 'Disconnect'}
+                                                </button>
+                                              ) : (
+                                                <button
+                                                  className={`${styles.actionButton} ${styles.connectButton}`}
+                                                  onClick={() => handleConnectMidi(interfaceName)}
+                                                  disabled={connectingInterfaces.has(interfaceName)}
+                                                  title={`Connect ${interfaceName}`}
+                                                >
+                                                  {connectingInterfaces.has(interfaceName) ? (
+                                                    <><i className="fas fa-spinner fa-spin"></i>{theme !== 'minimal' && 'Connecting...'}</>
+                                                  ) : (
+                                                    <><i className="fas fa-link"></i>{theme !== 'minimal' && 'Connect'}</>
+                                                  )}
+                                                </button>
+                                              )}
+                                            </div>
+                                          </div>
+                                        )
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
                         )}
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
 
                   <button
                     className={styles.refreshButton}
@@ -436,10 +632,8 @@ export const MidiOscSetup: React.FC = () => {
             onClick={() => setBrowserMidiExpanded((v) => !v)}
             aria-expanded={browserMidiExpanded}
           >
-            <h3 title="MIDI devices accessible through your web browser - requires Chrome/Edge and may have limited functionality">
-              {theme === 'artsnob' && 'Browser MIDI Interfaces: The Local Orchestrators'}
-              {theme === 'standard' && 'Browser MIDI Devices'}
-              {theme === 'minimal' && 'Browser MIDI'}
+            <h3 title="MIDI devices visible to the browser via Web MIDI">
+              Browser MIDI
             </h3>
             <span className={styles.cardHeaderMeta}>
               {browserInputs.length} found, {activeBrowserInputs.length} connected
@@ -448,13 +642,8 @@ export const MidiOscSetup: React.FC = () => {
           </button>
           {browserMidiExpanded && (
           <div className={styles.cardBody}>
-            <p className={styles.cardDescription}>
-              Browser MIDI uses the Web MIDI API to access devices directly in your browser.
-              Requires Chrome or Edge browser and may have limitations compared to server interfaces.
-              <br /><br />
-              <strong>Note:</strong> Browser MIDI connections are automatically saved and restored when you
-              navigate between pages. Server MIDI and Browser MIDI are separate systems - connecting one
-              does not automatically connect the other.
+            <p className={styles.cardDescription} style={{ fontSize: '0.78rem', margin: '0 0 0.5rem' }}>
+              Web MIDI API — Chrome/Edge only. Connections auto-restore across navigation.
             </p>
             <div className={styles.interfaceList}>
               {!browserMidiSupported ? (
@@ -544,18 +733,22 @@ export const MidiOscSetup: React.FC = () => {
 
         {/* OSC Configuration Card */}
         <div className={styles.card}>
-          <div className={styles.cardHeader}>
-            <h3 title="Open Sound Control - network protocol for real-time audio/visual control between devices and applications">
-              {theme === 'artsnob' && 'OSC Configuration: Network Dialogue'}
-              {theme === 'standard' && 'OSC Configuration'}
-              {theme === 'minimal' && 'OSC'}
+          <button
+            type="button"
+            className={styles.cardHeaderToggle}
+            onClick={() => setOscExpanded((v) => !v)}
+            aria-expanded={oscExpanded}
+          >
+            <h3 title="Open Sound Control - network protocol for real-time control">
+              OSC
             </h3>
-          </div>          <div className={styles.cardBody}>
-            <p className={styles.cardDescription}>
-              OSC (Open Sound Control) enables bidirectional network communication between devices and applications.
-              Configure both receiving and sending settings for OSC integration.
-            </p>
-
+            <span className={styles.cardHeaderMeta}>
+              recv {oscConfig.host}:{oscConfig.port}{oscConfig.sendEnabled ? ` · send ${oscConfig.sendHost}:${oscConfig.sendPort}` : ' · send off'}
+            </span>
+            <i className={`fas fa-chevron-${oscExpanded ? 'up' : 'down'}`} />
+          </button>
+          {oscExpanded && (
+          <div className={styles.cardBody}>
             <h4>OSC Receiving (Incoming Messages)</h4>
             <div className={styles.formGroup}>
               <label htmlFor="oscHost" title="IP address where OSC messages will be received. Use 127.0.0.1 for local connections or your network IP for remote devices">
@@ -747,6 +940,7 @@ export const MidiOscSetup: React.FC = () => {
               )}
             </div>
           </div>
+          )}
         </div>
 
         {/* MIDI Mappings Card */}
@@ -877,6 +1071,11 @@ export const MidiOscSetup: React.FC = () => {
         {/* APC40 Demoscene easter egg — LED animations for the clip grid */}
         <div className={styles.card} style={{ gridColumn: '1 / -1' }}>
           <Apc40Demoscene />
+        </div>
+
+        {/* ROLI debug + diagnostics — surfaces handshake state, touch readout, SysEx ring */}
+        <div className={styles.card} style={{ gridColumn: '1 / -1', padding: '0.75rem' }}>
+          <RoliDebugPanel />
         </div>
 
         {/* APC40 Manual Card */}

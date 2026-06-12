@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { LucideIcon } from '../ui/LucideIcon';
 import smx from './SmxSuperPanel.module.scss';
 import { getRoliDevices, type RoliDeviceInfo } from '../../engines/roliLightpad';
+import { bucketFor, BUCKET_LABELS, BUCKET_ORDER, type MidiBucket } from '../../midi/midiInterfaceGrouping';
 
 interface MidiInputDevice {
   id: string;
@@ -18,45 +19,14 @@ interface DmxMidiConnectionsProps {
   onDisconnectMidiDevice: (inputId: string) => void;
 }
 
-type DeviceCategory = 'lighting' | 'daw' | 'network' | 'other';
-
-const CATEGORY_LABEL: Record<DeviceCategory, string> = {
-  lighting: 'Lighting Controllers',
-  daw: 'DAW & Loopback',
-  network: 'Network MIDI',
-  other: 'Other Inputs',
-};
-
-const CATEGORY_ORDER: DeviceCategory[] = ['lighting', 'daw', 'network', 'other'];
+// Shared with MidiOscSetup → groupMidiInterfaces. Keep ordering identical so
+// users see the same hierarchy in both places.
+type DeviceCategory = MidiBucket;
+const CATEGORY_LABEL: Record<DeviceCategory, string> = BUCKET_LABELS;
+const CATEGORY_ORDER: DeviceCategory[] = BUCKET_ORDER;
 
 function categorize(name: string): DeviceCategory {
-  const n = (name || '').toLowerCase();
-  if (
-    n.includes('roli') ||
-    n.includes('lightpad') ||
-    n.includes('seaboard') ||
-    n.includes('block') ||
-    n.includes('apc') ||
-    n.includes('launch') ||
-    n.includes('x-touch') ||
-    n.includes('xtouch') ||
-    n.includes('mackie')
-  ) return 'lighting';
-  if (
-    n.includes('loopmidi') ||
-    n.includes('loopback') ||
-    n.includes('iac') ||
-    n.includes('virtual') ||
-    n.includes('loop midi')
-  ) return 'daw';
-  if (
-    n.includes('rtp') ||
-    n.includes('network') ||
-    n.includes('ethernet') ||
-    n.includes('bonjour') ||
-    n.includes('udp')
-  ) return 'network';
-  return 'other';
+  return bucketFor(name);
 }
 
 function labelForRoli(name: string, devices: RoliDeviceInfo[]): string | null {
@@ -101,15 +71,13 @@ export const DmxMidiConnections: React.FC<DmxMidiConnectionsProps> = ({
 }) => {
   const [expanded, setExpanded] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState<Record<DeviceCategory, boolean>>(() => {
-    if (typeof window === 'undefined') {
-      return { lighting: true, daw: true, network: true, other: true };
-    }
-    const next: Record<DeviceCategory, boolean> = { lighting: true, daw: true, network: true, other: true };
+    const defaults: Record<DeviceCategory, boolean> = { hardware: true, virtual: true, network: true, other: true };
+    if (typeof window === 'undefined') return defaults;
     for (const cat of CATEGORY_ORDER) {
       const raw = window.localStorage.getItem(`midi-group-open:${cat}`);
-      if (raw === '0') next[cat] = false;
+      if (raw === '0') defaults[cat] = false;
     }
-    return next;
+    return defaults;
   });
   const toggleCategory = (cat: DeviceCategory) => {
     setCategoryOpen((prev) => {
@@ -132,8 +100,8 @@ export const DmxMidiConnections: React.FC<DmxMidiConnectionsProps> = ({
 
   const grouped = useMemo(() => {
     const groups: Record<DeviceCategory, MidiInputDevice[]> = {
-      lighting: [],
-      daw: [],
+      hardware: [],
+      virtual: [],
       network: [],
       other: [],
     };

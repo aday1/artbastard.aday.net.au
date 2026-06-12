@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { LucideIcon } from '../ui/LucideIcon';
 import { ResizableFloatingPanel } from '../ui/ResizableFloatingPanel';
 import { useStore } from '../../store';
+import { useMonitorAutoPop } from '../../hooks/useMonitorAutoPop';
 import styles from '../midi/MidiMonitor.module.scss';
 import dmxStyles from './DmxMonitor.module.scss';
 import { describeApc40DmxSource, narrateDmxChange } from './dmxActivityNarration';
@@ -41,8 +42,6 @@ export const DmxMonitor: React.FC = () => {
     ].filter(Boolean).join(' · ') || undefined,
   }));
   const [messages, setMessages] = useState<DmxActivityMessage[]>([]);
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [flashActive, setFlashActive] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
   const [scrollback, setScrollback] = useState<number>(() => {
@@ -50,18 +49,21 @@ export const DmxMonitor: React.FC = () => {
     return saved ? parseInt(saved, 10) : 100;
   });
   const [editingScrollback, setEditingScrollback] = useState(false);
-  const [isDismissed, setIsDismissed] = useState(() => localStorage.getItem('dmxMonitorDismissed') === 'true');
   const previousChannelsRef = useRef<number[] | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const handleResetLayout = () => {
-      setIsDismissed(false);
-      localStorage.removeItem('dmxMonitorDismissed');
-    };
-    window.addEventListener('resetLayout', handleResetLayout);
-    return () => window.removeEventListener('resetLayout', handleResetLayout);
-  }, []);
+  // Minimised by default; first signal auto-expands + flashes unless the
+  // user has manually collapsed/dismissed.
+  const {
+    isCollapsed,
+    isDismissed,
+    flashActive,
+    setCollapsedByUser,
+    dismissByUser,
+    triggerFlash,
+  } = useMonitorAutoPop({ key: 'dmxMonitor', hasSignal: messages.length > 0 });
+
+  const handleDismiss = dismissByUser;
 
   useEffect(() => {
     const previous = previousChannelsRef.current;
@@ -106,8 +108,7 @@ export const DmxMonitor: React.FC = () => {
 
     if (updates.length > 0) {
       setMessages(prev => mergeDmxActivityMessages(prev, updates));
-      setFlashActive(true);
-      window.setTimeout(() => setFlashActive(false), 200);
+      triggerFlash();
     }
   }, [dmxChannels, channelNames, fixtures, groups, selectedFixtures, latestMidiMessage, deviceRoleLabels, lastApc40Change, activeAutomationSource, isPaused]);
 
@@ -122,11 +123,6 @@ export const DmxMonitor: React.FC = () => {
   }
 
   const displayedMessages = messages.slice(-scrollback);
-
-  const handleDismiss = () => {
-    setIsDismissed(true);
-    localStorage.setItem('dmxMonitorDismissed', 'true');
-  };
 
   const clearMessages = () => {
     setMessages([]);
@@ -205,7 +201,7 @@ export const DmxMonitor: React.FC = () => {
             <button onClick={clearMessages} title="Clear messages">
               <LucideIcon name="Trash2" size={14} />
             </button>
-            <button onClick={() => setIsCollapsed(!isCollapsed)} title={isCollapsed ? 'Expand' : 'Collapse'}>
+            <button onClick={() => setCollapsedByUser(!isCollapsed)} title={isCollapsed ? 'Expand' : 'Collapse'}>
               <LucideIcon name={isCollapsed ? 'ChevronUp' : 'ChevronDown'} size={14} />
             </button>
             <button onClick={handleDismiss} title="Dismiss monitor" className={styles.dismissButton}>

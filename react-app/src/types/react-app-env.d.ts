@@ -42,3 +42,13 @@ declare module '../../context/SocketContext' {
   export const useSocket: () => SocketContextType;
   export const SocketProvider: React.FC<{ children: React.ReactNode }>;
 }
+
+// Vite raw imports for hand-edited YAML data files.
+declare module '*.yml?raw' {
+  const src: string;
+  export default src;
+}
+declare module '*.yaml?raw' {
+  const src: string;
+  export default src;
+}

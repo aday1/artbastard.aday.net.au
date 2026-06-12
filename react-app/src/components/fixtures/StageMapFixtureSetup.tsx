@@ -875,9 +875,14 @@ export const StageMapFixtureSetup: React.FC = () => {
                   style={{ ['--fixture-accent' as any]: color }}
                 >
                   {template.photoUrl ? (
-                    <HoverZoomImage src={template.photoUrl} alt={template.templateName} zoomSize={240} />
+                    <HoverZoomImage
+                      src={template.photoUrl}
+                      alt={template.templateName}
+                      className={styles.templateIcon}
+                      zoomSize={320}
+                    />
                   ) : (
-                    <span className={styles.templateIcon}><LucideIcon name={icon} size={18} /></span>
+                    <span className={styles.templateIcon}><LucideIcon name={icon} size={48} /></span>
                   )}
                   <span>
                     <strong>{template.templateName}</strong>
@@ -951,7 +956,18 @@ export const StageMapFixtureSetup: React.FC = () => {
                     onContextMenu={(event) => handleFixtureContextMenu(event, fixture.id)}
                     title={`${fixture.name} DMX ${fixture.startAddress}-${fixtureEndAddress(fixture)}`}
                   >
-                    <span className={styles.nodeIcon}><LucideIcon name={icon} size={18} /></span>
+                    {fixture.photoUrl ? (
+                      <img
+                        className={styles.nodeIcon}
+                        src={fixture.photoUrl}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        draggable={false}
+                      />
+                    ) : (
+                      <span className={styles.nodeIcon}><LucideIcon name={icon} size={28} /></span>
+                    )}
                     <span className={styles.nodeName}>{fixture.name}</span>
                     <span className={styles.nodeAddress}>{fixture.startAddress}-{fixtureEndAddress(fixture)}</span>
                     {fixtureGroups.length > 0 && (

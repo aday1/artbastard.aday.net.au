@@ -40,6 +40,10 @@ export interface RoliDeviceInfo {
   outputName: string | null;
   handshakeDone: boolean;
   role: RoliRole;
+  lastX: number;
+  lastY: number;
+  lastZ: number;
+  isTouching: boolean;
 }
 
 export type RoliTouchCallback = (ev: RoliTouchEvent) => void;
@@ -47,7 +51,7 @@ export type RoliDeviceChangeCallback = (devices: RoliDeviceInfo[]) => void;
 export type RoliHandshakeCallback = (deviceId: string, done: boolean) => void;
 
 interface DeviceState {
-  deviceId: string; // == output name (canonical), or input name if no output
+  deviceId: string; // stable id from MIDIPort.id (falls back to port name)
   input: WebMidi.MIDIInput | null;
   output: WebMidi.MIDIOutput | null;
   inputName: string | null;
@@ -64,6 +68,21 @@ interface DeviceState {
   lastZ: number;
   isTouching: boolean;
   needsFullRepaint: boolean;
+  // ACK-driven handshake state. Reference: blocks-playground BlocksDevice.js:234-320.
+  ackResolver: (() => void) | null;
+  ackRejecter: ((err: Error) => void) | null;
+  ackTimer: number | null;
+  lastAckedCounter: number;
+  pingTimer: number | null;
+}
+
+export type RoliDebugKind = 'tx' | 'rx' | 'ack' | 'handshake' | 'error';
+export interface RoliDebugEvent {
+  ts: number;
+  kind: RoliDebugKind;
+  deviceId: string;
+  bytes?: number[];
+  note?: string;
 }
 
 interface EngineState {
@@ -81,6 +100,31 @@ const engine: EngineState = {
   onDevice: null,
   onHandshake: null,
 };
+
+// Debug ring buffer — TX/ACK/handshake/error events for the RoliDebugPanel.
+// Capacity is intentionally small (high-frequency touch events are NOT pushed).
+const DEBUG_RING_CAPACITY = 60;
+const debugRing: RoliDebugEvent[] = [];
+const debugSubs = new Set<(events: RoliDebugEvent[]) => void>();
+
+function pushDebugEvent(ev: RoliDebugEvent): void {
+  debugRing.push(ev);
+  while (debugRing.length > DEBUG_RING_CAPACITY) debugRing.shift();
+  if (debugSubs.size === 0) return;
+  const snapshot = debugRing.slice();
+  debugSubs.forEach((fn) => {
+    try { fn(snapshot); } catch { /* listener errors must not break engine */ }
+  });
+}
+
+export function getRoliDebugLog(): RoliDebugEvent[] {
+  return debugRing.slice();
+}
+
+export function subscribeRoliDebugLog(cb: (events: RoliDebugEvent[]) => void): () => void {
+  debugSubs.add(cb);
+  return () => { debugSubs.delete(cb); };
+}
 
 function loadRoleAssignments(): Record<string, RoliRole> {
   if (typeof localStorage === 'undefined') return {};
@@ -122,6 +166,11 @@ function newDeviceState(deviceId: string, role: RoliRole): DeviceState {
     lastZ: 0,
     isTouching: false,
     needsFullRepaint: false,
+    ackResolver: null,
+    ackRejecter: null,
+    ackTimer: null,
+    lastAckedCounter: -1,
+    pingTimer: null,
   };
 }
 
@@ -192,12 +241,19 @@ function buildBlockSysEx(deviceIndex: number, payload: number[]): Uint8Array {
   return d;
 }
 
-function sendSysExTo(dev: DeviceState, payload: number[]): void {
+function sendSysExTo(dev: DeviceState, payload: number[], note?: string): void {
   if (!dev.output) return;
   try {
     dev.output.send(buildBlockSysEx(DEVICE_INDEX, payload));
-  } catch {
+    pushDebugEvent({ ts: Date.now(), kind: 'tx', deviceId: dev.deviceId, bytes: payload, note });
+  } catch (err) {
     dev.ledFailCount++;
+    pushDebugEvent({
+      ts: Date.now(),
+      kind: 'error',
+      deviceId: dev.deviceId,
+      note: `tx failed: ${(err as Error).message || 'unknown'}`,
+    });
   }
 }
 
@@ -381,29 +437,101 @@ function parseDump(hex: string): number[] {
   return hex.trim().split(/\s+/).map((h) => parseInt(h, 16));
 }
 
-function doHandshake(dev: DeviceState): void {
+/**
+ * ACK-driven handshake (ported from blocks-playground BlocksDevice.js:372-423).
+ * Each SysEx step awaits a packetACK (msg type 0x02) from the device before
+ * proceeding; without this the LED pipeline races ahead and the pad stays dark.
+ */
+function waitForDeviceAck(dev: DeviceState, timeoutMs = 800): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (dev.ackTimer != null) {
+      window.clearTimeout(dev.ackTimer);
+      dev.ackTimer = null;
+    }
+    dev.ackResolver = resolve;
+    dev.ackRejecter = reject;
+    dev.ackTimer = window.setTimeout(() => {
+      const r = dev.ackRejecter;
+      dev.ackResolver = null;
+      dev.ackRejecter = null;
+      dev.ackTimer = null;
+      r?.(new Error('ack timeout'));
+    }, timeoutMs);
+  });
+}
+
+function clearPingTimer(dev: DeviceState): void {
+  if (dev.pingTimer != null) {
+    window.clearInterval(dev.pingTimer);
+    dev.pingTimer = null;
+  }
+}
+
+function startPingTimer(dev: DeviceState): void {
+  clearPingTimer(dev);
+  // Reference ping interval is 500ms (BlocksDevice.js:395). Without periodic
+  // ping the block stops processing commands after a few seconds of silence.
+  dev.pingTimer = window.setInterval(() => {
+    if (!dev.output || !dev.handshakeDone) return;
+    sendSysExTo(dev, [0x01, 0x03, 0x00], 'ping');
+  }, 500);
+}
+
+async function doHandshake(dev: DeviceState): Promise<void> {
   if (!dev.output) return;
-  sendSysExTo(dev, [0x01, 0x02, 0x00]);
-  sendSysExTo(dev, [0x01, 0x00, 0x00]);
-  setTimeout(() => {
-    sendSysExTo(dev, [0x01, 0x00, 0x00]);
-    sendSysExTo(dev, [0x01, 0x03, 0x00]);
-    sendSysExTo(dev, [0x10, 0x02]);
-    setTimeout(() => {
-      sendSysExTo(dev, [0x01, 0x03, 0x00]);
-      sendSysExTo(dev, parseDump(BITMAP_LED_DUMP_1));
-      sendSysExTo(dev, parseDump(BITMAP_LED_DUMP_2));
-      setTimeout(() => {
-        sendSysExTo(dev, [0x01, 0x05, 0x00]);
-        dev.handshakeDone = true;
-        dev.packetCounter = 1;
-        dev.prevLedData = new Uint8Array(LED_BYTE_COUNT);
-        dev.needsFullRepaint = true;
-        engine.onHandshake?.(dev.deviceId, true);
-        notifyDeviceChange();
-      }, 100);
-    }, 100);
-  }, 100);
+  clearPingTimer(dev);
+  dev.handshakeDone = false;
+  pushDebugEvent({ ts: Date.now(), kind: 'handshake', deviceId: dev.deviceId, note: 'begin' });
+  try {
+    sendSysExTo(dev, [0x01, 0x02, 0x00], 'endAPIMode');
+    sendSysExTo(dev, [0x01, 0x00, 0x00], 'beginAPIMode');
+    await waitForDeviceAck(dev);
+
+    sendSysExTo(dev, [0x01, 0x00, 0x00], 'beginAPIMode (re-send)');
+    await waitForDeviceAck(dev);
+
+    sendSysExTo(dev, [0x01, 0x03, 0x00], 'ping');
+    await waitForDeviceAck(dev);
+
+    sendSysExTo(dev, [0x10, 0x02], 'configMessage midiUseMPE');
+    await waitForDeviceAck(dev);
+
+    sendSysExTo(dev, [0x01, 0x03, 0x00], 'ping');
+    await waitForDeviceAck(dev);
+
+    sendSysExTo(dev, parseDump(BITMAP_LED_DUMP_1), 'bitmap dump 1');
+    sendSysExTo(dev, parseDump(BITMAP_LED_DUMP_2), 'bitmap dump 2');
+    dev.packetCounter = 3; // reference BlocksDevice.js:411
+    await waitForDeviceAck(dev);
+
+    sendSysExTo(dev, [0x01, 0x05, 0x00], 'saveProgramAsDefault');
+    await waitForDeviceAck(dev);
+
+    dev.handshakeDone = true;
+    dev.prevLedData = new Uint8Array(LED_BYTE_COUNT);
+    dev.needsFullRepaint = true;
+    pushDebugEvent({ ts: Date.now(), kind: 'handshake', deviceId: dev.deviceId, note: 'done' });
+    startPingTimer(dev);
+    engine.onHandshake?.(dev.deviceId, true);
+    notifyDeviceChange();
+  } catch (err) {
+    dev.handshakeDone = false;
+    pushDebugEvent({
+      ts: Date.now(),
+      kind: 'error',
+      deviceId: dev.deviceId,
+      note: `handshake failed: ${(err as Error).message || 'unknown'}`,
+    });
+    engine.onHandshake?.(dev.deviceId, false);
+    notifyDeviceChange();
+  }
+}
+
+export function forceRoliHandshake(deviceId: string): boolean {
+  const dev = engine.devices.get(deviceId);
+  if (!dev || !dev.output) return false;
+  void doHandshake(dev);
+  return true;
 }
 
 function read7BitBits(data: Uint8Array, bitPos: number, numBits: number): number {
@@ -436,6 +564,31 @@ function parseRoliTouchSysex(dev: DeviceState, data: Uint8Array): void {
   if (data.length < 8) return;
   const msgData = data.subarray(5, data.length - 2);
   let bitPos = 39;
+  // First message in the packet — may be an ACK rather than touch.
+  const firstType = read7BitBits(msgData, bitPos, 7);
+  if (firstType === 0x02) {
+    // packetACK: next field is 10-bit packetCounter (reference: DeviceAckMessage).
+    bitPos += 7;
+    const ackedCounter = read7BitBits(msgData, bitPos, 10);
+    dev.lastAckedCounter = ackedCounter;
+    pushDebugEvent({
+      ts: Date.now(),
+      kind: 'ack',
+      deviceId: dev.deviceId,
+      note: `counter=${ackedCounter}`,
+    });
+    if (dev.ackResolver) {
+      if (dev.ackTimer != null) {
+        window.clearTimeout(dev.ackTimer);
+        dev.ackTimer = null;
+      }
+      const r = dev.ackResolver;
+      dev.ackResolver = null;
+      dev.ackRejecter = null;
+      r();
+    }
+    return;
+  }
   while (bitPos + 7 <= msgData.length * 7) {
     const msgType = read7BitBits(msgData, bitPos, 7);
     bitPos += 7;
@@ -549,15 +702,16 @@ function refreshAndAutoMap(): void {
     if (isRoliblockLike(out.name || '')) outputs.push(out);
   });
 
-  // Canonical device id = output port name (the LED target). Fall back to
-  // input name for input-only enumerations. Pair input + output by exact name
-  // match first, then by trimmed name (Windows sometimes appends/strips spaces).
+  // Stable id = MIDIPort.id (unique per physical port even when names collide,
+  // which Windows does when two ROLI blocks are plugged in). Falls back to the
+  // trimmed port name on platforms that don't expose ids.
   const matchedOutputs = new Set<WebMidi.MIDIOutput>();
   const newIds = new Set<string>();
+  const usedInputs = new Set<WebMidi.MIDIInput>();
 
   for (const out of outputs) {
     const outName = out.name || '';
-    const id = outName.trim() || `roli-${matchedOutputs.size}`;
+    const id = out.id || outName.trim() || `roli-out-${matchedOutputs.size}`;
     newIds.add(id);
     matchedOutputs.add(out);
 
@@ -574,15 +728,18 @@ function refreshAndAutoMap(): void {
       dev.outputName = outName;
       dev.handshakeDone = false;
       dev.ledFailCount = 0;
-      doHandshake(dev);
+      void doHandshake(dev);
     }
 
-    // Pair this device with the input whose name matches best.
+    // Pair this output with an input. Prefer exact-id match (Web MIDI gives
+    // paired input/output the same id on most platforms), then name match,
+    // then positional fallback. Skip inputs already claimed by another device.
     const matchedInput =
-      inputs.find((i) => (i.name || '').trim() === id) ||
-      inputs.find((i) => isRoliblockLike(i.name || '') && !engine.devices.has((i.name || '').trim())) ||
-      inputs[outputs.indexOf(out)] ||
+      inputs.find((i) => !usedInputs.has(i) && i.id === out.id) ||
+      inputs.find((i) => !usedInputs.has(i) && (i.name || '').trim() === outName.trim()) ||
+      inputs.find((i) => !usedInputs.has(i)) ||
       null;
+    if (matchedInput) usedInputs.add(matchedInput);
     if (matchedInput && dev.input !== matchedInput) {
       if (dev.input) dev.input.onmidimessage = null;
       dev.input = matchedInput;
@@ -593,17 +750,18 @@ function refreshAndAutoMap(): void {
 
   // Input-only devices (no LED output but still a touch source)
   for (const inp of inputs) {
+    if (usedInputs.has(inp)) continue;
     const inName = (inp.name || '').trim();
-    if (!inName) continue;
-    if (newIds.has(inName)) continue;
-    let dev = engine.devices.get(inName);
+    const id = inp.id || inName || `roli-in-${newIds.size}`;
+    if (newIds.has(id)) continue;
+    let dev = engine.devices.get(id);
     if (!dev) {
-      const role = assignRoleForNewDevice(inName);
-      dev = newDeviceState(inName, role);
-      engine.devices.set(inName, dev);
-      persistRole(inName, role);
+      const role = assignRoleForNewDevice(id);
+      dev = newDeviceState(id, role);
+      engine.devices.set(id, dev);
+      persistRole(id, role);
     }
-    newIds.add(inName);
+    newIds.add(id);
     if (dev.input !== inp) {
       if (dev.input) dev.input.onmidimessage = null;
       dev.input = inp;
@@ -617,6 +775,13 @@ function refreshAndAutoMap(): void {
     if (!newIds.has(id)) {
       const dev = engine.devices.get(id);
       if (dev?.input) dev.input.onmidimessage = null;
+      if (dev) {
+        clearPingTimer(dev);
+        if (dev.ackTimer != null) {
+          window.clearTimeout(dev.ackTimer);
+          dev.ackTimer = null;
+        }
+      }
       engine.devices.delete(id);
     }
   }
@@ -643,6 +808,11 @@ export async function connectRoliLightpad(): Promise<boolean> {
 export function disconnectRoliLightpad(): void {
   engine.devices.forEach((dev) => {
     if (dev.input) dev.input.onmidimessage = null;
+    clearPingTimer(dev);
+    if (dev.ackTimer != null) {
+      window.clearTimeout(dev.ackTimer);
+      dev.ackTimer = null;
+    }
   });
   engine.devices.clear();
   if (engine.midiAccess) engine.midiAccess.onstatechange = null;
@@ -671,6 +841,10 @@ export function getRoliDevices(): RoliDeviceInfo[] {
     outputName: d.outputName,
     handshakeDone: d.handshakeDone,
     role: d.role,
+    lastX: d.lastX,
+    lastY: d.lastY,
+    lastZ: d.lastZ,
+    isTouching: d.isTouching,
   }));
 }
 

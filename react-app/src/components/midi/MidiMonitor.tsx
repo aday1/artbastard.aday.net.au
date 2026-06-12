@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { LucideIcon } from '../ui/LucideIcon';
 import { ResizableFloatingPanel } from '../ui/ResizableFloatingPanel';
 import { useStore } from '../../store';
+import { useMonitorAutoPop } from '../../hooks/useMonitorAutoPop';
 import styles from './MidiMonitor.module.scss';
 
 export const MidiMonitor: React.FC = () => {
@@ -19,8 +20,6 @@ export const MidiMonitor: React.FC = () => {
     debugTools: state.debugTools
   }));
   const [lastMessages, setLastMessages] = useState<Array<any>>([]);
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [flashActive, setFlashActive] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
   const [hoveredMessage, setHoveredMessage] = useState<any | null>(null);
@@ -30,10 +29,6 @@ export const MidiMonitor: React.FC = () => {
     return saved ? parseInt(saved, 10) : 100;
   });
   const [editingScrollback, setEditingScrollback] = useState(false);
-  const [isDismissed, setIsDismissed] = useState(() => {
-    const saved = localStorage.getItem('midiMonitorDismissed');
-    return saved === 'true';
-  });
   const [filterSource, setFilterSource] = useState<string>(() => {
     const saved = localStorage.getItem('midiMonitorFilterSource');
     return saved || 'all'; // 'all' means show all sources
@@ -43,20 +38,18 @@ export const MidiMonitor: React.FC = () => {
   const monitorRef = useRef<HTMLDivElement>(null);
   const lastMessageCountRef = useRef<number>(0);
 
-  // Listen for reset layout event
-  useEffect(() => {
-    const handleResetLayout = () => {
-      setIsDismissed(false);
-      localStorage.removeItem('midiMonitorDismissed');
-    };
-    window.addEventListener('resetLayout', handleResetLayout);
-    return () => window.removeEventListener('resetLayout', handleResetLayout);
-  }, []);
+  // Minimised by default; first signal auto-expands + flashes unless the
+  // user has manually collapsed/dismissed.
+  const {
+    isCollapsed,
+    isDismissed,
+    flashActive,
+    setCollapsedByUser,
+    dismissByUser,
+    triggerFlash,
+  } = useMonitorAutoPop({ key: 'midiMonitor', hasSignal: midiMessages.length > 0 });
 
-  const handleDismiss = () => {
-    setIsDismissed(true);
-    localStorage.setItem('midiMonitorDismissed', 'true');
-  };
+  const handleDismiss = dismissByUser;
 
   // Find which DMX channel(s) a MIDI message affects
   const getDmxChannelsForMidiMessage = (msg: any): Array<{ channel: number; name: string; value: number }> => {
@@ -158,8 +151,7 @@ export const MidiMonitor: React.FC = () => {
         setTimeout(scrollToBottom, 10);
       });
       
-      setFlashActive(true);
-      setTimeout(() => setFlashActive(false), 200);
+      triggerFlash();
     } else if (!autoScroll && hasNewMessages) {
       // If auto-scroll is disabled but new messages arrived, check if user is near bottom
       // If so, re-enable auto-scroll
@@ -327,8 +319,8 @@ export const MidiMonitor: React.FC = () => {
             </button>
           </>
         )}
-        <button 
-          onClick={() => setIsCollapsed(!isCollapsed)} 
+        <button
+          onClick={() => setCollapsedByUser(!isCollapsed)}
           onPointerDown={e => e.stopPropagation()}
           title={isCollapsed ? "Expand" : "Minimize"}
         >

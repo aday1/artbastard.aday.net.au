@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { LucideIcon } from '../ui/LucideIcon';
 import { ResizableFloatingPanel } from '../ui/ResizableFloatingPanel';
 import { useStore } from '../../store';
+import { useMonitorAutoPop } from '../../hooks/useMonitorAutoPop';
 import styles from './OscMonitor.module.scss';
 import { useSocket } from '../../context/SocketContext';
 import { OscMessage } from '../../store';
@@ -11,8 +12,6 @@ export const OscMonitor: React.FC = () => {
   const debugTools = useStore(state => state.debugTools);
   const addOscMessageToStore = useStore(state => state.addOscMessage);
   const [lastMessages, setLastMessages] = useState<Array<OscMessage>>([]);
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [flashActive, setFlashActive] = useState(false);
   const [hoveredMessage, setHoveredMessage] = useState<OscMessage | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isPaused, setIsPaused] = useState(false);
@@ -21,10 +20,6 @@ export const OscMonitor: React.FC = () => {
     return saved ? parseInt(saved, 10) : 100;
   });
   const [editingScrollback, setEditingScrollback] = useState(false);
-  const [isDismissed, setIsDismissed] = useState(() => {
-    const saved = localStorage.getItem('oscMonitorDismissed');
-    return saved === 'true';
-  });
   const [filterHost, setFilterHost] = useState<string>(() => {
     const saved = localStorage.getItem('oscMonitorFilterHost');
     return saved || 'all'; // 'all' means show all hosts
@@ -33,15 +28,16 @@ export const OscMonitor: React.FC = () => {
   const { socket, connected: socketConnected } = useSocket();
   const monitorRef = useRef<HTMLDivElement>(null);
 
-  // Listen for reset layout event
-  useEffect(() => {
-    const handleResetLayout = () => {
-      setIsDismissed(false);
-      localStorage.removeItem('oscMonitorDismissed');
-    };
-    window.addEventListener('resetLayout', handleResetLayout);
-    return () => window.removeEventListener('resetLayout', handleResetLayout);
-  }, []);
+  // Minimised by default; first signal auto-expands + flashes unless the
+  // user has manually collapsed/dismissed.
+  const {
+    isCollapsed,
+    isDismissed,
+    flashActive,
+    setCollapsedByUser,
+    dismissByUser,
+    triggerFlash,
+  } = useMonitorAutoPop({ key: 'oscMonitor', hasSignal: oscMessagesFromStore.length > 0 });
 
   // Throttling for OSC messages to reduce lag
   const lastOscMessageTimeRef = useRef<number>(0);
@@ -71,8 +67,7 @@ export const OscMonitor: React.FC = () => {
           addOscMessageToStore(message);
           lastOscMessageTimeRef.current = now;
           pendingOscMessageRef.current = null;
-          setFlashActive(true);
-          setTimeout(() => setFlashActive(false), 200);
+          triggerFlash();
         } else {
           // Too soon - schedule a throttled store update
           oscThrottleTimeoutRef.current = setTimeout(() => {
@@ -83,8 +78,7 @@ export const OscMonitor: React.FC = () => {
               if (messageAge < MAX_OSC_MESSAGE_AGE_MS) {
                 addOscMessageToStore(pending);
                 lastOscMessageTimeRef.current = Date.now();
-                setFlashActive(true);
-                setTimeout(() => setFlashActive(false), 200);
+                triggerFlash();
               } else {
                 // Message too old - discard it
                 console.log(`[OscMonitor] Discarding stale OSC message (${messageAge}ms old)`);
@@ -106,7 +100,7 @@ export const OscMonitor: React.FC = () => {
         pendingOscMessageRef.current = null;
       };
     }
-  }, [socket, socketConnected, addOscMessageToStore, isPaused]);
+  }, [socket, socketConnected, addOscMessageToStore, isPaused, triggerFlash]);
 
   const contentRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -179,10 +173,7 @@ export const OscMonitor: React.FC = () => {
     }
   }, [oscMessagesFromStore.length, autoScroll]);
 
-  const handleDismiss = () => {
-    setIsDismissed(true);
-    localStorage.setItem('oscMonitorDismissed', 'true');
-  };
+  const handleDismiss = dismissByUser;
 
   const handleMouseEnter = (msg: OscMessage, event: React.MouseEvent) => {
     setHoveredMessage(msg);
@@ -342,8 +333,8 @@ export const OscMonitor: React.FC = () => {
             </button>
           </>
         )}
-        <button 
-          onClick={() => setIsCollapsed(!isCollapsed)} 
+        <button
+          onClick={() => setCollapsedByUser(!isCollapsed)}
           onPointerDown={e => e.stopPropagation()}
           title={isCollapsed ? "Expand" : "Minimize"}
         >
