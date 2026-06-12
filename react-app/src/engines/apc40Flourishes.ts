@@ -151,17 +151,31 @@ async function runFixtureSelect(opts: FlourishOpts) {
   if (outs.length === 0) return;
   const col = (opts.column ?? Math.floor(Math.random() * COLS)) % COLS;
   const v = colorValue(opts.color ?? 'green');
-  const tickMs = 80;
-  const duration = opts.durationMs ?? 600;
+  const tickMs = 70;
+  const duration = opts.durationMs ?? 720;
+  // Spread the sweep across 3 adjacent columns (centred on `col`) so a
+  // fixture-select flourish reads as a wider shimmer instead of a single
+  // vertical line. Each neighbour column is offset by one row so the wave
+  // cascades diagonally outward.
+  const cols: Array<{ c: number; offset: number }> = [];
+  for (let dc = -1; dc <= 1; dc++) {
+    const c = col + dc;
+    if (c < 0 || c >= COLS) continue;
+    cols.push({ c, offset: Math.abs(dc) });
+  }
   const touched: Array<[number, number]> = [];
   track(
     outs,
     duration,
     tickMs,
     (f) => {
-      const r = f % ROWS;
-      for (const out of outs) sendNoteOn(out, col, CLIP_ROW_BASE + r, v);
-      touched.push([r, col]);
+      for (const out of outs) {
+        for (const { c, offset } of cols) {
+          const r = ((f + offset) % ROWS + ROWS) % ROWS;
+          sendNoteOn(out, c, CLIP_ROW_BASE + r, v);
+          touched.push([r, c]);
+        }
+      }
     },
     () => blankCells(outs, touched),
   );
