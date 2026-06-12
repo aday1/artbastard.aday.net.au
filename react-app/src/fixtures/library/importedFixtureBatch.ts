@@ -231,6 +231,7 @@ export const smallMovingHeadSpot: FixtureLibraryEntry = {
   category: 'Moving head / Small spot with colour and gobos',
   manufacturer: 'Generic',
   modelConfidence: 'unknown',
+  photoUrl: '/fixtures/ab-fix-005-small-moving-head-spot-lineart.png',
   documentationPath: 'DOCS/fixtures/AB-FIX-005-small-moving-head-spot.md',
   notes:
     'Manual-only small moving head profile. The source page is incomplete and broken English; ambiguous macro rows are preserved conservatively.',

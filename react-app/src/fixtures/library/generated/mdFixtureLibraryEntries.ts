@@ -42,6 +42,112 @@ export const mdFixtureLibraryEntries: FixtureLibraryEntry[] = [
     "notes": "Canonical fallback profile for a single DMX dimmer or intensity-only fixture."
   },
   {
+    "id": "led-bar-wash-24",
+    "catalogId": "AB-FIX-013",
+    "name": "24-LED Bar Wash",
+    "defaultNamePrefix": "LED Bar",
+    "type": "RGBW Wash",
+    "category": "LED Effect / Bar wash",
+    "manufacturer": "Generic",
+    "modes": [
+      {
+        "name": "7-channel mode",
+        "channels": 7,
+        "channelData": [
+          {
+            "name": "Dimmer",
+            "type": "dimmer",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "0-100% master dimmer"
+              }
+            ]
+          },
+          {
+            "name": "Red",
+            "type": "red",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "0-100% red"
+              }
+            ]
+          },
+          {
+            "name": "Green",
+            "type": "green",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "0-100% green"
+              }
+            ]
+          },
+          {
+            "name": "Blue",
+            "type": "blue",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "0-100% blue"
+              }
+            ]
+          },
+          {
+            "name": "White",
+            "type": "white",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "0-100% white"
+              }
+            ]
+          },
+          {
+            "name": "Strobe",
+            "type": "strobe",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "0=open, ramp = slow to fast"
+              }
+            ]
+          },
+          {
+            "name": "Macro",
+            "type": "macro",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Built-in colour and chase macros"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "tags": [
+      "WASH",
+      "RGBW",
+      "LED",
+      "BAR",
+      "STATIC"
+    ],
+    "model": "24-LED bar wash (7-channel RGBW + strobe + macro)",
+    "modelConfidence": "unknown",
+    "photoUrl": "/fixtures/ab-fix-013-led-bar-wash-24-lineart.png",
+    "documentationPath": "DOCS/fixtures/LED-EFFECT/LED-EFFECT-bar-wash-24.md",
+    "notes": "Generic 7-channel RGBW bar wash profile; verify against printed manual when available."
+  },
+  {
     "id": "mini-moving-head-9-11ch",
     "catalogId": "AB-FIX-015",
     "name": "Mini Moving Head Gobo Spot (9/11ch)",
@@ -797,6 +903,7 @@ export const mdFixtureLibraryEntries: FixtureLibraryEntry[] = [
     ],
     "model": "MiniBeam",
     "modelConfidence": "confirmed",
+    "photoUrl": "/fixtures/ab-fix-002-minibeam-moving-head.jpg",
     "documentationPath": "DOCS/fixtures/MOVING-HEAD/MOVING-HEAD-MINIBEAM.md",
     "notes": "18-channel MiniBeam moving head beam/spot with 14-colour wheel, 14-gobo wheel, prism with rotation, frost, focus, fine pan/tilt, macro, reset and lamp control."
   },

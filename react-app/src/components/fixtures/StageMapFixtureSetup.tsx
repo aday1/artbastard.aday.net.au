@@ -17,6 +17,7 @@ import {
   type StageMapViewMode,
 } from '../../fixtures/stageMap';
 import { STAGE_RIG_PRESETS, buildRigFromPreset, type StageRigPreset } from '../../fixtures/stageRigPresets';
+import { loadShowPreset } from '../../fixtures/showPresets/loadShow';
 import { getTemplateMode } from '../../fixtures/showBuilder/showPlan';
 import { SceneSeedButton } from '../scenes/SceneSeedButton';
 import { ActSeedButton } from '../acts/ActSeedButton';
@@ -111,6 +112,7 @@ export const StageMapFixtureSetup: React.FC = () => {
   const [selectionBox, setSelectionBox] = useState<SelectionBox | null>(null);
   const [newGroupName, setNewGroupName] = useState('Map Group');
   const [isGiddyUp, setIsGiddyUp] = useState(false);
+  const [isLoadingStandardShow, setIsLoadingStandardShow] = useState(false);
   const [showAutoAdd, setShowAutoAdd] = useState(false);
   const [autoAddBusy, setAutoAddBusy] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{ fixtureId: string; x: number; y: number } | null>(null);
@@ -465,6 +467,62 @@ export const StageMapFixtureSetup: React.FC = () => {
     }
   };
 
+  const loadStandardShow = async () => {
+    if (isLoadingStandardShow) return;
+    if (fixtures.length > 0) {
+      const ok = window.confirm(
+        `Replace your current ${fixtures.length} fixture${fixtures.length === 1 ? '' : 's'} and ${groups.length} group${groups.length === 1 ? '' : 's'} with the Standard Show? This cannot be undone from the UI.`,
+      );
+      if (!ok) return;
+    }
+    setIsLoadingStandardShow(true);
+    try {
+      const resolved = await loadShowPreset('standard-show');
+      const cols = 3;
+      const rows = Math.ceil(resolved.fixtures.length / cols);
+      const xMargin = STAGE_MAP_WIDTH * 0.15;
+      const yMargin = STAGE_MAP_HEIGHT * 0.2;
+      const xStep = (STAGE_MAP_WIDTH - 2 * xMargin) / Math.max(1, cols - 1);
+      const yStep = (STAGE_MAP_HEIGHT - 2 * yMargin) / Math.max(1, rows - 1);
+      const nextLayout: PlacedFixture[] = resolved.fixtures.map((fixture, i) => {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        return makeLayoutForFixture(fixture, {
+          x: Math.round(xMargin + col * xStep),
+          y: Math.round(yMargin + row * yStep),
+        });
+      });
+      setFixtureLayout(nextLayout);
+      await axios.post('/api/fixtures', {
+        fixtures: resolved.fixtures,
+        fixtureLayout: nextLayout,
+        groups: resolved.groups,
+      });
+      setFixtures(resolved.fixtures);
+      setGroups(resolved.groups);
+      setSelectedFixtures([]);
+      const highest = resolved.fixtures.reduce(
+        (max, f) => Math.max(max, f.startAddress + f.channels.length - 1),
+        0,
+      );
+      if (resolved.warnings.length) {
+        resolved.warnings.forEach((w) => notify(w, 'warning'));
+      }
+      notify(
+        `Standard Show loaded — ${resolved.fixtures.length} fixtures, ${resolved.groups.length} groups, highest DMX ${highest}`,
+        'success',
+      );
+    } catch (error) {
+      console.error('Failed to load Standard Show:', error);
+      notify(
+        `Failed to load Standard Show: ${error instanceof Error ? error.message : 'unknown error'}`,
+        'error',
+      );
+    } finally {
+      setIsLoadingStandardShow(false);
+    }
+  };
+
   const runAutoAddPreset = async (preset: StageRigPreset) => {
     if (autoAddBusy) return;
     setAutoAddBusy(preset.id);
@@ -722,6 +780,15 @@ export const StageMapFixtureSetup: React.FC = () => {
           <button type="button" onClick={applySmartGroups} disabled={!fixtures.length}>
             <LucideIcon name="Sparkles" size={16} />
             Smart Groups
+          </button>
+          <button
+            type="button"
+            onClick={loadStandardShow}
+            disabled={isLoadingStandardShow}
+            title="One-click reset to Aday's 9-fixture standard rig (MINI LED MH, LED MH Spot, Mini MH Gobo w/Strips, UV PAR, LED BAR, Full Color Laser, EL1000RGB, MINI BEAM, LED Toy Mover) patched at their physical DMX addresses. Replaces current fixtures."
+          >
+            <LucideIcon name="LayoutDashboard" size={16} />
+            {isLoadingStandardShow ? 'Loading...' : 'Standard Show'}
           </button>
           <SceneSeedButton compact />
           <ActSeedButton />

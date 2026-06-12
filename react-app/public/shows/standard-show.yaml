@@ -1,0 +1,51 @@
+spec: artbastard-show
+id: standard-show
+name: Standard Show
+description: |
+  Aday's default 9-fixture rig, pre-patched at the physical DMX addresses
+  used in the home studio. One-click reset of the standard setup.
+version: 1
+fixtures:
+  - catalogId: AB-FIX-003
+    name: MINI LED Moving Head
+    mode: 9-channel mode
+    startAddress: 1
+  - catalogId: AB-FIX-005
+    name: LED Moving Head Spot
+    mode: 9-channel mode
+    startAddress: 16
+  - catalogId: AB-FIX-014
+    name: Mini MH Gobo w/ Strips
+    mode: 12-channel mode
+    startAddress: 32
+  - catalogId: AB-FIX-004
+    name: UV LED PAR
+    mode: 7-channel mode
+    startAddress: 64
+  - catalogId: AB-FIX-013
+    name: LED BAR
+    mode: 7-channel mode
+    startAddress: 72
+  - catalogId: AB-FIX-006
+    name: Full Color Animation Laser
+    mode: 12-channel standard mode
+    startAddress: 80
+  - catalogId: AB-FIX-009
+    name: EL1000RGB Laser
+    mode: 16-channel mode
+    startAddress: 96
+  - catalogId: AB-FIX-002
+    name: MINI BEAM
+    mode: 18-channel mode
+    startAddress: 128
+  - catalogId: AB-FIX-007
+    name: LED Toy Mover
+    mode: 13-channel mode
+    startAddress: 256
+groups:
+  - name: Movers
+    catalogIds: [AB-FIX-003, AB-FIX-005, AB-FIX-014, AB-FIX-002, AB-FIX-007]
+  - name: Wash & UV
+    catalogIds: [AB-FIX-004, AB-FIX-013]
+  - name: Lasers
+    catalogIds: [AB-FIX-006, AB-FIX-009]
