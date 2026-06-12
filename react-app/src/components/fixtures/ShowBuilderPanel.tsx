@@ -482,6 +482,16 @@ export const ShowBuilderPanel: React.FC = () => {
         includeAutomation: true,
       });
 
+      // Deck B is the static counterpart to Deck A: same scene templates, but
+      // no timelines/keyframes. Lets the user crossfade between the animated
+      // Deck A and a still snapshot on Deck B without fighting two automation
+      // engines pulling on the same channels.
+      const staticSeed = await seedScenesFromFixtures({
+        packId: 'smart-starter-40',
+        target: 'deck-b',
+        includeAutomation: false,
+      });
+
       if (!sceneSeed.disabledReason) {
         await seedActsFromScenes({
           packId: 'starter-acts',
@@ -489,8 +499,15 @@ export const ShowBuilderPanel: React.FC = () => {
         });
       }
 
+      const seedSummary = [
+        sceneSeed.disabledReason ? null : 'animated Deck A',
+        staticSeed.disabledReason ? null : 'static Deck B',
+      ]
+        .filter(Boolean)
+        .join(' + ');
+
       useStoreUtils.getState().addNotification({
-        message: `Giddy Up complete: ${sourceFixtures.length} fixtures, ${sourceGroups.length} groups, optional scene/ACT seeds ready`,
+        message: `Giddy Up complete: ${sourceFixtures.length} fixtures, ${sourceGroups.length} groups${seedSummary ? `, ${seedSummary}` : ''}`,
         type: 'success',
         priority: 'normal',
       });

@@ -1004,6 +1004,26 @@ apiRouter.post('/config/artnet', (req, res) => {
   }
 });
 
+// GET /api/shows/:id - Return raw show preset YAML from data/shows/
+apiRouter.get('/shows/:id', (req, res) => {
+  try {
+    const id = req.params.id.replace(/[^a-z0-9-]/gi, '');
+    if (!id) {
+      res.status(400).json({ error: 'Invalid show id' });
+      return;
+    }
+    const filePath = path.join(DATA_DIR, 'shows', `${id}.yaml`);
+    if (!fs.existsSync(filePath)) {
+      res.status(404).json({ error: `Show '${id}' not found` });
+      return;
+    }
+    res.type('text/yaml').send(fs.readFileSync(filePath, 'utf-8'));
+  } catch (error) {
+    log('Error loading show preset', 'ERROR', { error, params: req.params });
+    res.status(500).json({ error: `Failed to load show: ${error}` });
+  }
+});
+
 // Fixtures endpoints
 // POST /api/fixtures - Save all fixtures (for bulk operations, still supported)
 apiRouter.post('/fixtures', (req, res) => {

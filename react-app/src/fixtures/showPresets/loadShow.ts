@@ -110,14 +110,27 @@ export const resolveShow = (preset: ShowPresetFile): ResolvedShow => {
 };
 
 export const loadShowPreset = async (id: string): Promise<ResolvedShow> => {
-  const res = await fetch(`/shows/${encodeURIComponent(id)}.yaml`);
-  if (!res.ok) {
-    throw new Error(`Failed to load show '${id}': ${res.status} ${res.statusText}`);
+  // Prefer the runtime-editable API (data/shows/*.yaml). Fall back to the
+  // static asset baked into the bundle so prod still works if the backend
+  // hasn't been redeployed with the /api/shows endpoint yet.
+  const sources = [`/api/shows/${encodeURIComponent(id)}`, `/shows/${encodeURIComponent(id)}.yaml`];
+  let lastErr: string | null = null;
+  for (const url of sources) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) {
+        lastErr = `${url} -> ${res.status} ${res.statusText}`;
+        continue;
+      }
+      const text = await res.text();
+      const parsed = parseYaml(text) as ShowPresetFile;
+      if (!parsed || !Array.isArray(parsed.fixtures)) {
+        throw new Error(`Show '${id}' is missing a 'fixtures' list`);
+      }
+      return resolveShow(parsed);
+    } catch (err) {
+      lastErr = err instanceof Error ? err.message : String(err);
+    }
   }
-  const text = await res.text();
-  const parsed = parseYaml(text) as ShowPresetFile;
-  if (!parsed || !Array.isArray(parsed.fixtures)) {
-    throw new Error(`Show '${id}' is missing a 'fixtures' list`);
-  }
-  return resolveShow(parsed);
+  throw new Error(`Failed to load show '${id}': ${lastErr ?? 'no sources responded'}`);
 };
