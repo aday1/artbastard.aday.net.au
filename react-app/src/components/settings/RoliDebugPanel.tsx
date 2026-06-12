@@ -8,11 +8,14 @@ import {
   clearLeds,
   setRoliDeviceRole,
   isRoliSysExEnabled,
+  registerVirtualRoliDevice,
+  unregisterVirtualRoliDevice,
   ROLI_GRID_COLS,
   ROLI_GRID_ROWS,
   type RoliDeviceInfo,
   type RoliDebugEvent,
 } from '../../engines/roliLightpad';
+import { pairRoliOverBluetooth } from '../../engines/roliBleTransport';
 import styles from './RoliDebugPanel.module.scss';
 
 const formatTime = (ts: number): string => {
@@ -27,6 +30,13 @@ const formatTime = (ts: number): string => {
 const formatBytes = (bytes?: number[]): string => {
   if (!bytes || bytes.length === 0) return '';
   return '[' + bytes.map((b) => b.toString(16).padStart(2, '0')).join(' ') + ']';
+};
+
+const TRANSPORT_BADGE: Record<string, { label: string; color: string; bg: string }> = {
+  usb: { label: '🔌 USB', color: '#a7f3d0', bg: 'rgba(34,197,94,0.18)' },
+  bluetooth: { label: '📡 Bluetooth', color: '#bfdbfe', bg: 'rgba(59,130,246,0.22)' },
+  'ble-bridge': { label: '🔁 BLE Bridge', color: '#fde68a', bg: 'rgba(250,204,21,0.18)' },
+  unknown: { label: '? Unknown', color: '#cbd5e1', bg: 'rgba(148,163,184,0.18)' },
 };
 
 const shortId = (id: string): string => {
@@ -84,7 +94,49 @@ export const RoliDebugPanel: React.FC = () => {
     setDevices(getRoliDevices());
   }, []);
 
+  const [blePairing, setBlePairing] = useState(false);
+  const [bleError, setBleError] = useState<string | null>(null);
+  const [pairedBle, setPairedBle] = useState<Map<string, () => void>>(new Map());
+
+  const handlePairBluetooth = useCallback(async () => {
+    setBleError(null);
+    setBlePairing(true);
+    try {
+      const paired = await pairRoliOverBluetooth();
+      const id = registerVirtualRoliDevice({
+        id: paired.id,
+        name: paired.name,
+        input: paired.input,
+        output: paired.output,
+        transport: 'bluetooth',
+      });
+      setPairedBle((prev) => {
+        const next = new Map(prev);
+        next.set(id, paired.disconnect);
+        return next;
+      });
+      setDevices(getRoliDevices());
+    } catch (err) {
+      setBleError((err as Error).message || 'Pairing cancelled or failed');
+    } finally {
+      setBlePairing(false);
+    }
+  }, []);
+
+  const handleUnpairBluetooth = useCallback((deviceId: string) => {
+    const teardown = pairedBle.get(deviceId);
+    teardown?.();
+    unregisterVirtualRoliDevice(deviceId);
+    setPairedBle((prev) => {
+      const next = new Map(prev);
+      next.delete(deviceId);
+      return next;
+    });
+    setDevices(getRoliDevices());
+  }, [pairedBle]);
+
   const sysexOk = isRoliSysExEnabled();
+  const webBluetoothAvailable = typeof navigator !== 'undefined' && Boolean((navigator as any).bluetooth);
 
   return (
     <div className={styles.panel}>
@@ -113,6 +165,39 @@ export const RoliDebugPanel: React.FC = () => {
         Colour block drives the colour wheel. Swap to flip the assignment.
       </div>
 
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.4rem 0.6rem', flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          onClick={handlePairBluetooth}
+          disabled={blePairing || !webBluetoothAvailable}
+          title={
+            webBluetoothAvailable
+              ? 'Open the browser pairing dialog and connect a ROLI block over BLE-MIDI'
+              : 'Web Bluetooth not available in this browser'
+          }
+          style={{
+            padding: '0.35rem 0.7rem',
+            background: 'rgba(59,130,246,0.22)',
+            border: '1px solid rgba(59,130,246,0.5)',
+            color: '#bfdbfe',
+            borderRadius: 4,
+            cursor: webBluetoothAvailable && !blePairing ? 'pointer' : 'not-allowed',
+            fontSize: '0.85rem',
+            fontWeight: 600,
+          }}
+        >
+          {blePairing ? 'Pairing…' : '📡 Pair Bluetooth ROLI'}
+        </button>
+        {!webBluetoothAvailable && (
+          <span style={{ fontSize: '0.72rem', color: '#fde68a' }}>
+            Web Bluetooth requires Chrome/Edge on Windows/Mac/Linux/Android.
+          </span>
+        )}
+        {bleError && (
+          <span style={{ fontSize: '0.78rem', color: '#ff7777' }}>⚠ {bleError}</span>
+        )}
+      </div>
+
       <div className={styles.deviceList}>
         {devices.length === 0 ? (
           <div className={styles.empty}>
@@ -136,6 +221,21 @@ export const RoliDebugPanel: React.FC = () => {
                   </span>
                   <span className={styles.deviceId} title={dev.deviceId}>
                     {shortId(dev.deviceId)}
+                  </span>
+                  <span
+                    title={`Transport: ${dev.transport}`}
+                    style={{
+                      fontSize: '0.68rem',
+                      fontWeight: 700,
+                      padding: '0.1rem 0.4rem',
+                      borderRadius: 3,
+                      marginLeft: 6,
+                      color: (TRANSPORT_BADGE[dev.transport] ?? TRANSPORT_BADGE.unknown).color,
+                      background: (TRANSPORT_BADGE[dev.transport] ?? TRANSPORT_BADGE.unknown).bg,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {(TRANSPORT_BADGE[dev.transport] ?? TRANSPORT_BADGE.unknown).label}
                   </span>
                   {dev.lastError && (
                     <span
@@ -194,6 +294,16 @@ export const RoliDebugPanel: React.FC = () => {
                   >
                     Blank
                   </button>
+                  {pairedBle.has(dev.deviceId) && (
+                    <button
+                      type="button"
+                      className={`${styles.actionButton} ${styles.danger}`}
+                      onClick={() => handleUnpairBluetooth(dev.deviceId)}
+                      title="Disconnect this Bluetooth ROLI"
+                    >
+                      Unpair
+                    </button>
+                  )}
                 </div>
               </div>
             );

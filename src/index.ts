@@ -385,6 +385,16 @@ async function connectMidiInput(io: Server, inputName: string, isBrowserMidi = f
             return;
         }
 
+        // ROLI Lightpad / Seaboard / Block devices are owned by the browser-side
+        // roliLightpad engine (Web MIDI + Web Bluetooth). The backend must NOT
+        // try to open them — Windows MIDI ports are single-owner and Chrome
+        // already holds them, which produces a recurring "Internal RtMidi error"
+        // every reconnect attempt. Silently skip.
+        if (/\b(roli|lightpad|seaboard|block)\b/i.test(inputName)) {
+            log(`Skipping ROLI-family input (browser-engine-owned): ${inputName}`, 'MIDI');
+            return;
+        }
+
         if (isRunningInWsl()) {
             throw new Error('Hardware MIDI not available in WSL');
         }

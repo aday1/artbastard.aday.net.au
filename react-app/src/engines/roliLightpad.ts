@@ -24,6 +24,7 @@ const ROLE_STORAGE_KEY = 'roli-device-roles';
 
 export type TouchPhase = 'start' | 'move' | 'end';
 export type RoliRole = 'primary' | 'colour-wheel';
+export type RoliTransport = 'usb' | 'bluetooth' | 'ble-bridge' | 'unknown';
 
 export interface RoliTouchEvent {
   x: number; // 0..1
@@ -45,6 +46,7 @@ export interface RoliDeviceInfo {
   lastZ: number;
   isTouching: boolean;
   lastError: string | null;
+  transport: RoliTransport;
 }
 
 export type RoliTouchCallback = (ev: RoliTouchEvent) => void;
@@ -70,6 +72,7 @@ interface DeviceState {
   isTouching: boolean;
   needsFullRepaint: boolean;
   lastError: string | null;
+  transport: RoliTransport;
   // ACK-driven handshake state. Reference: blocks-playground BlocksDevice.js:234-320.
   ackResolver: (() => void) | null;
   ackRejecter: ((err: Error) => void) | null;
@@ -169,6 +172,7 @@ function newDeviceState(deviceId: string, role: RoliRole): DeviceState {
     isTouching: false,
     needsFullRepaint: false,
     lastError: null,
+    transport: 'unknown',
     ackResolver: null,
     ackRejecter: null,
     ackTimer: null,
@@ -676,6 +680,25 @@ export function isRoliblockLike(name: string): boolean {
   );
 }
 
+/**
+ * Best-effort guess of how a ROLI port is reaching us. Web MIDI doesn't
+ * expose a transport field, so we sniff the port name. Most platforms make
+ * BLE-MIDI explicit ("Bluetooth", "BLE"); on Windows the user typically runs
+ * a desktop bridge (MIDIBerry → loopMIDI), which we tag as 'ble-bridge'.
+ * Native USB falls through to 'usb'. The 'bluetooth' result here is only
+ * for OS-level BLE-MIDI; devices paired via our own Web Bluetooth adapter
+ * register themselves with transport='bluetooth' directly.
+ */
+function detectTransportFromName(name: string): RoliTransport {
+  const n = (name || '').toLowerCase();
+  if (!n) return 'unknown';
+  if (n.includes('bluetooth') || /\bble\b/.test(n)) return 'bluetooth';
+  if (n.includes('loopmidi') || n.includes('midiberry') || n.includes('rtpmidi') || n.includes('iac')) {
+    return 'ble-bridge';
+  }
+  return 'usb';
+}
+
 function notifyDeviceChange(): void {
   engine.onDevice?.(getRoliDevices());
 }
@@ -736,6 +759,7 @@ function refreshAndAutoMap(): void {
     if (dev.output !== out) {
       dev.output = out;
       dev.outputName = outName;
+      dev.transport = detectTransportFromName(outName);
       dev.handshakeDone = false;
       dev.ledFailCount = 0;
       void doHandshake(dev);
@@ -776,6 +800,7 @@ function refreshAndAutoMap(): void {
       if (dev.input) dev.input.onmidimessage = null;
       dev.input = inp;
       dev.inputName = inp.name || null;
+      dev.transport = detectTransportFromName(inp.name || '');
       inp.onmidimessage = makeOnMidiMessage(dev);
     }
   }
@@ -835,6 +860,79 @@ export function isRoliSysExEnabled(): boolean {
   return Boolean(engine.midiAccess?.sysexEnabled);
 }
 
+/**
+ * Register a paired Bluetooth ROLI (or any other virtual transport) with the
+ * engine. The provided input/output objects must look like Web MIDI ports —
+ * `output.send(bytes)` and a settable `input.onmidimessage` are all the
+ * engine touches. After registration the engine runs the standard handshake
+ * sequence; touch events flow through the existing per-role hooks.
+ *
+ * Returns the deviceId the engine assigned (matches input.id).
+ */
+export function registerVirtualRoliDevice(args: {
+  id: string;
+  name: string;
+  input: { id: string; name: string; onmidimessage: ((e: { data: Uint8Array }) => void) | null };
+  output: { id: string; name: string; send(data: number[] | Uint8Array): void };
+  transport: RoliTransport;
+}): string {
+  const role = assignRoleForNewDevice(args.id);
+  let dev = engine.devices.get(args.id);
+  if (!dev) {
+    dev = newDeviceState(args.id, role);
+    engine.devices.set(args.id, dev);
+    persistRole(args.id, role);
+  }
+  // Cast — virtual ports don't implement the full WebMidi.MIDIInput/Output
+  // surface (no addEventListener, state, etc.) but the engine only ever
+  // touches .onmidimessage on inputs and .send on outputs. Verified above.
+  dev.input = args.input as unknown as WebMidi.MIDIInput;
+  dev.output = args.output as unknown as WebMidi.MIDIOutput;
+  dev.inputName = args.name;
+  dev.outputName = args.name;
+  dev.transport = args.transport;
+  dev.handshakeDone = false;
+  dev.ledFailCount = 0;
+  args.input.onmidimessage = makeOnMidiMessage(dev);
+  void doHandshake(dev);
+  notifyDeviceChange();
+  return args.id;
+}
+
+/**
+ * Remove a previously-registered virtual device (e.g. on BLE disconnect).
+ */
+export function unregisterVirtualRoliDevice(deviceId: string): void {
+  const dev = engine.devices.get(deviceId);
+  if (!dev) return;
+  if (dev.input) dev.input.onmidimessage = null;
+  clearPingTimer(dev);
+  if (dev.ackTimer != null) {
+    window.clearTimeout(dev.ackTimer);
+    dev.ackTimer = null;
+  }
+  engine.devices.delete(deviceId);
+  notifyDeviceChange();
+}
+
+/**
+ * Push a synthetic touch event into the engine. Used by the generic-MIDI
+ * fallback path so a knob/fader rig can drive PAN/TILT or COLOR WHEEL
+ * without a real ROLI block. The deviceId must already be registered (see
+ * `registerVirtualRoliDevice`).
+ */
+export function emitSyntheticTouch(
+  deviceId: string,
+  x: number,
+  y: number,
+  z: number,
+  phase: TouchPhase,
+): void {
+  const dev = engine.devices.get(deviceId);
+  if (!dev) return;
+  emitTouch(dev, x, y, z, phase);
+}
+
 export function disconnectRoliLightpad(): void {
   engine.devices.forEach((dev) => {
     if (dev.input) dev.input.onmidimessage = null;
@@ -876,6 +974,7 @@ export function getRoliDevices(): RoliDeviceInfo[] {
     lastZ: d.lastZ,
     isTouching: d.isTouching,
     lastError: d.lastError,
+    transport: d.transport,
   }));
 }
 
