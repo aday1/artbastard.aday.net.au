@@ -16,15 +16,21 @@ const fixtureA: Fixture = {
   name: 'Wash A',
   type: 'RGB Wash',
   startAddress: 1,
-  channels: [{ name: 'Dimmer', type: 'dimmer' }],
+  channels: [
+    { name: 'Dimmer', type: 'dimmer' },
+    { name: 'Red', type: 'red' },
+  ],
 };
 
 const fixtureB: Fixture = {
   id: 'fixture-b',
   name: 'Wash B',
   type: 'RGB Wash',
-  startAddress: 2,
-  channels: [{ name: 'Dimmer', type: 'dimmer' }],
+  startAddress: 3,
+  channels: [
+    { name: 'Dimmer', type: 'dimmer' },
+    { name: 'Pan', type: 'pan' },
+  ],
 };
 
 const groupA: Group = {
@@ -114,6 +120,36 @@ describe('useApc40Workflow', () => {
 
     await waitFor(() => {
       expect(useStore.getState().activeSceneName).toBe('APC40 Deck A 02');
+    });
+  });
+
+  it('saves Deck B when SHIFT is held for the clip after transport REC', async () => {
+    renderHook(() => useApc40Workflow());
+
+    apcMessage({ channel: 0, note: 0x5d });
+    apcMessage({ channel: 0, note: 0x62 });
+    apcMessage({ channel: 1, note: 0x35 });
+
+    await waitFor(() => {
+      const scene = useStore.getState().scenes.find((candidate) => candidate.name === 'APC40 Deck B 02');
+      expect(scene?.channelValues[0]).toBe(111);
+      expect(scene?.channelValues[1]).toBe(77);
+      expect(useStore.getState().apc40CrossfaderState.sceneBName).toBe('APC40 Deck B 02');
+    });
+  });
+
+  it('rolls dice on SHIFT+REC without entering save mode or saving a clip', async () => {
+    renderHook(() => useApc40Workflow());
+
+    apcMessage({ channel: 0, note: 0x62 });
+    apcMessage({ channel: 0, note: 0x5d });
+
+    await waitFor(() => {
+      const state = useStore.getState();
+      expect(state.scenes).toEqual([]);
+      expect(state.apc40CrossfaderState.mode).toBeNull();
+      expect(state.apc40CrossfaderState.armedColumns).toEqual([]);
+      expect(state.dmxChannels.some((value, index) => index < 4 && value !== [111, 77, 77, 0][index])).toBe(true);
     });
   });
 });

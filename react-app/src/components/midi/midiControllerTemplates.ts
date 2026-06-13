@@ -109,7 +109,7 @@ export const MIDI_CONTROLLER_TEMPLATES: MidiControllerTemplateDefinition[] = [
     id: 'apc40_mk1',
     title: 'Akai APC40 MK1',
     description: 'Drives SuperControl from the APC40: faders → selected fixture dimmers, Device Control → gobo/effects/DMX roles.',
-    details: 'Live APC40 mode: grid = Deck A scenes, SHIFT+grid = Deck B scenes, Scene Launch = ACTS, Record Arm saves grid slots, crossfader blends Deck A/B, Device Control follows selected fixture roles. Template mappings are only the SuperControl fallback.',
+    details: 'Live APC40 mode: grid = Deck A scenes, SHIFT+grid = Deck B scenes, Scene Launch = ACTS, REC then Clip saves grid slots, Record Arm soloes groups, crossfader blends Deck A/B, Device Control follows selected fixture roles. Template mappings are only the SuperControl fallback.',
     mappings: {},
     superControlMappings: buildApc40SuperControlMappings(),
   },

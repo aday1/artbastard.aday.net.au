@@ -57,11 +57,11 @@ function groupSelected(groupFixtureIds: string[], selectedIds: Set<string>): boo
  *
  * Surface contract:
  *   - Clip grid: Deck A by default, Deck B while SHIFT is held. Green = saved,
- *     orange-blink = active deck slot, red-blink = record-armed save column.
+ *     orange-blink = active deck slot, red-blink = REC save-mode target.
  *   - Scene Launch 1-5: ACT 1-5. Green = saved act, orange-blink = current act.
- *   - Record Arm 1-8: red-blink when that grid column is armed for save.
- *   - Activator 1-8: green = group exists, orange-blink = APC40 auto running.
- *   - Track Select 1-8: green when that group/fixture is selected.
+ *   - Record Arm 1-8: red-blink while its Solo Group latch is active.
+ *   - Activator 1-8: green when that group is fully selected.
+ *   - Track Select 1-8: intentionally off/unmapped.
  *   - Master Track Select: red while FULL ON is latched.
  */
 export function useApc40LedFeedback() {

@@ -394,8 +394,7 @@ export const Apc40SurfaceDiagram: React.FC<Props> = ({
         <div className={styles.saveModeBanner} role="status" aria-live="polite">
           <strong>SAVE MODE · Deck {activeDeck}</strong>
           <span>
-            Armed column{armedColumnSet.size === 1 ? '' : 's'} {armedColumnLabel}. Press a flashing red clip pad in
-            an armed column to save the current DMX look; saved pads will be overwritten.
+            Armed column{armedColumnSet.size === 1 ? '' : 's'} {armedColumnLabel}. Press a flashing red clip pad to save the current DMX look into Deck {activeDeck}; saved pads will be overwritten.
           </span>
         </div>
       )}
@@ -674,7 +673,7 @@ export const Apc40SurfaceDiagram: React.FC<Props> = ({
           <button type="button" className={`${styles.txBtn} ${flashing['nav-fixture-next'] ? styles.flash : ''} ${lastTouched?.key === 'nav-fixture-next' ? styles.lastTouched : ''}`} disabled title="↓ fixture (0x5F)">▼</button>
           <button type="button" className={`${styles.txBtn} ${styles.play} ${flashing['play'] ? styles.flash : ''} ${lastTouched?.key === 'play' ? styles.lastTouched : ''}`} disabled title="PLAY (0x5B)">▶</button>
           <button type="button" className={`${styles.txBtn} ${styles.stop} ${flashing['stop'] ? styles.flash : ''} ${lastTouched?.key === 'stop' ? styles.lastTouched : ''}`} disabled title="STOP (0x5C)">■</button>
-          <button type="button" className={`${styles.txBtn} ${styles.record} ${saveMode ? styles.saveArmed : ''} ${flashing['record'] ? styles.flash : ''} ${lastTouched?.key === 'record' ? styles.lastTouched : ''}`} disabled title={saveMode ? `REC armed columns ${armedColumnLabel}` : 'REC (0x5D)'}>●</button>
+          <button type="button" className={`${styles.txBtn} ${styles.record} ${saveMode ? styles.saveArmed : ''} ${flashing['record'] ? styles.flash : ''} ${lastTouched?.key === 'record' ? styles.lastTouched : ''}`} disabled title={saveMode ? `REC save mode columns ${armedColumnLabel}` : 'REC (0x5D)'}>●</button>
           <button type="button" className={`${styles.txBtn} ${flashing['select-all'] ? styles.flash : ''} ${lastTouched?.key === 'select-all' ? styles.lastTouched : ''}`} disabled title="PAN / SEL-ALL (0x57)">PAN</button>
           <div className={`${styles.knob} ${flashing['cue'] ? styles.flash : ''} ${lastTouched?.key === 'cue' ? styles.lastTouched : ''}`} title="CUE (CC 0x2F ch0)">
             <span className={styles.knobDot} />

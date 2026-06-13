@@ -6,7 +6,7 @@ path.
 
 Last content refresh: 2026-06-10 (v5.2.4.0 APC40 Deck A/B workflow,
 canvas-first stage fixture setup, optional fixture-aware scene and ACT seed
-templates, Record Arm scene saves, Device Control gobo roles, Roli Lightpad
+templates, REC then Clip scene saves, Device Control gobo roles, Roli Lightpad
 LED drawing, mobile showcase layout, and six-clip operator how-to tour).
 Website feature grid mentions the stage canvas, seed workflow, and LAN / Pi
 bridge for cloud-hosted Art-Net on home LANs.

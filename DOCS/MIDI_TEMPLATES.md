@@ -55,8 +55,9 @@ channel name changes (rename, fixture template apply, scene capture).
 > **The APC40 has a dedicated live integration that runs without applying any
 > template — see [APC40_CHEATSHEET.md](APC40_CHEATSHEET.md) for the full
 > button-by-button reference (grid=Deck A scenes, SHIFT+grid=Deck B scenes,
-> Scene Launch=ACTS, Record Arm=saves deck slots, crossfader=Deck A/B blend,
-> Device Control=gobo/effects roles).** The template below remains available
+> Scene Launch=ACTS, REC then Clip saves deck slots, Record Arm=Solo Group,
+> crossfader=Deck A/B blend, Device Control=gobo/effects roles).** The
+> template below remains available
 > for backwards-compatible SuperControl mappings.
 
 The APC40 template assumes the device is in mode 0 (factory). Live APC40 mode

@@ -81,9 +81,9 @@ export const Apc40WorkflowBody: React.FC<Apc40WorkflowBodyProps> = ({ withoutMap
           <strong>Scene Launch</strong>
           <span>Launch ACTS 1-5</span>
         </div>
-        <div title="Record Arm saves the next grid press into the current deck; faders and Device Control drive Super Control roles.">
+        <div title="REC then Clip saves into the current deck; Record Arm soloes groups; faders and Device Control drive Super Control roles.">
           <strong>Record / Super Control</strong>
-          <span>Record-arm deck slots, dimmers, gobo/effects</span>
+          <span>REC saves deck slots, dimmers, gobo/effects</span>
         </div>
       </div>
 

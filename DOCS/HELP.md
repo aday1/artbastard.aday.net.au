@@ -1,3 +1,4 @@
+- Akai APC40 MK1 - Deck A/B scene grid, REC then Clip scene saves, ACT launch buttons, optional ACT seeds for Scene Launch 1-5, Device Control gobo/effects roles.
 # ArtBastard Help (Offline Mirror)
 
 This page mirrors the in-app HelpOverlay so it can be read offline or while
@@ -334,7 +335,7 @@ Apply factory-tuned MIDI mappings in one click. Two templates ship today:
 
 - Behringer X-Touch (Mackie mode) - faders, pan, encoders, scribble strip
   SysEx labelling.
-- Akai APC40 MK1 - Deck A/B scene grid, ACT launch buttons, optional ACT seeds for Scene Launch 1-5, Record Arm scene saves, Device Control gobo/effects roles.
+- Akai APC40 MK1 - Deck A/B scene grid, REC then Clip scene saves, ACT launch buttons, optional ACT seeds for Scene Launch 1-5, Device Control gobo/effects roles.
 
 Apply via UI (Settings > MIDI > Apply Template) or via REST:
 
