@@ -1,91 +1,160 @@
 .strip {
   margin: 1rem 0 1.25rem;
-  padding: 0.75rem;
-  border-radius: 6px;
+  padding: 0.85rem;
+  border-radius: 8px;
   background: var(--bg-secondary, var(--color-card-bg));
   border: 1px solid var(--border-color, var(--color-card-border));
 }
 
 .heading {
-  margin-bottom: 0.6rem;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
 }
 
 .headingTitle {
-  margin: 0 0 0.15rem;
+  margin: 0;
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-primary);
 }
 
 .hint {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: var(--text-secondary, var(--rk-label-dim));
   margin: 0;
 }
 
 .group {
-  margin-top: 0.65rem;
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  gap: 0.65rem;
+  align-items: start;
+  margin-top: 0.7rem;
+}
+
+.groupHeader {
   display: flex;
-  align-items: flex-start;
-  gap: 0.6rem;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding-top: 0.1rem;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+
+  span:last-child {
+    opacity: 0.78;
+  }
 }
 
 .groupLabel {
   font-family: var(--font-mono);
-  font-size: 0.7rem;
-  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  letter-spacing: 0;
   text-transform: uppercase;
-  color: var(--text-secondary);
-  padding: 0.45rem 0.5rem 0;
-  min-width: 38px;
+  color: var(--text-primary);
 }
 
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  flex: 1;
+.presetGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.55rem;
 }
 
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.45rem 0.75rem;
-  font-family: var(--font-body);
-  font-size: 0.8rem;
+.presetCard {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: 0.45rem minmax(0, 1fr);
+  gap: 0.55rem;
+  padding: 0.6rem;
   border: 1px solid var(--border-color, var(--color-card-border));
-  border-radius: 4px;
+  border-radius: 8px;
   background: var(--input-bg, var(--bg-tertiary));
   color: var(--text-primary);
   cursor: pointer;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
+  text-align: left;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease, background 0.15s ease;
 }
 
-.chip:hover {
-  border-color: var(--color-primary);
+.presetCard:hover {
+  border-color: color-mix(in srgb, var(--color-primary, #3b82f6) 70%, white 10%);
+  background: color-mix(in srgb, var(--input-bg, var(--bg-tertiary)) 82%, var(--color-primary, #3b82f6) 18%);
 }
 
-.chip:active {
+.presetCard:active {
   transform: translateY(1px);
 }
 
-.chipActive {
+.presetCardActive {
   border-color: var(--color-accent, var(--color-primary));
   box-shadow: 0 0 0 1px var(--color-accent, var(--color-primary)),
-              0 4px 12px color-mix(in srgb, var(--color-accent, orange) 25%, transparent);
-  font-weight: 600;
+              0 8px 20px color-mix(in srgb, var(--color-accent, orange) 22%, transparent);
 }
 
-.chipLabel {
-  white-space: nowrap;
+.paletteBar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  overflow: hidden;
+  border-radius: 999px;
+  border: 1px solid rgb(var(--shadow-rgb, 0 0 0) / 0.28);
 }
 
-.swatch {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  border: 1px solid rgb(var(--shadow-rgb, 0 0 0) / 0.35);
-  flex-shrink: 0;
+.paletteSwatch {
+  min-width: 0;
+  height: 100%;
+}
+
+.cardText {
+  min-width: 0;
+  display: grid;
+  gap: 0.25rem;
+
+  small {
+    color: var(--text-secondary, var(--rk-label-dim));
+    font-size: 0.74rem;
+    line-height: 1.25;
+  }
+}
+
+.cardTitleRow {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+
+  strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.86rem;
+  }
+
+  em {
+    flex: 0 0 auto;
+    padding: 0.08rem 0.35rem;
+    border-radius: 999px;
+    background: rgb(148 163 184 / 0.14);
+    color: var(--text-secondary, var(--rk-label-dim));
+    font-size: 0.68rem;
+    font-style: normal;
+  }
+}
+
+@media (max-width: 760px) {
+  .heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .group {
+    grid-template-columns: 1fr;
+  }
+
+  .groupHeader {
+    flex-direction: row;
+    justify-content: space-between;
+  }
 }

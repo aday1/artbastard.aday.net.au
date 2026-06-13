@@ -62,6 +62,7 @@ const makeGroup = (name: string, fixtureIndices: number[]): Group => ({
 });
 
 const fixtureEndAddress = (fixture: Fixture) => fixture.startAddress + fixture.channels.length - 1;
+const CHANNEL_PREVIEW_LIMIT = 8;
 
 function findAddressConflict(fixtures: Fixture[], target: Fixture): Fixture | null {
   const start = target.startAddress;
@@ -150,6 +151,7 @@ export const StageMapFixtureSetup: React.FC = () => {
     });
   }, [fixtureTemplates, fixtures]);
   const [contextMenu, setContextMenu] = useState<{ fixtureId: string; x: number; y: number } | null>(null);
+  const [expandedChannelFixtureId, setExpandedChannelFixtureId] = useState<string | null>(null);
 
   const layout = useMemo(() => normalizeFixtureLayout(fixtures, fixtureLayout), [fixtures, fixtureLayout]);
   const layoutByFixtureId = useMemo(() => new Map(layout.map((item) => [item.fixtureId, item])), [layout]);
@@ -160,6 +162,11 @@ export const StageMapFixtureSetup: React.FC = () => {
   );
   const primarySelectedFixture = selectedFixtureObjects[0] || null;
   const primaryConflict = primarySelectedFixture ? findAddressConflict(fixtures, primarySelectedFixture) : null;
+  const primaryChannels = primarySelectedFixture?.channels ?? [];
+  const primaryChannelsExpanded = primarySelectedFixture?.id === expandedChannelFixtureId;
+  const primaryVisibleChannels = primaryChannelsExpanded
+    ? primaryChannels
+    : primaryChannels.slice(0, CHANNEL_PREVIEW_LIMIT);
 
   const templateTypes = useMemo(() => {
     const values = fixtureTemplates
@@ -1220,32 +1227,33 @@ export const StageMapFixtureSetup: React.FC = () => {
                     {(() => {
                       const sourceTemplate = findTemplateForFixture(primarySelectedFixture);
                       const availableModes = sourceTemplate?.modes ?? [];
-                      if (availableModes.length > 1) {
-                        return (
-                          <label>
-                            Mode
-                            <select
-                              value={primarySelectedFixture.mode || availableModes[0]?.name || ''}
-                              onChange={(event) => changeFixtureMode(primarySelectedFixture.id, event.target.value)}
-                            >
-                              {availableModes.map((mode) => (
-                                <option key={mode.name} value={mode.name}>
-                                  {mode.name} ({mode.channelData?.length ?? mode.channels} ch)
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                        );
-                      }
+                      const currentMode = primarySelectedFixture.mode || availableModes[0]?.name || 'Default';
                       return (
-                        <label>
-                          Mode
-                          <input
-                            value={primarySelectedFixture.mode || 'Default'}
-                            readOnly
-                            title={sourceTemplate ? 'This template has only one mode' : 'Source template not found; mode is locked'}
-                          />
-                        </label>
+                        <div className={styles.modeSummaryCard}>
+                          <div className={styles.modeSummaryCopy}>
+                            <span>Mode</span>
+                            <strong>{currentMode}</strong>
+                            <small>
+                              {primarySelectedFixture.channels.length} ch · DMX {primarySelectedFixture.startAddress}-{fixtureEndAddress(primarySelectedFixture)}
+                              {availableModes.length > 1 ? ` · ${availableModes.length} modes` : ''}
+                            </small>
+                          </div>
+                          {availableModes.length > 1 && (
+                            <label className={styles.modePicker}>
+                              <span>Switch</span>
+                              <select
+                                value={currentMode}
+                                onChange={(event) => changeFixtureMode(primarySelectedFixture.id, event.target.value)}
+                              >
+                                {availableModes.map((mode) => (
+                                  <option key={mode.name} value={mode.name}>
+                                    {mode.name} ({mode.channelData?.length ?? mode.channels} ch)
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          )}
+                        </div>
                       );
                     })()}
                   </div>
@@ -1296,9 +1304,23 @@ export const StageMapFixtureSetup: React.FC = () => {
               </section>
 
               <section className={styles.inspectorSection}>
-                <h3>Channels</h3>
-                <div className={styles.channelList}>
-                  {primarySelectedFixture.channels.map((channel, index) => (
+                <div className={styles.inspectorSectionHeader}>
+                  <h3>Channels</h3>
+                  <div>
+                    <span>{primarySelectedFixture.channels.length} ch</span>
+                    {primarySelectedFixture.channels.length > CHANNEL_PREVIEW_LIMIT && (
+                      <button
+                        type="button"
+                        className={styles.compactToggle}
+                        onClick={() => setExpandedChannelFixtureId(primaryChannelsExpanded ? null : primarySelectedFixture.id)}
+                      >
+                        {primaryChannelsExpanded ? 'Less' : `All ${primarySelectedFixture.channels.length}`}
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className={`${styles.channelList} ${primaryChannelsExpanded ? '' : styles.channelListCompact}`}>
+                  {primaryVisibleChannels.map((channel, index) => (
                     <span key={`${channel.name}-${index}`}>
                       <strong>{primarySelectedFixture.startAddress + index}</strong>
                       {channel.name}

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { THEME_PRESETS, applyThemePreset, type ThemeColorsHsl } from '../../utils/themeUtils';
+import { THEME_PRESETS, applyThemePreset, type ThemeColorsHsl, type ThemePreset } from '../../utils/themeUtils';
 import styles from './ThemePresetStrip.module.scss';
 
 interface ThemePresetStripProps {
@@ -21,7 +21,7 @@ export const ThemePresetStrip: React.FC<ThemePresetStripProps> = ({
     return { darkPresets: dark, lightPresets: light };
   }, []);
 
-  const handlePick = (preset: typeof THEME_PRESETS[number]) => {
+  const handlePick = (preset: ThemePreset) => {
     setActiveId(preset.id);
     localStorage.setItem('themePresetId', preset.id);
     if (preset.preferDark !== undefined) {
@@ -31,16 +31,53 @@ export const ThemePresetStrip: React.FC<ThemePresetStripProps> = ({
     onPreview(colors);
   };
 
-  const renderChip = (preset: typeof THEME_PRESETS[number]) => (
+  const hsl = (hue: number, saturation: number, brightness: number) =>
+    `hsl(${hue}, ${saturation}%, ${brightness}%)`;
+
+  const paletteForPreset = (preset: ThemePreset) => [
+    {
+      label: 'Primary',
+      color: hsl(preset.colors.primaryHue, preset.colors.primarySaturation, preset.colors.primaryBrightness),
+    },
+    {
+      label: 'Secondary',
+      color: hsl(preset.colors.secondaryHue, preset.colors.secondarySaturation, preset.colors.secondaryBrightness),
+    },
+    {
+      label: 'Accent',
+      color: hsl(preset.colors.accentHue, preset.colors.accentSaturation, preset.colors.accentBrightness),
+    },
+    {
+      label: 'Surface',
+      color: preset.rack.rkPanel,
+    },
+  ];
+
+  const renderPresetCard = (preset: ThemePreset, modeLabel: 'Dark' | 'Light') => (
     <button
       key={preset.id}
       type="button"
-      className={`${styles.chip} ${activeId === preset.id ? styles.chipActive : ''}`}
+      className={`${styles.presetCard} ${activeId === preset.id ? styles.presetCardActive : ''}`}
       title={preset.description}
+      aria-pressed={activeId === preset.id}
       onClick={() => handlePick(preset)}
     >
-      <span className={styles.swatch} style={{ background: preset.rack.rkAccent }} />
-      <span className={styles.chipLabel}>{preset.name}</span>
+      <span className={styles.paletteBar} aria-hidden="true">
+        {paletteForPreset(preset).map((swatch) => (
+          <span
+            key={swatch.label}
+            className={styles.paletteSwatch}
+            style={{ background: swatch.color }}
+          />
+        ))}
+      </span>
+      <span className={styles.cardText}>
+        <span className={styles.cardTitleRow}>
+          <strong>{preset.name}</strong>
+          <em>{modeLabel}</em>
+        </span>
+        {preset.description && <small>{preset.description}</small>}
+      </span>
     </button>
   );
 
@@ -48,22 +85,30 @@ export const ThemePresetStrip: React.FC<ThemePresetStripProps> = ({
     <div className={styles.strip}>
       <div className={styles.heading}>
         <h4 className={styles.headingTitle}>Built-in presets</h4>
-        <p className={styles.hint}>
-          Click a preset to apply instantly. Selection syncs to the server and is restored on next launch.
-        </p>
+        <p className={styles.hint}>Pick by palette, then fine-tune below.</p>
       </div>
 
       {darkPresets.length > 0 && (
         <div className={styles.group}>
-          <span className={styles.groupLabel}>Dark</span>
-          <div className={styles.chips}>{darkPresets.map(renderChip)}</div>
+          <div className={styles.groupHeader}>
+            <span className={styles.groupLabel}>Dark</span>
+            <span>{darkPresets.length} presets</span>
+          </div>
+          <div className={styles.presetGrid}>
+            {darkPresets.map((preset) => renderPresetCard(preset, 'Dark'))}
+          </div>
         </div>
       )}
 
       {lightPresets.length > 0 && (
         <div className={styles.group}>
-          <span className={styles.groupLabel}>Light</span>
-          <div className={styles.chips}>{lightPresets.map(renderChip)}</div>
+          <div className={styles.groupHeader}>
+            <span className={styles.groupLabel}>Light</span>
+            <span>{lightPresets.length} preset</span>
+          </div>
+          <div className={styles.presetGrid}>
+            {lightPresets.map((preset) => renderPresetCard(preset, 'Light'))}
+          </div>
         </div>
       )}
     </div>

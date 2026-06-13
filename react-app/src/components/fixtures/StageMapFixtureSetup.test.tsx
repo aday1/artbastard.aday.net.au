@@ -97,4 +97,30 @@ describe('StageMapFixtureSetup', () => {
     expect(HTMLElement.prototype.setPointerCapture).not.toHaveBeenCalled();
     expect(useStore.getState().selectedFixtures).toEqual([]);
   });
+
+  it('keeps large fixture channel lists compact until expanded', () => {
+    const largeFixture = {
+      ...fixture,
+      channels: Array.from({ length: 10 }, (_, index) => ({
+        name: `Channel ${index + 1}`,
+        type: 'other',
+      })),
+    };
+    useStore.setState({
+      fixtures: [largeFixture],
+      selectedFixtures: [largeFixture.id],
+    } as any);
+
+    render(<StageMapFixtureSetup />);
+
+    expect(screen.getByText(/10 ch .*DMX 1-10/)).toBeDefined();
+    expect(screen.getByRole('button', { name: 'All 10' })).toBeDefined();
+    expect(screen.queryByDisplayValue('Default')).toBeNull();
+    expect(screen.queryByText('Channel 9')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'All 10' }));
+
+    expect(screen.getByText('Channel 10')).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Less' })).toBeDefined();
+  });
 });

@@ -25,6 +25,10 @@ import { applyRackChrome, getPresetById } from '../../utils/themeUtils'
 import styles from './UnifiedSettings.module.scss'
 
 type SuperControlSettingsExport = SuperControlPreferences
+type ColorTabId = 'primary' | 'semantic' | 'text' | 'surfaces' | 'status'
+
+const hslColor = (hue: number, saturation: number, brightness: number) =>
+  `hsl(${hue}, ${saturation}%, ${brightness}%)`
 
 interface AppSettings {
   theme: 'artsnob' | 'standard' | 'minimal'
@@ -155,7 +159,7 @@ export const UnifiedSettings: React.FC = () => {
     statusActiveHue: themeColors.statusActiveHue ?? 142,
     statusInactiveBrightness: themeColors.statusInactiveBrightness ?? 50
   });
-  const [activeColorTab, setActiveColorTab] = useState<'primary' | 'semantic' | 'text' | 'surfaces' | 'status'>('primary');
+  const [activeColorTab, setActiveColorTab] = useState<ColorTabId>('primary');
   const [savedThemes, setSavedThemes] = useState<Array<{ name: string; colors: typeof previewThemeColors; uiSettings?: typeof previewUiSettings }>>([]);
   const [previewUiSettings, setPreviewUiSettings] = useState({
     ...uiSettings,
@@ -730,6 +734,64 @@ export const UnifiedSettings: React.FC = () => {
     },
   ];
 
+  const colorTabOptions: Array<{
+    id: ColorTabId;
+    label: string;
+    detail: string;
+    swatches: string[];
+  }> = [
+    {
+      id: 'primary',
+      label: 'Palette',
+      detail: 'Base, secondary, accent',
+      swatches: [
+        hslColor(previewThemeColors.primaryHue, previewThemeColors.primarySaturation, previewThemeColors.primaryBrightness),
+        hslColor(previewThemeColors.secondaryHue, previewThemeColors.secondarySaturation, previewThemeColors.secondaryBrightness),
+        hslColor(previewThemeColors.accentHue, previewThemeColors.accentSaturation, previewThemeColors.accentBrightness),
+      ],
+    },
+    {
+      id: 'semantic',
+      label: 'Semantic',
+      detail: 'Success, warning, error',
+      swatches: [
+        hslColor(previewThemeColors.successHue ?? 142, previewThemeColors.successSaturation ?? 71, previewThemeColors.successBrightness ?? 47),
+        hslColor(previewThemeColors.warningHue ?? 38, previewThemeColors.warningSaturation ?? 92, previewThemeColors.warningBrightness ?? 51),
+        hslColor(previewThemeColors.errorHue ?? 0, previewThemeColors.errorSaturation ?? 84, previewThemeColors.errorBrightness ?? 60),
+      ],
+    },
+    {
+      id: 'text',
+      label: 'Text',
+      detail: 'Text and borders',
+      swatches: [
+        hslColor(previewThemeColors.backgroundHue ?? 220, previewThemeColors.backgroundSaturation ?? 20, previewThemeColors.textPrimaryBrightness ?? 90),
+        hslColor(previewThemeColors.backgroundHue ?? 220, previewThemeColors.backgroundSaturation ?? 20, previewThemeColors.textSecondaryBrightness ?? 65),
+        hslColor(previewThemeColors.backgroundHue ?? 220, previewThemeColors.borderSaturation ?? 15, previewThemeColors.borderBrightness ?? 30),
+      ],
+    },
+    {
+      id: 'surfaces',
+      label: 'Surfaces',
+      detail: 'Background and cards',
+      swatches: [
+        hslColor(previewThemeColors.backgroundHue ?? 220, previewThemeColors.backgroundSaturation ?? 20, previewThemeColors.backgroundBrightness ?? 25),
+        hslColor(previewThemeColors.backgroundHue ?? 220, previewThemeColors.cardSaturation ?? 20, (previewThemeColors.backgroundBrightness ?? 25) + (previewThemeColors.cardBrightness ?? 8)),
+        hslColor(previewThemeColors.backgroundHue ?? 220, previewThemeColors.borderSaturation ?? 15, previewThemeColors.borderBrightness ?? 30),
+      ],
+    },
+    {
+      id: 'status',
+      label: 'Status',
+      detail: 'Connection states',
+      swatches: [
+        hslColor(previewThemeColors.statusConnectedHue ?? 142, 71, 47),
+        hslColor(previewThemeColors.statusDisconnectedHue ?? 0, 84, 60),
+        hslColor(previewThemeColors.backgroundHue ?? 220, 12, previewThemeColors.statusInactiveBrightness ?? 50),
+      ],
+    },
+  ];
+
   return (
     <div className={styles.unifiedSettings}>
       <div className={styles.panel}>
@@ -961,36 +1023,25 @@ export const UnifiedSettings: React.FC = () => {
 
                   {/* Color Category Tabs */}
                   <div className={styles.colorTabs}>
-                    <button
-                      className={activeColorTab === 'primary' ? styles.activeTab : ''}
-                      onClick={() => setActiveColorTab('primary')}
-                    >
-                      Primary Colors
-                    </button>
-                    <button
-                      className={activeColorTab === 'semantic' ? styles.activeTab : ''}
-                      onClick={() => setActiveColorTab('semantic')}
-                    >
-                      Semantic Colors
-                    </button>
-                    <button
-                      className={activeColorTab === 'text' ? styles.activeTab : ''}
-                      onClick={() => setActiveColorTab('text')}
-                    >
-                      Text & Borders
-                    </button>
-                    <button
-                      className={activeColorTab === 'surfaces' ? styles.activeTab : ''}
-                      onClick={() => setActiveColorTab('surfaces')}
-                    >
-                      Surfaces & Cards
-                    </button>
-                    <button
-                      className={activeColorTab === 'status' ? styles.activeTab : ''}
-                      onClick={() => setActiveColorTab('status')}
-                    >
-                      Status Colors
-                    </button>
+                    {colorTabOptions.map((tab) => (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        className={activeColorTab === tab.id ? styles.activeTab : ''}
+                        aria-pressed={activeColorTab === tab.id}
+                        onClick={() => setActiveColorTab(tab.id)}
+                      >
+                        <span className={styles.tabSwatches} aria-hidden="true">
+                          {tab.swatches.map((color, index) => (
+                            <span key={`${tab.id}-${index}`} style={{ background: color }} />
+                          ))}
+                        </span>
+                        <span className={styles.tabText}>
+                          <strong>{tab.label}</strong>
+                          <small>{tab.detail}</small>
+                        </span>
+                      </button>
+                    ))}
                   </div>
 
                   {/* Primary Colors Tab */}
@@ -1202,18 +1253,6 @@ export const UnifiedSettings: React.FC = () => {
                       </label>
                     </div>
                   </div>
-
-                  <ThemePresetStrip
-                    onPreview={(colors) => {
-                      setPreviewThemeColors(colors);
-                    }}
-                    onPreferDark={(prefer) => {
-                      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-                      if (prefer && !isDark) toggleDarkMode();
-                      if (!prefer && isDark) toggleDarkMode();
-                      scheduleSave({ darkMode: prefer });
-                    }}
-                  />
 
                   {/* Custom Saved Themes */}
                   {savedThemes.length > 0 ? (
