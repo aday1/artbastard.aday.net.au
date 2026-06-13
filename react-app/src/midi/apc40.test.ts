@@ -68,7 +68,7 @@ describe('APC40 workflow decoder', () => {
     }
   });
 
-  it('decodes record-arm, activator, solo-cue, stop-all, and freeze-dmx rows', () => {
+  it('decodes solo-group, activator, solo-cue, stop-all, and freeze-dmx rows', () => {
     expect(decodeApc40Message({
       _type: 'noteon',
       source: 'Akai APC40',
@@ -76,7 +76,7 @@ describe('APC40 workflow decoder', () => {
       note: 0x30,
       velocity: 127,
     })).toEqual({
-      type: 'record-arm',
+      type: 'solo-group',
       model: 'apc40-mk1',
       trackIndex: 4,
     });
@@ -139,7 +139,7 @@ describe('APC40 workflow decoder', () => {
     });
   });
 
-  it('maps every Record Arm button to its matching save-arm column', () => {
+  it('maps every Record Arm button to its matching solo-group column', () => {
     for (let channel = 0; channel < 8; channel += 1) {
       expect(decodeApc40Message({
         _type: 'noteon',
@@ -148,7 +148,7 @@ describe('APC40 workflow decoder', () => {
         note: 0x30,
         velocity: 127,
       })).toEqual({
-        type: 'record-arm',
+        type: 'solo-group',
         model: 'apc40-mk1',
         trackIndex: channel,
       });

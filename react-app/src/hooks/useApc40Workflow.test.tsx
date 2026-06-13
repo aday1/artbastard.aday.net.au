@@ -94,10 +94,10 @@ describe('useApc40Workflow', () => {
     });
   });
 
-  it('saves then recalls a Deck A scene from Record Arm plus clip grid', async () => {
+  it('saves then recalls a Deck A scene from transport REC plus clip grid', async () => {
     renderHook(() => useApc40Workflow());
 
-    apcMessage({ channel: 1, note: 0x30 });
+    apcMessage({ channel: 0, note: 0x5d });
     apcMessage({ channel: 1, note: 0x35 });
 
     await waitFor(() => {

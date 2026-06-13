@@ -170,10 +170,8 @@ export function useApc40LedFeedback() {
       // Encode only selection state, not "exists vs absent", since the operator
       // can't distinguish multiple non-off colors on these pads.
       const soloed = soloedGroups.has(column);
-      const armed = armedColumns.has(column);
-      // Record Arm row = save-column arm. SHIFT+Record Arm also soloes groups;
-      // both states are shown as red-blink on the MK1 single-color row.
-      sendLed(out, column, RECORD_ARM_NOTE, (armed || soloed) ? LED_RED_BLINK : LED_OFF);
+      // Record Arm row = Solo Group latch. Save mode is shown on REC and clip-grid pads.
+      sendLed(out, column, RECORD_ARM_NOTE, soloed ? LED_RED_BLINK : LED_OFF);
       // Solo/Cue row = toggle FIXTURE in multi-selection. On = selected.
       sendLed(out, column, SOLO_NOTE, fixtureSelected ? LED_GREEN : LED_OFF);
       // Activator row = toggle GROUP in multi-selection. On = all fixtures in group selected.

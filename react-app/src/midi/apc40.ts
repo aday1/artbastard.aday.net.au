@@ -9,7 +9,6 @@ export type Apc40Action =
   | { type: 'track-stop'; model: Apc40Model; trackIndex: number }
   | { type: 'activator'; model: Apc40Model; trackIndex: number }
   | { type: 'solo-cue'; model: Apc40Model; trackIndex: number }
-  | { type: 'record-arm'; model: Apc40Model; trackIndex: number }
   | { type: 'solo-group'; model: Apc40Model; trackIndex: number }
   | { type: 'channel-fader'; model: Apc40Model; trackIndex: number; value: number }
   | { type: 'master-fader'; model: Apc40Model; value: number }
@@ -157,7 +156,7 @@ export function decodeApc40Message(message: MidiLikeMessage): Apc40Action | null
   const scene = sceneLaunch(model, note);
   if (scene) return scene;
 
-  if (note === 0x30) return { type: 'record-arm', model, trackIndex };
+  if (note === 0x30) return { type: 'solo-group', model, trackIndex };
   // Solo/Cue row selects FIXTURES (formerly solo-isolation).
   if (note === 0x31) return { type: 'select-fixture', model, trackIndex };
   // Activator row selects GROUPS (formerly auto-control toggle).

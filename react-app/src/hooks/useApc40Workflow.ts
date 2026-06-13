@@ -291,42 +291,15 @@ export function useApc40Workflow() {
       return;
     }
 
-    if (action.type === 'record-arm') {
-      if (!shiftHeldRef.current) {
-        const alreadyArmed = armedColumnsRef.current.has(action.trackIndex);
-        if (alreadyArmed) armedColumnsRef.current.delete(action.trackIndex);
-        else armedColumnsRef.current.add(action.trackIndex);
-        publishSurfaceState({
-          mode: armedColumnsRef.current.size > 0 ? 'save' : null,
-          lastChange: makeLastChange(
-            'scene',
-            `Record Arm ${action.trackIndex + 1}`,
-            alreadyArmed
-              ? `Disarmed Deck ${deck} save column ${action.trackIndex + 1}`
-              : `Armed Deck ${deck} save column ${action.trackIndex + 1}`,
-            alreadyArmed
-              ? 'That clip-grid column is back to launch mode.'
-              : `Press a clip-grid pad in column ${action.trackIndex + 1} to save the current DMX look into Deck ${deck}.`
-          ),
-        });
-        state.addNotification({
-          message: alreadyArmed
-            ? `APC40 disarmed save column ${action.trackIndex + 1}`
-            : `APC40 armed save column ${action.trackIndex + 1} for Deck ${deck}`,
-          type: 'info',
-          priority: 'normal',
-        });
-        return;
-      }
-
+    if (action.type === 'solo-group') {
       const group = state.groups[action.trackIndex];
       if (!group) {
         publishSurfaceState({
           lastChange: makeLastChange(
             'selection',
-            `SHIFT+Record Arm ${action.trackIndex + 1}`,
+            `Solo Group ${action.trackIndex + 1}`,
             `Group ${action.trackIndex + 1} does not exist`,
-            'SHIFT+Record Arm solos the matching fixture group. Patch a group first.'
+            'Record Arm row solos the matching fixture group. Patch a group first.'
           ),
         });
         return;
@@ -353,7 +326,7 @@ export function useApc40Workflow() {
       publishSurfaceState({
         lastChange: makeLastChange(
           'selection',
-          `SHIFT+Record Arm ${action.trackIndex + 1}`,
+          `Solo Group ${action.trackIndex + 1}`,
           alreadyOn
             ? `Released solo on group "${group.name}"`
             : `Soloed group "${group.name}"`,

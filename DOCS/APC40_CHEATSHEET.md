@@ -12,7 +12,7 @@ APC40 MK1 factory MIDI mode and works without applying a MIDI template.
                 pan/tilt/RGB/W/strobe      gobo, wheel, prism, iris,
                 speed                      focus, zoom, effects
 
-  RECORD ARM   [arm col1] ... [arm col8]     arm save column; SHIFT+Record Arm solos group
+  RECORD ARM   [solo grp1] ... [solo grp8]   latched Solo-Group blackout of non-soloed fixtures
   SOLO/CUE     [fixture 1] ... [fixture 8]   select fixture N (positional)
   ACTIVATOR    [group 1]   ... [group 8]     select fixture group N (positional)
   TRACK SELECT [UNMAPPED ] ... [UNMAPPED ]   hardware CC bleed — selection lives on Solo/Cue + Activator
@@ -32,7 +32,7 @@ APC40 MK1 factory MIDI mode and works without applying a MIDI template.
   CUE LEVEL          UNMAPPED (Device Left/Right cycles Device Control role bank)
   PLAY               enable Auto Scene playback        (LED green-blink while running)
   STOP               disable Auto Scene playback       (LED red while running)
-  REC                arm grid column for clip save     (LED red-blink while any column armed)
+  REC                enter clip-grid save mode         (LED red-blink while save mode active)
                      SHIFT+REC = roll fresh random look across all fixtures (preview only)
   SEND A             toggle Color modular automation   (SHIFT+SEND A cycles color pattern)
   SEND B             toggle Pan/Tilt modular auto      (SHIFT+SEND B cycles pan/tilt path)
@@ -50,8 +50,8 @@ APC40 MK1 factory MIDI mode and works without applying a MIDI template.
 | --- | --- | --- |
 | **Clip Launch / Session View 8x5** | Launch Deck A scene slots `APC40 Deck A 01` through `APC40 Deck A 40` | green = saved, orange-blink = active deck scene, off = empty |
 | **SHIFT + Clip Grid** | Hold SHIFT to use Deck B scene slots `APC40 Deck B 01` through `APC40 Deck B 40` | SHIFT orange while held; grid repaints for Deck B |
-| **REC (transport)** | Toggle all save columns. SHIFT+REC rolls a fresh random look across all fixtures (preview only — does not save). | red-blink on REC and every armed clip pad |
-| **Record Arm 1-8 (top row)** | Arm/disarm save column N. Next grid pad in that column saves current DMX into the current deck slot. SHIFT+Record Arm N soloes group N. | red-blink while armed or soloed, off otherwise (MK1: single-color amber row) |
+| **REC (transport)** | Enter/exit save mode for the clip grid. Next clip-grid pad saves current DMX into that deck slot. SHIFT+REC rolls a fresh random look across all fixtures (preview only — does not save). | red-blink on REC and every armed clip pad |
+| **Record Arm 1-8 (top row)** | **SOLO GROUP N** latch. Snapshots DMX on first solo, blacks out fixtures not in soloed groups, restores snapshot when last solo released. | red-blink while soloed, off otherwise (MK1: single-color amber row) |
 | **Scene Launch 1-5** | Launch ACT 1-5 | green = ACT exists, orange-blink = playing ACT |
 | **Clip Stop row** | Stop/unselect the active scene for that column in the current deck | red while a deck scene is active |
 | **Stop All Clips** | Stop Deck A scene, Deck B scene, scene timeline playback, and ACT playback | red while a deck scene or ACT is active |
@@ -182,8 +182,8 @@ The SEND-row LED is orange-blink while its engine is enabled.
 ## Save scene workflow
 
 1. Choose the deck: leave SHIFT released for Deck A, hold SHIFT for Deck B.
-2. Press **Record Arm 1-8** for the column you want to save into, or press **REC** transport to arm all columns. ArtBastard enters **SAVE MODE** and flashes armed columns red.
-3. Press a flashing red grid pad in an armed column. Empty pads are spare save targets; saved pads will be overwritten.
+2. Press **REC** on the transport row. ArtBastard enters **SAVE MODE** and flashes the clip grid red.
+3. Press the clip-grid pad you want to save into. Empty pads are spare save targets; saved pads will be overwritten.
 4. ArtBastard saves the current DMX state into that deck slot name.
 
 To launch a scene, press any saved grid pad in the current deck.
@@ -209,7 +209,7 @@ up to whatever you changed during the freeze.
 
 ## Solo Group latch
 
-Hold **SHIFT** and press a **Record Arm** button (top row) to solo that group. The first press
+Press a **Record Arm** button (top row) to solo that group. The first press
 in an empty solo set snapshots DMX and blacks out all fixtures that are not
 in any soloed group. Additional presses add groups to the solo set. Pressing
 a soloed group again removes it; releasing the last solo restores the
@@ -251,7 +251,7 @@ tests and overlay preferences:
 | 1 | green | saved deck slot, saved ACT, fixture/group selected (MK1 single-color rows display this as plain amber-on) |
 | 2 | green-blink | PLAY while Auto Scene running |
 | 3 | red | STOP active / FULL ON latched / Master Select frozen / active deck scene present (MK1 single-color rows display this as plain amber-on) |
-| 4 | red-blink | record-armed save column (REC + armed clip pads) **or** Solo Group latched |
+| 4 | red-blink | REC save mode / armed clip pads **or** Solo Group latched |
 | 5 | orange | SHIFT latched |
 | 6 | orange-blink | active deck scene, playing ACT, SEND-row engine enabled |
 
