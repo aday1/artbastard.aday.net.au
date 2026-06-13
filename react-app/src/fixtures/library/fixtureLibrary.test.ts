@@ -26,7 +26,10 @@ describe('source-backed fixture profile catalog', () => {
       ['generic-dimmer', 'AB-FIX-010'],
       ['simple-rgb-par', 'AB-FIX-011'],
       ['rgbw-par-can', 'AB-FIX-012'],
-      ['basic-moving-head-spot', 'AB-FIX-013'],
+      ['led-bar-wash-24', 'AB-FIX-013'],
+      ['mini-moving-head-gobo-strips', 'AB-FIX-014'],
+      ['mini-moving-head-9-11ch', 'AB-FIX-015'],
+      ['basic-moving-head-spot', 'AB-FIX-016'],
     ].forEach(([id, catalogId]) => {
       expect(getFixtureLibraryEntryById(id)?.catalogId).toBe(catalogId);
       expect(getFixtureLibraryEntryByCatalogId(catalogId)?.id).toBe(id);
@@ -35,7 +38,7 @@ describe('source-backed fixture profile catalog', () => {
 
   it('keeps docs and gallery paths attached to imported hardware profiles', () => {
     fixtureLibraryEntries.forEach((entry) => {
-      expect(entry.documentationPath).toMatch(/^DOCS\/fixtures\/AB-FIX-\d{3}/);
+      expect(entry.documentationPath).toMatch(/^DOCS\/fixtures\//);
       if (entry.photoUrl) {
         expect(entry.photoUrl).toMatch(/^\/fixtures\//);
       }

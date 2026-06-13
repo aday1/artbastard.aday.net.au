@@ -9,6 +9,7 @@ category: Moving head / Mini gobo spot with decorative light strips
 manufacturer: Generic
 model: 10/12-channel mini moving head gobo with LED light strips
 modelConfidence: probable
+photoUrl: /fixtures/ab-fix-014-mini-moving-head-gobo-strips-generated.png
 documentationPath: DOCS/fixtures/MOVING-HEAD/MOVING-HEAD-mini-gobo-with-strips.md
 tags: [MOVING-HEAD, GOBO, COLOR, MINI, LED, STRIPS]
 notes: Small LED moving head with colour wheel, gobo wheel, strobe, dimmer, motor speed, built-in automatic and sound-active modes, and a secondary LED light-strip channel. Selectable 10- or 12-channel DMX mode via on-fixture LCD menu.

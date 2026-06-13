@@ -9,7 +9,7 @@ category: Moving head / Beam spot with gobos
 manufacturer: Generic
 model: MiniBeam
 modelConfidence: confirmed
-photoUrl: /fixtures/ab-fix-002-minibeam-moving-head.jpg
+photoUrl: /fixtures/ab-fix-002-minibeam-moving-head-generated.png
 documentationPath: DOCS/fixtures/MOVING-HEAD/MOVING-HEAD-MINIBEAM.md
 tags: [MOVING-HEAD, BEAM, SPOT, GOBO, PRISM, FROST, MINIBEAM]
 notes: 18-channel MiniBeam moving head beam/spot with 14-colour wheel, 14-gobo wheel, prism with rotation, frost, focus, fine pan/tilt, macro, reset and lamp control.

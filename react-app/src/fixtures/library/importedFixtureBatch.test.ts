@@ -47,13 +47,13 @@ describe('imported user fixture batch AB-FIX-003 through AB-FIX-009', () => {
     ]));
   });
 
-  it('keeps store and canvas adapters compatible with photo and no-photo entries', () => {
+  it('keeps store and canvas adapters compatible with generated fixture images', () => {
     const withPhoto = toStoreFixtureTemplate(tinyLedMovingHeadWash);
-    const withoutPhoto = toCanvasFixtureTemplate(eventLightingEl1000Rgb);
+    const laserPhoto = toCanvasFixtureTemplate(eventLightingEl1000Rgb);
 
-    expect(withPhoto.photoUrl).toBe('/fixtures/ab-fix-007-tiny-led-moving-head-wash.jpg');
+    expect(withPhoto.photoUrl).toBe('/fixtures/ab-fix-007-tiny-led-moving-head-wash-generated.png');
     expect(withPhoto.modes?.[0].channels).toBe(13);
-    expect(withoutPhoto.photoUrl).toBeUndefined();
-    expect(withoutPhoto.modes?.[0].channels).toBe(16);
+    expect(laserPhoto.photoUrl).toBe('/fixtures/ab-fix-009-event-lighting-el1000rgb-generated.png');
+    expect(laserPhoto.modes?.[0].channels).toBe(16);
   });
 });

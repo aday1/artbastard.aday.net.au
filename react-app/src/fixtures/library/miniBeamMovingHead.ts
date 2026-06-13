@@ -10,7 +10,7 @@ export const miniBeamMovingHead: FixtureLibraryEntry = {
   manufacturer: 'Generic',
   model: 'MiniBeam',
   modelConfidence: 'confirmed',
-  photoUrl: '/fixtures/ab-fix-002-minibeam-moving-head.jpg',
+  photoUrl: '/fixtures/ab-fix-002-minibeam-moving-head-generated.png',
   documentationPath: 'DOCS/fixtures/AB-FIX-002-minibeam-moving-head.md',
   notes:
     'User-owned MiniBeam moving-head fixture. Manual pages document one 18-channel mode with colour wheel, gobo wheel, prism, frost, focus, pan/tilt fine control, reset and lamp commands. The macro note is ambiguous in the photo and is preserved in documentation.',

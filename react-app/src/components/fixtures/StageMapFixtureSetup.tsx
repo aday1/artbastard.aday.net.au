@@ -1,7 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import { type Fixture, type Group, type PlacedFixture, useStore } from '../../store';
-import { getFixtureTypeColor, getFixtureTypeIcon } from '../../utils/fixturePresentation';
+import {
+  mergeFixtureTemplatesWithCatalog,
+  refreshFixtureCatalogPhotos,
+} from '../../store/fixtureCatalogSync';
+import { getFixtureIdentity } from '../../utils/fixturePresentation';
 import { mergeSmartFixtureGroups, suggestFixtureGroups } from '../../fixtures/autoGroups';
 import {
   cleanupAfterFixtureDelete,
@@ -23,7 +27,7 @@ import { SceneSeedButton } from '../scenes/SceneSeedButton';
 import { ActSeedButton } from '../acts/ActSeedButton';
 import { UnifiedStageWorkbench } from './UnifiedStageWorkbench';
 import { LucideIcon } from '../ui/LucideIcon';
-import { HoverZoomImage } from '../ui/HoverZoomImage';
+import { FixtureIdentityVisual } from './FixtureIdentityVisual';
 import styles from './StageMapFixtureSetup.module.scss';
 
 type StageTool = 'select' | 'box';
@@ -124,6 +128,27 @@ export const StageMapFixtureSetup: React.FC = () => {
     if (typeof window === 'undefined') return;
     window.localStorage.setItem('stage-map-tools-open', stageToolsOpen ? '1' : '0');
   }, [stageToolsOpen]);
+
+  useEffect(() => {
+    const mergedTemplates = mergeFixtureTemplatesWithCatalog(
+      fixtureTemplates.filter(template => !template.isBuiltIn)
+    );
+    const needsRefresh = mergedTemplates.length !== fixtureTemplates.length ||
+      mergedTemplates.some((template, index) => {
+        const current = fixtureTemplates[index];
+        return !current ||
+          current.id !== template.id ||
+          current.photoUrl !== template.photoUrl ||
+          current.templateName !== template.templateName;
+      });
+    const refreshedFixtures = refreshFixtureCatalogPhotos(fixtures, mergedTemplates);
+
+    if (!needsRefresh && refreshedFixtures === fixtures) return;
+    useStore.setState({
+      fixtureTemplates: mergedTemplates,
+      fixtures: refreshedFixtures,
+    });
+  }, [fixtureTemplates, fixtures]);
   const [contextMenu, setContextMenu] = useState<{ fixtureId: string; x: number; y: number } | null>(null);
 
   const layout = useMemo(() => normalizeFixtureLayout(fixtures, fixtureLayout), [fixtures, fixtureLayout]);
@@ -856,16 +881,13 @@ export const StageMapFixtureSetup: React.FC = () => {
           </select>
           <div className={styles.templateList}>
             {filteredTemplates.map((template) => {
-              const type = template.type || template.category || 'Fixture';
-              const color = getFixtureTypeColor(type);
-              const icon = getFixtureTypeIcon(type) as any;
+              const identity = getFixtureIdentity(template);
               const isSelected = selectedTemplateId === template.id;
               const mode = template.modes?.[0];
-              const channelCount = mode?.channels || template.channels?.length || 1;
+              const channelCount = identity.channelCount || mode?.channels || template.channels?.length || 1;
               const channelList: Array<{ name: string; type?: string }> = mode?.channelData
                 ? mode.channelData.map((c) => ({ name: c.name, type: c.type }))
                 : (template.channels || []).map((c) => ({ name: c.name, type: c.type }));
-              const makeModel = [template.manufacturer, template.model].filter(Boolean).join(' · ');
               return (
                 <button
                   key={template.id}
@@ -877,25 +899,28 @@ export const StageMapFixtureSetup: React.FC = () => {
                     event.dataTransfer.setData('application/x-artbastard-fixture-template', template.id);
                     event.dataTransfer.effectAllowed = 'copy';
                   }}
-                  style={{ ['--fixture-accent' as any]: color }}
+                  style={{ ['--fixture-accent' as any]: identity.accentColor }}
+                  title={identity.title}
                 >
-                  {template.photoUrl ? (
-                    <HoverZoomImage
-                      src={template.photoUrl}
-                      alt={template.templateName}
-                      className={styles.templateIcon}
-                      zoomSize={320}
-                    />
-                  ) : (
-                    <span className={styles.templateIcon}><LucideIcon name={icon} size={48} /></span>
-                  )}
-                  <span>
-                    <strong>{template.templateName}</strong>
-                    <small>{type} · {channelCount}ch</small>
+                  <FixtureIdentityVisual
+                    fixture={template}
+                    className={styles.templateIcon}
+                    variant="library"
+                    zoom
+                    zoomSize={320}
+                  />
+                  <span className={styles.templateInfo}>
+                    <strong>{identity.label}</strong>
+                    <small>
+                      {identity.catalogId ? `${identity.catalogId} · ` : ''}
+                      {identity.typeLabel} · {identity.channelText}
+                    </small>
+                    {identity.makeModel && <em className={styles.templateMake}>{identity.makeModel}</em>}
                   </span>
                   <div className={styles.templateTooltip} role="tooltip">
-                    <span className={styles.templateTooltipTitle}>{template.templateName}</span>
-                    {makeModel && <span className={styles.templateTooltipMake}>{makeModel}</span>}
+                    <span className={styles.templateTooltipTitle}>{identity.label}</span>
+                    {identity.catalogId && <span className={styles.templateTooltipCatalog}>{identity.catalogId}</span>}
+                    {identity.makeModel && <span className={styles.templateTooltipMake}>{identity.makeModel}</span>}
                     <span className={styles.templateTooltipChannelsHeader}>
                       {channelCount} channel{channelCount === 1 ? '' : 's'}
                       {mode?.name ? ` · ${mode.name}` : ''}
@@ -965,8 +990,7 @@ export const StageMapFixtureSetup: React.FC = () => {
               {layout.map((item) => {
                 const fixture = fixtures.find((entry) => entry.id === item.fixtureId);
                 if (!fixture) return null;
-                const color = getFixtureTypeColor(fixture.type);
-                const icon = getFixtureTypeIcon(fixture.type) as any;
+                const identity = getFixtureIdentity(fixture);
                 const selected = selectedIdSet.has(fixture.id);
                 const conflict = findAddressConflict(fixtures, fixture);
                 const fixtureIndex = fixtures.findIndex((entry) => entry.id === fixture.id);
@@ -977,28 +1001,23 @@ export const StageMapFixtureSetup: React.FC = () => {
                     type="button"
                     className={`${styles.fixtureNode} ${selected ? styles.selectedNode : ''} ${conflict ? styles.conflictNode : ''}`}
                     style={{
-                      ['--fixture-color' as any]: color,
+                      ['--fixture-color' as any]: identity.accentColor,
                       left: `${(item.x / STAGE_MAP_WIDTH) * 100}%`,
                       top: `${(item.y / STAGE_MAP_HEIGHT) * 100}%`,
                       transform: `translate(-50%, -50%) rotate(${(item as any).rotation || 0}deg) scale(${item.scale || 1})`,
                     }}
                     onPointerDown={(event) => handleFixturePointerDown(event, fixture.id)}
                     onContextMenu={(event) => handleFixtureContextMenu(event, fixture.id)}
-                    title={`${fixture.name} DMX ${fixture.startAddress}-${fixtureEndAddress(fixture)}`}
+                    title={`${identity.title} · DMX ${fixture.startAddress}-${fixtureEndAddress(fixture)}`}
                   >
-                    {fixture.photoUrl ? (
-                      <img
-                        className={styles.nodeIcon}
-                        src={fixture.photoUrl}
-                        alt=""
-                        loading="lazy"
-                        decoding="async"
-                        draggable={false}
-                      />
-                    ) : (
-                      <span className={styles.nodeIcon}><LucideIcon name={icon} size={28} /></span>
-                    )}
-                    <span className={styles.nodeName}>{fixture.name}</span>
+                    <FixtureIdentityVisual
+                      fixture={fixture}
+                      className={styles.nodeIcon}
+                      variant="node"
+                      showCatalog={false}
+                    />
+                    <span className={styles.nodeName}>{identity.label}</span>
+                    <span className={styles.nodeType}>{identity.typeLabel}</span>
                     <span className={styles.nodeAddress}>{fixture.startAddress}-{fixtureEndAddress(fixture)}</span>
                     {fixtureGroups.length > 0 && (
                       <span className={styles.nodeGroups}>

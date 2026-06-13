@@ -85,7 +85,7 @@ export const rgbwParCan: FixtureLibraryEntry = {
 
 export const basicMovingHeadSpot: FixtureLibraryEntry = {
   id: 'basic-moving-head-spot',
-  catalogId: 'AB-FIX-013',
+  catalogId: 'AB-FIX-016',
   name: 'Basic Moving Head Spot',
   defaultNamePrefix: 'Basic Mover',
   type: 'Moving Head Spot',
@@ -93,7 +93,8 @@ export const basicMovingHeadSpot: FixtureLibraryEntry = {
   manufacturer: 'Generic',
   model: '10-channel pan/tilt spot profile',
   modelConfidence: 'confirmed',
-  documentationPath: 'DOCS/fixtures/AB-FIX-013-basic-moving-head-spot.md',
+  photoUrl: '/fixtures/ab-fix-016-basic-moving-head-spot-generated.png',
+  documentationPath: 'DOCS/fixtures/MOVING-HEAD/MOVING-HEAD-basic-spot.md',
   notes: 'Generic starter profile for unconfirmed moving head spot fixtures.',
   tags: ['MOVING HEAD', 'SPOT', 'RGB', 'GENERIC'],
   modes: [

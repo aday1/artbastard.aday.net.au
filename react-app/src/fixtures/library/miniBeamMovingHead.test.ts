@@ -64,7 +64,7 @@ describe('AB-FIX-002 MiniBeam Moving Head Spot', () => {
     expect(storeTemplate.id).toBe('minibeam-moving-head');
     expect(storeTemplate.isBuiltIn).toBe(true);
     expect(storeTemplate.modes?.[0].channels).toBe(18);
-    expect(storeTemplate.photoUrl).toBe('/fixtures/ab-fix-002-minibeam-moving-head.jpg');
+    expect(storeTemplate.photoUrl).toBe('/fixtures/ab-fix-002-minibeam-moving-head-generated.png');
     expect(storeTemplate.modes).toEqual(canvasTemplate.modes);
   });
 });

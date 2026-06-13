@@ -9,6 +9,7 @@ category: Par / Wash
 manufacturer: Generic
 model: 4-channel RGB plus dimmer profile
 modelConfidence: confirmed
+photoUrl: /fixtures/ab-fix-011-simple-rgb-par-generated.png
 documentationPath: DOCS/fixtures/PAR/PAR-simple-rgb.md
 tags: [WASH, RGB, PAR, GENERIC]
 notes: Generic starter profile for RGB par cans using direct RGB plus master dimmer.

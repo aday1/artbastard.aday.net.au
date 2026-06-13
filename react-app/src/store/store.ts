@@ -24,11 +24,11 @@ import {
 } from '../utils/themeUtils'
 import type { ChannelEnvelope } from './types'
 import { ensureGroupsSync } from './groupIds'
+import type { FixtureDipSwitchAddressing } from '../fixtures/library'
 import {
-  fixtureLibraryEntries,
-  toStoreFixtureTemplate,
-  type FixtureDipSwitchAddressing,
-} from '../fixtures/library'
+  mergeFixtureTemplatesWithCatalog,
+  refreshFixtureCatalogPhotos,
+} from './fixtureCatalogSync'
 import {
   createTransitionTrackerSlice,
   type TransitionTrackerSlice,
@@ -1507,8 +1507,6 @@ const initializeFixtureTemplates = (): FixtureTemplate[] => {
   // Canonical fixture profile catalog. Generic starter profiles live in
   // src/fixtures/library/coreFixtureLibrary.ts, and uploaded hardware profiles
   // live in src/fixtures/library so every protected profile has one source.
-  const catalogProfiles: FixtureTemplate[] = fixtureLibraryEntries.map(toStoreFixtureTemplate);
-
   // Custom editable profiles provided by default.
   const defaultCustomProfiles: FixtureTemplate[] = [
     {
@@ -1526,30 +1524,11 @@ const initializeFixtureTemplates = (): FixtureTemplate[] => {
   // Load custom profile copies from localStorage. Server copies sync via SocketContext.
   try {
     const stored = localStorage.getItem('fixtureTemplates');
-    const allProfiles = [...catalogProfiles, ...defaultCustomProfiles];
-    
-    if (stored) {
-      const customTemplates: FixtureTemplate[] = JSON.parse(stored);
-      // Add custom profiles that are not duplicates of catalog/default profiles.
-      customTemplates.forEach(template => {
-        if (!template.isBuiltIn && 
-            !catalogProfiles.some(profile => profile.id === template.id) &&
-            !defaultCustomProfiles.some(profile => profile.id === template.id)) {
-          // Validate and ensure channels array exists
-          if (!template.channels || !Array.isArray(template.channels) || template.channels.length === 0) {
-            // If channels is missing or invalid, provide a default
-            template.channels = [{ name: 'Channel 1', type: 'other' }];
-          }
-          allProfiles.push(template);
-        }
-      });
-      return allProfiles;
-    }
-    
-    return allProfiles;
+    const customTemplates: FixtureTemplate[] = stored ? JSON.parse(stored) : [];
+    return mergeFixtureTemplatesWithCatalog(customTemplates, defaultCustomProfiles);
   } catch (error) {
     console.warn('Failed to load fixture templates from localStorage:', error);
-    return [...catalogProfiles, ...defaultCustomProfiles];
+    return mergeFixtureTemplatesWithCatalog([], defaultCustomProfiles);
   }
 };
 
@@ -1796,7 +1775,7 @@ export const useStore = create<State>()(
             const parsed = JSON.parse(saved);
             if (Array.isArray(parsed)) {
               debugLog.log('[Store] Loaded fixtures from localStorage:', parsed.length);
-              return parsed;
+              return refreshFixtureCatalogPhotos(parsed);
             }
           }
         } catch (e) {
@@ -3671,7 +3650,7 @@ export const useStore = create<State>()(
 
       // Fixture Actions
       addFixture: (fixture) => {
-        const updatedFixtures = [...get().fixtures, fixture];
+        const updatedFixtures = refreshFixtureCatalogPhotos([...get().fixtures, fixture]);
         set({ fixtures: updatedFixtures });
         
         // Save to localStorage immediately
@@ -3733,11 +3712,12 @@ export const useStore = create<State>()(
       },
 
       setFixtures: (fixtures) => {
-        set({ fixtures });
+        const refreshedFixtures = refreshFixtureCatalogPhotos(fixtures);
+        set({ fixtures: refreshedFixtures });
         // Save to localStorage for persistence across server restarts
         try {
-          localStorage.setItem('artbastard-fixtures', JSON.stringify(fixtures));
-          debugLog.log('[Store] Saved fixtures to localStorage:', fixtures.length);
+          localStorage.setItem('artbastard-fixtures', JSON.stringify(refreshedFixtures));
+          debugLog.log('[Store] Saved fixtures to localStorage:', refreshedFixtures.length);
         } catch (e) {
           console.error('Failed to save fixtures to localStorage:', e);
         }

@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
 import { useStore } from '../../store';
-import { getFixtureTypeColor, getFixtureTypeIcon } from '../../utils/fixturePresentation';
+import { getFixtureIdentity } from '../../utils/fixturePresentation';
 import { normalizeFixtureLayout, STAGE_MAP_HEIGHT, STAGE_MAP_WIDTH } from '../../fixtures/stageMap';
 import { LucideIcon } from '../ui/LucideIcon';
+import { FixtureIdentityVisual } from './FixtureIdentityVisual';
 import styles from './StageMapDashboard.module.scss';
 
 interface StageMapDashboardProps {
@@ -136,8 +137,7 @@ export const StageMapDashboard: React.FC<StageMapDashboardProps> = ({
               const fixture = fixtures.find((f) => f.id === item.fixtureId);
               if (!fixture) return null;
               const fixtureIndex = fixtures.findIndex((f) => f.id === item.fixtureId);
-              const color = getFixtureTypeColor(fixture.type);
-              const icon = getFixtureTypeIcon(fixture.type) as any;
+              const identity = getFixtureIdentity(fixture);
               const selected = selectedIdSet.has(fixture.id);
               const apcHighlighted = highlightedIndices.has(fixtureIndex);
               const isLit = fixture.channels.some(
@@ -156,16 +156,21 @@ export const StageMapDashboard: React.FC<StageMapDashboardProps> = ({
                     .filter(Boolean)
                     .join(' ')}
                   style={{
-                    ['--fixture-color' as any]: color,
+                    ['--fixture-color' as any]: identity.accentColor,
                     left: `${(item.x / STAGE_MAP_WIDTH) * 100}%`,
                     top: `${(item.y / STAGE_MAP_HEIGHT) * 100}%`,
                   }}
                   onClick={(e) => handleFixtureClick(e, fixture.id)}
-                  title={`${fixture.name} · DMX ${fixture.startAddress}${isLit ? ' · LIVE' : ''}`}
+                  title={`${identity.title} · DMX ${fixture.startAddress}${isLit ? ' · LIVE' : ''}`}
                 >
-                  <LucideIcon name={icon} size={13} />
-                  <span className={styles.nodeName}>{fixture.name}</span>
-                  <span className={styles.nodeAddr}>{fixture.startAddress}</span>
+                  <FixtureIdentityVisual
+                    fixture={fixture}
+                    variant="mini"
+                    className={styles.nodeVisual}
+                    showCatalog={false}
+                  />
+                  <span className={styles.nodeName}>{identity.shortLabel}</span>
+                  <span className={styles.nodeAddr}>DMX {fixture.startAddress}</span>
                 </button>
               );
             })

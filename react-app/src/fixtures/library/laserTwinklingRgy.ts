@@ -10,7 +10,7 @@ export const laserTwinklingRgy: FixtureLibraryEntry = {
   manufacturer: 'Generic',
   model: 'TL-2028',
   modelConfidence: 'probable',
-  photoUrl: '/fixtures/ab-fix-001-twinkling-laser-rgy.jpg',
+  photoUrl: '/fixtures/ab-fix-001-twinkling-laser-rgy-generated.png',
   documentationPath: 'DOCS/fixtures/AB-FIX-001-twinkling-laser-rgy.md',
   notes:
     'Probable TL-2028 variant. Channels 2-4 are active only when channel 1 is in DMX mode (50-99). The manual documents channel 5 only for TL-2028.',

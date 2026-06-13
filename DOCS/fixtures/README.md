@@ -19,9 +19,10 @@ generated from `library/*.md` at build time via `scripts/buildSpecs.mjs`.
 | [AB-FIX-010](PAR/PAR-generic-dimmer.md) | Generic Dimmer | Generic control | 1-channel | ArtBastard canonical starter |
 | [AB-FIX-011](PAR/PAR-simple-rgb.md) | Simple RGB Par Can | Par / Wash | 4-channel | ArtBastard canonical starter |
 | [AB-FIX-012](PAR/PAR-rgbw.md) | RGBW Par Can | Par / Wash | 5-channel | ArtBastard canonical starter |
-| [AB-FIX-013](MOVING-HEAD/MOVING-HEAD-basic-spot.md) | Basic Moving Head Spot | Moving head | 10-channel | ArtBastard canonical starter |
+| [AB-FIX-013](LED-EFFECT/LED-EFFECT-bar-wash-24.md) | 24-LED Bar Wash | LED effect / Bar wash | 7-channel | Generic; provisional |
 | [AB-FIX-014](MOVING-HEAD/MOVING-HEAD-mini-gobo-with-strips.md) | Mini Moving Head Gobo Light (light strips) | Moving head / Mini gobo with side LED strips | 10-channel, 12-channel | Generic |
 | [AB-FIX-015](MOVING-HEAD/MOVING-HEAD-mini-9-11ch.md) | Mini Moving Head Gobo Spot (9/11ch) | Moving head / Mini gobo spot with colour wheel | 9-channel, 11-channel | Generic |
+| [AB-FIX-016](MOVING-HEAD/MOVING-HEAD-basic-spot.md) | Basic Moving Head Spot | Moving head | 10-channel | ArtBastard canonical starter |
 
 Profiles retain the manual's exact DMX ranges. Unconfirmed manufacturer or
 model information is labelled as probable or unknown rather than inferred.

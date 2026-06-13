@@ -53,7 +53,7 @@ export const miniLedMovingHeadWash: FixtureLibraryEntry = {
   manufacturer: 'Generic',
   model: 'Mini LED Moving Head',
   modelConfidence: 'confirmed',
-  photoUrl: '/fixtures/ab-fix-003-mini-led-moving-head-wash.jpg',
+  photoUrl: '/fixtures/ab-fix-003-mini-led-moving-head-wash-generated.png',
   documentationPath: 'DOCS/fixtures/AB-FIX-003-mini-led-moving-head-wash.md',
   notes:
     'User-owned mini LED moving wash. Manual was partly bilingual Chinese/English; this profile normalises the 9-channel and 14-channel tables into English.',
@@ -115,7 +115,7 @@ export const uvDmxLedPar: FixtureLibraryEntry = {
   category: 'UV / LED par wash',
   manufacturer: 'Generic',
   modelConfidence: 'unknown',
-  photoUrl: '/fixtures/ab-fix-004-uv-dmx-led-par-lineart.png',
+  photoUrl: '/fixtures/ab-fix-004-uv-dmx-led-par-generated.png',
   documentationPath: 'DOCS/fixtures/AB-FIX-004-uv-dmx-led-par.md',
   notes:
     'Purple/UV LED par-style wash. Manual documents one 7-channel DMX mode plus local menu programs for colour select, shade, pulse, transition, strobe and sound.',
@@ -231,7 +231,7 @@ export const smallMovingHeadSpot: FixtureLibraryEntry = {
   category: 'Moving head / Small spot with colour and gobos',
   manufacturer: 'Generic',
   modelConfidence: 'unknown',
-  photoUrl: '/fixtures/ab-fix-005-small-moving-head-spot-lineart.png',
+  photoUrl: '/fixtures/ab-fix-005-small-moving-head-spot-generated.png',
   documentationPath: 'DOCS/fixtures/AB-FIX-005-small-moving-head-spot.md',
   notes:
     'Manual-only small moving head profile. The source page is incomplete and broken English; ambiguous macro rows are preserved conservatively.',
@@ -281,6 +281,7 @@ export const fullColourAnimationLaser: FixtureLibraryEntry = {
   category: 'Laser / Full-colour animation and pattern laser',
   manufacturer: 'Generic',
   modelConfidence: 'unknown',
+  photoUrl: '/fixtures/ab-fix-006-full-colour-animation-laser-generated.png',
   documentationPath: 'DOCS/fixtures/AB-FIX-006-full-colour-animation-laser.md',
   notes:
     'Ripped single-page manual source. Profile keeps the documented 12-channel and 20-channel maps usable for patching; unclear rows are marked partial.',
@@ -373,7 +374,7 @@ export const tinyLedMovingHeadWash: FixtureLibraryEntry = {
   manufacturer: 'Generic',
   model: 'LED Stage Lighting',
   modelConfidence: 'probable',
-  photoUrl: '/fixtures/ab-fix-007-tiny-led-moving-head-wash-lineart.png',
+  photoUrl: '/fixtures/ab-fix-007-tiny-led-moving-head-wash-generated.png',
   documentationPath: 'DOCS/fixtures/AB-FIX-007-tiny-led-moving-head-wash.md',
   notes:
     'Small toy-grade LED pan/tilt light. Manual documents 11-channel and 13-channel modes plus local auto, sound, motor direction and reset menus.',
@@ -430,7 +431,7 @@ export const miniSpiderLight: FixtureLibraryEntry = {
   manufacturer: 'Generic',
   model: 'Mini Spider Light',
   modelConfidence: 'confirmed',
-  photoUrl: '/fixtures/ab-fix-008-mini-spider-light.jpg',
+  photoUrl: '/fixtures/ab-fix-008-mini-spider-light-generated.png',
   documentationPath: 'DOCS/fixtures/AB-FIX-008-mini-spider-light.md',
   notes:
     'Mini Spider LED effect. Manual is torn but documents 7-channel and 15-channel DMX modes plus menu setup for sound, slave, display and motor direction.',
@@ -476,6 +477,7 @@ export const eventLightingEl1000Rgb: FixtureLibraryEntry = {
   manufacturer: 'Event Lighting',
   model: 'EL1000RGB',
   modelConfidence: 'confirmed',
+  photoUrl: '/fixtures/ab-fix-009-event-lighting-el1000rgb-generated.png',
   documentationPath: 'DOCS/fixtures/AB-FIX-009-event-lighting-el1000rgb.md',
   notes:
     'Professional 1000 mW RGB animation laser with ILDA support. DMX profile completed from the official Event Lighting EL1000RGB manual.',

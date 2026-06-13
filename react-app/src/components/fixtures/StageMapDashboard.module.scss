@@ -118,8 +118,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.05rem;
-  padding: 0.25rem 0.35rem;
+  gap: 0.08rem;
+  padding: 0.25rem 0.38rem;
   border: 2px solid var(--fixture-color);
   border-radius: 5px;
   background: rgba(15, 23, 42, 0.92);
@@ -137,8 +137,13 @@
   }
 }
 
+.nodeVisual {
+  width: 24px;
+  height: 24px;
+}
+
 .nodeName {
-  max-width: 72px;
+  max-width: 84px;
   overflow-wrap: anywhere;
   word-break: break-word;
   white-space: normal;
@@ -149,8 +154,9 @@
 
 .nodeAddr {
   color: #a7f3d0;
-  font-size: 0.55rem;
+  font-size: 0.52rem;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .selected {

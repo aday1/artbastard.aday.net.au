@@ -10,7 +10,7 @@ manufacturer: Generic
 model: 9/11-channel mini moving head with 8-colour and 8-gobo wheels
 modelConfidence: probable
 documentationPath: DOCS/fixtures/MOVING-HEAD/MOVING-HEAD-mini-9-11ch.md
-photoUrl: /fixtures/ab-fix-009-mini-moving-head-9-11ch-lineart.png
+photoUrl: /fixtures/ab-fix-015-mini-moving-head-gobo-spot-generated.png
 tags: [MOVING-HEAD, GOBO, COLOR, MINI, SPOT]
 notes: Small generic moving head with 8-position colour wheel, 8-position gobo wheel with jitter and rotation, strobe, dimmer, motor speed, built-in automatic programs and selectable dim curves. Selectable 9- or 11-channel DMX mode via on-fixture LCD menu.
 ---

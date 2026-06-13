@@ -9,6 +9,7 @@ category: Par / Wash
 manufacturer: Generic
 model: 5-channel RGBW plus dimmer profile
 modelConfidence: confirmed
+photoUrl: /fixtures/ab-fix-012-rgbw-par-can-generated.png
 documentationPath: DOCS/fixtures/PAR/PAR-rgbw.md
 tags: [WASH, RGBW, LED, PAR, GENERIC]
 notes: Generic starter profile for RGBW par cans using direct RGBW plus master dimmer.

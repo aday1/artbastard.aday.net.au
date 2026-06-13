@@ -2,7 +2,8 @@ import React from 'react';
 import { Fixture } from '../../store';
 import { LucideIcon } from '../ui/LucideIcon';
 import { fixtureTemplates } from './fixtureTemplates';
-import { getFixtureTypeColor, getFixtureTypeIcon } from '../../utils/fixturePresentation';
+import { getFixtureIdentity } from '../../utils/fixturePresentation';
+import { FixtureIdentityVisual } from './FixtureIdentityVisual';
 import styles from './DraggableFixturePalette.module.scss';
 
 interface DraggableFixturePaletteProps {
@@ -44,34 +45,38 @@ const DraggableFixturePalette: React.FC<DraggableFixturePaletteProps> = ({
       </div>
       
       <div className={styles.fixtureGrid}>
-        {fixtureTemplates.map(template => (
-          <div
-            key={template.id}
-            className={styles.paletteFixture}
-            draggable
-            onDragStart={(e) => handleDragStart(e, template.id)}
-            onDragEnd={handleDragEnd}
-            onMouseDown={handleMouseDown}
-            style={{
-              '--fixture-color': getFixtureTypeColor(template.type)
-            } as React.CSSProperties}
-            title={`${template.name} (${template.type}) - ${template.channels?.length || 0} channels`}
-          >
-            <div className={styles.fixtureIcon}>
-              <LucideIcon name={getFixtureTypeIcon(template.type) as any} />
-            </div>
-            
-            <div className={styles.fixtureInfo}>
-              <div className={styles.fixtureName}>{template.name}</div>
-              <div className={styles.fixtureType}>{template.type}</div>
-              <div className={styles.fixtureChannels}>{template.channels?.length || 0}ch</div>
-            </div>
+        {fixtureTemplates.map(template => {
+          const identity = getFixtureIdentity(template);
+          return (
+            <div
+              key={template.id}
+              className={styles.paletteFixture}
+              draggable
+              onDragStart={(e) => handleDragStart(e, template.id)}
+              onDragEnd={handleDragEnd}
+              onMouseDown={handleMouseDown}
+              style={{
+                '--fixture-color': identity.accentColor
+              } as React.CSSProperties}
+              title={identity.title}
+            >
+              <FixtureIdentityVisual fixture={template} variant="palette" className={styles.fixtureIcon} />
+              
+              <div className={styles.fixtureInfo}>
+                <div className={styles.fixtureName}>{identity.label}</div>
+                <div className={styles.fixtureType}>{identity.typeLabel}</div>
+                <div className={styles.fixtureChannels}>
+                  {identity.catalogId && <span>{identity.catalogId}</span>}
+                  <span>{identity.channelText}</span>
+                </div>
+              </div>
 
-            <div className={styles.dragHandle}>
-              <LucideIcon name="GripVertical" />
+              <div className={styles.dragHandle}>
+                <LucideIcon name="GripVertical" />
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

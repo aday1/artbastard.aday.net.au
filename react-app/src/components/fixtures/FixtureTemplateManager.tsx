@@ -1,5 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useStore, FixtureTemplate } from '../../store';
+import {
+  mergeFixtureTemplatesWithCatalog,
+  refreshFixtureCatalogPhotos,
+} from '../../store/fixtureCatalogSync';
 import { useTheme } from '../../context/ThemeContext';
 import { LucideIcon } from '../ui/LucideIcon';
 import { HoverZoomImage } from '../ui/HoverZoomImage';
@@ -64,6 +68,28 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
     isCustom: true,
     photoUrl: undefined
   });
+
+  useEffect(() => {
+    const mergedTemplates = mergeFixtureTemplatesWithCatalog(
+      fixtureTemplates.filter(template => !template.isBuiltIn)
+    );
+    const needsRefresh = mergedTemplates.length !== fixtureTemplates.length ||
+      mergedTemplates.some((template, index) => {
+        const current = fixtureTemplates[index];
+        return !current ||
+          current.id !== template.id ||
+          current.photoUrl !== template.photoUrl ||
+          current.templateName !== template.templateName;
+      });
+    const currentState = useStore.getState();
+    const refreshedFixtures = refreshFixtureCatalogPhotos(currentState.fixtures, mergedTemplates);
+
+    if (!needsRefresh && refreshedFixtures === currentState.fixtures) return;
+    useStore.setState({
+      fixtureTemplates: mergedTemplates,
+      fixtures: refreshedFixtures,
+    });
+  }, [fixtureTemplates]);
 
   // Ensure channels is always an array
   const safeChannels = templateForm.channels && Array.isArray(templateForm.channels) 
@@ -500,4 +526,3 @@ export const FixtureTemplateManager: React.FC<FixtureTemplateManagerProps> = ({ 
     </div>
   );
 };
-

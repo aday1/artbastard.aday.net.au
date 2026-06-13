@@ -38,6 +38,7 @@ export const mdFixtureLibraryEntries: FixtureLibraryEntry[] = [
     ],
     "model": "1-channel intensity profile",
     "modelConfidence": "confirmed",
+    "photoUrl": "/fixtures/ab-fix-010-generic-dimmer-generated.png",
     "documentationPath": "DOCS/fixtures/PAR/PAR-generic-dimmer.md",
     "notes": "Canonical fallback profile for a single DMX dimmer or intensity-only fixture."
   },
@@ -143,7 +144,7 @@ export const mdFixtureLibraryEntries: FixtureLibraryEntry[] = [
     ],
     "model": "24-LED bar wash (7-channel RGBW + strobe + macro)",
     "modelConfidence": "unknown",
-    "photoUrl": "/fixtures/ab-fix-013-led-bar-wash-24-lineart.png",
+    "photoUrl": "/fixtures/ab-fix-013-led-bar-wash-24-generated.png",
     "documentationPath": "DOCS/fixtures/LED-EFFECT/LED-EFFECT-bar-wash-24.md",
     "notes": "Generic 7-channel RGBW bar wash profile; verify against printed manual when available."
   },
@@ -398,7 +399,7 @@ export const mdFixtureLibraryEntries: FixtureLibraryEntry[] = [
     ],
     "model": "9/11-channel mini moving head with 8-colour and 8-gobo wheels",
     "modelConfidence": "probable",
-    "photoUrl": "/fixtures/ab-fix-009-mini-moving-head-9-11ch-lineart.png",
+    "photoUrl": "/fixtures/ab-fix-015-mini-moving-head-gobo-spot-generated.png",
     "documentationPath": "DOCS/fixtures/MOVING-HEAD/MOVING-HEAD-mini-9-11ch.md",
     "notes": "Small generic moving head with 8-position colour wheel, 8-position gobo wheel with jitter and rotation, strobe, dimmer, motor speed, built-in automatic programs and selectable dim curves. Selectable 9- or 11-channel DMX mode via on-fixture LCD menu."
   },
@@ -676,6 +677,7 @@ export const mdFixtureLibraryEntries: FixtureLibraryEntry[] = [
     ],
     "model": "10/12-channel mini moving head gobo with LED light strips",
     "modelConfidence": "probable",
+    "photoUrl": "/fixtures/ab-fix-014-mini-moving-head-gobo-strips-generated.png",
     "documentationPath": "DOCS/fixtures/MOVING-HEAD/MOVING-HEAD-mini-gobo-with-strips.md",
     "notes": "Small LED moving head with colour wheel, gobo wheel, strobe, dimmer, motor speed, built-in automatic and sound-active modes, and a secondary LED light-strip channel. Selectable 10- or 12-channel DMX mode via on-fixture LCD menu."
   },
@@ -904,7 +906,7 @@ export const mdFixtureLibraryEntries: FixtureLibraryEntry[] = [
     ],
     "model": "MiniBeam",
     "modelConfidence": "confirmed",
-    "photoUrl": "/fixtures/ab-fix-002-minibeam-moving-head.jpg",
+    "photoUrl": "/fixtures/ab-fix-002-minibeam-moving-head-generated.png",
     "documentationPath": "DOCS/fixtures/MOVING-HEAD/MOVING-HEAD-MINIBEAM.md",
     "notes": "18-channel MiniBeam moving head beam/spot with 14-colour wheel, 14-gobo wheel, prism with rotation, frost, focus, fine pan/tilt, macro, reset and lamp control."
   },
@@ -988,6 +990,7 @@ export const mdFixtureLibraryEntries: FixtureLibraryEntry[] = [
     ],
     "model": "5-channel RGBW plus dimmer profile",
     "modelConfidence": "confirmed",
+    "photoUrl": "/fixtures/ab-fix-012-rgbw-par-can-generated.png",
     "documentationPath": "DOCS/fixtures/PAR/PAR-rgbw.md",
     "notes": "Generic starter profile for RGBW par cans using direct RGBW plus master dimmer."
   },
@@ -1059,6 +1062,7 @@ export const mdFixtureLibraryEntries: FixtureLibraryEntry[] = [
     ],
     "model": "4-channel RGB plus dimmer profile",
     "modelConfidence": "confirmed",
+    "photoUrl": "/fixtures/ab-fix-011-simple-rgb-par-generated.png",
     "documentationPath": "DOCS/fixtures/PAR/PAR-simple-rgb.md",
     "notes": "Generic starter profile for RGB par cans using direct RGB plus master dimmer."
   }

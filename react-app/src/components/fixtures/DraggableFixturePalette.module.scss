@@ -120,10 +120,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
-  background: linear-gradient(135deg, var(--fixture-color), rgba(255, 255, 255, 0.2));
-  border-radius: 12px;
+  width: 56px;
+  height: 56px;
+  background: color-mix(in srgb, var(--fixture-color) 24%, #111827);
+  border-radius: 8px;
   color: white;
   font-size: 20px;
   flex-shrink: 0;
@@ -161,6 +161,9 @@
   font-size: 11px;
   color: var(--fixture-color);
   font-weight: 500;
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
 }
 
 .dragHandle {

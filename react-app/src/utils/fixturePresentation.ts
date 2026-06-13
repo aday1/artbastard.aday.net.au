@@ -11,32 +11,156 @@ export interface FixtureChannelInfo {
   fixtureTypeIcon?: string;
 }
 
-const FIXTURE_TYPE_COLORS: Record<string, string> = {
+export type FixtureTypeKey =
+  | 'moving-head'
+  | 'par'
+  | 'strip'
+  | 'laser'
+  | 'led-effect'
+  | 'dimmer'
+  | 'strobe'
+  | 'smoke'
+  | 'default';
+
+export interface FixturePresentationInput {
+  name?: string;
+  templateName?: string;
+  defaultNamePrefix?: string;
+  type?: string;
+  category?: string;
+  manufacturer?: string;
+  model?: string;
+  modelConfidence?: 'confirmed' | 'probable' | 'unknown';
+  catalogId?: string;
+  photoUrl?: string;
+  documentationPath?: string;
+  notes?: string;
+  tags?: string[];
+  mode?: string;
+  channels?: unknown[];
+  modes?: Array<{
+    name?: string;
+    channels?: number;
+    channelData?: unknown[];
+  }>;
+}
+
+export interface FixtureIdentity {
+  accentColor: string;
+  catalogId?: string;
+  channelCount: number;
+  channelText: string;
+  iconName: string;
+  label: string;
+  makeModel?: string;
+  modeName?: string;
+  photoUrl?: string;
+  shortCode: string;
+  shortLabel: string;
+  title: string;
+  typeKey: FixtureTypeKey;
+  typeLabel: string;
+}
+
+const FIXTURE_TYPE_COLORS: Record<FixtureTypeKey, string> = {
   'moving-head': '#ff6b6b',
   par: '#4ecdc4',
   strip: '#45b7d1',
   laser: '#96ceb4',
+  'led-effect': '#f59e0b',
+  dimmer: '#feca57',
   strobe: '#feca57',
   smoke: '#a55eea',
   default: '#fd79a8',
 };
 
-const FIXTURE_TYPE_ICONS: Record<string, string> = {
-  'moving-head': 'Zap',
-  par: 'Circle',
-  strip: 'Minus',
-  laser: 'Target',
+const FIXTURE_TYPE_ICONS: Record<FixtureTypeKey, string> = {
+  'moving-head': 'Move3D',
+  par: 'Aperture',
+  strip: 'Rows3',
+  laser: 'Crosshair',
+  'led-effect': 'Sparkles',
+  dimmer: 'Lightbulb',
   strobe: 'Flashlight',
   smoke: 'Cloud',
-  default: 'Lightbulb',
+  default: 'Box',
 };
 
-export function getFixtureTypeColor(type: string): string {
-  return FIXTURE_TYPE_COLORS[type.toLowerCase()] ?? FIXTURE_TYPE_COLORS.default;
+const titleCase = (value: string) =>
+  value
+    .replace(/[-_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (match) => match.toUpperCase());
+
+const catalogFromNotes = (notes?: string) => notes?.match(/\bAB-FIX-\d{3}\b/)?.[0];
+
+const initialsFromLabel = (label: string) => {
+  const words = label
+    .replace(/[^a-zA-Z0-9]+/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (!words.length) return 'FX';
+  if (words.length === 1) return words[0].slice(0, 3).toUpperCase();
+  return words.slice(0, 3).map((word) => word[0]).join('').toUpperCase();
+};
+
+export function getFixtureTypeKey(type = '', category = '', tags: string[] = []): FixtureTypeKey {
+  const haystack = [type, category, ...tags].filter(Boolean).join(' ').toLowerCase();
+
+  if (/\blaser\b|ilda|starfield|twinkl/.test(haystack)) return 'laser';
+  if (/moving[\s-]*head|\bmover\b|pan\/tilt|\bpan\b.*\btilt\b|\bbeam\b/.test(haystack)) return 'moving-head';
+  if (/spider|derby|led effect|\beffect\b/.test(haystack)) return 'led-effect';
+  if (/\bbar\b|\bstrip\b|linear/.test(haystack)) return 'strip';
+  if (/dimmer|intensity/.test(haystack)) return 'dimmer';
+  if (/strobe|flash/.test(haystack)) return 'strobe';
+  if (/smoke|fog|haze/.test(haystack)) return 'smoke';
+  if (/\bpar\b|\bwash\b|rgbw?|uv/.test(haystack)) return 'par';
+  return 'default';
 }
 
-export function getFixtureTypeIcon(type: string): string {
-  return FIXTURE_TYPE_ICONS[type.toLowerCase()] ?? FIXTURE_TYPE_ICONS.default;
+export function getFixtureTypeColor(type: string, category = '', tags: string[] = []): string {
+  return FIXTURE_TYPE_COLORS[getFixtureTypeKey(type, category, tags)];
+}
+
+export function getFixtureTypeIcon(type: string, category = '', tags: string[] = []): string {
+  return FIXTURE_TYPE_ICONS[getFixtureTypeKey(type, category, tags)];
+}
+
+export function getFixtureIdentity(fixture: FixturePresentationInput): FixtureIdentity {
+  const label = fixture.templateName || fixture.name || fixture.defaultNamePrefix || 'Fixture';
+  const shortLabel = fixture.defaultNamePrefix || fixture.templateName || fixture.name || label;
+  const typeLabel = fixture.type || fixture.category || 'Fixture';
+  const typeKey = getFixtureTypeKey(fixture.type, fixture.category, fixture.tags);
+  const mode = fixture.modes?.[0];
+  const channelCount = mode?.channels || mode?.channelData?.length || fixture.channels?.length || 0;
+  const catalogId = fixture.catalogId || catalogFromNotes(fixture.notes);
+  const makeModel = [fixture.manufacturer, fixture.model].filter(Boolean).join(' · ') || undefined;
+  const parts = [
+    catalogId,
+    label,
+    makeModel,
+    typeLabel !== 'Fixture' ? typeLabel : undefined,
+    channelCount ? `${channelCount}ch` : undefined,
+  ].filter(Boolean);
+
+  return {
+    accentColor: FIXTURE_TYPE_COLORS[typeKey],
+    catalogId,
+    channelCount,
+    channelText: channelCount ? `${channelCount}ch` : 'profile',
+    iconName: FIXTURE_TYPE_ICONS[typeKey],
+    label,
+    makeModel,
+    modeName: fixture.mode || mode?.name,
+    photoUrl: fixture.photoUrl,
+    shortCode: initialsFromLabel(shortLabel),
+    shortLabel,
+    title: parts.join(' · '),
+    typeKey,
+    typeLabel: typeLabel === typeKey ? titleCase(typeLabel) : typeLabel,
+  };
 }
 
 export function getShortChannelLabel(channelType: string): string {

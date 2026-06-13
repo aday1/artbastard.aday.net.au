@@ -9,7 +9,7 @@ category: LED Effect / Bar wash
 manufacturer: Generic
 model: 24-LED bar wash (7-channel RGBW + strobe + macro)
 modelConfidence: unknown
-photoUrl: /fixtures/ab-fix-013-led-bar-wash-24-lineart.png
+photoUrl: /fixtures/ab-fix-013-led-bar-wash-24-generated.png
 documentationPath: DOCS/fixtures/LED-EFFECT/LED-EFFECT-bar-wash-24.md
 tags: [WASH, RGBW, LED, BAR, STATIC]
 notes: Generic 7-channel RGBW bar wash profile; verify against printed manual when available.
