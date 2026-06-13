@@ -127,18 +127,17 @@
 
 .fixturePage {
   gap: 0.75rem;
-  height: 100%;
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
 
   .pageContent {
-    min-height: 0;
-    overflow: hidden;
+    min-height: min-content;
+    overflow: visible;
   }
 
   .setupSection {
     min-height: 0;
-    overflow: hidden;
+    overflow: visible;
   }
 }
 

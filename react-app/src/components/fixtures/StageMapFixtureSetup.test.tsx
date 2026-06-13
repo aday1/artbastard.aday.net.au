@@ -1,6 +1,6 @@
 import React from 'react';
-import { describe, expect, it, beforeEach, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import StageMapFixtureSetup from './StageMapFixtureSetup';
 import { useStore } from '../../store';
 
@@ -25,6 +25,10 @@ const fixture = {
 };
 
 describe('StageMapFixtureSetup', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   beforeEach(() => {
     (HTMLElement.prototype as any).setPointerCapture = vi.fn();
     (HTMLElement.prototype as any).releasePointerCapture = vi.fn();
@@ -54,17 +58,19 @@ describe('StageMapFixtureSetup', () => {
   it('renders fixture setup as a canvas-first stage map', () => {
     render(<StageMapFixtureSetup />);
 
-    expect(screen.getByRole('application', { name: /canvas-first fixture stage map/i })).toBeDefined();
+    const stageCanvas = screen.getByRole('application', { name: /canvas-first fixture stage map/i });
+    expect(stageCanvas).toBeDefined();
     expect(screen.getByText('Top-down Stage Map')).toBeDefined();
     expect(screen.getByText('Fixture Library')).toBeDefined();
     expect(screen.getByText('Inspector')).toBeDefined();
-    expect(screen.getByText('Wash 1')).toBeDefined();
+    expect(within(stageCanvas).getByText('Wash 1')).toBeDefined();
   });
 
   it('selects a fixture node into the shared selectedFixtures state', () => {
     render(<StageMapFixtureSetup />);
 
-    fireEvent.pointerDown(screen.getByTitle('Wash 1 DMX 1-4'), {
+    const stageCanvas = screen.getByRole('application', { name: /canvas-first fixture stage map/i });
+    fireEvent.pointerDown(within(stageCanvas).getByTitle(/Wash 1.*DMX 1-4/), {
       pointerId: 1,
       clientX: 100,
       clientY: 100,
