@@ -31,6 +31,7 @@ import { FactoryResetBanner } from './components/layout/FactoryResetBanner'
 import { RouterProvider } from './context/RouterContext'
 import { ContextMenuProvider } from './context/ContextMenuContext'
 import { shouldDefaultToMobileSurface } from './utils/deviceSurface'
+import { isFeatureEnabled } from './utils/featureFlags'
 
 /**
  * Pick a toast container position that does not overlap the new
@@ -101,7 +102,7 @@ function App() {
   useTimelinePlayback();
 
   // DMX transition pattern tracker (line-stepped scenes + channels)
-  useTransitionTrackerPlayback();
+  useTransitionTrackerPlayback(isFeatureEnabled('dmxTracker'));
 
   useAppearanceSync();
   

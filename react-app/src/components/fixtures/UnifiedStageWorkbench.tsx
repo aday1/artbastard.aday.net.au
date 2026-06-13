@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useStore } from '../../store';
 import { LucideIcon } from '../ui/LucideIcon';
 import { ShowBuilderPanel } from './ShowBuilderPanel';
-import { Apc40WorkflowBody } from './Apc40WorkflowPanel';
+import { Apc40SurfaceDiagram } from '../midi/Apc40SurfaceDiagram';
 import styles from './UnifiedStageWorkbench.module.scss';
 
 export type WorkbenchMode = 'patch' | 'show' | 'apc';
@@ -39,7 +39,7 @@ export const UnifiedStageWorkbench: React.FC<UnifiedStageWorkbenchProps> = ({ mo
     apc40State: s.apc40CrossfaderState,
   }));
 
-  const activeTarget = apc40State.activeTargetLabel || 'No APC40 target selected';
+  const activeTarget = apc40State.activeTargetLabel;
 
   return (
     <section className={styles.workbench} aria-label="Unified stage workbench">
@@ -89,12 +89,20 @@ export const UnifiedStageWorkbench: React.FC<UnifiedStageWorkbenchProps> = ({ mo
 
       {mode === 'apc' && (
         <div className={`${styles.bodySlot} ${styles.apcBody}`} aria-label="APC40 map-first workflow">
-          <div className={styles.apcOverview}>
-            <div className={styles.apcModeHeader}>
-              <span>APC40 target</span>
-              <strong>{activeTarget}</strong>
+          <div className={styles.apcVisualizerPanel}>
+            <div className={styles.apcVisualHeader}>
+              <div>
+                <span>APC40 Visualizer</span>
+                <strong>{activeTarget || 'Track Select chooses groups or fixtures'}</strong>
+              </div>
+              <ul>
+                <li><b>Track Select</b><span>stage target</span></li>
+                <li><b>Faders</b><span>dimmers</span></li>
+                <li><b>Device Control</b><span>gobo / color / prism / focus</span></li>
+                <li><b>Grid + Crossfader</b><span>Deck A/B scenes</span></li>
+              </ul>
             </div>
-            <Apc40WorkflowBody withoutMap />
+            <Apc40SurfaceDiagram mode="fixtures" compact showBothDecks title="APC40 Visualizer" />
           </div>
         </div>
       )}

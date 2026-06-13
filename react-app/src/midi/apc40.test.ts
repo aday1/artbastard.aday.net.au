@@ -79,6 +79,20 @@ describe('APC40 workflow decoder', () => {
       type: 'solo-group',
       model: 'apc40-mk1',
       trackIndex: 4,
+      pressed: true,
+    });
+
+    expect(decodeApc40Message({
+      _type: 'noteon',
+      source: 'Akai APC40',
+      channel: 4,
+      note: 0x30,
+      velocity: 0,
+    })).toEqual({
+      type: 'solo-group',
+      model: 'apc40-mk1',
+      trackIndex: 4,
+      pressed: false,
     });
 
     expect(decodeApc40Message({
@@ -91,6 +105,7 @@ describe('APC40 workflow decoder', () => {
       type: 'select-group',
       model: 'apc40-mk1',
       trackIndex: 2,
+      pressed: true,
     });
 
     expect(decodeApc40Message({
@@ -103,6 +118,7 @@ describe('APC40 workflow decoder', () => {
       type: 'select-fixture',
       model: 'apc40-mk1',
       trackIndex: 1,
+      pressed: true,
     });
 
     // Track Select row (note 0x33) is intentionally unmapped on channels 0-7
@@ -151,6 +167,7 @@ describe('APC40 workflow decoder', () => {
         type: 'solo-group',
         model: 'apc40-mk1',
         trackIndex: channel,
+        pressed: true,
       });
     }
   });

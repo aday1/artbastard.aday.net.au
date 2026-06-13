@@ -8,7 +8,7 @@ import {
 } from '../utils/transitionTrackerEngine';
 import type { TransitionPatternLine } from '../store/types';
 
-export const useTransitionTrackerPlayback = () => {
+export const useTransitionTrackerPlayback = (enabled = true) => {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const rampRef = useRef<number | null>(null);
   const rampStartRef = useRef<number>(0);
@@ -85,7 +85,7 @@ export const useTransitionTrackerPlayback = () => {
   };
 
   useEffect(() => {
-    if (!playback.active || !playback.patternId) {
+    if (!enabled || !playback.active || !playback.patternId) {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
         timerRef.current = null;
@@ -93,6 +93,9 @@ export const useTransitionTrackerPlayback = () => {
       if (rampRef.current) {
         cancelAnimationFrame(rampRef.current);
         rampRef.current = null;
+      }
+      if (!enabled && playback.active) {
+        stopTransitionTrackerPlayback();
       }
       return;
     }
@@ -147,6 +150,7 @@ export const useTransitionTrackerPlayback = () => {
       }
     };
   }, [
+    enabled,
     playback.active,
     playback.patternId,
     playback.loop,

@@ -34,9 +34,9 @@ const FixturePage: React.FC = () => {
   ]
 
   return (
-    <div className={`${styles.pageContainer} ${styles.fixturePage}`}>
+    <div className={`${styles.pageContainer} ${styles.fixturePage} ${activeTab === 'control' ? styles.fixtureControlMode : ''}`}>
       <PageHeader
-        className={styles.fixturePageHeader}
+        className={`${styles.fixturePageHeader} ${activeTab === 'control' ? styles.fixtureControlHeader : ''}`}
         title={{
           artsnob: 'Fixture Orchestration: The Instruments of Light',
           standard: 'Fixture Management',
@@ -58,7 +58,7 @@ const FixturePage: React.FC = () => {
       </PageHeader>
       
       <div className={styles.pageContent}>
-        <Apc40SceneLaunchStrip />
+        {activeTab === 'setup' && <Apc40SceneLaunchStrip />}
         <TabPanel id="control" isActive={activeTab === 'control'}>
           <div className={`${styles.controlSection} ${styles.fixtureController}`}>
             <SuperControl isDockable={false} />

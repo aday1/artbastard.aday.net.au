@@ -12,6 +12,10 @@
     display: none !important;
   }
 
+  &:global(.footerDockedMonitor) {
+    display: flex !important;
+  }
+
   // Any element inside the shell marked as a drag handle gets the grab cursor
   :global(.handle) {
     cursor: grab;

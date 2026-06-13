@@ -11,7 +11,11 @@ import {
   mergeDmxActivityMessages,
 } from './dmxActivityMessages';
 
-export const DmxMonitor: React.FC = () => {
+interface DmxMonitorProps {
+  footerDocked?: boolean;
+}
+
+export const DmxMonitor: React.FC<DmxMonitorProps> = ({ footerDocked = false }) => {
   const {
     dmxChannels,
     channelNames,
@@ -61,7 +65,7 @@ export const DmxMonitor: React.FC = () => {
     setCollapsedByUser,
     dismissByUser,
     triggerFlash,
-  } = useMonitorAutoPop({ key: 'dmxMonitor', hasSignal: messages.length > 0 });
+  } = useMonitorAutoPop({ key: 'dmxMonitor', hasSignal: messages.length > 0, autoPop: !footerDocked });
 
   const handleDismiss = dismissByUser;
 
@@ -118,7 +122,7 @@ export const DmxMonitor: React.FC = () => {
     }
   }, [messages, autoScroll]);
 
-  if (debugTools.dmxMonitor === false || isDismissed) {
+  if (debugTools.dmxMonitor === false || (footerDocked && (isCollapsed || isDismissed)) || (!footerDocked && isDismissed)) {
     return null;
   }
 
@@ -139,6 +143,7 @@ export const DmxMonitor: React.FC = () => {
     styles.midiMonitor,
     isCollapsed ? styles.collapsed : '',
     flashActive ? styles.flash : '',
+    footerDocked ? 'footerDockedMonitor' : '',
   ].filter(Boolean).join(' ');
 
   return (
@@ -152,7 +157,16 @@ export const DmxMonitor: React.FC = () => {
       maxHeight={480}
       anchor="top-right"
       className={monitorClasses}
-      style={isCollapsed ? { width: 'auto', height: 'auto' } : undefined}
+      style={footerDocked
+        ? {
+            left: 'auto',
+            right: '260px',
+            top: 'auto',
+            bottom: '96px',
+            width: '400px',
+            height: '270px',
+          }
+        : isCollapsed ? { width: 'auto', height: 'auto' } : undefined}
     >
       <div className={styles.monitorInner}>
         <div className={`${styles.header} handle`}>

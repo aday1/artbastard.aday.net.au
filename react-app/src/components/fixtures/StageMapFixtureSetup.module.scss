@@ -1,4 +1,7 @@
 .stageMapSetup {
+  --stage-side-pane-width: 320px;
+  --stage-workspace-height: 560px;
+  --stage-apc-workbench-height: 360px;
   height: auto;
   min-height: clamp(720px, calc(100dvh - 14rem), 980px);
   max-height: none;
@@ -132,19 +135,28 @@
 }
 
 .workspace {
-  height: clamp(540px, 58vh, 680px);
+  height: var(--stage-workspace-height, clamp(540px, 58vh, 680px));
   min-height: 540px;
   flex: 0 0 auto;
   display: grid;
-  grid-template-columns: minmax(260px, 320px) minmax(420px, 1fr) minmax(260px, 320px);
+  grid-template-columns:
+    minmax(220px, var(--stage-side-pane-width, 320px))
+    minmax(420px, 1fr)
+    minmax(220px, var(--stage-side-pane-width, 320px));
   gap: 0.75rem;
   overflow: hidden;
 }
 
 .workspaceMapOnly {
   grid-template-columns: minmax(0, 1fr);
-  height: clamp(640px, calc(100dvh - 20rem), 900px);
-  min-height: 640px;
+  height: var(--stage-workspace-height, clamp(320px, calc(48dvh - 4rem), 520px));
+  min-height: 320px;
+  position: relative;
+}
+
+.workspaceMapOnly::after,
+.apcDriveSetup .drawerStack::after {
+  display: none;
 }
 
 .workspaceMapOnly .mapPane {
@@ -868,6 +880,59 @@
   > * {
     min-height: 0;
   }
+}
+
+.paneResizeHandle {
+  flex: 0 0 28px;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border: 1px solid rgba(251, 191, 36, 0.34);
+  border-radius: 6px;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(251, 191, 36, 0.12) 0 10px,
+      rgba(251, 191, 36, 0.24) 10px 18px
+    ),
+    rgba(15, 23, 42, 0.86);
+  color: #fcd34d;
+  cursor: row-resize;
+  user-select: none;
+  touch-action: none;
+
+  span {
+    color: #fde68a;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+}
+
+.paneResizeHandle:hover {
+  border-color: rgba(251, 191, 36, 0.75);
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(251, 191, 36, 0.18) 0 10px,
+      rgba(251, 191, 36, 0.38) 10px 18px
+    ),
+    rgba(30, 41, 59, 0.95);
+}
+
+.apcDriveSetup {
+  min-height: 0;
+  gap: 0.5rem;
+}
+
+.apcDriveSetup .drawerStack {
+  flex: 0 0 var(--stage-apc-workbench-height, clamp(260px, calc(48dvh - 5rem), 440px));
+  height: var(--stage-apc-workbench-height, clamp(260px, calc(48dvh - 5rem), 440px));
+  position: relative;
+  overflow: hidden;
 }
 
 .drawerToggles {

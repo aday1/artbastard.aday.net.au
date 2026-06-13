@@ -165,6 +165,31 @@
   font-size: 0.76rem;
 }
 
+.fixtureControlMode {
+  gap: 0.35rem;
+
+  .pageContent {
+    gap: 0.35rem;
+  }
+}
+
+.fixtureControlHeader {
+  justify-content: flex-end;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.fixtureControlHeader > div:first-child {
+  display: none;
+}
+
+.fixtureControlHeader .fixtureTabs {
+  min-width: 0;
+}
+
 .fixtureTabs {
   margin-top: 0;
   min-width: min(420px, 100%);

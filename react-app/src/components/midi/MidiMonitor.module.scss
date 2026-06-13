@@ -469,3 +469,113 @@
   color: #fcd34d;
   font-variant-numeric: tabular-nums;
 }
+
+:global([data-theme="light"]) {
+  .midiMonitor {
+    background-color: #fff4dc;
+    border-color: #dec69f;
+    color: #2c2119;
+    box-shadow: 0 8px 22px rgb(99 72 39 / 0.18);
+  }
+
+  .header {
+    background-color: #efd7ab;
+    color: #2c2119;
+
+    &:hover {
+      background-color: #ffe8bd;
+    }
+  }
+
+  .title,
+  .type,
+  .dmxLabel,
+  .connectedDevicesLabel {
+    color: var(--color-primary, #008faa);
+  }
+
+  .scrollbackSetting,
+  .status,
+  .source,
+  .noData,
+  .timestamp,
+  .detail,
+  .noSources {
+    color: #725844;
+  }
+
+  .scrollbackInput {
+    background: #fff9ed;
+    border-color: #dec69f;
+    color: #2c2119;
+  }
+
+  .controls button {
+    color: #6d4c3d;
+
+    &:hover {
+      background-color: #ffe8bd;
+      color: #2c2119;
+    }
+
+    &.active {
+      background-color: var(--color-primary, #008faa);
+      color: #fff9ed;
+    }
+  }
+
+  .content,
+  .filterPanel,
+  .connectedDevices {
+    background-color: #f4e4c6;
+    border-color: #dec69f;
+    color: #2c2119;
+  }
+
+  .messageRow,
+  .devicePill,
+  .arg,
+  .dmxChannel {
+    background-color: #fff9ed;
+    border-color: rgb(0 143 170 / 0.34);
+    color: #2c2119;
+  }
+
+  .channel {
+    color: #008faa;
+  }
+
+  .controller,
+  .note,
+  .scrollbackValue,
+  .devicePillCount {
+    color: #8f5400;
+  }
+
+  .value,
+  .velocity,
+  .dmxValue {
+    color: #a21caf;
+  }
+
+  .devicePillTransport {
+    color: #725844;
+  }
+
+  .hoverTooltip {
+    background: rgb(255 249 237 / 0.96);
+    color: #2c2119;
+    border-color: rgb(0 143 170 / 0.26);
+    box-shadow: 0 8px 22px rgb(99 72 39 / 0.18);
+  }
+
+  .tooltipContent strong,
+  .argValue {
+    color: #2c2119;
+  }
+
+  .footer {
+    border-top-color: rgba(15, 139, 85, 0.22);
+    color: #725844;
+  }
+}

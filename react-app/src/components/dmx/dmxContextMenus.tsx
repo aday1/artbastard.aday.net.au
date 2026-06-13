@@ -1,5 +1,6 @@
 import type { ContextMenuItem } from '../ui/ContextMenu';
 import type { ViewType } from '../../context/RouterContext';
+import { isFeatureEnabled } from '../../utils/featureFlags';
 
 export interface DmxChannelMenuHandlers {
   channelIndex: number;
@@ -78,13 +79,13 @@ export function buildDmxChannelContextMenu(h: DmxChannelMenuHandlers): ContextMe
       icon: h.isPinned ? 'PinOff' : 'Pin',
       onClick: () => h.togglePinChannel(i),
     },
-    {
+    ...(isFeatureEnabled('dmxTracker') ? [{
       id: 'tracker',
       label: 'Add to DMX Tracker',
       icon: 'Table',
       disabled: !h.onAddToTracker,
       onClick: () => h.onAddToTracker?.(),
-    },
+    } satisfies ContextMenuItem] : []),
     {
       id: 'color',
       label: 'Random label color',

@@ -298,25 +298,6 @@ export const Navbar: React.FC<NavbarProps> = ({ variant = 'sidebar', onItemSelec
           ))}
         </div>
         
-        <div className={styles.toolbarExtras}>
-          <div className={styles.resetLayoutSection}>
-            <button
-              type="button"
-              onClick={() => {
-                const event = new CustomEvent('resetLayout');
-                window.dispatchEvent(event);
-                localStorage.removeItem('midiMonitorDismissed');
-                localStorage.removeItem('oscMonitorDismissed');
-                localStorage.removeItem('fancyQuotesDismissed');
-              }}
-              className={styles.resetLayoutButton}
-              title="Reset Layout - Restore dismissed monitors"
-            >
-              <LucideIcon name="RotateCcw" />
-              {!isCollapsed && <span>Reset Layout</span>}
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   )

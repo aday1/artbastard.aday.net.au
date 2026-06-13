@@ -4,12 +4,12 @@ export type Apc40Action =
   | { type: 'clip-launch'; model: Apc40Model; row: number; column: number; index: number }
   | { type: 'scene-launch'; model: Apc40Model; sceneIndex: number }
   | { type: 'track-select'; model: Apc40Model; trackIndex: number }
-  | { type: 'select-fixture'; model: Apc40Model; trackIndex: number }
-  | { type: 'select-group'; model: Apc40Model; trackIndex: number }
+  | { type: 'select-fixture'; model: Apc40Model; trackIndex: number; pressed: boolean }
+  | { type: 'select-group'; model: Apc40Model; trackIndex: number; pressed: boolean }
   | { type: 'track-stop'; model: Apc40Model; trackIndex: number }
   | { type: 'activator'; model: Apc40Model; trackIndex: number }
   | { type: 'solo-cue'; model: Apc40Model; trackIndex: number }
-  | { type: 'solo-group'; model: Apc40Model; trackIndex: number }
+  | { type: 'solo-group'; model: Apc40Model; trackIndex: number; pressed: boolean }
   | { type: 'channel-fader'; model: Apc40Model; trackIndex: number; value: number }
   | { type: 'master-fader'; model: Apc40Model; value: number }
   | { type: 'crossfader'; model: Apc40Model; value: number }
@@ -151,16 +151,20 @@ export function decodeApc40Message(message: MidiLikeMessage): Apc40Action | null
     return { type: 'shift', model, pressed: isButtonPress(message) };
   }
 
-  if (!isButtonPress(message)) return null;
+  const pressed = isButtonPress(message);
+  const released = isButtonRelease(message);
+
+  if (note === 0x30 && (pressed || released)) return { type: 'solo-group', model, trackIndex, pressed };
+  // Solo/Cue row selects FIXTURES (formerly solo-isolation).
+  if (note === 0x31 && (pressed || released)) return { type: 'select-fixture', model, trackIndex, pressed };
+  // Activator row selects GROUPS (formerly auto-control toggle).
+  if (note === 0x32 && (pressed || released)) return { type: 'select-group', model, trackIndex, pressed };
+
+  if (!pressed) return null;
 
   const scene = sceneLaunch(model, note);
   if (scene) return scene;
 
-  if (note === 0x30) return { type: 'solo-group', model, trackIndex };
-  // Solo/Cue row selects FIXTURES (formerly solo-isolation).
-  if (note === 0x31) return { type: 'select-fixture', model, trackIndex };
-  // Activator row selects GROUPS (formerly auto-control toggle).
-  if (note === 0x32) return { type: 'select-group', model, trackIndex };
   if (note === 0x33 && (message.channel ?? 0) === 8) return { type: 'freeze-dmx', model };
   // Note 0x33 (Track Select row) is intentionally unmapped \u2014 the hardware
   // emits unreliable CCs in some modes. Selection lives on Solo/Cue + Activator.

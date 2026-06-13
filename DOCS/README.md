@@ -1,9 +1,9 @@
 # ArtBastard Documentation Index
 
-Reference set for v5.2.4.0 - APC40 Deck A/B Edition. Reflects the
-state of the system after the APC40 scene deck refactor, canvas-first fixture
-setup, Roli Lightpad LED drawing fix, and showcase video refresh on
-2026-06-10.
+Reference set for v5.2.12.0 - Hard Version Bump. Reflects the
+state of the system after the SuperControl layout rebuild, cream/synthwave
+light theme, footer monitor consolidation, DMX Tracker feature flagging, and
+APC40 ON/OFF button semantics on 2026-06-14.
 
 ## Start here
 

@@ -13,6 +13,7 @@ import { MasterStyledSlider, RangeWindowControl } from '../ui/controls';
 import { RemasterPanel } from '../ui/remaster/RemasterPanel';
 import { EnvelopeDrawCanvas } from './EnvelopeDrawCanvas';
 import { defaultEnvelopeDraft, bakeWaveformToPoints } from '../../utils/envelopeDefaults';
+import { isFeatureEnabled } from '../../utils/featureFlags';
 import styles from './EnvelopeAutomation.module.scss';
 
 export interface EnvelopeAutomationProps {
@@ -116,7 +117,7 @@ export const EnvelopeAutomation: React.FC<EnvelopeAutomationProps> = ({ embedded
   );
 
   const body = (
-      <div className={styles.content}>
+      <div className={`${styles.content} ${showEditor ? styles.contentWithEditor : ''}`}>
         {/* Speed/Timer Control */}
         <div className={styles.speedControl}>
           <div className={styles.speedControlHeader}>
@@ -392,7 +393,7 @@ const EnvelopeCard: React.FC<EnvelopeCardProps> = ({
         </div>
       )}
 
-      {activeTransitionPatternId && (
+      {isFeatureEnabled('dmxTracker') && activeTransitionPatternId && (
         <div className={styles.trackerSyncRow}>
           <SkeuoButton
             compact

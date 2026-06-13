@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { RackTabStrip } from '../ui/rack';
 import { DmxTransitionTracker } from '../automation/tracker/DmxTransitionTracker';
 import { useStore } from '../../store';
+import { isFeatureEnabled } from '../../utils/featureFlags';
 import styles from './SceneTimelinePatternDrawer.module.scss';
 
 interface SceneTimelinePatternDrawerProps {
@@ -11,6 +12,7 @@ interface SceneTimelinePatternDrawerProps {
 export const SceneTimelinePatternDrawer: React.FC<SceneTimelinePatternDrawerProps> = ({
   sceneName,
 }) => {
+  const trackerEnabled = isFeatureEnabled('dmxTracker');
   const [mode, setMode] = useState<'timeline' | 'pattern'>('timeline');
   const [patternId, setPatternId] = useState<string | null>(null);
 
@@ -22,6 +24,10 @@ export const SceneTimelinePatternDrawer: React.FC<SceneTimelinePatternDrawerProp
   );
 
   useEffect(() => {
+    if (!trackerEnabled) {
+      setMode('timeline');
+      return;
+    }
     const linked = transitionPatterns.find((p) => p.name === `Scene: ${sceneName}`);
     if (linked) {
       setPatternId(linked.id);
@@ -31,24 +37,24 @@ export const SceneTimelinePatternDrawer: React.FC<SceneTimelinePatternDrawerProp
       const id = addTransitionPattern(`Scene: ${sceneName}`);
       setPatternId(id);
     }
-  }, [sceneName, addTransitionPattern, transitionPatterns, patternId]);
+  }, [trackerEnabled, sceneName, addTransitionPattern, transitionPatterns, patternId]);
 
   return (
     <div className={`ab-rack ${styles.drawer}`}>
       <RackTabStrip
         tabs={[
           { id: 'timeline', label: 'Timeline' },
-          { id: 'pattern', label: 'Pattern' },
+          ...(trackerEnabled ? [{ id: 'pattern', label: 'Pattern' } as const] : []),
         ]}
         activeId={mode}
         onChange={(id) => setMode(id as 'timeline' | 'pattern')}
         ariaLabel="Scene editor mode"
       />
-      {mode === 'pattern' && patternId ? (
+      {trackerEnabled && mode === 'pattern' && patternId ? (
         <DmxTransitionTracker patternId={patternId} compact />
       ) : (
         <p className={styles.hint}>
-          Timeline lanes are above. Switch to Pattern for stepped DMX transition rows in the DMX Tracker.
+          Timeline lanes are above.
         </p>
       )}
     </div>

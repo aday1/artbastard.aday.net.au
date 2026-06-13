@@ -34,6 +34,7 @@ function nextInCycle<T extends string>(values: readonly T[], current: T): T {
 }
 
 const TRACK_SELECT_ENCODER_SUPPRESSION_MS = 250;
+const APC40_NOTE_RELEASE_WINDOW_MS = 350;
 
 function sortedColumns(columns: Set<number>): number[] {
   return Array.from(columns).sort((a, b) => a - b);
@@ -120,6 +121,8 @@ export function useApc40Workflow() {
   const setApc40StatePatch = useStore((state) => state.setApc40StatePatch);
 
   const lastSignature = useRef('');
+  const lastSignatureAtRef = useRef(0);
+  const recentPositiveNoteRef = useRef<Map<string, number>>(new Map());
   const handleApc40MessageRef = useRef<(message: any) => void>(() => {});
   const shiftHeldRef = useRef(false);
   const sceneRefs = useRef<Record<Apc40Deck, string | null>>({ A: null, B: null });
@@ -268,11 +271,42 @@ export function useApc40Workflow() {
   handleApc40MessageRef.current = (latestMessage: any) => {
     if (!latestMessage || !isApc40Source(latestMessage.source)) return;
 
-    const signature = JSON.stringify(latestMessage);
-    if (signature === lastSignature.current) return;
-    lastSignature.current = signature;
+    let message = latestMessage;
+    const type = message.type || message._type;
+    const note = typeof message.note === 'number' ? message.note : undefined;
+    const channel = typeof message.channel === 'number' ? message.channel : 0;
+    const velocity = message.velocity ?? message.value ?? 0;
+    const now = typeof message.timestamp === 'number' ? message.timestamp : Date.now();
 
-    const action = decodeApc40Message(latestMessage);
+    const noteOffLike = note !== undefined && (
+      type === 'noteoff' ||
+      (type === 'noteon' && velocity === 0)
+    );
+
+    if (type === 'noteon' && note !== undefined && velocity > 0) {
+      const noteKey = `${message.source || ''}:${channel}:${note}`;
+      recentPositiveNoteRef.current.set(noteKey, now);
+    } else if (noteOffLike && note !== 0x62) {
+      const noteKey = `${message.source || ''}:${channel}:${note}`;
+      const previousPositiveAt = recentPositiveNoteRef.current.get(noteKey);
+      const isImmediateRelease =
+        previousPositiveAt !== undefined &&
+        now >= previousPositiveAt &&
+        now - previousPositiveAt <= APC40_NOTE_RELEASE_WINDOW_MS;
+
+      if (isImmediateRelease) return;
+
+      // Some APC40 modes emit separate physical button presses as
+      // NOTE ON velocity 127 and later NOTE ON velocity 0. Let delayed
+      // velocity-0 / note-off events through as explicit OFF state.
+    }
+
+    const signature = JSON.stringify(message);
+    if (signature === lastSignature.current && now - lastSignatureAtRef.current < 35) return;
+    lastSignature.current = signature;
+    lastSignatureAtRef.current = now;
+
+    const action = decodeApc40Message(message);
     if (!action) return;
 
     const state = useStore.getState();
@@ -305,13 +339,17 @@ export function useApc40Workflow() {
         return;
       }
 
-      const wasEmpty = soloedGroupsRef.current.size === 0;
       const alreadyOn = soloedGroupsRef.current.has(action.trackIndex);
-      if (alreadyOn) {
-        soloedGroupsRef.current.delete(action.trackIndex);
-      } else {
-        if (wasEmpty) soloSnapshotRef.current = [...state.dmxChannels];
+      if (action.pressed === alreadyOn) {
+        publishSurfaceState();
+        return;
+      }
+
+      if (action.pressed) {
+        if (soloedGroupsRef.current.size === 0) soloSnapshotRef.current = [...state.dmxChannels];
         soloedGroupsRef.current.add(action.trackIndex);
+      } else {
+        soloedGroupsRef.current.delete(action.trackIndex);
       }
 
       if (soloedGroupsRef.current.size === 0) {
@@ -327,9 +365,9 @@ export function useApc40Workflow() {
         lastChange: makeLastChange(
           'selection',
           `Solo Group ${action.trackIndex + 1}`,
-          alreadyOn
-            ? `Released solo on group "${group.name}"`
-            : `Soloed group "${group.name}"`,
+          action.pressed
+            ? `Soloed group "${group.name}"`
+            : `Released solo on group "${group.name}"`,
           soloedGroupsRef.current.size > 0
             ? `Currently soloed: ${formatList(soloedNames.map(quoted))}. Other fixtures dimmed to 0.`
             : 'No groups soloed; previous DMX snapshot restored.',
@@ -337,9 +375,9 @@ export function useApc40Workflow() {
         ),
       });
       state.addNotification({
-        message: alreadyOn
-          ? `APC40 released solo on "${group.name}"`
-          : `APC40 soloed group "${group.name}"`,
+        message: action.pressed
+          ? `APC40 soloed group "${group.name}"`
+          : `APC40 released solo on "${group.name}"`,
         type: 'info',
         priority: 'low',
       });
@@ -828,32 +866,38 @@ export function useApc40Workflow() {
     }
 
     if (action.type === 'select-fixture') {
-      // Solo/Cue row (note 0x31): toggle fixture in/out of multi-selection.
+      // Solo/Cue row (note 0x31): ON selects fixture, OFF removes it.
       suppressTrackControlUntilRef.current = Date.now() + TRACK_SELECT_ENCODER_SUPPRESSION_MS;
       const fixture = state.fixtures[action.trackIndex];
       if (fixture) {
         const wasSelected = state.selectedFixtures.includes(fixture.id);
-        state.toggleFixtureSelection(fixture.id);
+        if (action.pressed === wasSelected) {
+          publishSurfaceState({
+            ...apcTargetPatch(action.trackIndex, null, state.selectedFixtures, `Fixture ${action.trackIndex + 1}: ${fixture.name}`),
+          });
+          return;
+        }
         state.deselectAllChannels();
-        const nextSelection = wasSelected
-          ? state.selectedFixtures.filter((id) => id !== fixture.id)
-          : [...state.selectedFixtures, fixture.id];
+        const nextSelection = action.pressed
+          ? [...state.selectedFixtures, fixture.id]
+          : state.selectedFixtures.filter((id) => id !== fixture.id);
+        state.setSelectedFixtures(nextSelection);
         publishSurfaceState({
           ...apcTargetPatch(action.trackIndex, null, nextSelection, `Fixture ${action.trackIndex + 1}: ${fixture.name}`),
           lastChange: makeLastChange(
             'selection',
             `Select Fixture ${action.trackIndex + 1}`,
-            wasSelected
-              ? `Deselected fixture "${fixture.name}" (${nextSelection.length} now selected)`
-              : `Added fixture "${fixture.name}" to selection (${nextSelection.length} now selected)`,
-            'Solo/Cue row toggles individual fixtures in the live selection.',
+            action.pressed
+              ? `Added fixture "${fixture.name}" to selection (${nextSelection.length} now selected)`
+              : `Deselected fixture "${fixture.name}" (${nextSelection.length} now selected)`,
+            'Solo/Cue row ON selects individual fixtures; OFF removes them from the live selection.',
             { fixtureNames: [fixture.name] }
           ),
         });
         state.addNotification({
-          message: wasSelected
-            ? `APC40 deselected fixture "${fixture.name}"`
-            : `APC40 added fixture "${fixture.name}" to selection`,
+          message: action.pressed
+            ? `APC40 added fixture "${fixture.name}" to selection`
+            : `APC40 deselected fixture "${fixture.name}"`,
           type: 'info',
           priority: 'low',
         });
@@ -872,7 +916,7 @@ export function useApc40Workflow() {
     }
 
     if (action.type === 'select-group') {
-      // Activator row (note 0x32): toggle the group's fixtures in/out of multi-selection.
+      // Activator row (note 0x32): ON adds the group, OFF removes it.
       suppressTrackControlUntilRef.current = Date.now() + TRACK_SELECT_ENCODER_SUPPRESSION_MS;
       activeGroupIndexRef.current = action.trackIndex;
       const group = state.groups[action.trackIndex];
@@ -883,9 +927,15 @@ export function useApc40Workflow() {
         const currentSelection = state.selectedFixtures;
         const allAlreadySelected = groupFixtureIds.length > 0
           && groupFixtureIds.every((id) => currentSelection.includes(id));
-        const nextSelection = allAlreadySelected
-          ? currentSelection.filter((id) => !groupFixtureIds.includes(id))
-          : Array.from(new Set([...currentSelection, ...groupFixtureIds]));
+        if (action.pressed === allAlreadySelected) {
+          publishSurfaceState({
+            ...apcTargetPatch(action.trackIndex, group.id, currentSelection, `Group ${action.trackIndex + 1}: ${group.name}`),
+          });
+          return;
+        }
+        const nextSelection = action.pressed
+          ? Array.from(new Set([...currentSelection, ...groupFixtureIds]))
+          : currentSelection.filter((id) => !groupFixtureIds.includes(id));
         state.setSelectedFixtures(nextSelection);
         state.deselectAllChannels();
         const fixtureNames = group.fixtureIndices
@@ -896,17 +946,17 @@ export function useApc40Workflow() {
           lastChange: makeLastChange(
             'selection',
             `Select Group ${action.trackIndex + 1}`,
-            allAlreadySelected
-              ? `Removed group "${group.name}" from selection (${nextSelection.length} now selected)`
-              : `Added group "${group.name}" to selection (${nextSelection.length} now selected)`,
+            action.pressed
+              ? `Added group "${group.name}" to selection (${nextSelection.length} now selected)`
+              : `Removed group "${group.name}" from selection (${nextSelection.length} now selected)`,
             fixtureNames.length > 0 ? `Group contains ${formatList(fixtureNames.map(quoted))}.` : 'Group has no patched fixtures.',
             { groupNames: [group.name], fixtureNames }
           ),
         });
         state.addNotification({
-          message: allAlreadySelected
-            ? `APC40 removed group "${group.name}" from selection`
-            : `APC40 added group "${group.name}" to selection`,
+          message: action.pressed
+            ? `APC40 added group "${group.name}" to selection`
+            : `APC40 removed group "${group.name}" from selection`,
           type: 'info',
           priority: 'low',
         });

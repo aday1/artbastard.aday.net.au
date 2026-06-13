@@ -10,9 +10,9 @@ import { DmxMonitor } from '../dmx/DmxMonitor';
 export const GlobalMonitors: React.FC = () => {
   return (
     <>
-      <MidiMonitor />
-      <OscMonitor />
-      <DmxMonitor />
+      <MidiMonitor footerDocked />
+      <OscMonitor footerDocked />
+      <DmxMonitor footerDocked />
     </>
   );
 };

@@ -7,7 +7,11 @@ import styles from './OscMonitor.module.scss';
 import { useSocket } from '../../context/SocketContext';
 import { OscMessage } from '../../store';
 
-export const OscMonitor: React.FC = () => {
+interface OscMonitorProps {
+  footerDocked?: boolean;
+}
+
+export const OscMonitor: React.FC<OscMonitorProps> = ({ footerDocked = false }) => {
   const oscMessagesFromStore = useStore(state => state.oscMessages);
   const debugTools = useStore(state => state.debugTools);
   const addOscMessageToStore = useStore(state => state.addOscMessage);
@@ -37,7 +41,7 @@ export const OscMonitor: React.FC = () => {
     setCollapsedByUser,
     dismissByUser,
     triggerFlash,
-  } = useMonitorAutoPop({ key: 'oscMonitor', hasSignal: oscMessagesFromStore.length > 0 });
+  } = useMonitorAutoPop({ key: 'oscMonitor', hasSignal: oscMessagesFromStore.length > 0, autoPop: !footerDocked });
 
   // Throttling for OSC messages to reduce lag
   const lastOscMessageTimeRef = useRef<number>(0);
@@ -429,10 +433,11 @@ export const OscMonitor: React.FC = () => {
     styles.oscMonitor,
     flashActive ? styles.flash : '',
     isCollapsed ? styles.collapsed : '',
+    footerDocked ? 'footerDockedMonitor' : '',
   ].join(' ');
 
   // Don't render if oscMonitor is disabled in debugTools or dismissed
-  if (!debugTools.oscMonitor || isDismissed) {
+  if (!debugTools.oscMonitor || (footerDocked && (isCollapsed || isDismissed)) || (!footerDocked && isDismissed)) {
     return null;
   }
 
@@ -448,7 +453,16 @@ export const OscMonitor: React.FC = () => {
         maxHeight={480}
         anchor="bottom-right"
         className={monitorClasses}
-        style={isCollapsed ? { width: 'auto', height: 'auto' } : undefined}
+        style={footerDocked
+          ? {
+              left: 'calc(50vw - 180px)',
+              right: 'auto',
+              top: 'auto',
+              bottom: '96px',
+              width: '360px',
+              height: '270px',
+            }
+          : isCollapsed ? { width: 'auto', height: 'auto' } : undefined}
       >
         <div ref={monitorRef} className={styles.monitorInner}>
         {renderHeader()}

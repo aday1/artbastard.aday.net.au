@@ -25,8 +25,6 @@ import { ROLI_GRID_COLS, ROLI_GRID_ROWS } from '../../engines/roliLightpad';
 import { paintApc40Crosshair } from '../../engines/apc40XyCrosshair';
 import { SkeuoButton } from '../ui/SkeuoButton';
 import { SelectedChannelsFaderStrip } from './SelectedChannelsFaderStrip';
-import { SuperControlMidiBindingsBar } from './SuperControlMidiBindingsBar';
-import { Apc40SurfaceDiagram, useApc40DiagramVisible } from '../midi/Apc40SurfaceDiagram';
 import { StageMapDashboard } from '../fixtures/StageMapDashboard';
 import { debugLog } from '../../utils/debugLog';
 import { rangesToTickSteps } from '../../utils/fixtureChannelTicks';
@@ -45,17 +43,13 @@ interface SuperControlProps {
 type SelectionMode = 'channels' | 'fixtures' | 'groups' | 'capabilities';
 type SuperControlPanelId =
   | 'selection'
-  | 'monitoring'
-  | 'stageMap'
   | 'midiOsc'
-  | 'scenes'
   | 'basic'
   | 'panTilt'
   | 'rgb'
   | 'effects'
   | 'envelopes'
-  | 'directDmx'
-  | 'colorAutopilot';
+  | 'directDmx';
 
 interface SuperControlPanelLayoutState {
   order: SuperControlPanelId[];
@@ -73,7 +67,7 @@ interface SuperControlPanelLayoutState {
 
 const SUPER_CONTROL_MAX_COLUMNS = 4;
 
-const SUPER_CONTROL_LAYOUT_KEY = 'artbastard.superControl.panelLayout.v1';
+const SUPER_CONTROL_LAYOUT_KEY = 'artbastard.superControl.panelLayout.v7';
 const SUPER_CONTROL_LOCAL_MIDI_MAPPINGS_KEY = 'artbastard.superControl.localMidiMappings.v1';
 const SUPER_CONTROL_PATH_SLOTS_KEY = 'artbastard.superControl.pathSlots.v1';
 const SCENE_AUTO_SAVE_TOOLTIP = 'Reserved: automatic scene capture is not wired to a live trigger yet. Use Save Scene or MIDI Save to capture the current DMX look manually.';
@@ -149,33 +143,24 @@ function loadPathSlots(): PathSlotsState {
 }
 const DEFAULT_SUPER_CONTROL_PANEL_ORDER: SuperControlPanelId[] = [
   'selection',
-  'monitoring',
-  'stageMap',
   'basic',
   'panTilt',
   'rgb',
   'effects',
-  'scenes',
   'midiOsc',
   'envelopes',
   'directDmx',
-  'colorAutopilot',
 ];
 const SUPER_CONTROL_PANEL_LABELS: Record<SuperControlPanelId, string> = {
   selection: 'Selection',
-  monitoring: 'Monitoring',
-  stageMap: 'Stage Map',
   midiOsc: 'MIDI/OSC',
-  scenes: 'Scenes',
   basic: 'Basic',
   panTilt: 'Pan/Tilt',
   rgb: 'RGB',
   effects: 'Effects',
   envelopes: 'Envelopes',
   directDmx: 'Direct DMX',
-  colorAutopilot: 'Color Auto',
 };
-
 interface LocalMidiMapping {
   channel?: number;
   note?: number;
@@ -232,6 +217,17 @@ const midiMappingLabel = (mapping?: LocalMidiMapping) => {
   return `CH${displayChannel}`;
 };
 
+const CONTROL_AVAILABILITY = [
+  { key: 'dimmer', label: 'Dimmer', types: ['dimmer'] },
+  { key: 'panTilt', label: 'Pan/Tilt', types: ['pan', 'tilt'] },
+  { key: 'rgb', label: 'RGB', types: ['red', 'green', 'blue'] },
+  { key: 'gobo', label: 'Gobo', types: ['gobo'] },
+  { key: 'shutter', label: 'Shutter', types: ['shutter'] },
+  { key: 'strobe', label: 'Strobe', types: ['strobe'] },
+  { key: 'lamp', label: 'Lamp', types: ['lamp'] },
+  { key: 'reset', label: 'Reset', types: ['reset'] },
+];
+
 const loadLocalMidiMappings = (): Record<string, LocalMidiMapping> => {
   if (typeof window === 'undefined') return {};
   try {
@@ -248,9 +244,6 @@ function normalizeSuperControlPanelLayout(raw: unknown): SuperControlPanelLayout
   const parsed = raw && typeof raw === 'object' ? raw as Partial<SuperControlPanelLayoutState> : {};
   const incomingOrder = Array.isArray(parsed.order) ? parsed.order : [];
   const validIds = new Set(DEFAULT_SUPER_CONTROL_PANEL_ORDER);
-  const defaultHidden: Partial<Record<SuperControlPanelId, boolean>> = incomingOrder.includes('stageMap')
-    ? {}
-    : { stageMap: true };
   const order = [
     ...incomingOrder.filter((id): id is SuperControlPanelId => validIds.has(id as SuperControlPanelId)),
     ...DEFAULT_SUPER_CONTROL_PANEL_ORDER.filter((id) => !incomingOrder.includes(id)),
@@ -279,13 +272,22 @@ function normalizeSuperControlPanelLayout(raw: unknown): SuperControlPanelLayout
     parsed.fullscreen && validIds.has(parsed.fullscreen as SuperControlPanelId)
       ? (parsed.fullscreen as SuperControlPanelId)
       : null;
+  const cleanCollapsed: Partial<Record<SuperControlPanelId, boolean>> = {};
+  if (parsed.collapsed && typeof parsed.collapsed === 'object') {
+    for (const id of DEFAULT_SUPER_CONTROL_PANEL_ORDER) {
+      if (id !== 'selection' && Boolean((parsed.collapsed as any)[id])) cleanCollapsed[id] = true;
+    }
+  }
+  const cleanHidden: Partial<Record<SuperControlPanelId, boolean>> = {};
+  if (parsed.hidden && typeof parsed.hidden === 'object') {
+    for (const id of DEFAULT_SUPER_CONTROL_PANEL_ORDER) {
+      if (id !== 'selection' && Boolean((parsed.hidden as any)[id])) cleanHidden[id] = true;
+    }
+  }
   return {
     order,
-    collapsed: parsed.collapsed && typeof parsed.collapsed === 'object' ? parsed.collapsed : {},
-    hidden: {
-      ...defaultHidden,
-      ...(parsed.hidden && typeof parsed.hidden === 'object' ? parsed.hidden : {}),
-    },
+    collapsed: cleanCollapsed,
+    hidden: cleanHidden,
     columns,
     spans: cleanSpans,
     heights: cleanHeights,
@@ -511,8 +513,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
   const [selectedCapabilities, setSelectedCapabilities] = useState<string[]>([]);
   const [panelLayout, setPanelLayout] = useState<SuperControlPanelLayoutState>(loadSuperControlPanelLayout);
-  // APC40 surface diagram is opt-in (hidden by default, shared across pages).
-  const [showApc40Diagram, setShowApc40Diagram] = useApc40DiagramVisible();
+  const [midiOscNavExpanded, setMidiOscNavExpanded] = useState(true);
   // Control values state
   const [dimmer, setDimmer] = useState(255);
   const [panValue, setPanValue] = useState(127);
@@ -577,41 +578,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     }
   }, [panelLayout]);
 
-  // Watch user-driven resize of each panel root (CSS `resize: vertical` on
-  // .gridItem) and persist the new height keyed by the data-panel-id attribute.
   const panelContainerRef = useRef<HTMLDivElement>(null);
-  const lastObservedHeights = useRef<Partial<Record<SuperControlPanelId, number>>>({});
-  useEffect(() => {
-    const root = panelContainerRef.current;
-    if (!root || typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver((entries) => {
-      let pending: Partial<Record<SuperControlPanelId, number>> | null = null;
-      for (const entry of entries) {
-        const el = entry.target as HTMLElement;
-        const id = el.getAttribute('data-panel-id') as SuperControlPanelId | null;
-        if (!id) continue;
-        const h = Math.round(entry.contentRect.height + 1);
-        // Ignore tiny deltas (rounding noise during layout pass) and the very
-        // first observation (which is just the initial natural height).
-        const prev = lastObservedHeights.current[id];
-        lastObservedHeights.current[id] = h;
-        if (prev === undefined) continue;
-        if (Math.abs(prev - h) < 6) continue;
-        pending = pending ?? {};
-        pending[id] = h;
-      }
-      if (pending) {
-        const next = pending;
-        setPanelLayout((prevLayout) => ({
-          ...prevLayout,
-          heights: { ...prevLayout.heights, ...next },
-        }));
-      }
-    });
-    const panels = root.querySelectorAll<HTMLElement>('[data-panel-id]');
-    panels.forEach((p) => observer.observe(p));
-    return () => observer.disconnect();
-  }, [panelLayout.order]);
 
   const panelOrderIndex = useCallback(
     (panelId: SuperControlPanelId) => {
@@ -623,23 +590,17 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
 
   const panelStyle = useCallback(
     (panelId: SuperControlPanelId): React.CSSProperties => {
-      const span = panelLayout.spans[panelId] ?? 1;
       const colCount = panelLayout.columns > 0 ? panelLayout.columns : SUPER_CONTROL_MAX_COLUMNS;
+      const span = panelId === 'selection' ? colCount : panelLayout.spans[panelId] ?? 1;
       const effectiveSpan = Math.max(1, Math.min(span, colCount));
-      const height = panelLayout.heights[panelId];
-      // Fullscreen takes over via CSS — don't pin a height in that case.
-      const isFullscreen = panelLayout.fullscreen === panelId;
       return {
         order: panelOrderIndex(panelId),
-        display: panelLayout.hidden[panelId] ? 'none' : undefined,
+        display: panelId !== 'selection' && panelLayout.hidden[panelId] ? 'none' : undefined,
         gridColumn: effectiveSpan > 1 ? `span ${effectiveSpan}` : undefined,
-        height: !isFullscreen && height ? `${height}px` : undefined,
       };
     },
     [
       panelLayout.columns,
-      panelLayout.fullscreen,
-      panelLayout.heights,
       panelLayout.hidden,
       panelLayout.spans,
       panelOrderIndex,
@@ -654,7 +615,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
   const panelClass = useCallback(
     (panelId: SuperControlPanelId) => {
       const classes = [styles.gridItem];
-      if (panelLayout.collapsed[panelId]) classes.push(styles.gridItemCollapsed);
+      if (panelId !== 'selection' && panelLayout.collapsed[panelId]) classes.push(styles.gridItemCollapsed);
       if (panelLayout.fullscreen === panelId) classes.push(styles.gridItemFullscreen);
       if (draggingPanelId === panelId) classes.push(styles.gridItemDragging);
       if (dragOverPanelId === panelId && draggingPanelId && draggingPanelId !== panelId) {
@@ -717,6 +678,16 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
       const current = prev.spans[panelId] ?? 1;
       const cap = prev.columns > 0 ? prev.columns : SUPER_CONTROL_MAX_COLUMNS;
       const next = Math.max(1, Math.min(cap, current + delta));
+      if (next === current) return prev;
+      return { ...prev, spans: { ...prev.spans, [panelId]: next } };
+    });
+  }, []);
+
+  const setPanelSpan = useCallback((panelId: SuperControlPanelId, span: number) => {
+    setPanelLayout((prev) => {
+      const cap = prev.columns > 0 ? prev.columns : SUPER_CONTROL_MAX_COLUMNS;
+      const next = Math.max(1, Math.min(cap, Math.floor(span)));
+      const current = prev.spans[panelId] ?? 1;
       if (next === current) return prev;
       return { ...prev, spans: { ...prev.spans, [panelId]: next } };
     });
@@ -824,7 +795,15 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     () => Object.values(panelLayout.hidden).filter(Boolean).length,
     [panelLayout.hidden]
   );
-  const stageMapVisible = !panelLayout.hidden.stageMap;
+  const hiddenPanelIds = useMemo(
+    () => DEFAULT_SUPER_CONTROL_PANEL_ORDER.filter((id) => id !== 'selection' && panelLayout.hidden[id]),
+    [panelLayout.hidden]
+  );
+  const visibleSpanPanelIds = useMemo(
+    () => DEFAULT_SUPER_CONTROL_PANEL_ORDER.filter((id) => id !== 'selection' && !panelLayout.hidden[id]),
+    [panelLayout.hidden]
+  );
+  const columnCap = panelLayout.columns > 0 ? panelLayout.columns : SUPER_CONTROL_MAX_COLUMNS;
 
   const renderPanelHeader = useCallback((
     panelId: SuperControlPanelId,
@@ -838,6 +817,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     const span = panelLayout.spans[panelId] ?? 1;
     const colCap = panelLayout.columns > 0 ? panelLayout.columns : SUPER_CONTROL_MAX_COLUMNS;
     const isFullscreen = panelLayout.fullscreen === panelId;
+    const locked = panelId === 'selection';
 
     return (
       <div
@@ -856,7 +836,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
           <span>{label}</span>
         </span>
         {status && <span className={styles.gridItemHeaderStatus}>{status}</span>}
-        <span className={styles.cardLayoutControls} aria-label={`${title} layout controls`}>
+        {!locked && <span className={styles.cardLayoutControls} aria-label={`${title} layout controls`}>
           <button
             type="button"
             onClick={() => adjustPanelSpan(panelId, -1)}
@@ -917,7 +897,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
           >
             <LucideIcon name="ArrowRight" />
           </button>
-        </span>
+        </span>}
       </div>
     );
   }, [
@@ -1037,7 +1017,6 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
 
   // Custom path editor state
   const [showPanTiltPathEditor, setShowPanTiltPathEditor] = useState(false);
-  const [midiOscNavExpanded, setMidiOscNavExpanded] = useState(false);
 
   // Color wheel state
   const [colorHue, setColorHue] = useState(0);
@@ -2137,7 +2116,9 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         if (config.settings) {
           const settings = config.settings;
           if (settings.currentSceneIndex !== undefined) setCurrentSceneIndex(settings.currentSceneIndex);
-          if (settings.selectionMode) setSelectionMode(settings.selectionMode);
+          if (settings.selectionMode) {
+            setSelectionMode(settings.selectionMode === 'channels' && selectedChannels.length === 0 ? 'fixtures' : settings.selectionMode);
+          }
           if (settings.controlValues) {
             const cv = settings.controlValues;
             if (cv.dimmer !== undefined) setDimmer(cv.dimmer);
@@ -2212,7 +2193,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     setSceneOscAddresses({});
     // Scenes are managed globally, not reset here
     setCurrentSceneIndex(0);
-    setSelectionMode('channels');
+    setSelectionMode('fixtures');
     setSelectedGroups([]);
     setSelectedCapabilities([]);
 
@@ -2282,7 +2263,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     switch (selectionMode) {
       case 'channels':
         return selectedChannels.length === 0
-          ? 'Select DMX channels to control'
+          ? 'Select fixtures to control'
           : `Controlling ${selectedChannels.length} channel(s) across ${affected.length} fixture(s)`;
       case 'fixtures':
         return selectedFixtures.length === 0
@@ -2301,6 +2282,21 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
 
   const hasSelection = getAffectedFixtures().length > 0;
   const capabilities = getFixtureCapabilities();
+  const hasChannelSelection = selectedChannels.length > 0;
+
+  useEffect(() => {
+    if (selectionMode === 'channels' && !hasChannelSelection) {
+      setSelectionMode('fixtures');
+    }
+  }, [hasChannelSelection, selectionMode]);
+
+  const availableControls = useMemo(
+    () => CONTROL_AVAILABILITY.map((control) => ({
+      ...control,
+      available: control.types.some((type) => hasControlType(type)),
+    })),
+    [fixtures, groups, selectedCapabilities, selectedChannels, selectedFixtures, selectedGroups, selectionMode]
+  );
 
   const handleSelectAllFixtures = () => {
     selectAllFixtures();
@@ -2399,110 +2395,103 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     if (!hasSelection) {
       if (selectionMode === 'fixtures') return 'Click fixtures below or use Select All';
       if (selectionMode === 'groups' && groups.length > 0) return 'Click a group to select it';
-      if (selectionMode === 'channels') {
-        return touchLayout
-          ? 'Pin channels on DMX Control (pin icon), or use the faders below once pinned'
-          : 'Select DMX channels from the DMX Control page';
-      }
       return 'Select fixtures, groups, or channels to control';
     }
     return null;
   };
+
+  const showMidiOscPanel = fixtures.length > 0 || groups.length > 0 || scenes.length > 0;
+  const showBasicPanel = hasControlType('dimmer');
+  const spanControlPanelIds = visibleSpanPanelIds.filter((panelId) => {
+    switch (panelId) {
+      case 'midiOsc': return showMidiOscPanel;
+      case 'basic': return showBasicPanel;
+      case 'panTilt': return hasControlType('pan') || hasControlType('tilt');
+      case 'rgb': return hasControlType('red') || hasControlType('green') || hasControlType('blue');
+      case 'effects': return hasControlType('gobo') || hasControlType('shutter') || hasControlType('strobe') || hasControlType('lamp') || hasControlType('reset');
+      case 'envelopes': return selectionMode === 'channels' && selectedChannels.length > 0;
+      case 'directDmx': return selectionMode === 'channels' && selectedChannels.length > 0 && !touchLayout;
+      default: return false;
+    }
+  });
 
   return (
     <div
       className={['ab-rack-module', styles.superControl, touchLayout ? styles.touchLayout : ''].filter(Boolean).join(' ')}
       data-embedded-workbench={embeddedWorkbench ? 'true' : undefined}
     >
-      <div className={styles.header}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', flexWrap: 'wrap', gap: '12px' }}>
-          <div>
-            <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <LucideIcon name="Settings" />
-              Super Control
-            </h3>
-            <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: 'var(--color-text-secondary)' }}>{getSelectionInfo()}</p>
-            {getQuickTip() && (
-              <p style={{ margin: '6px 0 0 0', fontSize: '12px', opacity: 0.85, color: 'var(--color-interactive)' }}>
-                {getQuickTip()}
-              </p>
-            )}
-          </div>
-          <div className={styles.superControlHeaderActions} aria-label="Super Control layout recovery">
-            {!isMobile && (
-              <span
-                className={styles.columnPicker}
-                role="group"
-                aria-label="Super Control column count"
-                title="Set the maximum number of Super Control card columns. Auto fits to the screen; manual layouts are capped at 4 columns."
+      {touchLayout && selectionMode === 'channels' && hasChannelSelection && (
+        <SelectedChannelsFaderStrip maxVisible={10} />
+      )}
+
+      <div className={styles.layoutTray} aria-label="SuperControl card layout controls">
+        <div className={styles.layoutTraySection}>
+          <span className={styles.layoutTrayLabel}>Grid</span>
+          <div className={styles.layoutTrayButtons}>
+            {[0, 1, 2, 3, 4].map((columns) => (
+              <button
+                key={columns}
+                type="button"
+                className={panelLayout.columns === columns ? styles.layoutTrayButtonActive : ''}
+                onClick={() => setColumnCount(columns)}
+                title={columns === 0 ? 'Auto-fit card columns' : `Use ${columns} card column${columns === 1 ? '' : 's'}`}
               >
-                <span className={styles.columnPickerLabel}>Cols</span>
-                {[0, 1, 2, 3, 4].map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => setColumnCount(n)}
-                    className={panelLayout.columns === n ? styles.columnPickerActive : ''}
-                    title={
-                      n === 0
-                        ? 'Auto-fit Super Control cards to available width'
-                        : `Use a ${n}-column Super Control layout`
-                    }
-                    aria-label={
-                      n === 0
-                        ? 'Use auto-fit Super Control columns'
-                        : `Use ${n} Super Control column${n === 1 ? '' : 's'}`
-                    }
-                    aria-pressed={panelLayout.columns === n}
-                  >
-                    {n === 0 ? 'Auto' : n}
-                  </button>
-                ))}
-              </span>
-            )}
-            {hiddenPanelCount > 0 && (
-              <button type="button" onClick={showAllPanels} title="Show every hidden Super Control card again">
-                <LucideIcon name="Eye" />
-                <span>{hiddenPanelCount} hidden</span>
+                {columns === 0 ? 'Auto' : columns}
               </button>
+            ))}
+          </div>
+        </div>
+
+        {spanControlPanelIds.length > 0 && (
+          <div className={styles.layoutTraySection}>
+            <span className={styles.layoutTrayLabel}>Card widths</span>
+            <div className={styles.cardWidthGrid}>
+              {spanControlPanelIds.map((panelId) => {
+                const currentSpan = panelLayout.spans[panelId] ?? 1;
+                return (
+                  <div key={panelId} className={styles.cardWidthControl}>
+                    <span>{SUPER_CONTROL_PANEL_LABELS[panelId]}</span>
+                    <div className={styles.layoutTrayButtons}>
+                      {Array.from({ length: columnCap }, (_, index) => index + 1).map((span) => (
+                        <button
+                          key={span}
+                          type="button"
+                          className={currentSpan === span ? styles.layoutTrayButtonActive : ''}
+                          onClick={() => setPanelSpan(panelId, span)}
+                          title={`${SUPER_CONTROL_PANEL_LABELS[panelId]} spans ${span} column${span === 1 ? '' : 's'}`}
+                        >
+                          {span}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div className={styles.layoutTraySection}>
+          <span className={styles.layoutTrayLabel}>Hidden</span>
+          <div className={styles.layoutTrayButtons}>
+            {hiddenPanelIds.length === 0 ? (
+              <span className={styles.layoutTrayEmpty}>None</span>
+            ) : (
+              hiddenPanelIds.map((panelId) => (
+                <button key={panelId} type="button" onClick={() => togglePanelHidden(panelId)}>
+                  Show {SUPER_CONTROL_PANEL_LABELS[panelId]}
+                </button>
+              ))
             )}
-            <button
-              type="button"
-              onClick={() => togglePanelHidden('stageMap')}
-              title={stageMapVisible ? 'Hide Stage Map card' : 'Show Stage Map card'}
-              aria-pressed={stageMapVisible}
-              className={stageMapVisible ? styles.columnPickerActive : ''}
-            >
-              <LucideIcon name="Map" />
-              <span>Map</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowApc40Diagram((v) => !v)}
-              title={showApc40Diagram ? 'Hide APC40 surface diagram' : 'Show APC40 surface diagram'}
-              aria-pressed={showApc40Diagram}
-              className={showApc40Diagram ? styles.columnPickerActive : ''}
-            >
-              <LucideIcon name="Sliders" />
-              <span>APC40</span>
-            </button>
-            <button type="button" onClick={resetPanelLayout} title="Reset card order, hidden cards, sizes, spans, and column layout back to defaults">
-              <LucideIcon name="RotateCcw" />
-              <span>Reset</span>
+            {hiddenPanelCount > 1 && (
+              <button type="button" onClick={showAllPanels}>Show all</button>
+            )}
+            <button type="button" onClick={resetPanelLayout} title="Reset order, hidden cards, columns, widths, and heights">
+              Reset layout
             </button>
           </div>
         </div>
       </div>
-
-      <SuperControlMidiBindingsBar />
-
-      {showApc40Diagram && (
-        <Apc40SurfaceDiagram mode="superControl" compact title="SuperControl bindings" />
-      )}
-
-      {touchLayout && selectionMode === 'channels' && (
-        <SelectedChannelsFaderStrip maxVisible={10} />
-      )}
 
       <div
         ref={panelContainerRef}
@@ -2516,18 +2505,20 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
       >
         <div {...panelProps('selection')}>
           {renderPanelHeader('selection', <LucideIcon name="ListChecks" />, 'Selection')}
-          <div className={styles.gridItemContent}>
+          <div className={`${styles.gridItemContent} ${styles.selectionDashboardContent}`}>
             {/* Selection Mode */}
             <div className={styles.fixtureSelection}>
               <div className={`${styles.selectionTabs} ab-view-tabs`}>
-                <SkeuoButton
-                  compact
-                  active={selectionMode === 'channels'}
-                  onClick={() => setSelectionMode('channels')}
-                >
-                  <LucideIcon name="Radio" />
-                  Channels
-                </SkeuoButton>
+                {hasChannelSelection && (
+                  <SkeuoButton
+                    compact
+                    active={selectionMode === 'channels'}
+                    onClick={() => setSelectionMode('channels')}
+                  >
+                    <LucideIcon name="Radio" />
+                    Channels
+                  </SkeuoButton>
+                )}
                 <SkeuoButton
                   compact
                   active={selectionMode === 'fixtures'}
@@ -2675,156 +2666,162 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                 ))}
                 </div>
               )}
+              <div className={styles.availableControls} aria-label="Available Super Control sliders">
+                <div className={styles.availableControlsHeader}>
+                  <strong>Available sliders</strong>
+                  <span>{hasSelection ? `${availableControls.filter((control) => control.available).length} active` : 'select target'}</span>
+                </div>
+                <div className={styles.availableControlGrid}>
+                  {availableControls.map((control) => (
+                    <span
+                      key={control.key}
+                      className={`${styles.availableControlPill} ${control.available ? styles.availableControlOn : ''}`}
+                    >
+                      {control.label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className={styles.selectionStageMapPane}>
+              <StageMapDashboard
+                title="Stage Map"
+                subtitle={selectedFixtures.length
+                  ? `${selectedFixtures.length} selected`
+                  : `${fixtures.length} fixtures · ${groups.length} groups`}
+                showGroupPicker={false}
+                maxGroupChips={6}
+              />
+            </div>
+            <div className={styles.selectionMonitorPane}>
+              <div className={styles.selectionPaneHeader}>
+                <strong>Monitor</strong>
+                <span>live channels for the selected target</span>
+              </div>
+              {hasSelection ? (
+                <div className={styles.monitoringSection}>
+                  <div className={styles.sectionHeader}>
+                    <h4>
+                      <LucideIcon name="Activity" />
+                      Monitor
+                    </h4>
+                    <span className={styles.totalFixtures}>
+                      {getAffectedFixtures().length} fixture(s)
+                    </span>
+                  </div>
+
+                  <div className={styles.monitoringSurface}>
+                    <div className={styles.monitorStream}>
+                      {getAffectedFixtures().map(({ fixture, channels }, index) => (
+                        <div key={`${fixture.id}-${index}`} className={styles.fixtureMonitor}>
+                          <div className={styles.fixtureHeader}>
+                            <LucideIcon name="Lightbulb" />
+                            <span className={styles.fixtureName}>{fixture.name}</span>
+                            <span className={styles.fixtureRange}>
+                              CH {fixture.startAddress}-{fixture.startAddress + fixture.channels.length - 1}
+                            </span>
+                          </div>
+
+                          <div className={styles.channelStripRow}>
+                            {Object.entries(channels).map(([channelType, dmxAddress]) => {
+                              const currentValue = getDmxChannelValue(dmxAddress);
+                              const isControlled = (() => {
+                                switch (channelType) {
+                                  case 'dimmer':
+                                  case 'intensity':
+                                  case 'master':
+                                    return currentValue === dimmer;
+                                  case 'pan':
+                                    return currentValue === panValue;
+                                  case 'tilt':
+                                    return currentValue === tiltValue;
+                                  case 'red':
+                                  case 'r':
+                                    return currentValue === red;
+                                  case 'green':
+                                  case 'g':
+                                    return currentValue === green;
+                                  case 'blue':
+                                  case 'b':
+                                    return currentValue === blue;
+                                  case 'gobo':
+                                  case 'gobowheel':
+                                  case 'gobo_wheel':
+                                    return currentValue === gobo;
+                                  case 'shutter':
+                                    return currentValue === shutter;
+                                  case 'strobe':
+                                    return currentValue === strobe;
+                                  case 'lamp':
+                                  case 'lamp_on':
+                                  case 'lamp_control':
+                                    return currentValue === lamp;
+                                  case 'reset':
+                                  case 'reset_control':
+                                  case 'function':
+                                    return currentValue === reset;
+                                  default:
+                                    return false;
+                                }
+                              })();
+
+                              return (
+                                <DmxLedChannelMeter
+                                  key={`${dmxAddress}-${channelType}`}
+                                  value={currentValue}
+                                  label={channelType}
+                                  sublabel={`CH ${dmxAddress}`}
+                                  active={isControlled}
+                                />
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <aside className={styles.controlIndicators} aria-label="Real-time control indicators">
+                      <div className={styles.indicatorRow}>
+                        <div className={`${styles.indicator} ${dimmer > 0 ? styles.active : ''}`}>
+                          <LucideIcon name="Sun" />
+                          <span>Dimmer: {dimmer}</span>
+                        </div>
+                        <div className={`${styles.indicator} ${panValue !== 127 || tiltValue !== 127 ? styles.active : ''}`}>
+                          <LucideIcon name="Move" />
+                          <span>P/T: {panValue}/{tiltValue}</span>
+                        </div>
+                        <div className={`${styles.indicator} ${red !== 255 || green !== 255 || blue !== 255 ? styles.active : ''}`}>
+                          <LucideIcon name="Palette" />
+                          <span>RGB: {red}/{green}/{blue}</span>
+                        </div>
+                        <div className={`${styles.indicator} ${gobo > 0 ? styles.active : ''}`}>
+                          <LucideIcon name="Circle" />
+                          <span>Gobo: {gobo}</span>
+                        </div>
+                        <div className={`${styles.indicator} ${strobe > 0 ? styles.active : ''}`}>
+                          <LucideIcon name="Zap" />
+                          <span>Strobe: {strobe}</span>
+                        </div>
+                        <div className={`${styles.indicator} ${lamp > 0 ? styles.active : ''}`}>
+                          <LucideIcon name="Power" />
+                          <span>Lamp: {lamp}</span>
+                        </div>
+                        <div className={`${styles.indicator} ${reset > 0 ? styles.active : ''}`}>
+                          <LucideIcon name="RotateCcw" />
+                          <span>Reset: {reset}</span>
+                        </div>
+                      </div>
+                    </aside>
+                  </div>
+                </div>
+              ) : (
+                <div className={styles.placeholder}>Select fixtures, groups, or channels to monitor.</div>
+              )}
             </div>
           </div>
         </div>
 
-        <div {...panelProps('monitoring')}>
-          {renderPanelHeader('monitoring', <LucideIcon name="Activity" />, 'Monitoring')}
-          <div className={styles.gridItemContent}>
-            {/* Channel/Fixture Monitoring */}
-            {hasSelection ? (
-              <div className={styles.monitoringSection}>
-                <div className={styles.sectionHeader}>
-                  <h4>
-                    <LucideIcon name="Activity" />
-                    Active Channels & Values
-                  </h4>
-                  <span className={styles.totalFixtures}>
-                    {getAffectedFixtures().length} fixture(s) selected
-                  </span>
-                </div>
-
-                <div className={styles.monitoringSurface}>
-                  <div className={styles.monitorStream}>
-                    {getAffectedFixtures().map(({ fixture, channels }, index) => (
-                      <div key={`${fixture.id}-${index}`} className={styles.fixtureMonitor}>
-                        <div className={styles.fixtureHeader}>
-                          <LucideIcon name="Lightbulb" />
-                          <span className={styles.fixtureName}>{fixture.name}</span>
-                          <span className={styles.fixtureRange}>
-                            CH {fixture.startAddress}-{fixture.startAddress + fixture.channels.length - 1}
-                          </span>
-                        </div>
-
-                        <div className={styles.channelStripRow}>
-                          {Object.entries(channels).map(([channelType, dmxAddress]) => {
-                            const currentValue = getDmxChannelValue(dmxAddress);
-                            const isControlled = (() => {
-                              switch (channelType) {
-                                case 'dimmer':
-                                case 'intensity':
-                                case 'master':
-                                  return currentValue === dimmer;
-                                case 'pan':
-                                  return currentValue === panValue;
-                                case 'tilt':
-                                  return currentValue === tiltValue;
-                                case 'red':
-                                case 'r':
-                                  return currentValue === red;
-                                case 'green':
-                                case 'g':
-                                  return currentValue === green;
-                                case 'blue':
-                                case 'b':
-                                  return currentValue === blue;
-                                case 'gobo':
-                                case 'gobowheel':
-                                case 'gobo_wheel':
-                                  return currentValue === gobo;
-                                case 'shutter':
-                                  return currentValue === shutter;
-                                case 'strobe':
-                                  return currentValue === strobe;
-                                case 'lamp':
-                                case 'lamp_on':
-                                case 'lamp_control':
-                                  return currentValue === lamp;
-                                case 'reset':
-                                case 'reset_control':
-                                case 'function':
-                                  return currentValue === reset;
-                                default:
-                                  return false;
-                              }
-                            })();
-
-                            return (
-                              <DmxLedChannelMeter
-                                key={`${dmxAddress}-${channelType}`}
-                                value={currentValue}
-                                label={channelType}
-                                sublabel={`CH ${dmxAddress}`}
-                                active={isControlled}
-                              />
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Real-time control indicators */}
-                  <aside className={styles.controlIndicators} aria-label="Real-time control indicators">
-                    <div className={styles.indicatorRow}>
-                      <div className={`${styles.indicator} ${dimmer > 0 ? styles.active : ''}`}>
-                        <LucideIcon name="Sun" />
-                        <span>Dimmer: {dimmer}</span>
-                      </div>
-                      <div className={`${styles.indicator} ${panValue !== 127 || tiltValue !== 127 ? styles.active : ''}`}>
-                        <LucideIcon name="Move" />
-                        <span>P/T: {panValue}/{tiltValue}</span>
-                      </div>
-                      <div className={`${styles.indicator} ${red !== 255 || green !== 255 || blue !== 255 ? styles.active : ''}`}>
-                        <LucideIcon name="Palette" />
-                        <span>RGB: {red}/{green}/{blue}</span>
-                      </div>
-                      <div className={`${styles.indicator} ${gobo > 0 ? styles.active : ''}`}>
-                        <LucideIcon name="Circle" />
-                        <span>Gobo: {gobo}</span>
-                      </div>
-                      <div className={`${styles.indicator} ${strobe > 0 ? styles.active : ''}`}>
-                        <LucideIcon name="Zap" />
-                        <span>Strobe: {strobe}</span>
-                      </div>
-                      <div className={`${styles.indicator} ${lamp > 0 ? styles.active : ''}`}>
-                        <LucideIcon name="Power" />
-                        <span>Lamp: {lamp}</span>
-                      </div>
-                      <div className={`${styles.indicator} ${reset > 0 ? styles.active : ''}`}>
-                        <LucideIcon name="RotateCcw" />
-                        <span>Reset: {reset}</span>
-                      </div>
-                    </div>
-                  </aside>
-                </div>
-              </div>
-            ) : (
-              <div className={styles.placeholder}>Select fixtures, groups, or channels to monitor.</div>
-            )}
-          </div>
-        </div>
-
-        <div {...panelProps('stageMap')}>
-          {renderPanelHeader(
-            'stageMap',
-            <LucideIcon name="Map" />,
-            'Stage Map',
-            <span>{fixtures.length} fixtures · {selectedFixtures.length} selected</span>
-          )}
-          <div className={`${styles.gridItemContent} ${styles.stageMapCardContent}`}>
-            <StageMapDashboard
-              title="Super Control Stage Map"
-              subtitle={selectedFixtures.length
-                ? `${selectedFixtures.length} selected · selection follows fixture and APC40 targeting`
-                : `${fixtures.length} fixtures · ${groups.length} groups`}
-              showGroupPicker={false}
-              maxGroupChips={6}
-            />
-          </div>
-        </div>
-
+        {showMidiOscPanel && (
         <div {...panelProps('midiOsc')}>
           {renderPanelHeader(
             'midiOsc',
@@ -2845,6 +2842,8 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
             {/* MIDI/OSC Learning and Navigation Controls */}
             <div className={styles.midiOscSection}>
               <div className={styles.navigationGrid}>
+                {fixtures.length > 0 && (
+                  <>
                 {/* Fixture Navigation */}
                 <div className={styles.navigationGroup}>
                   <h5>Fixture Navigation</h5>
@@ -2915,7 +2914,11 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                     </div>
                   </div>
                 </div>
+                  </>
+                )}
 
+                {groups.length > 0 && (
+                  <>
                 {/* Group Navigation */}
                 <div className={styles.navigationGroup}>
                   <h5>Group Navigation</h5>
@@ -2986,198 +2989,145 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                     </div>
                   </div>
                 </div>
+                  </>
+                )}
+              </div>
+              <div className={styles.sceneControlsDock}>
+                <h5>Scene Controls</h5>
+                <div className={styles.sceneControls}>
+                  <div className={styles.sceneButtonRow}>
+                    <SkeuoButton compact accent="purple" className={styles.sceneBtn} onClick={() => captureCurrentScene()}>
+                      <LucideIcon name="Camera" />
+                      Save Scene
+                    </SkeuoButton>
+                    <SkeuoButton compact accent="purple" className={styles.sceneBtn} onClick={selectPreviousScene} disabled={scenes.length === 0}>
+                      <LucideIcon name="ChevronLeft" />
+                      Previous
+                    </SkeuoButton>
+                    <SkeuoButton compact accent="purple" className={styles.sceneBtn} onClick={selectNextScene} disabled={scenes.length === 0}>
+                      Next
+                      <LucideIcon name="ChevronRight" />
+                    </SkeuoButton>
+                  </div>
+                  <div className={styles.sceneInfo}>
+                    <span className={styles.currentScene}>{scenes.length > 0 ? scenes[currentSceneIndex]?.name || 'No scene' : 'No scenes'}</span>
+                    <span className={styles.sceneCount}>({scenes.length} saved)</span>
+                  </div>
+                  <div className={styles.sceneOptions}>
+                    <label className={styles.checkboxLabel} title={SCENE_AUTO_SAVE_TOOLTIP}>
+                      <input type="checkbox" checked={false} disabled readOnly title={SCENE_AUTO_SAVE_TOOLTIP} />
+                      Auto-save scenes (inactive)
+                    </label>
+                  </div>
+                </div>
+                <div className={styles.midiLearnRow}>
+                  <button
+                    type="button"
+                    className={`${styles.midiLearnBtn} ${midiLearnTarget === 'scene_save' ? styles.learning : ''} ${midiMappings.scene_save ? styles.mapped : ''}`}
+                    onClick={() => midiLearnTarget === 'scene_save' ? stopMidiLearn() : startMidiLearn('scene_save')}
+                    title={midiMappings.scene_save ? `Remap ${midiMappingLabel(midiMappings.scene_save)}` : 'Learn MIDI for Save Scene'}
+                    aria-pressed={midiLearnTarget === 'scene_save'}
+                  >
+                    <LucideIcon name={midiLearnTarget === 'scene_save' ? 'Radio' : 'Music'} />
+                    {midiButtonLabel('scene_save', 'MIDI Save')}
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.midiLearnBtn} ${midiLearnTarget === 'scene_previous' ? styles.learning : ''} ${midiMappings.scene_previous ? styles.mapped : ''}`}
+                    onClick={() => midiLearnTarget === 'scene_previous' ? stopMidiLearn() : startMidiLearn('scene_previous')}
+                    title={midiMappings.scene_previous ? `Remap ${midiMappingLabel(midiMappings.scene_previous)}` : 'Learn MIDI for Previous Scene'}
+                    aria-pressed={midiLearnTarget === 'scene_previous'}
+                  >
+                    <LucideIcon name={midiLearnTarget === 'scene_previous' ? 'Radio' : 'Music'} />
+                    {midiButtonLabel('scene_previous', 'MIDI Prev')}
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.midiLearnBtn} ${midiLearnTarget === 'scene_next' ? styles.learning : ''} ${midiMappings.scene_next ? styles.mapped : ''}`}
+                    onClick={() => midiLearnTarget === 'scene_next' ? stopMidiLearn() : startMidiLearn('scene_next')}
+                    title={midiMappings.scene_next ? `Remap ${midiMappingLabel(midiMappings.scene_next)}` : 'Learn MIDI for Next Scene'}
+                    aria-pressed={midiLearnTarget === 'scene_next'}
+                  >
+                    <LucideIcon name={midiLearnTarget === 'scene_next' ? 'Radio' : 'Music'} />
+                    {midiButtonLabel('scene_next', 'MIDI Next')}
+                  </button>
+                  <input type="text" placeholder="OSC: /scene/control" className={styles.oscInput} defaultValue="/scene/control" />
+                </div>
+                {scenes.length > 0 && (
+                  <div className={styles.scenesList}>
+                    <h5>Saved Scenes ({scenes.length})</h5>
+                    <div className={styles.scenesGrid}>
+                      {scenes.map((scene, index) => (
+                        <div key={scene.name} className={`${styles.sceneItem} ${index === currentSceneIndex ? styles.active : ''}`}>
+                          <div className={styles.sceneHeader}>
+                            <span className={styles.sceneName}>{scene.name}</span>
+                            <button className={styles.deleteBtn} onClick={() => deleteSceneByIndex(index)}>
+                              <LucideIcon name="X" />
+                            </button>
+                          </div>
+                          <div className={styles.sceneDetails}>
+                            <span className={styles.sceneChannels}>{scene.channelValues.filter(v => v > 0).length} channels</span>
+                            <span className={styles.sceneTime}>{scene.oscAddress || `/scene/${index + 1}`}</span>
+                          </div>
+                          <div className={styles.sceneConnectionControls}>
+                            <div className={styles.sceneMidiSection}>
+                              <button
+                                type="button"
+                                className={`${styles.midiLearnBtn} ${styles.small} ${midiLearnTarget === `scene-${scene.name}` ? styles.learning : ''} ${midiMappings[`scene-${scene.name}`] ? styles.mapped : ''}`}
+                                onClick={() => midiLearnTarget === `scene-${scene.name}` ? stopMidiLearn() : startMidiLearn(`scene-${scene.name}`)}
+                                title={midiMappings[`scene-${scene.name}`] ? `Remap ${midiMappingLabel(midiMappings[`scene-${scene.name}`])}` : `Learn MIDI for ${scene.name}`}
+                                aria-pressed={midiLearnTarget === `scene-${scene.name}`}
+                              >
+                                <LucideIcon name={midiLearnTarget === `scene-${scene.name}` ? 'Radio' : 'Music'} />
+                                {midiButtonLabel(`scene-${scene.name}`, 'MIDI')}
+                              </button>
+                              {midiMappings[`scene-${scene.name}`] && (
+                                <div className={styles.midiInfo}>
+                                  <span>{midiMappingLabel(midiMappings[`scene-${scene.name}`])}</span>
+                                  <button
+                                    type="button"
+                                    className={styles.clearBtn}
+                                    onClick={() => clearMidiMapping(`scene-${scene.name}`)}
+                                  >
+                                    <LucideIcon name="X" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                            <div className={styles.sceneOscSection}>
+                              <input
+                                type="text"
+                                placeholder="OSC Address"
+                                className={`${styles.oscInput} ${styles.small}`}
+                                defaultValue={scene.oscAddress || `/scene/${index + 1}`}
+                                onBlur={(e) => updateSceneOscAddress(scene.name, e.target.value)}
+                              />
+                              <button
+                                className={styles.copyOscBtn}
+                                onClick={() => copyOscAddress(`/scene/${index + 1}`)}
+                                title="Copy OSC Address"
+                              >
+                                <LucideIcon name="Copy" />
+                              </button>
+                            </div>
+                          </div>
+                          <SkeuoButton variant="wide" accent="green" compact className={styles.loadSceneBtn} onClick={() => storeLoadScene(scene.name)}>
+                            <LucideIcon name="Play" />
+                            Load Scene
+                          </SkeuoButton>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
           )}
         </div>
+        )}
 
-        <div {...panelProps('scenes')}>
-          {renderPanelHeader('scenes', <LucideIcon name="Film" />, 'Scene Management')}
-          <div className={styles.gridItemContent}>
-            {/* Scene Management */}
-            <div className={styles.navigationGroup}>
-              <h5>Scene Controls</h5>
-              <div className={styles.sceneControls}>
-                <div className={styles.sceneButtonRow}>
-                  <SkeuoButton
-                    compact
-                    accent="purple"
-                    className={styles.sceneBtn}
-                    onClick={() => captureCurrentScene()}
-                  >
-                    <LucideIcon name="Camera" />
-                    Save Scene
-                  </SkeuoButton>
-                  <SkeuoButton
-                    compact
-                    accent="purple"
-                    className={styles.sceneBtn}
-                    onClick={selectPreviousScene}
-                    disabled={scenes.length === 0}
-                  >
-                    <LucideIcon name="ChevronLeft" />
-                    Previous
-                  </SkeuoButton>
-                  <SkeuoButton
-                    compact
-                    accent="purple"
-                    className={styles.sceneBtn}
-                    onClick={selectNextScene}
-                    disabled={scenes.length === 0}
-                  >
-                    Next
-                    <LucideIcon name="ChevronRight" />
-                  </SkeuoButton>
-                </div>
-                <div className={styles.sceneInfo}>
-                  <span className={styles.currentScene}>
-                    {scenes.length > 0 ? scenes[currentSceneIndex]?.name || 'No scene' : 'No scenes'}
-                  </span>
-                  <span className={styles.sceneCount}>({scenes.length} saved)</span>
-                </div>
-                <div className={styles.sceneOptions}>
-                  <label className={styles.checkboxLabel} title={SCENE_AUTO_SAVE_TOOLTIP}>
-                    <input
-                      type="checkbox"
-                      checked={false}
-                      disabled
-                      readOnly
-                      title={SCENE_AUTO_SAVE_TOOLTIP}
-                    />
-                    Auto-save scenes (inactive)
-                  </label>
-                </div>
-              </div>
-              <div className={styles.midiLearnRow}>
-                <button
-                  type="button"
-                  className={`${styles.midiLearnBtn} ${midiLearnTarget === 'scene_save' ? styles.learning : ''} ${midiMappings.scene_save ? styles.mapped : ''}`}
-                  onClick={() => midiLearnTarget === 'scene_save' ? stopMidiLearn() : startMidiLearn('scene_save')}
-                  title={midiMappings.scene_save ? `Remap ${midiMappingLabel(midiMappings.scene_save)}` : 'Learn MIDI for Save Scene'}
-                  aria-pressed={midiLearnTarget === 'scene_save'}
-                >
-                  <LucideIcon name={midiLearnTarget === 'scene_save' ? 'Radio' : 'Music'} />
-                  {midiButtonLabel('scene_save', 'MIDI Save')}
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.midiLearnBtn} ${midiLearnTarget === 'scene_previous' ? styles.learning : ''} ${midiMappings.scene_previous ? styles.mapped : ''}`}
-                  onClick={() => midiLearnTarget === 'scene_previous' ? stopMidiLearn() : startMidiLearn('scene_previous')}
-                  title={midiMappings.scene_previous ? `Remap ${midiMappingLabel(midiMappings.scene_previous)}` : 'Learn MIDI for Previous Scene'}
-                  aria-pressed={midiLearnTarget === 'scene_previous'}
-                >
-                  <LucideIcon name={midiLearnTarget === 'scene_previous' ? 'Radio' : 'Music'} />
-                  {midiButtonLabel('scene_previous', 'MIDI Prev')}
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.midiLearnBtn} ${midiLearnTarget === 'scene_next' ? styles.learning : ''} ${midiMappings.scene_next ? styles.mapped : ''}`}
-                  onClick={() => midiLearnTarget === 'scene_next' ? stopMidiLearn() : startMidiLearn('scene_next')}
-                  title={midiMappings.scene_next ? `Remap ${midiMappingLabel(midiMappings.scene_next)}` : 'Learn MIDI for Next Scene'}
-                  aria-pressed={midiLearnTarget === 'scene_next'}
-                >
-                  <LucideIcon name={midiLearnTarget === 'scene_next' ? 'Radio' : 'Music'} />
-                  {midiButtonLabel('scene_next', 'MIDI Next')}
-                </button>
-                <input
-                  type="text"
-                  placeholder="OSC: /scene/control"
-                  className={styles.oscInput}
-                  defaultValue="/scene/control"
-                />
-              </div>
-            </div>
-            {/* Saved Scenes List */}
-            {scenes.length > 0 && (
-              <div className={styles.scenesList}>
-                <h5>Saved Scenes ({scenes.length})</h5>
-                <div className={styles.scenesGrid}>
-                  {scenes.map((scene, index) => (
-                    <div
-                      key={scene.name}
-                      className={`${styles.sceneItem} ${index === currentSceneIndex ? styles.active : ''}`}
-                    >
-                      <div className={styles.sceneHeader}>
-                        <span className={styles.sceneName}>{scene.name}</span>
-                        <button
-                          className={styles.deleteBtn}
-                          onClick={() => deleteSceneByIndex(index)}
-                        >
-                          <LucideIcon name="X" />
-                        </button>
-                      </div>
-                      <div className={styles.sceneDetails}>
-                        <span className={styles.sceneChannels}>
-                          {scene.channelValues.filter(v => v > 0).length} channels
-                        </span>
-                        <span className={styles.sceneTime}>
-                          {scene.oscAddress || `/scene/${index + 1}`}
-                        </span>
-                      </div>
-
-                      {/* Scene MIDI/OSC Controls */}
-                      <div className={styles.sceneConnectionControls}>
-                        <div className={styles.sceneMidiSection}>
-                          <button
-                            type="button"
-                            className={`${styles.midiLearnBtn} ${styles.small} ${midiLearnTarget === `scene-${scene.name}` ? styles.learning : ''} ${midiMappings[`scene-${scene.name}`] ? styles.mapped : ''}`}
-                            onClick={() => midiLearnTarget === `scene-${scene.name}` ? stopMidiLearn() : startMidiLearn(`scene-${scene.name}`)}
-                            title={midiMappings[`scene-${scene.name}`] ? `Remap ${midiMappingLabel(midiMappings[`scene-${scene.name}`])}` : `Learn MIDI for ${scene.name}`}
-                            aria-pressed={midiLearnTarget === `scene-${scene.name}`}
-                          >
-                            <LucideIcon name={midiLearnTarget === `scene-${scene.name}` ? 'Radio' : 'Music'} />
-                            {midiButtonLabel(`scene-${scene.name}`, 'MIDI')}
-                          </button>
-                          {midiMappings[`scene-${scene.name}`] && (
-                            <div className={styles.midiInfo}>
-                              <span>{midiMappingLabel(midiMappings[`scene-${scene.name}`])}</span>
-                              <button
-                                type="button"
-                                className={styles.clearBtn}
-                                onClick={() => clearMidiMapping(`scene-${scene.name}`)}
-                              >
-                                <LucideIcon name="X" />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                        <div className={styles.sceneOscSection}>
-                          <input
-                            type="text"
-                            placeholder="OSC Address"
-                            className={`${styles.oscInput} ${styles.small}`}
-                            defaultValue={scene.oscAddress || `/scene/${index + 1}`}
-                            onBlur={(e) => updateSceneOscAddress(scene.name, e.target.value)}
-                          />
-                          <button
-                            className={styles.copyOscBtn}
-                            onClick={() => copyOscAddress(`/scene/${index + 1}`)}
-                            title="Copy OSC Address"
-                          >
-                            <LucideIcon name="Copy" />
-                          </button>
-                        </div>
-                      </div>
-
-                      <SkeuoButton
-                        variant="wide"
-                        accent="green"
-                        compact
-                        className={styles.loadSceneBtn}
-                        onClick={() => storeLoadScene(scene.name)}
-                      >
-                        <LucideIcon name="Play" />
-                        Load Scene
-                      </SkeuoButton>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
+        {showBasicPanel && (
         <div {...panelProps('basic')}>
           {renderPanelHeader('basic', <LucideIcon name="SlidersHorizontal" />, 'Basic Controls')}
           <div className={styles.gridItemContent}>
@@ -3198,6 +3148,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
             </div>
           </div>
         </div>
+        )}
 
         {(hasControlType('pan') || hasControlType('tilt')) && (
           <div {...panelProps('panTilt')}>
@@ -3450,6 +3401,78 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                 />
                 </div>
               </div>
+              <div className={styles.colorAutoDock}>
+                <div className={styles.colorAutoHeader}>
+                  <SkeuoButton
+                    variant="wide"
+                    active={colorSliderAutopilot.enabled}
+                    accent="green"
+                    onClick={toggleColorSliderAutopilot}
+                  >
+                    <LucideIcon name={colorSliderAutopilot.enabled ? 'Palette' : 'PaintBucket'} />
+                    {colorSliderAutopilot.enabled ? 'Disable Auto Color' : 'Enable Auto Color'}
+                  </SkeuoButton>
+                  <span>
+                    {colorSliderAutopilot.enabled
+                      ? `${colorSliderAutopilot.type}${colorSliderAutopilot.syncToBPM ? ` · ${bpm} BPM` : ''}`
+                      : 'RGB fixtures only'}
+                  </span>
+                </div>
+                <div className={styles.colorAutoControls}>
+                  <label>
+                    Pattern
+                    <select
+                      value={colorSliderAutopilot.type}
+                      onChange={(e) => setColorSliderAutopilot({
+                        type: e.target.value as 'ping-pong' | 'cycle' | 'random' | 'sine' | 'triangle' | 'sawtooth'
+                      })}
+                      disabled={!colorSliderAutopilot.enabled}
+                    >
+                      <option value="sine">Rainbow Sine</option>
+                      <option value="cycle">Rainbow Cycle</option>
+                      <option value="triangle">Triangle Wave</option>
+                      <option value="sawtooth">Sawtooth Ramp</option>
+                      <option value="ping-pong">Ping Pong</option>
+                      <option value="random">Random Colors</option>
+                    </select>
+                  </label>
+                  <label className={styles.checkRow}>
+                    <input
+                      type="checkbox"
+                      checked={colorSliderAutopilot.syncToBPM}
+                      onChange={(e) => setColorSliderAutopilot({ syncToBPM: e.target.checked })}
+                      disabled={!colorSliderAutopilot.enabled}
+                    />
+                    Sync BPM
+                  </label>
+                  <SkeuoKnobSlider
+                    label="Auto speed"
+                    min={0.1}
+                    max={1}
+                    step={0.1}
+                    value={colorSliderAutopilot.speed}
+                    disabled={!colorSliderAutopilot.enabled}
+                    onChange={(v) => setColorSliderAutopilot({ speed: v })}
+                  />
+                  <div className={styles.colorAutoRange}>
+                    <span>Hue {colorSliderAutopilot.range.min}-{colorSliderAutopilot.range.max}</span>
+                    <RangeWindowControl
+                      min={0}
+                      max={360}
+                      minValue={colorSliderAutopilot.range.min}
+                      maxValue={colorSliderAutopilot.range.max}
+                      disabled={!colorSliderAutopilot.enabled}
+                      onChange={(minV, maxV) => setColorSliderAutopilot({ range: { min: minV, max: maxV } })}
+                    />
+                  </div>
+                </div>
+                <EnvelopePlaybackControls
+                  repeatMode={colorSliderAutopilot.repeatMode ?? 'loop'}
+                  loopDirection={colorSliderAutopilot.loopDirection ?? 'forward'}
+                  onRepeatModeChange={(repeatMode) => setColorSliderAutopilot({ repeatMode })}
+                  onLoopDirectionChange={(loopDirection) => setColorSliderAutopilot({ loopDirection })}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -3655,135 +3678,6 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
           </div>
         )}
 
-        {/* Color Autopilot Panel */}
-        <div {...panelProps('colorAutopilot')}>
-          {renderPanelHeader('colorAutopilot', <LucideIcon name="Palette" />, 'Color Autopilot')}
-          <div className={styles.gridItemContent}>
-            <div style={{ marginBottom: '12px' }}>
-              <SkeuoButton
-                variant="wide"
-                active={colorSliderAutopilot.enabled}
-                accent="green"
-                onClick={toggleColorSliderAutopilot}
-              >
-                <LucideIcon name={colorSliderAutopilot.enabled ? 'Palette' : 'PaintBucket'} />
-                {colorSliderAutopilot.enabled ? 'Disable Color Auto' : 'Enable Color Auto'}
-              </SkeuoButton>
-            </div>
-
-            <div style={{ marginBottom: '12px' }}>
-              <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                Color Pattern
-              </label>
-              <select
-                value={colorSliderAutopilot.type}
-                onChange={(e) => setColorSliderAutopilot({
-                  type: e.target.value as 'ping-pong' | 'cycle' | 'random' | 'sine' | 'triangle' | 'sawtooth'
-                })}
-                disabled={!colorSliderAutopilot.enabled}
-                style={{
-                  width: '100%',
-                  padding: '6px',
-                  borderRadius: '4px',
-                  border: '1px solid var(--color-card-border)',
-                  background: 'var(--input-bg)',
-                  color: colorSliderAutopilot.enabled ? 'var(--text-primary)' : 'var(--text-secondary)',
-                  opacity: colorSliderAutopilot.enabled ? 1 : 0.6,
-                  cursor: colorSliderAutopilot.enabled ? 'pointer' : 'not-allowed'
-                }}
-              >
-                <option value="sine">Rainbow Sine</option>
-                <option value="cycle">Rainbow Cycle</option>
-                <option value="triangle">Triangle Wave</option>
-                <option value="sawtooth">Sawtooth Ramp</option>
-                <option value="ping-pong">Ping Pong</option>
-                <option value="random">Random Colors</option>
-              </select>
-            </div>
-
-            <div style={{ marginBottom: '12px' }}>
-              <SkeuoKnobSlider
-                label="Color autopilot speed"
-                min={0.1}
-                max={1}
-                step={0.1}
-                value={colorSliderAutopilot.speed}
-                disabled={!colorSliderAutopilot.enabled}
-                onChange={(v) => setColorSliderAutopilot({ speed: v })}
-              />
-            </div>
-
-            <div style={{ marginBottom: '12px' }}>
-              <label style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                fontSize: '12px',
-                color: '#ccc',
-                cursor: colorSliderAutopilot.enabled ? 'pointer' : 'not-allowed',
-                opacity: colorSliderAutopilot.enabled ? 1 : 0.5
-              }}>
-                <input
-                  type="checkbox"
-                  checked={colorSliderAutopilot.syncToBPM}
-                  onChange={(e) => setColorSliderAutopilot({ syncToBPM: e.target.checked })}
-                  disabled={!colorSliderAutopilot.enabled}
-                />
-                Sync to BPM ({bpm})
-              </label>
-            </div>
-
-            <div style={{ marginBottom: '12px' }}>
-              <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#ccc' }}>
-                Hue Range: {colorSliderAutopilot.range.min}° - {colorSliderAutopilot.range.max}°
-              </label>
-              <RangeWindowControl
-                min={0}
-                max={360}
-                minValue={colorSliderAutopilot.range.min}
-                maxValue={colorSliderAutopilot.range.max}
-                disabled={!colorSliderAutopilot.enabled}
-                onChange={(minV, maxV) =>
-                  setColorSliderAutopilot({
-                    range: { min: minV, max: maxV },
-                  })
-                }
-              />
-            </div>
-
-            <EnvelopePlaybackControls
-              repeatMode={colorSliderAutopilot.repeatMode ?? 'loop'}
-              loopDirection={colorSliderAutopilot.loopDirection ?? 'forward'}
-              onRepeatModeChange={(repeatMode) => setColorSliderAutopilot({ repeatMode })}
-              onLoopDirectionChange={(loopDirection) => setColorSliderAutopilot({ loopDirection })}
-            />
-
-            {colorSliderAutopilot.enabled ? (
-              <div style={{
-                padding: '8px',
-                background: 'rgba(16, 185, 129, 0.1)',
-                border: '1px solid rgba(16, 185, 129, 0.3)',
-                borderRadius: '4px',
-                fontSize: '11px',
-                color: '#10b981'
-              }}>
-                Color autopilot active ({colorSliderAutopilot.type}).
-                {colorSliderAutopilot.syncToBPM && ` Synced to ${bpm} BPM.`}
-              </div>
-            ) : (
-              <div style={{
-                padding: '8px',
-                background: 'rgba(107, 114, 128, 0.1)',
-                border: '1px solid rgba(107, 114, 128, 0.3)',
-                borderRadius: '4px',
-                fontSize: '11px',
-                color: '#6b7280'
-              }}>
-                Enable to automatically cycle colors on RGB fixtures with customizable patterns and BPM sync.
-              </div>
-            )}
-          </div>
-        </div>
       </div>
 
       <CustomPathEditor

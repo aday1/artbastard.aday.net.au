@@ -12,10 +12,13 @@ export interface VersionInfo {
 }
 
 export const CURRENT_VERSION: VersionInfo = {
-  version: '5.2.4.0',
-  buildDate: '2026-06-09',
+  version: '5.2.12.0',
+  buildDate: '2026-06-14',
   releaseType: 'stable',
   features: [
+    'Hard version bump: light-theme remaster, SuperControl layout rebuild, footer monitor consolidation, and APC40 ON/OFF state semantics',
+    'APC40 Record Arm, Solo/Cue, and Activator rows now treat ON as add/solo and OFF as remove/release, with LED feedback aligned to app state',
+    'DMX Tracker is feature-flagged off by default while envelope automation and channel strip controls remain production-facing',
     'APC40 Deck A/B scene grid, ACT launch buttons, REC then Clip saves, Device Control role feedback',
     'Confirmed ArtBastard line promoted across dev/live lanes (GHCR + Linode)',
     'DMX512 desk: Art-Net, scenes, fixtures, MIDI/OSC, LAN bridge',
@@ -27,6 +30,10 @@ export const CURRENT_VERSION: VersionInfo = {
     'Lightweight DMX activity glow replaces particle Sparkles for smoother browsers'
   ],
   changelog: [
+    'v5.2.12.0: Hard release line for SuperControl card layout, cream/synthwave light theme, footer monitor controls, and APC40 ON/OFF button semantics',
+    'v5.2.12.0: Record Arm/Solo Group, Solo/Cue fixture select, and Activator group select now follow explicit APC40 ON/OFF state instead of blind toggles',
+    'v5.2.12.0: DMX Tracker hidden behind feature flag; SuperControl hides featureless cards and folds scenes/color autopilot into parent cards',
+    'v5.2.12.0: Fixed light-mode dark leakage across DMX page, SuperControl selection, monitor panels, status bar, and deploy-meta dock',
     'v5.2.4.0: APC40 grid is Deck A, SHIFT grid is Deck B, Scene Launch buttons fire ACTS 1-5',
     'v5.2.4.0: APC40 REC then Clip saves deck scene slots; crossfader blends active Deck A/B scenes',
     'v5.2.4.0: APC40 Device Control follows selected fixture gobo/effects roles; Cue Level pages role banks',
@@ -44,6 +51,13 @@ export const CURRENT_VERSION: VersionInfo = {
 };
 
 export const VERSION_HISTORY: VersionInfo[] = [
+  {
+    version: '5.2.12.0',
+    buildDate: '2026-06-14',
+    releaseType: 'stable',
+    features: CURRENT_VERSION.features,
+    changelog: CURRENT_VERSION.changelog
+  },
   {
     version: '5.2.4.0',
     buildDate: '2026-06-09',

@@ -8,7 +8,11 @@ import { buildSmartControllers } from '../../midi/smartControllers';
 import { stripPortSuffix } from '../../midi/midiInterfaceGrouping';
 import styles from './MidiMonitor.module.scss';
 
-export const MidiMonitor: React.FC = () => {
+interface MidiMonitorProps {
+  footerDocked?: boolean;
+}
+
+export const MidiMonitor: React.FC<MidiMonitorProps> = ({ footerDocked = false }) => {
   const {
     midiMessages,
     midiMappings,
@@ -55,7 +59,7 @@ export const MidiMonitor: React.FC = () => {
     setCollapsedByUser,
     dismissByUser,
     triggerFlash,
-  } = useMonitorAutoPop({ key: 'midiMonitor', hasSignal: midiMessages.length > 0 });
+  } = useMonitorAutoPop({ key: 'midiMonitor', hasSignal: midiMessages.length > 0, autoPop: !footerDocked });
 
   const handleDismiss = dismissByUser;
 
@@ -208,7 +212,7 @@ export const MidiMonitor: React.FC = () => {
 
   // Don't render if midiMonitor is disabled in debugTools or dismissed
   // This check must come AFTER all hooks to avoid hooks violation
-  if (!debugTools.midiMonitor || isDismissed) {
+  if (!debugTools.midiMonitor || (footerDocked && (isCollapsed || isDismissed)) || (!footerDocked && isDismissed)) {
     return null;
   }
 
@@ -476,6 +480,7 @@ export const MidiMonitor: React.FC = () => {
     styles.midiMonitor,
     flashActive ? styles.flash : '',
     isCollapsed ? styles.collapsed : '',
+    footerDocked ? 'footerDockedMonitor' : '',
   ].join(' ');
 
   return (
@@ -490,7 +495,16 @@ export const MidiMonitor: React.FC = () => {
         maxHeight={560}
         anchor="bottom-left"
         className={monitorClasses}
-        style={isCollapsed ? { width: 'auto', height: 'auto' } : undefined}
+        style={footerDocked
+          ? {
+              left: 'calc(var(--pinned-channels-width, 0px) + 12px)',
+              right: 'auto',
+              top: 'auto',
+              bottom: '96px',
+              width: '400px',
+              height: '300px',
+            }
+          : isCollapsed ? { width: 'auto', height: 'auto' } : undefined}
       >
         <div ref={monitorRef} className={styles.monitorInner}>
         {renderHeader()}

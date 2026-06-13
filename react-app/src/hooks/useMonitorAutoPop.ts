@@ -23,6 +23,7 @@ interface UseMonitorAutoPopArgs {
   key: string;
   hasSignal: boolean;
   flashDurationMs?: number;
+  autoPop?: boolean;
 }
 
 interface UseMonitorAutoPopResult {
@@ -33,6 +34,8 @@ interface UseMonitorAutoPopResult {
   dismissByUser: () => void;
   triggerFlash: () => void;
 }
+
+export const OPEN_MONITOR_EVENT = 'artbastard:open-monitor';
 
 const readBool = (key: string, fallback: boolean): boolean => {
   try {
@@ -56,6 +59,7 @@ export function useMonitorAutoPop({
   key,
   hasSignal,
   flashDurationMs = 200,
+  autoPop = true,
 }: UseMonitorAutoPopArgs): UseMonitorAutoPopResult {
   const collapsedKey = `${key}Collapsed`;
   const dismissedKey = `${key}Dismissed`;
@@ -71,6 +75,12 @@ export function useMonitorAutoPop({
   const prevSignalRef = useRef<boolean>(hasSignal);
   const flashTimerRef = useRef<number | null>(null);
 
+  const triggerFlash = useCallback(() => {
+    if (flashTimerRef.current != null) window.clearTimeout(flashTimerRef.current);
+    setFlashActive(true);
+    flashTimerRef.current = window.setTimeout(() => setFlashActive(false), flashDurationMs);
+  }, [flashDurationMs]);
+
   // Auto-pop on the first signal of this session, IF the user has never
   // manually closed/minimised the panel. Subsequent signals just flash.
   useEffect(() => {
@@ -82,7 +92,7 @@ export function useMonitorAutoPop({
     prevSignalRef.current = true;
     if (!wasIdle) return;
 
-    if (!userInteractedRef.current && !hasAutoPoppedRef.current) {
+    if (autoPop && !userInteractedRef.current && !hasAutoPoppedRef.current) {
       hasAutoPoppedRef.current = true;
       if (isDismissed) {
         setIsDismissed(false);
@@ -97,7 +107,7 @@ export function useMonitorAutoPop({
     if (flashTimerRef.current != null) window.clearTimeout(flashTimerRef.current);
     setFlashActive(true);
     flashTimerRef.current = window.setTimeout(() => setFlashActive(false), flashDurationMs);
-  }, [hasSignal, isCollapsed, isDismissed, collapsedKey, dismissedKey, flashDurationMs]);
+  }, [autoPop, hasSignal, isCollapsed, isDismissed, collapsedKey, dismissedKey, flashDurationMs]);
 
   useEffect(() => () => {
     if (flashTimerRef.current != null) window.clearTimeout(flashTimerRef.current);
@@ -118,6 +128,29 @@ export function useMonitorAutoPop({
     return () => window.removeEventListener('resetLayout', onReset);
   }, [collapsedKey, dismissedKey, userKey]);
 
+  useEffect(() => {
+    const onOpenMonitor = (event: Event) => {
+      const detail = (event as CustomEvent<{ key?: string }>).detail;
+      if (detail?.key !== key) return;
+      userInteractedRef.current = true;
+      writeBool(userKey, true);
+      if (!isCollapsed && !isDismissed) {
+        writeBool(collapsedKey, true);
+        writeBool(dismissedKey, false);
+        setIsCollapsed(true);
+        setIsDismissed(false);
+        return;
+      }
+      writeBool(collapsedKey, false);
+      writeBool(dismissedKey, false);
+      setIsDismissed(false);
+      setIsCollapsed(false);
+      triggerFlash();
+    };
+    window.addEventListener(OPEN_MONITOR_EVENT, onOpenMonitor as EventListener);
+    return () => window.removeEventListener(OPEN_MONITOR_EVENT, onOpenMonitor as EventListener);
+  }, [collapsedKey, dismissedKey, isCollapsed, isDismissed, key, triggerFlash, userKey]);
+
   const setCollapsedByUser = useCallback((next: boolean) => {
     setIsCollapsed(next);
     writeBool(collapsedKey, next);
@@ -131,12 +164,6 @@ export function useMonitorAutoPop({
     userInteractedRef.current = true;
     writeBool(userKey, true);
   }, [dismissedKey, userKey]);
-
-  const triggerFlash = useCallback(() => {
-    if (flashTimerRef.current != null) window.clearTimeout(flashTimerRef.current);
-    setFlashActive(true);
-    flashTimerRef.current = window.setTimeout(() => setFlashActive(false), flashDurationMs);
-  }, [flashDurationMs]);
 
   return {
     isCollapsed,

@@ -353,4 +353,91 @@
   text-align: center;
 }
 
+:global([data-theme="light"]) {
+  .oscMonitor {
+    background-color: #fff4dc;
+    border-color: #dec69f;
+    color: #2c2119;
+    box-shadow: 0 8px 22px rgb(99 72 39 / 0.18);
+  }
+
+  .header {
+    background-color: #efd7ab;
+    color: #2c2119;
+
+    &:hover {
+      background-color: #ffe8bd;
+    }
+  }
+
+  .title,
+  .address,
+  .tooltipHeader {
+    color: #d88700;
+  }
+
+  .scrollbackSetting,
+  .status,
+  .source,
+  .noData,
+  .noHosts {
+    color: #725844;
+  }
+
+  .scrollbackInput {
+    background: #fff9ed;
+    border-color: #dec69f;
+    color: #2c2119;
+  }
+
+  .controls button {
+    color: #6d4c3d;
+
+    &:hover {
+      background-color: #ffe8bd;
+      color: #2c2119;
+    }
+
+    &.active {
+      background-color: #d88700;
+      color: #fff9ed;
+    }
+  }
+
+  .content,
+  .filterPanel {
+    background-color: #f4e4c6;
+    border-color: #dec69f;
+    color: #2c2119;
+  }
+
+  .messageRow,
+  .arg {
+    background-color: #fff9ed;
+    border-color: rgb(216 135 0 / 0.32);
+    color: #2c2119;
+  }
+
+  .args,
+  .argType {
+    color: #008faa;
+  }
+
+  .scrollbackValue {
+    color: #9a5b05;
+  }
+
+  .hoverTooltip {
+    background: rgb(255 249 237 / 0.96);
+    color: #2c2119;
+    border-color: rgb(216 135 0 / 0.26);
+    box-shadow: 0 8px 22px rgb(99 72 39 / 0.18);
+  }
+
+  .tooltipContent strong,
+  .argValue {
+    color: #2c2119;
+  }
+}
+
 /* Removed duplicated .tooltipArgs, .tooltipArg, .argType, .argValue from here as they are now direct children of .hoverTooltip or part of new structure */

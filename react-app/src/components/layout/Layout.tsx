@@ -10,8 +10,6 @@ import BpmIndicator from '../audio/BpmIndicator'
 import SignalFlashIndicator from '../midi/SignalFlashIndicator'
 import PageRouter from '../router/PageRouter'
 import { useStore } from '../../store'
-import { ResetButton } from './ResetButton'
-import { ThemeToggleButton } from './ThemeToggleButton'
 import { GlobalMonitors } from '../monitors/GlobalMonitors'
 import { StateManager } from '../../utils/stateManager'
 import { useLocalStorageSync } from '../../hooks/useLocalStorageSync'
@@ -19,7 +17,6 @@ import { useSocket } from '../../context/SocketContext'
 import { HelpOverlay } from '../ui/HelpOverlay'
 import { GettingStartedPanel } from '../onboarding/GettingStartedPanel'
 import styles from './Layout.module.scss'
-import { LucideIcon } from '../ui/LucideIcon'
 import { useMobile } from '../../hooks/useMobile'
 import { MobileTopBar } from './MobileTopBar'
 import { DeployLaneBadge } from './DeployLaneBadge'
@@ -42,7 +39,7 @@ interface LayoutProps {
 const LayoutBody: React.FC<LayoutProps> = ({ children }) => {
   const { openAppMenu } = useAppContextMenu()
   const { currentView } = useRouter()
-  const { theme, darkMode, toggleDarkMode, setTheme } = useTheme()
+  const { theme, darkMode } = useTheme()
   const { 
     // Remove automation-related imports since we're removing transport controls
   } = useStore()
@@ -237,43 +234,18 @@ const LayoutBody: React.FC<LayoutProps> = ({ children }) => {
             >
               <PageRouter />
             </main>
-
-            {!isMobileOrTablet && !isFocusedFixtureRoute && (
-              <div className={styles.bottomControls}>
-                <ResetButton showLabels={true} />
-
-                {/* Theme Controls */}
-                <div className={styles.themeControls}>
-                  {/* Language Switcher */}
-                  <button
-                    onClick={() => {
-                      // Toggle between ArtSnob and Standard only
-                      setTheme(theme === 'artsnob' ? 'standard' : 'artsnob')
-                    }}
-                    className={`${styles.themeButton} ${styles[theme]}`}
-                    title={`Current: ${theme === 'artsnob' ? 'ArtSnob (French pretentious)' : 'Standard (Normal)'} - Click to switch language`}
-                  >
-                    <LucideIcon name={theme === 'artsnob' ? 'Languages' : 'Globe'} />
-                    <span>{theme === 'artsnob' ? 'ArtSnob' : 'Standard'}</span>
-                  </button>
-
-                  {/* Dark/Light Mode Toggle */}
-                  <ThemeToggleButton showLabels={true} />
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
         {/* Desktop floating top Navbar; drawer copy is spawned by MobileTopBar. */}
         {!isMobileOrTablet && <Navbar />}
         <ToastContainer />
-        {!isMobileOrTablet && <StatusBar />}
+        <StatusBar />
 
         <GlobalMonitors />
 
         {/* Global Help Overlay - available on all pages */}
-        <HelpOverlay />
+        <HelpOverlay showTriggerButton={false} />
         <GettingStartedPanel />
       </div>
     </>

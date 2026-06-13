@@ -3,7 +3,7 @@
 ArtBastard is a TypeScript-based DMX lighting controller with a React
 frontend and Node / Socket.IO backend.
 
-Current package version: 5.2.4.0
+Current package version: 5.2.12.0
 
 ## Showcase
 
@@ -21,6 +21,16 @@ settings/help). They are recorded straight off the running app via
 `npm run demo:capture-videos`. See DOCS/SHOWCASE.md for details.
 
 ## Current status (2026-06)
+
+### Confirmed live/dev line (v5.2.12.0)
+
+- Hard version bump for the SuperControl layout rebuild, cream/synthwave light
+  theme, footer monitor controls, DMX Tracker feature flagging, and APC40
+  ON/OFF state semantics.
+- APC40 Record Arm, Solo/Cue, and Activator rows now treat ON as add/solo and
+  OFF as remove/release so hardware LEDs can represent actual app state.
+- SuperControl Selection spans the card top, with Stage Map and Monitor filled
+  underneath instead of squeezing the selector into a narrow column.
 
 ### Confirmed live/dev line (v5.2.4.0)
 

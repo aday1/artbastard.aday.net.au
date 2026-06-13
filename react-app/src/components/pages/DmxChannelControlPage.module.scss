@@ -149,6 +149,185 @@
   }
 }
 
+:global([data-theme='light']) {
+  .dmxChannelControlPage {
+    background:
+      linear-gradient(180deg, rgb(255 250 240 / 0.58), transparent 42%),
+      repeating-linear-gradient(90deg, rgb(44 33 25 / 0.045) 0 1px, transparent 1px 18px),
+      var(--color-background, #f4e4c6) !important;
+    color: var(--text-primary, #2c2119) !important;
+  }
+
+  .header,
+  .headerFaderLayout,
+  .controlsPanel,
+  .faderLayoutDock,
+  .globalChannelNamesSection,
+  .envelopeAutomationSection,
+  .midiOscSection,
+  .sceneSection,
+  .dmxChannelSection,
+  .footer,
+  .channelVisibilityNotice,
+  .pinnedChannelsContainer,
+  .activeChannelsContainer,
+  .filterSelect,
+  .pageSizeSelect,
+  .rangeInput,
+  .searchField,
+  .channelsPerRowInput,
+  .fixtureSelectorDropdown,
+  .fixtureSelectorButton,
+  .stat,
+  .channelsGrid,
+  .channelsList {
+    border-color: var(--color-card-border, #dec69f) !important;
+    background:
+      linear-gradient(180deg, rgb(255 249 237 / 0.88), rgb(255 244 220 / 0.96)) !important;
+    color: var(--text-primary, #2c2119) !important;
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.82),
+      0 3px 12px rgb(99 72 39 / 0.12) !important;
+  }
+
+  .controlGroup,
+  .channelRangeControls,
+  .oscAddressDisplay,
+  .midiMappingDisplay,
+  .noActiveChannels,
+  .emptyState {
+    border-color: var(--color-card-border, #dec69f) !important;
+    background: rgb(255 249 237 / 0.66) !important;
+    color: var(--text-primary, #2c2119) !important;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.76) !important;
+  }
+
+  .controlLabel,
+  .title,
+  .sceneListLabel,
+  .footerInfo,
+  .channelsPerRowHint,
+  .fixtureSelectorSectionTitle,
+  .fixtureSelectorEmpty,
+  .fixtureSelectorSummary,
+  .fixtureSelectorCount,
+  .channelName,
+  .channelNameInput,
+  .fixtureLabel,
+  .fixtureAddress,
+  .channelType,
+  .fixtureRef,
+  .channelWindowLabel,
+  .rangeLabel,
+  .label,
+  .valueLabel {
+    color: var(--text-primary, #2c2119) !important;
+    text-shadow: none !important;
+  }
+
+  .viewModeButton,
+  .selectionButton,
+  .channelsPerRowPreset,
+  .activeSelectionsButton,
+  .toggleButton,
+  .sceneButton,
+  .loadSceneButton,
+  .midiLearnButton,
+  .midiForgetButton,
+  .oscAddressButton,
+  .selectButton,
+  .colorButton,
+  .pinButton,
+  .ticksModeButton,
+  .pageButton {
+    border-color: var(--color-card-border, #dec69f) !important;
+    background: linear-gradient(180deg, #fff9ed, #f4dfb9) !important;
+    color: var(--text-primary, #2c2119) !important;
+    box-shadow: inset 0 1px 0 #fffaf0 !important;
+  }
+
+  .viewModeButton.active,
+  .channelsPerRowPreset.active,
+  .activeSelectionsButton.active,
+  .toggleButton.active,
+  .selectButton.selected,
+  .pinButton.pinned {
+    color: #071216 !important;
+    border-color: var(--color-primary, #008faa) !important;
+    background: linear-gradient(180deg, #9fe8f4, var(--color-primary, #008faa)) !important;
+    box-shadow: 0 0 0 1px rgb(0 143 170 / 0.18), 0 4px 12px rgb(0 143 170 / 0.22) !important;
+  }
+
+  .dmxChannel:not(.fixtureAssigned),
+  .pinnedChannel,
+  .dmxChannel.channelStripCard:not(.fixtureAssigned) {
+    border-color: #c9aa76 !important;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.9), transparent 20%),
+      repeating-linear-gradient(90deg, rgb(44 33 25 / 0.035) 0 1px, transparent 1px 7px),
+      linear-gradient(180deg, #fff9ed 0%, #efd7ab 100%) !important;
+    color: var(--text-primary, #2c2119) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.95),
+      0 4px 12px rgb(99 72 39 / 0.18) !important;
+  }
+
+  .dmxChannel.channelStripCard::before,
+  .dmxChannel.channelStripCard::after {
+    background: radial-gradient(circle at 35% 30%, #fffaf0, #d3b987 48%, #7a604d 72%) !important;
+  }
+
+  .channelHeader,
+  .dmxChannel.channelStripCard .channelHeader {
+    border-bottom-color: rgb(0 143 170 / 0.28) !important;
+    background: linear-gradient(180deg, rgb(0 143 170 / 0.08), transparent) !important;
+  }
+
+  .channelNumber,
+  .valueDisplay,
+  .valuePercent,
+  .channelValue {
+    color: #071216 !important;
+    background: rgb(255 249 237 / 0.72) !important;
+    border-color: var(--color-card-border, #dec69f) !important;
+    text-shadow: none !important;
+  }
+
+  .channelSlider,
+  .channelSliderVertical,
+  .channelActions,
+  .channelActionsStrip,
+  .channelEnvelopeStrip,
+  .channelWindow,
+  .pinnedRangeControls {
+    background: rgb(255 249 237 / 0.42) !important;
+    border-color: var(--color-card-border, #dec69f) !important;
+  }
+
+  .emptyChannelStrip {
+    border-color: var(--color-card-border, #dec69f) !important;
+    background: rgb(255 249 237 / 0.62) !important;
+    color: var(--text-secondary, #6d4c3d) !important;
+  }
+
+  .dmxChannelsContainer {
+    color: var(--text-primary, #2c2119) !important;
+  }
+
+  .dmxChannelsContainer.columnsFixed {
+    scrollbar-color: var(--color-primary, #008faa) #ead5af;
+
+    &::-webkit-scrollbar-track {
+      background: #ead5af;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: linear-gradient(90deg, var(--color-primary, #008faa), var(--color-accent, #c026d3));
+      border-color: #ead5af;
+    }
+  }
+}
+
 .fixtureSelectorBadge {
   display: inline-flex;
   align-items: center;
@@ -2257,14 +2436,42 @@
   }
 
   &.channelStrip {
-    grid-template-columns: repeat(auto-fill, minmax(13rem, 15.5rem));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr));
     gap: 14px;
     align-items: start;
   }
 
-  // Inline gridTemplateColumns from channels-per-row select overrides auto-fill
   &.columnsFixed {
-    justify-content: start;
+    justify-content: stretch;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: visible;
+    padding-bottom: 12px;
+    overscroll-behavior-x: contain;
+    scrollbar-width: auto;
+    scrollbar-color: color-mix(in srgb, var(--color-primary, #d68706) 70%, #60a5fa)
+      color-mix(in srgb, var(--color-primary, #d68706) 16%, #0f172a);
+
+    &::-webkit-scrollbar {
+      height: 14px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: color-mix(in srgb, var(--color-primary, #d68706) 14%, #0f172a);
+      border-radius: 999px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      min-width: 52px;
+      background: linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--color-primary, #d68706) 82%, #60a5fa),
+        #60a5fa
+      );
+      border: 2px solid color-mix(in srgb, var(--color-primary, #d68706) 24%, #0f172a);
+      border-radius: 999px;
+      background-clip: padding-box;
+    }
   }
 
   &.emptyChannelViewport {
@@ -3628,7 +3835,7 @@
   }
 
   .channelVisibilityNotice {
-    order: 2;
+    order: 3;
     border-radius: 2px;
     border-color: #070609;
     background:
@@ -3645,7 +3852,7 @@
   }
 
   .controlsPanel {
-    order: 4;
+    order: 2;
     grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
     gap: 10px;
     padding: 12px;
@@ -3740,6 +3947,10 @@
     order: 5;
   }
 
+  .dmxChannelsContainer {
+    order: 4;
+  }
+
   .channelsGrid {
     max-height: 96px;
     padding: 8px;
@@ -3750,9 +3961,9 @@
   }
 
   .dmxChannelsContainer.channelStrip {
-    order: 2;
+    order: 4;
     gap: 14px;
-    grid-template-columns: repeat(auto-fill, minmax(13rem, 15.5rem));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr));
   }
 
   .dmxChannel {

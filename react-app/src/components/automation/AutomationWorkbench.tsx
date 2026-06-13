@@ -4,6 +4,7 @@ import { RackModule, RackTabStrip } from '../ui/rack';
 import { LucideIcon } from '../ui/LucideIcon';
 import { EnvelopeAutomation } from './EnvelopeAutomation';
 import { DmxTransitionTracker } from './tracker/DmxTransitionTracker';
+import { isFeatureEnabled } from '../../utils/featureFlags';
 import styles from './AutomationWorkbench.module.scss';
 
 type AutomationTab = 'envelopes' | 'tracker';
@@ -21,14 +22,15 @@ export const AutomationWorkbench: React.FC<AutomationWorkbenchProps> = ({
 }) => {
   const { theme } = useTheme();
   const [tab, setTab] = useState<AutomationTab>(defaultTab);
+  const trackerEnabled = showTracker && isFeatureEnabled('dmxTracker');
 
   const tabs = useMemo(
     () =>
       [
-        showTracker ? { id: 'tracker', label: theme === 'minimal' ? 'DMX' : 'DMX Tracker' } : null,
+        trackerEnabled ? { id: 'tracker', label: theme === 'minimal' ? 'DMX' : 'DMX Tracker' } : null,
         showEnvelopes ? { id: 'envelopes', label: theme === 'minimal' ? 'Env' : 'Envelopes' } : null,
       ].filter(Boolean) as Array<{ id: AutomationTab; label: string }>,
-    [showEnvelopes, showTracker, theme]
+    [showEnvelopes, trackerEnabled, theme]
   );
 
   useEffect(() => {

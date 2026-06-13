@@ -28,9 +28,10 @@ type HelpTab =
 
 interface HelpOverlayProps {
   embedded?: boolean; // When true, renders without floating button (for settings page)
+  showTriggerButton?: boolean;
 }
 
-export const HelpOverlay: React.FC<HelpOverlayProps> = ({ embedded = false }) => {
+export const HelpOverlay: React.FC<HelpOverlayProps> = ({ embedded = false, showTriggerButton = true }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<HelpTab>('overview');
   const [searchQuery, setSearchQuery] = useState('');
@@ -73,8 +74,8 @@ export const HelpOverlay: React.FC<HelpOverlayProps> = ({ embedded = false }) =>
     const handleOpenHelpOverlay = (e: CustomEvent) => {
       if (e.detail?.tab) {
         setActiveTab(e.detail.tab as HelpTab);
-        setIsVisible(true);
       }
+      setIsVisible(true);
     };
 
     window.addEventListener('openHelpOverlay', handleOpenHelpOverlay as EventListener);
@@ -1326,14 +1327,15 @@ GET    /api/factory-reset-check    # returns true once reset has occurred`}</cod
 
   return (
     <>
-      {/* Help trigger button */}
-      <button
-        className={styles.helpButton}
-        onClick={() => setIsVisible(!isVisible)}
-        title="Show ArtBastard Help (Ctrl+H)"
-      >
-        <i className="fas fa-question-circle"></i>
-      </button>
+      {showTriggerButton && (
+        <button
+          className={styles.helpButton}
+          onClick={() => setIsVisible(!isVisible)}
+          title="Show ArtBastard Help (Ctrl+H)"
+        >
+          <i className="fas fa-question-circle"></i>
+        </button>
+      )}
 
       {/* Help overlay */}
       {isVisible && (

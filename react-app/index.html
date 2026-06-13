@@ -111,6 +111,31 @@
         background: rgba(176, 128, 255, 0.35);
         border-color: rgba(200, 160, 255, 0.65);
       }
+      #deployMetaDock {
+        bottom: calc(52px + env(safe-area-inset-bottom, 0px)) !important;
+      }
+      html[data-theme="light"] #deployMetaShowBtn,
+      html[data-theme="light"] #deployMetaHideBtn,
+      html[data-theme="light"] #deployMetaCollapseBtn {
+        border-color: rgba(0, 143, 170, 0.42) !important;
+        background: rgba(255, 249, 237, 0.88) !important;
+        color: #006172 !important;
+        box-shadow: 0 2px 8px rgba(99, 72, 39, 0.12) !important;
+      }
+      html[data-theme="light"] #deployMetaPanel {
+        border-color: rgba(0, 143, 170, 0.36) !important;
+        background: rgba(255, 244, 220, 0.96) !important;
+        color: #2c2119 !important;
+        box-shadow: 0 6px 18px rgba(99, 72, 39, 0.18) !important;
+      }
+      html[data-theme="light"] #deploySwitcherStrip {
+        border-top-color: rgba(0, 143, 170, 0.18) !important;
+        background: rgba(239, 215, 171, 0.9) !important;
+      }
+      html[data-theme="light"] #deployMetaTitle {
+        border-bottom-color: rgba(0, 143, 170, 0.22) !important;
+        color: #2c2119 !important;
+      }
       @media (max-width: 760px) {
         #deployMetaDock {
           max-width: min(236px, calc(100vw - 20px)) !important;

@@ -34,6 +34,7 @@ interface DmxControlsPanelProps {
   onToggleOscControls: () => void;
   showEnvelopeAutomation: boolean;
   onToggleEnvelopeAutomation: () => void;
+  transitionTrackerAvailable: boolean;
   showTransitionTracker: boolean;
   onToggleTransitionTracker: () => void;
   showActiveChannelTracker: boolean;
@@ -74,6 +75,7 @@ export const DmxControlsPanel: React.FC<DmxControlsPanelProps> = ({
   onToggleOscControls,
   showEnvelopeAutomation,
   onToggleEnvelopeAutomation,
+  transitionTrackerAvailable,
   showTransitionTracker,
   onToggleTransitionTracker,
   showActiveChannelTracker,
@@ -346,14 +348,16 @@ export const DmxControlsPanel: React.FC<DmxControlsPanelProps> = ({
             <LucideIcon name="Activity" />
             Envelopes
           </button>
-          <button
-            className={`${styles.toggleButton} ${showTransitionTracker ? styles.active : ''}`}
-            onClick={onToggleTransitionTracker}
-            title="Show or hide the DMX transition pattern tracker"
-          >
-            <LucideIcon name="Grid3X3" />
-            Pattern Tracker
-          </button>
+          {transitionTrackerAvailable && (
+            <button
+              className={`${styles.toggleButton} ${showTransitionTracker ? styles.active : ''}`}
+              onClick={onToggleTransitionTracker}
+              title="Show or hide the DMX transition pattern tracker"
+            >
+              <LucideIcon name="Grid3X3" />
+              Pattern Tracker
+            </button>
+          )}
           <button
             className={`${styles.toggleButton} ${showActiveChannelTracker ? styles.active : ''}`}
             onClick={onToggleActiveChannelTracker}

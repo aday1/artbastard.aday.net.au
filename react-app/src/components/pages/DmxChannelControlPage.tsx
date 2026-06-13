@@ -25,6 +25,7 @@ import { filterDmxChannels, filterFixtures, isFixtureActive } from '../dmx/dmxFi
 import styles from './DmxChannelControlPage.module.scss';
 import pageStyles from '../../pages/Pages.module.scss';
 import { useSceneCapture } from '../../hooks/useSceneCapture';
+import { isFeatureEnabled } from '../../utils/featureFlags';
 
 interface DmxChannelControlPageProps {
   embedded?: boolean;
@@ -93,6 +94,8 @@ export const DmxChannelControlPage: React.FC<DmxChannelControlPageProps> = ({
   const [showTransitionTracker, setShowTransitionTracker] = useState(() =>
     readBooleanPreference('dmxShowTransitionTracker', !compactByDefault)
   );
+  const transitionTrackerAvailable = isFeatureEnabled('dmxTracker');
+  const effectiveShowTransitionTracker = transitionTrackerAvailable && showTransitionTracker;
   const [showActiveChannelTracker, setShowActiveChannelTracker] = useState(() =>
     readBooleanPreference('dmxShowActiveChannelTracker', false)
   );
@@ -593,7 +596,8 @@ export const DmxChannelControlPage: React.FC<DmxChannelControlPageProps> = ({
             onToggleOscControls={() => setShowOscControls(!showOscControls)}
             showEnvelopeAutomation={showEnvelopeAutomation}
             onToggleEnvelopeAutomation={() => setShowEnvelopeAutomation(!showEnvelopeAutomation)}
-            showTransitionTracker={showTransitionTracker}
+            transitionTrackerAvailable={transitionTrackerAvailable}
+            showTransitionTracker={effectiveShowTransitionTracker}
             onToggleTransitionTracker={() => setShowTransitionTracker(!showTransitionTracker)}
             showActiveChannelTracker={showActiveChannelTracker}
             onToggleActiveChannelTracker={() => setShowActiveChannelTracker(!showActiveChannelTracker)}
@@ -612,12 +616,12 @@ export const DmxChannelControlPage: React.FC<DmxChannelControlPageProps> = ({
           )}
 
           {/* Automation workbench */}
-          {(showEnvelopeAutomation || showTransitionTracker) && (
+          {(showEnvelopeAutomation || effectiveShowTransitionTracker) && (
             <div className={styles.envelopeAutomationSection}>
               <AutomationWorkbench
                 showEnvelopes={showEnvelopeAutomation}
-                showTracker={showTransitionTracker}
-                defaultTab={showTransitionTracker ? 'tracker' : 'envelopes'}
+                showTracker={effectiveShowTransitionTracker}
+                defaultTab={effectiveShowTransitionTracker ? 'tracker' : 'envelopes'}
               />
             </div>
           )}

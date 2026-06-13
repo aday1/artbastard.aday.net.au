@@ -64,6 +64,34 @@ const makeGroup = (name: string, fixtureIndices: number[]): Group => ({
 
 const fixtureEndAddress = (fixture: Fixture) => fixture.startAddress + fixture.channels.length - 1;
 const CHANNEL_PREVIEW_LIMIT = 8;
+const STAGE_MAP_LAYOUT_KEY = 'artbastard.stageMap.layout.v1';
+
+interface StagePaneLayoutState {
+  apcWorkbenchHeight: number;
+}
+
+const DEFAULT_STAGE_PANE_LAYOUT: StagePaneLayoutState = {
+  apcWorkbenchHeight: 360,
+};
+
+const clampNumber = (value: number, min: number, max: number) => Math.max(min, Math.min(max, Math.round(value)));
+
+function normalizeStagePaneLayout(raw: unknown): StagePaneLayoutState {
+  const parsed = raw && typeof raw === 'object' ? raw as Partial<StagePaneLayoutState> : {};
+  return {
+    apcWorkbenchHeight: clampNumber(typeof parsed.apcWorkbenchHeight === 'number' ? parsed.apcWorkbenchHeight : DEFAULT_STAGE_PANE_LAYOUT.apcWorkbenchHeight, 220, 720),
+  };
+}
+
+function loadStagePaneLayout(): StagePaneLayoutState {
+  if (typeof window === 'undefined') return DEFAULT_STAGE_PANE_LAYOUT;
+  try {
+    const raw = window.localStorage.getItem(STAGE_MAP_LAYOUT_KEY);
+    return normalizeStagePaneLayout(raw ? JSON.parse(raw) : null);
+  } catch {
+    return DEFAULT_STAGE_PANE_LAYOUT;
+  }
+}
 
 function findAddressConflict(fixtures: Fixture[], target: Fixture): Fixture | null {
   const start = target.startAddress;
@@ -76,6 +104,12 @@ function findAddressConflict(fixtures: Fixture[], target: Fixture): Fixture | nu
 
 export const StageMapFixtureSetup: React.FC = () => {
   const stageRef = useRef<HTMLDivElement>(null);
+  const paneResizeRef = useRef<{
+    target: 'apcWorkbench' | 'workspace';
+    pointerId?: number;
+    startY: number;
+    startValue: number;
+  } | null>(null);
   const {
     addNotification,
     fixtureLayout,
@@ -123,6 +157,7 @@ export const StageMapFixtureSetup: React.FC = () => {
   const [showAutoAdd, setShowAutoAdd] = useState(false);
   const [autoAddBusy, setAutoAddBusy] = useState<string | null>(null);
   const [workbenchMode, setWorkbenchMode] = useState<WorkbenchMode>('patch');
+  const [paneLayout, setPaneLayout] = useState<StagePaneLayoutState>(loadStagePaneLayout);
   const [stageToolsOpen, setStageToolsOpen] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     return window.localStorage.getItem('stage-map-tools-open') === '1';
@@ -131,6 +166,63 @@ export const StageMapFixtureSetup: React.FC = () => {
     if (typeof window === 'undefined') return;
     window.localStorage.setItem('stage-map-tools-open', stageToolsOpen ? '1' : '0');
   }, [stageToolsOpen]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(STAGE_MAP_LAYOUT_KEY, JSON.stringify(paneLayout));
+  }, [paneLayout]);
+
+  useEffect(() => {
+    const applyResizeDrag = (clientY: number) => {
+      const drag = paneResizeRef.current;
+      if (!drag) return;
+      const deltaY = clientY - drag.startY;
+      setPaneLayout((prev) => {
+        if (drag.target === 'apcWorkbench') {
+          return { ...prev, apcWorkbenchHeight: clampNumber(drag.startValue + deltaY, 220, 720) };
+        }
+        return prev;
+      });
+    };
+    const handleMove = (event: PointerEvent) => {
+      const drag = paneResizeRef.current;
+      if (!drag || drag.pointerId === undefined || event.pointerId !== drag.pointerId) return;
+      applyResizeDrag(event.clientY);
+    };
+    const handleMouseMove = (event: MouseEvent) => {
+      const drag = paneResizeRef.current;
+      if (!drag || drag.pointerId !== undefined) return;
+      applyResizeDrag(event.clientY);
+    };
+    const stopDrag = (event?: PointerEvent) => {
+      const drag = paneResizeRef.current;
+      if (!drag) return;
+      if (event && drag.pointerId !== undefined && event.pointerId !== drag.pointerId) return;
+      paneResizeRef.current = null;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    const stopMouseDrag = () => {
+      const drag = paneResizeRef.current;
+      if (!drag || drag.pointerId !== undefined) return;
+      stopDrag();
+    };
+    const handleBlur = () => stopDrag();
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', stopDrag);
+    window.addEventListener('pointercancel', stopDrag);
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', stopMouseDrag);
+    window.addEventListener('blur', handleBlur);
+    return () => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', stopDrag);
+      window.removeEventListener('pointercancel', stopDrag);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', stopMouseDrag);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, []);
 
   useEffect(() => {
     const mergedTemplates = mergeFixtureTemplatesWithCatalog(
@@ -782,8 +874,37 @@ export const StageMapFixtureSetup: React.FC = () => {
       }
     : undefined;
 
+  const stageSetupStyle = {
+    ['--stage-apc-workbench-height' as any]: `${paneLayout.apcWorkbenchHeight}px`,
+  } as React.CSSProperties;
+  const workspaceClassName = [
+    styles.workspace,
+    apcDriveMode ? styles.workspaceMapOnly : '',
+  ].filter(Boolean).join(' ');
+  const startPaneResize = (target: 'apcWorkbench' | 'workspace', event: React.PointerEvent) => {
+    event.preventDefault();
+    paneResizeRef.current = {
+      target,
+      pointerId: event.pointerId,
+      startY: event.clientY,
+      startValue: paneLayout.apcWorkbenchHeight,
+    };
+    document.body.style.cursor = 'row-resize';
+    document.body.style.userSelect = 'none';
+  };
+  const startPaneMouseResize = (target: 'apcWorkbench' | 'workspace', event: React.MouseEvent) => {
+    if (paneResizeRef.current) return;
+    event.preventDefault();
+    paneResizeRef.current = {
+      target,
+      startY: event.clientY,
+      startValue: paneLayout.apcWorkbenchHeight,
+    };
+    document.body.style.cursor = 'row-resize';
+    document.body.style.userSelect = 'none';
+  };
   return (
-    <section className={styles.stageMapSetup}>
+    <section className={`${styles.stageMapSetup} ${apcDriveMode ? styles.apcDriveSetup : ''}`} style={stageSetupStyle}>
       <header className={styles.toolbar}>
         <div className={styles.toolbarGroup}>
           <button type="button" className={viewMode === 'top' ? styles.active : ''} onClick={() => setViewMode('top')}>
@@ -898,8 +1019,21 @@ export const StageMapFixtureSetup: React.FC = () => {
       <div className={styles.drawerStack}>
         <UnifiedStageWorkbench mode={workbenchMode} onModeChange={setWorkbenchMode} />
       </div>
+      {apcDriveMode && (
+        <div
+          className={styles.paneResizeHandle}
+          role="separator"
+          aria-label="Resize APC visualizer and stage map split"
+          aria-orientation="horizontal"
+          onPointerDown={(event) => startPaneResize('apcWorkbench', event)}
+          onMouseDown={(event) => startPaneMouseResize('apcWorkbench', event)}
+        >
+          <LucideIcon name="GripHorizontal" size={16} />
+          <span>Drag to resize APC visualizer / stage split</span>
+        </div>
+      )}
 
-      <div className={`${styles.workspace} ${apcDriveMode ? styles.workspaceMapOnly : ''}`} data-apc-drive-mode={apcDriveMode ? 'true' : undefined}>
+      <div className={workspaceClassName} data-apc-drive-mode={apcDriveMode ? 'true' : undefined}>
         {!apcDriveMode && <aside className={styles.libraryPane} aria-label="Fixture library">
           <div className={styles.paneHeader}>
             <div>

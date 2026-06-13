@@ -26,6 +26,28 @@ All notable changes to this project are documented here.
 - Factory reset now fully removes per-fixture files in `data/fixtures/*.json` and emits `fixtureLayoutUpdate` / `groupsUpdated` clears, preventing stale stage fixtures from reappearing after reset.
 - `deploy-linode` workflow now honors the effective lane ref (`dev` for dev track, `main` for live track) instead of always resetting the VPS repo to `main`.
 
+## [5.2.12.0] - 2026-06-14 - Hard version bump: APC40 state semantics and UI remaster
+
+### Added
+
+- Hard release line for the SuperControl card-layout rebuild, footer monitor controls, cream/synthwave light theme, and APC40 ON/OFF input semantics.
+- Feature flag guard for the experimental DMX Tracker so production-facing automation defaults to envelopes and stable channel controls.
+- SuperControl layout tray with hidden-card restore and card width controls.
+
+### Changed
+
+- APC40 Record Arm, Solo/Cue, and Activator rows now honor explicit hardware ON/OFF state: ON adds/solos, OFF removes/releases.
+- SuperControl Selection now spans the card top, with Stage Map and Monitor filled underneath instead of squeezing controls into a narrow column.
+- Standalone SuperControl Scenes and Color Autopilot cards are folded into MIDI/OSC and RGB parent cards.
+- Light mode now uses a softer cream palette with stronger cyan/magenta/amber theme accents across DMX, SuperControl, monitors, footer, and deploy metadata.
+
+### Fixed
+
+- APC40 toggle-mode `noteon velocity 0` no longer disappears or blindly flips state; delayed velocity-zero events are explicit OFF while immediate releases are ignored.
+- Footer MIDI/OSC/DMX monitors stay hidden until opened from the footer and pick up light-mode styling.
+- DMX fixed-column channel strips scroll horizontally and keep controls above the grid in both fader orientations.
+- Dark-mode hardcoded surfaces no longer leak through the DMX and SuperControl light theme.
+
 ## [5.2.4.0] - 2026-06-09 - APC40 Deck A/B live controller refactor
 
 ### Added

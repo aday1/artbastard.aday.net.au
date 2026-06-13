@@ -44,13 +44,16 @@ const groupA: Group = {
 };
 
 function apcMessage(message: Record<string, unknown>) {
+  const timestamp = typeof message.timestamp === 'number'
+    ? message.timestamp
+    : Date.now() + useStore.getState().midiMessages.length;
   act(() => {
     useStore.getState().addMidiMessage({
         _type: 'noteon',
         source: 'Akai APC40',
         velocity: 127,
         ...message,
-        timestamp: Date.now() + useStore.getState().midiMessages.length,
+        timestamp,
       } as any);
   });
 }
@@ -97,6 +100,81 @@ describe('useApc40Workflow', () => {
       expect(state.apc40CrossfaderState.activeGroupId).toBe('group-a');
       expect(state.apc40CrossfaderState.activeFixtureIds).toEqual(['fixture-a', 'fixture-b']);
       expect(state.apc40CrossfaderState.activeTargetLabel).toBe('Group 1: Front Wash');
+    });
+  });
+
+  it('treats delayed APC40 note-on velocity 0 as a toggle-off press, not an ignored release', async () => {
+    renderHook(() => useApc40Workflow());
+
+    apcMessage({ channel: 0, note: 0x31, velocity: 127, timestamp: 1000 });
+
+    await waitFor(() => {
+      expect(useStore.getState().selectedFixtures).toEqual(['fixture-a']);
+    });
+
+    apcMessage({ channel: 0, note: 0x31, velocity: 0, timestamp: 1010 });
+
+    await waitFor(() => {
+      expect(useStore.getState().selectedFixtures).toEqual(['fixture-a']);
+    });
+
+    apcMessage({ channel: 0, note: 0x31, velocity: 127, timestamp: 1500 });
+
+    await waitFor(() => {
+      expect(useStore.getState().selectedFixtures).toEqual(['fixture-a']);
+    });
+
+    apcMessage({ channel: 0, note: 0x31, velocity: 0, timestamp: 2000 });
+
+    await waitFor(() => {
+      expect(useStore.getState().selectedFixtures).toEqual([]);
+      expect(useStore.getState().apc40CrossfaderState.lastChange?.summary).toContain('Deselected fixture');
+    });
+  });
+
+  it('uses APC40 activator OFF state to remove a group without double toggling', async () => {
+    renderHook(() => useApc40Workflow());
+
+    apcMessage({ channel: 0, note: 0x32, velocity: 127, timestamp: 1000 });
+
+    await waitFor(() => {
+      expect(useStore.getState().selectedFixtures).toEqual(['fixture-a', 'fixture-b']);
+    });
+
+    apcMessage({ channel: 0, note: 0x32, velocity: 127, timestamp: 1500 });
+
+    await waitFor(() => {
+      expect(useStore.getState().selectedFixtures).toEqual(['fixture-a', 'fixture-b']);
+    });
+
+    apcMessage({ channel: 0, note: 0x32, velocity: 0, timestamp: 2000 });
+
+    await waitFor(() => {
+      expect(useStore.getState().selectedFixtures).toEqual([]);
+      expect(useStore.getState().apc40CrossfaderState.lastChange?.summary).toContain('Removed group');
+    });
+  });
+
+  it('uses APC40 record-arm OFF state to release solo group without double toggling', async () => {
+    renderHook(() => useApc40Workflow());
+
+    apcMessage({ channel: 0, note: 0x30, velocity: 127, timestamp: 1000 });
+
+    await waitFor(() => {
+      expect(useStore.getState().apc40CrossfaderState.soloedGroups).toEqual([0]);
+    });
+
+    apcMessage({ channel: 0, note: 0x30, velocity: 127, timestamp: 1500 });
+
+    await waitFor(() => {
+      expect(useStore.getState().apc40CrossfaderState.soloedGroups).toEqual([0]);
+    });
+
+    apcMessage({ channel: 0, note: 0x30, velocity: 0, timestamp: 2000 });
+
+    await waitFor(() => {
+      expect(useStore.getState().apc40CrossfaderState.soloedGroups).toEqual([]);
+      expect(useStore.getState().apc40CrossfaderState.lastChange?.summary).toContain('Released solo');
     });
   });
 
