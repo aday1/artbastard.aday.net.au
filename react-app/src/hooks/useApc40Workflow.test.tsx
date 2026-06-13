@@ -39,15 +39,13 @@ const groupA: Group = {
 
 function apcMessage(message: Record<string, unknown>) {
   act(() => {
-    useStore.setState((state) => ({
-      midiMessages: [...state.midiMessages, {
+    useStore.getState().addMidiMessage({
         _type: 'noteon',
         source: 'Akai APC40',
         velocity: 127,
         ...message,
-        timestamp: Date.now() + state.midiMessages.length,
-      } as any],
-    }));
+        timestamp: Date.now() + useStore.getState().midiMessages.length,
+      } as any);
   });
 }
 
@@ -81,10 +79,10 @@ describe('useApc40Workflow', () => {
     } as any);
   });
 
-  it('publishes live APC target state when Track Select chooses a group', async () => {
+  it('publishes live APC target state when Activator chooses a group', async () => {
     renderHook(() => useApc40Workflow());
 
-    apcMessage({ channel: 0, note: 0x33 });
+    apcMessage({ channel: 0, note: 0x32 });
 
     await waitFor(() => {
       const state = useStore.getState();
@@ -92,7 +90,7 @@ describe('useApc40Workflow', () => {
       expect(state.apc40CrossfaderState.activeTrackIndex).toBe(0);
       expect(state.apc40CrossfaderState.activeGroupId).toBe('group-a');
       expect(state.apc40CrossfaderState.activeFixtureIds).toEqual(['fixture-a', 'fixture-b']);
-      expect(state.apc40CrossfaderState.activeTargetLabel).toBe('Track 1: Front Wash');
+      expect(state.apc40CrossfaderState.activeTargetLabel).toBe('Group 1: Front Wash');
     });
   });
 

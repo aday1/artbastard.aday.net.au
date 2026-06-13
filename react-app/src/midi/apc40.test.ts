@@ -68,7 +68,7 @@ describe('APC40 workflow decoder', () => {
     }
   });
 
-  it('decodes solo-group, activator, solo-cue, stop-all, and freeze-dmx rows', () => {
+  it('decodes record-arm, activator, solo-cue, stop-all, and freeze-dmx rows', () => {
     expect(decodeApc40Message({
       _type: 'noteon',
       source: 'Akai APC40',
@@ -76,7 +76,7 @@ describe('APC40 workflow decoder', () => {
       note: 0x30,
       velocity: 127,
     })).toEqual({
-      type: 'solo-group',
+      type: 'record-arm',
       model: 'apc40-mk1',
       trackIndex: 4,
     });
@@ -139,7 +139,7 @@ describe('APC40 workflow decoder', () => {
     });
   });
 
-  it('maps every Record Arm button to its matching solo-group column', () => {
+  it('maps every Record Arm button to its matching save-arm column', () => {
     for (let channel = 0; channel < 8; channel += 1) {
       expect(decodeApc40Message({
         _type: 'noteon',
@@ -148,7 +148,7 @@ describe('APC40 workflow decoder', () => {
         note: 0x30,
         velocity: 127,
       })).toEqual({
-        type: 'solo-group',
+        type: 'record-arm',
         model: 'apc40-mk1',
         trackIndex: channel,
       });
@@ -187,7 +187,7 @@ describe('APC40 workflow decoder', () => {
     });
   });
 
-  it('decodes device control and shift press/release; cue level is unmapped', () => {
+  it('decodes device control, cue level, and shift press/release', () => {
     expect(decodeApc40Message({
       _type: 'cc',
       source: 'Akai APC40',
@@ -201,14 +201,17 @@ describe('APC40 workflow decoder', () => {
       value: 64,
     });
 
-    // Cue Level (CC 0x2f) is intentionally unmapped; Device Left/Right cycles role banks instead.
     expect(decodeApc40Message({
       _type: 'cc',
       source: 'Akai APC40',
       channel: 0,
       controller: 0x2f,
       value: 32,
-    })).toBeNull();
+    })).toEqual({
+      type: 'cue-level',
+      model: 'apc40-mk1',
+      value: 32,
+    });
 
     expect(decodeApc40Message({
       _type: 'noteon',
