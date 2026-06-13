@@ -71,11 +71,30 @@ describe('StageMapFixtureSetup', () => {
 
     const stageCanvas = screen.getByRole('application', { name: /canvas-first fixture stage map/i });
     fireEvent.pointerDown(within(stageCanvas).getByTitle(/Wash 1.*DMX 1-4/), {
+      button: 0,
       pointerId: 1,
       clientX: 100,
       clientY: 100,
     });
 
     expect(useStore.getState().selectedFixtures).toEqual(['fixture-wash-1']);
+  });
+
+  it('does not start fixture dragging from a right-click', () => {
+    render(<StageMapFixtureSetup />);
+
+    const stageCanvas = screen.getByRole('application', { name: /canvas-first fixture stage map/i });
+    const node = within(stageCanvas).getByTitle(/Wash 1.*DMX 1-4/);
+    const event = new Event('pointerdown', { bubbles: true, cancelable: true });
+    Object.defineProperties(event, {
+      button: { value: 2 },
+      pointerId: { value: 2 },
+      clientX: { value: 100 },
+      clientY: { value: 100 },
+    });
+    fireEvent(node, event);
+
+    expect(HTMLElement.prototype.setPointerCapture).not.toHaveBeenCalled();
+    expect(useStore.getState().selectedFixtures).toEqual([]);
   });
 });

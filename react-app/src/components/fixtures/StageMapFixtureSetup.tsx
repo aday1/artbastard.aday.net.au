@@ -616,8 +616,11 @@ export const StageMapFixtureSetup: React.FC = () => {
     }
   };
 
-  const handleStagePointerUp = () => {
+  const handleStagePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!selectionBox) return;
+    if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
     const left = Math.min(selectionBox.start.x, selectionBox.current.x);
     const right = Math.max(selectionBox.start.x, selectionBox.current.x);
     const top = Math.min(selectionBox.start.y, selectionBox.current.y);
@@ -636,7 +639,15 @@ export const StageMapFixtureSetup: React.FC = () => {
     setSelectionBox(null);
   };
 
+  const handleStagePointerCancel = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    setSelectionBox(null);
+  };
+
   const handleFixturePointerDown = (event: React.PointerEvent, fixtureId: string) => {
+    if (event.button > 0) return;
     event.preventDefault();
     event.stopPropagation();
     const item = layoutByFixtureId.get(fixtureId);
@@ -715,11 +726,19 @@ export const StageMapFixtureSetup: React.FC = () => {
         }
       }
     };
+    const handleCancel = (event?: PointerEvent) => {
+      if (event && event.pointerId !== dragState.pointerId) return;
+      setDragState(null);
+    };
     window.addEventListener('pointermove', handleMove);
     window.addEventListener('pointerup', handleUp);
+    window.addEventListener('pointercancel', handleCancel);
+    window.addEventListener('blur', handleCancel);
     return () => {
       window.removeEventListener('pointermove', handleMove);
       window.removeEventListener('pointerup', handleUp);
+      window.removeEventListener('pointercancel', handleCancel);
+      window.removeEventListener('blur', handleCancel);
     };
   }, [dragState, snapEnabled]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -973,6 +992,8 @@ export const StageMapFixtureSetup: React.FC = () => {
               onPointerDown={handleStagePointerDown}
               onPointerMove={handleStagePointerMove}
               onPointerUp={handleStagePointerUp}
+              onPointerCancel={handleStagePointerCancel}
+              onLostPointerCapture={handleStagePointerCancel}
               onDragOver={(event) => event.preventDefault()}
               onDrop={handleDrop}
               role="application"
