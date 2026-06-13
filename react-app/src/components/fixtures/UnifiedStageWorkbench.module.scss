@@ -1,5 +1,7 @@
 .workbench {
-  margin: 1rem;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
   padding: 1rem;
   background: color-mix(in srgb, var(--bg-secondary, #2c2c34) 92%, #111 8%);
   border: 1px solid var(--border-color, #444);
@@ -8,9 +10,11 @@
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
+  overflow: hidden;
 }
 
 .tabStrip {
+  flex: 0 0 auto;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 0.5rem;
@@ -66,10 +70,13 @@
 }
 
 .mapWrap {
-  min-height: 0;
+  flex: 0 1 46%;
+  min-height: 130px;
+  overflow: hidden;
 }
 
 .patchHint {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 0.45rem;
@@ -80,6 +87,29 @@
 }
 
 .bodySlot {
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: auto;
+
+  > * {
+    margin: 0 !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .workbench {
+    height: auto;
+    overflow: visible;
+  }
+
+  .mapWrap {
+    flex: 0 0 auto;
+    min-height: 180px;
+  }
+
+  .bodySlot {
+    overflow: visible;
+  }
 }

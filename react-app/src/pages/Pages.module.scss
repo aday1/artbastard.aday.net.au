@@ -127,6 +127,19 @@
 
 .fixturePage {
   gap: 0.75rem;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+
+  .pageContent {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .setupSection {
+    min-height: 0;
+    overflow: hidden;
+  }
 }
 
 .fixturePageHeader {
@@ -157,6 +170,18 @@
   margin-top: 0;
   min-width: min(420px, 100%);
   border-radius: 8px;
+}
+
+@media (max-width: 760px) {
+  .fixturePage {
+    height: auto;
+    overflow: visible;
+
+    .pageContent,
+    .setupSection {
+      overflow: visible;
+    }
+  }
 }
 
 /* Control Setup Page */
