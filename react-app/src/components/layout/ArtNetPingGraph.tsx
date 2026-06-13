@@ -67,7 +67,7 @@ export const ArtNetPingGraph: React.FC<ArtNetPingGraphProps> = ({ samples, targe
           <span>{view.length} samples</span>
         </div>
       </div>
-      <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="ArtNet latency graph">
+      <svg className={styles.graphSvg} viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="ArtNet latency graph">
         <rect x="0" y="0" width={WIDTH} height={HEIGHT} rx="8" />
         <line x1={PAD_X} x2={WIDTH - PAD_X} y1={HEIGHT - PAD_Y} y2={HEIGHT - PAD_Y} className={styles.axis} />
         <line x1={PAD_X} x2={PAD_X} y1={PAD_Y} y2={HEIGHT - PAD_Y} className={styles.axis} />
