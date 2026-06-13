@@ -223,6 +223,26 @@ snapshot.
   stops scene timeline playback, and stops ACT playback.
 - Stop All Clips does not delete saved scenes.
 
+## LED overlays and screensaver
+
+The MIDI/OSC hardware panel includes an **APC40 Demoscene** card for manual LED
+tests and overlay preferences:
+
+- **Flourishes** are short LED overlays for explicit actions such as fixture
+  selection, clip launch, blackout, crossfade, and deck switching. Navigation
+  and ROLI device-list changes do not auto-flash the grid by default.
+- Each flourish type has its own selected animation. This is deterministic by
+  default so the same action has the same visual signature every time.
+- **Random flourishes** is opt-in. When enabled, each flourish type chooses from
+  a curated pattern pool for that action rather than from the entire demoscene
+  catalog.
+- **Screensaver** defaults on and runs randomized demoscene patterns only while
+  the browser tab is hidden. It stops when the tab becomes visible and normal
+  APC40 feedback repaints.
+- **XY crosshair** mirrors SuperControl pan/tilt XY movement, including ROLI
+  Lightpad input, as a throttled crosshair on the APC40 clip grid. It has its
+  own toggle and does not disable SuperControl or ROLI drawing when off.
+
 ## LED legend
 
 | Velocity | Color | Meaning |

@@ -84,6 +84,7 @@ describe('useApc40LedFeedback', () => {
         activeDeck: 'A',
         mode: 'save',
         armedColumns: [1],
+        soloedGroups: [1],
       },
     });
 
@@ -91,7 +92,8 @@ describe('useApc40LedFeedback', () => {
 
     await waitFor(() => expect(sent()).toContainEqual([0x90, 0x35, 6]));
 
-    expect(sent()).toEqual(expect.arrayContaining([
+    const messages = sent();
+    [
       [0x90, 0x35, 6],
       [0x91, 0x35, 4],
       [0x92, 0x35, 1],
@@ -99,6 +101,6 @@ describe('useApc40LedFeedback', () => {
       [0x90, 0x52, 1],
       [0x90, 0x53, 6],
       [0x90, 0x5d, 4],
-    ]));
+    ].forEach((message) => expect(messages).toContainEqual(message));
   });
 });

@@ -10,6 +10,7 @@ import {
   isRoliSysExEnabled,
   registerVirtualRoliDevice,
   unregisterVirtualRoliDevice,
+  reconnectRoliLightpad,
   ROLI_GRID_COLS,
   ROLI_GRID_ROWS,
   type RoliDeviceInfo,
@@ -135,6 +136,11 @@ export const RoliDebugPanel: React.FC = () => {
     setDevices(getRoliDevices());
   }, [pairedBle]);
 
+  const handleReconnect = useCallback(() => {
+    reconnectRoliLightpad();
+    setDevices(getRoliDevices());
+  }, []);
+
   const sysexOk = isRoliSysExEnabled();
   const webBluetoothAvailable = typeof navigator !== 'undefined' && Boolean((navigator as any).bluetooth);
 
@@ -166,6 +172,23 @@ export const RoliDebugPanel: React.FC = () => {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.4rem 0.6rem', flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          onClick={handleReconnect}
+          title="Clear stale ROLI topology state, re-scan Web MIDI ports, and re-run the joined-block handshake"
+          style={{
+            padding: '0.35rem 0.7rem',
+            background: 'rgba(34,197,94,0.18)',
+            border: '1px solid rgba(34,197,94,0.45)',
+            color: '#a7f3d0',
+            borderRadius: 4,
+            cursor: 'pointer',
+            fontSize: '0.85rem',
+            fontWeight: 600,
+          }}
+        >
+          Reconnect / Rescan
+        </button>
         <button
           type="button"
           onClick={handlePairBluetooth}

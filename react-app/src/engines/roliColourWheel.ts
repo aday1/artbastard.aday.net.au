@@ -1,8 +1,10 @@
 /**
- * ROLI second-block colour-wheel engine.
+ * ROLI second-block colour-strip engine.
  *
- * Renders a static HSV colour wheel onto a 15x15 ROLI Lightpad and converts
- * normalised touch (0..1, 0..1) into a hue/saturation/value triple.
+ * Renders a broad RGBW strip onto a 15x15 ROLI Lightpad and converts
+ * normalised touch (0..1, 0..1) into an RGB triple. This works better than a
+ * tiny wheel on the physical BLOCKS LEDs: X selects colour across chunky
+ * red/yellow/green/cyan/blue/magenta/white regions, Y selects brightness.
  *
  * Pure module — no React, no DMX. Pair with `useRoliLightpad({ role:
  * 'colour-wheel' })` and a small UI component that owns the DMX writes.
@@ -32,67 +34,73 @@ export interface ColourWheelTouch {
   b: number;
   /** `#rrggbb`. */
   hex: string;
-  /** True when the touch fell inside the wheel disc; false in the corners. */
+  /** True for every touch in this rectangular strip. Kept for API compatibility. */
   inDisc: boolean;
+  /** Normalized strip position, 0..1 left-to-right. */
+  x: number;
+  /** Normalized brightness row, 0..1 top-to-bottom. */
+  y: number;
 }
 
 const clamp01 = (n: number) => (n < 0 ? 0 : n > 1 ? 1 : n);
-
-function hsvToRgb(h: number, s: number, v: number): [number, number, number] {
-  const c = v * s;
-  const hh = ((h % 360) + 360) % 360;
-  const x = c * (1 - Math.abs(((hh / 60) % 2) - 1));
-  const m = v - c;
-  let r = 0;
-  let g = 0;
-  let b = 0;
-  if (hh < 60) { r = c; g = x; b = 0; }
-  else if (hh < 120) { r = x; g = c; b = 0; }
-  else if (hh < 180) { r = 0; g = c; b = x; }
-  else if (hh < 240) { r = 0; g = x; b = c; }
-  else if (hh < 300) { r = x; g = 0; b = c; }
-  else { r = c; g = 0; b = x; }
-  return [
-    Math.round((r + m) * 255),
-    Math.round((g + m) * 255),
-    Math.round((b + m) * 255),
-  ];
-}
 
 function toHex(r: number, g: number, b: number): string {
   const h = (n: number) => n.toString(16).padStart(2, '0');
   return `#${h(r)}${h(g)}${h(b)}`;
 }
 
-/** Build a 15x15 RGBA buffer rendering a hue/saturation wheel. */
+const STRIP_STOPS: Array<{ at: number; h: number; rgb: [number, number, number] }> = [
+  { at: 0.00, h: 0, rgb: [255, 0, 0] },
+  { at: 0.16, h: 45, rgb: [255, 180, 0] },
+  { at: 0.32, h: 120, rgb: [0, 255, 0] },
+  { at: 0.48, h: 180, rgb: [0, 220, 255] },
+  { at: 0.64, h: 240, rgb: [0, 70, 255] },
+  { at: 0.80, h: 300, rgb: [255, 0, 255] },
+  { at: 0.92, h: 0, rgb: [255, 255, 255] },
+  { at: 1.00, h: 0, rgb: [255, 255, 255] },
+];
+
+function stripColorAt(x: number): { h: number; s: number; rgb: [number, number, number] } {
+  const nx = clamp01(x);
+  for (let i = 1; i < STRIP_STOPS.length; i++) {
+    const a = STRIP_STOPS[i - 1];
+    const b = STRIP_STOPS[i];
+    if (nx <= b.at) {
+      const span = Math.max(0.0001, b.at - a.at);
+      const t = clamp01((nx - a.at) / span);
+      const rgb: [number, number, number] = [
+        Math.round(a.rgb[0] + (b.rgb[0] - a.rgb[0]) * t),
+        Math.round(a.rgb[1] + (b.rgb[1] - a.rgb[1]) * t),
+        Math.round(a.rgb[2] + (b.rgb[2] - a.rgb[2]) * t),
+      ];
+      const whiteish = rgb[0] > 220 && rgb[1] > 220 && rgb[2] > 220;
+      return { h: whiteish ? 0 : a.h + (b.h - a.h) * t, s: whiteish ? 0 : 1, rgb };
+    }
+  }
+  return { h: 0, s: 0, rgb: [255, 255, 255] };
+}
+
+function applyBrightness(rgb: [number, number, number], brightness: number): [number, number, number] {
+  const v = clamp01(brightness);
+  return [
+    Math.round(rgb[0] * v),
+    Math.round(rgb[1] * v),
+    Math.round(rgb[2] * v),
+  ];
+}
+
+/** Build a 15x15 RGBA buffer rendering the RGBW strip. */
 export function composeColourWheelFrame(opts?: {
   cursor?: { x: number; y: number } | null;
   cursorColor?: LedRgba;
 }): Uint8ClampedArray {
   const out = new Uint8ClampedArray(PIXEL_COUNT * 4);
-  const cx = (ROLI_GRID_COLS - 1) / 2;
-  const cy = (ROLI_GRID_ROWS - 1) / 2;
-  const radius = Math.min(cx, cy);
   for (let y = 0; y < ROLI_GRID_ROWS; y++) {
     for (let x = 0; x < ROLI_GRID_COLS; x++) {
-      const dx = x - cx;
-      const dy = y - cy;
-      const dist = Math.sqrt(dx * dx + dy * dy);
       const idx = (y * ROLI_GRID_COLS + x) * 4;
-      if (dist > radius + 0.5) {
-        // Outside the disc: dim cool background so corners aren't black holes.
-        out[idx] = 0;
-        out[idx + 1] = 0;
-        out[idx + 2] = 0;
-        out[idx + 3] = 0;
-        continue;
-      }
-      // Angle: 0° at +x, increasing CCW. Map so hue=0 (red) at the top.
-      const angle = Math.atan2(-dy, dx); // -PI..PI
-      const hue = ((angle * 180) / Math.PI + 360 + 90) % 360;
-      const sat = clamp01(dist / radius);
-      const val = 1;
-      const [r, g, b] = hsvToRgb(hue, sat, val);
+      const strip = stripColorAt(x / (ROLI_GRID_COLS - 1));
+      const brightness = 1 - y / (ROLI_GRID_ROWS - 1);
+      const [r, g, b] = applyBrightness(strip.rgb, Math.max(0.06, brightness));
       out[idx] = r;
       out[idx + 1] = g;
       out[idx + 2] = b;
@@ -105,7 +113,7 @@ export function composeColourWheelFrame(opts?: {
   return out;
 }
 
-/** Paint the colour wheel onto the colour-wheel-role device. One-shot. */
+/** Paint the colour strip onto the colour-wheel-role device. One-shot. */
 export function paintColourWheel(opts?: {
   cursor?: { x: number; y: number } | null;
   cursorColor?: LedRgba;
@@ -115,27 +123,24 @@ export function paintColourWheel(opts?: {
 
 /**
  * Convert a ROLI touch (x,y normalised 0..1, y top-origin) into a colour from
- * the wheel. Touches outside the wheel disc are reported with `inDisc=false`
- * but still resolved to the nearest edge colour.
+ * the strip. X is colour, Y is brightness.
  */
 export function colourFromTouch(x: number, y: number, pressure = 1): ColourWheelTouch {
-  const nx = clamp01(x) * 2 - 1; // -1..1
-  const ny = clamp01(y) * 2 - 1; // -1..1 (top=-1)
-  const dist = Math.sqrt(nx * nx + ny * ny);
-  // Touch y is top-origin, so flip dy to mirror composeColourWheelFrame.
-  const angle = Math.atan2(-ny, nx);
-  const hue = ((angle * 180) / Math.PI + 360 + 90) % 360;
-  const sat = clamp01(dist);
-  const val = clamp01(pressure);
-  const [r, g, b] = hsvToRgb(hue, sat, val);
+  const nx = clamp01(x);
+  const ny = clamp01(y);
+  const strip = stripColorAt(nx);
+  const val = clamp01((1 - ny) * pressure);
+  const [r, g, b] = applyBrightness(strip.rgb, val);
   return {
-    h: hue,
-    s: sat,
+    h: strip.h,
+    s: strip.s,
     v: val,
     r,
     g,
     b,
     hex: toHex(r, g, b),
-    inDisc: dist <= 1,
+    inDisc: true,
+    x: nx,
+    y: ny,
   };
 }

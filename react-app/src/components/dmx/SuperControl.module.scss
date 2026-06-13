@@ -1503,7 +1503,7 @@
   }
 }
 
-// Color wheel — metallic housing matches thebabydino range sliders (JovQwE)
+// RGBW strip — matches the 15x15 ROLI colour surface.
 $color-wheel-checker: repeating-conic-gradient(
     hsla(0, 0%, 0%, 0.235) 0% 25%,
     transparent 0% 50%
@@ -1512,11 +1512,12 @@ $color-wheel-checker: repeating-conic-gradient(
 
 .colorWheelHousing {
   width: min(100%, 340px);
-  aspect-ratio: 1;
+  aspect-ratio: 2.35;
   min-width: 228px;
   max-width: 380px;
-  padding: 0.55em;
-  border-radius: 50%;
+  min-height: 112px;
+  padding: 0.45em;
+  border-radius: 10px;
   box-shadow:
     0 1px 1px hsla(0, 0%, 100%, 0.1),
     inset 0 1px 0 2px #0d0d0d,
@@ -1532,22 +1533,17 @@ $color-wheel-checker: repeating-conic-gradient(
 .colorWheel {
   width: 100%;
   height: 100%;
-  border-radius: 50%;
-  background: conic-gradient(
-    from 0deg,
-    #ff0000 0deg,
-    #ff8000 30deg,
-    #ffff00 60deg,
-    #80ff00 90deg,
-    #00ff00 120deg,
-    #00ff80 150deg,
-    #00ffff 180deg,
-    #0080ff 210deg,
-    #0000ff 240deg,
-    #8000ff 270deg,
-    #ff00ff 300deg,
-    #ff0080 330deg,
-    #ff0000 360deg
+  border-radius: 7px;
+  background: linear-gradient(
+    90deg,
+    #ff0000 0%,
+    #ffb400 16%,
+    #00ff00 32%,
+    #00dcff 48%,
+    #0046ff 64%,
+    #ff00ff 80%,
+    #ffffff 92%,
+    #ffffff 100%
   );
   position: relative;
   box-shadow: inset 0 0 0 2px #000;
@@ -1555,14 +1551,16 @@ $color-wheel-checker: repeating-conic-gradient(
   .colorSaturation {
     width: 100%;
     height: 100%;
-    border-radius: 50%;
-    background: radial-gradient(circle, transparent 0%, rgba(255, 255, 255, 0.85) 100%);
+    border-radius: 7px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0) 34%, rgba(0, 0, 0, 0.92) 100%),
+      repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.13) 0 1px, transparent 1px calc(100% / 15));
     position: relative;
   }
 
   .colorHandle {
-    width: 1.35em;
-    height: 1.35em;
+    width: 1.2em;
+    height: 1.2em;
     border: solid 2px transparent;
     border-radius: 50%;
     position: absolute;

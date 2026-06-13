@@ -12,6 +12,7 @@
 
 import { LED, APC40_GRID } from '../midi/generated';
 import { safeMidiSend } from '../midi/midiOutputGuard';
+import { notifyApc40LedDirty } from '../midi/apc40LedRuntime';
 
 const ROWS = APC40_GRID.rows; // 5
 const COLS = APC40_GRID.cols; // 8
@@ -606,6 +607,7 @@ function startPatternInternal(
       activeInvalidate = null;
       activeRunner = null;
       opts.onStop?.();
+      notifyApc40LedDirty('demoscene-stop');
     },
   };
   return true;

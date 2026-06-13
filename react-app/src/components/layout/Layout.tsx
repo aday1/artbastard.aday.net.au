@@ -33,7 +33,7 @@ import {
   describeDetectedMidiController,
   dispatchConnectedMidiController,
 } from '../../midi/detectedMidiController'
-import { connectRoliLightpad, getRoliStatus } from '../../engines/roliLightpad'
+import { connectRoliLightpad, getRoliDevices, getRoliStatus, reconnectRoliLightpad } from '../../engines/roliLightpad'
 
 interface LayoutProps {
   children?: React.ReactNode
@@ -59,20 +59,37 @@ const LayoutBody: React.FC<LayoutProps> = ({ children }) => {
   // layout level, but useRoliLightpad() only mounts inside SuperControl. Without
   // this, clicking "Connect ROLI" from any other page does nothing.
   useEffect(() => {
-    const tryConnect = () => {
+    const finishConnect = (ok: boolean) => {
+      const status = getRoliStatus();
+      if (!ok && !status.connected) return;
+      const controller = describeDetectedMidiController(
+        status.inputName ?? status.outputName ?? 'ROLI Lightpad BLOCK',
+        'browser',
+      );
+      if (controller) dispatchConnectedMidiController(controller);
+    };
+
+    const isRoliStateStale = () => {
+      const devices = getRoliDevices();
+      return devices.length === 0 || devices.some((d) => !d.handshakeDone || d.lastError);
+    };
+
+    const tryConnect = (forceRescan = false) => {
+      if (forceRescan || isRoliStateStale()) {
+        const ok = reconnectRoliLightpad();
+        if (ok) {
+          finishConnect(ok);
+          return;
+        }
+      }
       connectRoliLightpad().then((ok) => {
-        const status = getRoliStatus();
-        if (!ok && !status.connected) return;
-        const controller = describeDetectedMidiController(
-          status.inputName ?? status.outputName ?? 'ROLI Lightpad BLOCK',
-          'browser',
-        );
-        if (controller) dispatchConnectedMidiController(controller);
+        finishConnect(ok);
       });
     };
-    window.addEventListener(MIDI_CONNECT_ROLI_EVENT, tryConnect);
+    const handleConnectRoli = () => tryConnect(true);
+    window.addEventListener(MIDI_CONNECT_ROLI_EVENT, handleConnectRoli);
     if (localStorage.getItem(ROLI_LIGHTPAD_CONNECT_APPROVED_KEY) === 'true') tryConnect();
-    return () => window.removeEventListener(MIDI_CONNECT_ROLI_EVENT, tryConnect);
+    return () => window.removeEventListener(MIDI_CONNECT_ROLI_EVENT, handleConnectRoli);
   }, []);
 
   // If a drawer closed without cleanup, body scroll can stay locked.
@@ -109,6 +126,19 @@ const LayoutBody: React.FC<LayoutProps> = ({ children }) => {
       return () => clearTimeout(timeoutId);
     }
   }, [socket, connected, syncAllLocalStorage]);
+
+  useEffect(() => {
+    if (!connected) return;
+    if (localStorage.getItem(ROLI_LIGHTPAD_CONNECT_APPROVED_KEY) !== 'true') return;
+    const timeoutId = window.setTimeout(() => {
+      const devices = getRoliDevices();
+      const stale = devices.length === 0 || devices.some((d) => !d.handshakeDone || d.lastError);
+      if (stale && !reconnectRoliLightpad()) {
+        void connectRoliLightpad();
+      }
+    }, 500);
+    return () => window.clearTimeout(timeoutId);
+  }, [connected]);
   
   // Fetch network IP address
   useEffect(() => {

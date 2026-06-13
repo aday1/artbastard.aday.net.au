@@ -19,7 +19,10 @@ import {
 } from '../ui/controls';
 import { PATH_SLOT_IDS, PathSlotId, PathSlotSummary, ArtbastardXYPadHandle } from '../ui/controls/ArtbastardXYPad';
 import { useRoliLightpad } from '../../hooks/useRoliLightpad';
-import { RoliColourWheel } from './RoliColourWheel';
+import { RoliColourWheel, ROLI_RGB_STRIP_CHANGE_EVENT } from './RoliColourWheel';
+import { colourFromTouch } from '../../engines/roliColourWheel';
+import { ROLI_GRID_COLS, ROLI_GRID_ROWS } from '../../engines/roliLightpad';
+import { paintApc40Crosshair } from '../../engines/apc40XyCrosshair';
 import { SkeuoButton } from '../ui/SkeuoButton';
 import { SelectedChannelsFaderStrip } from './SelectedChannelsFaderStrip';
 import { SuperControlMidiBindingsBar } from './SuperControlMidiBindingsBar';
@@ -347,7 +350,95 @@ function rgbToHsv(r: number, g: number, b: number) {
     h *= 60;
     if (h < 0) h += 360;
   }
-  return { h, s };
+  return { h, s, v: max * 100 };
+}
+
+const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
+
+function mapRoliPanTiltLedPoint(point: { x: number; y: number }) {
+  return {
+    x: clamp01(point.x),
+    y: clamp01(point.y),
+  };
+}
+
+type RoliPanTiltFrameMode = 'live' | 'ghost' | 'health';
+
+function buildRoliPanTiltFrame(
+  cursor: { x: number; y: number },
+  path: Array<{ x: number; y: number }>,
+  mode: RoliPanTiltFrameMode = 'live',
+): Uint8ClampedArray {
+  const frame = new Uint8ClampedArray(ROLI_GRID_COLS * ROLI_GRID_ROWS * 4);
+  const isGhost = mode === 'ghost';
+  const isHealth = mode === 'health';
+
+  for (let y = 0; y < ROLI_GRID_ROWS; y++) {
+    for (let x = 0; x < ROLI_GRID_COLS; x++) {
+      const idx = (y * ROLI_GRID_COLS + x) * 4;
+      frame[idx] = 0;
+      frame[idx + 1] = isGhost ? 150 : 210;
+      frame[idx + 2] = isGhost ? 210 : 255;
+      frame[idx + 3] = 255;
+    }
+  }
+
+  const toCell = (point: { x: number; y: number }) => ({
+    x: Math.round(clamp01(point.x) * (ROLI_GRID_COLS - 1)),
+    y: Math.round(clamp01(point.y) * (ROLI_GRID_ROWS - 1)),
+  });
+  const put = (x: number, y: number, rgba: [number, number, number, number]) => {
+    if (x < 0 || y < 0 || x >= ROLI_GRID_COLS || y >= ROLI_GRID_ROWS) return;
+    const idx = (y * ROLI_GRID_COLS + x) * 4;
+    frame[idx] = Math.max(frame[idx], rgba[0]);
+    frame[idx + 1] = Math.max(frame[idx + 1], rgba[1]);
+    frame[idx + 2] = Math.max(frame[idx + 2], rgba[2]);
+    frame[idx + 3] = Math.max(frame[idx + 3], rgba[3]);
+  };
+  const drawLine = (from: { x: number; y: number }, to: { x: number; y: number }, color: [number, number, number, number]) => {
+    let { x: x0, y: y0 } = toCell(from);
+    const { x: x1, y: y1 } = toCell(to);
+    const dx = Math.abs(x1 - x0);
+    const sx = x0 < x1 ? 1 : -1;
+    const dy = -Math.abs(y1 - y0);
+    const sy = y0 < y1 ? 1 : -1;
+    let err = dx + dy;
+    while (true) {
+      put(x0, y0, color);
+      if (x0 === x1 && y0 === y1) break;
+      const e2 = 2 * err;
+      if (e2 >= dy) { err += dy; x0 += sx; }
+      if (e2 <= dx) { err += dx; y0 += sy; }
+    }
+  };
+
+  const trail = path.slice(-(isHealth ? 18 : isGhost ? 36 : 24)).map(mapRoliPanTiltLedPoint);
+  const trailColor: [number, number, number, number] = isGhost ? [255, 70, 0, 255] : [255, 40, 0, 255];
+  for (let i = 1; i < trail.length; i++) drawLine(trail[i - 1], trail[i], trailColor);
+  if (trail.length === 1) {
+    const only = toCell(trail[0]);
+    put(only.x, only.y, trailColor);
+  }
+
+  const cell = toCell(mapRoliPanTiltLedPoint(cursor));
+  const reticleRadius = isHealth ? 5 : 4;
+  const reticleColor: [number, number, number, number] = isGhost ? [0, 0, 80, 255] : [0, 0, 0, 255];
+  for (let offset = -reticleRadius; offset <= reticleRadius; offset++) {
+    put(cell.x + offset, cell.y, reticleColor);
+    put(cell.x, cell.y + offset, reticleColor);
+  }
+
+  const cursorColor: [number, number, number, number] = [255, 255, 255, 255];
+  const haloColor: [number, number, number, number] = [255, 220, 0, 255];
+  for (let dy = -3; dy <= 3; dy++) {
+    for (let dx = -3; dx <= 3; dx++) {
+      const distance = Math.abs(dx) + Math.abs(dy);
+      if (distance > 3) continue;
+      put(cell.x + dx, cell.y + dy, distance <= 2 ? cursorColor : haloColor);
+    }
+  }
+
+  return frame;
 }
 
 const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferTouchLayout = false }) => {
@@ -938,6 +1029,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
   // Color wheel state
   const [colorHue, setColorHue] = useState(0);
   const [colorSaturation, setColorSaturation] = useState(100);
+  const [colorStripX, setColorStripX] = useState(0);
   const colorWheelRef = useRef<HTMLDivElement>(null);
   const [isDraggingColor, setIsDraggingColor] = useState(false);
   // MIDI Learn state
@@ -1317,6 +1409,20 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     });
   };
 
+  useEffect(() => {
+    const handleRoliRgbStripChange = (event: Event) => {
+      const detail = (event as CustomEvent<{ r: number; g: number; b: number }>).detail;
+      if (!detail) return;
+      setRed(detail.r);
+      setGreen(detail.g);
+      setBlue(detail.b);
+      updateRGB(detail.r, detail.g, detail.b);
+    };
+
+    window.addEventListener(ROLI_RGB_STRIP_CHANGE_EVENT, handleRoliRgbStripChange);
+    return () => window.removeEventListener(ROLI_RGB_STRIP_CHANGE_EVENT, handleRoliRgbStripChange);
+  }, [updateRGB]);
+
   // --- Roli Lightpad: touch in + LED feedback ---
   // Use refs so the touch handler always sees the latest store values without
   // re-subscribing on every keystroke.
@@ -1366,6 +1472,34 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
   // strokes / dropped touch-end events.
   const trailRef = useRef<Array<{ x: number; y: number }>>([]);
   const [liveTouchVersion, setLiveTouchVersion] = useState(0);
+  const paintRoliPanTiltFrame = useCallback(
+    (
+      cursor: { x: number; y: number },
+      path: Array<{ x: number; y: number }>,
+      mode: 'live' | 'ghost' | 'health' = 'live',
+      deviceId?: string,
+    ) => {
+      return roli.sendRawFrame(buildRoliPanTiltFrame(cursor, path, mode), deviceId, true);
+    },
+    [roli.sendRawFrame]
+  );
+
+  useEffect(() => {
+    if (!roli.handshakeDone) return;
+    const paintHealth = () => {
+      if (liveTouchRef.current) return;
+      const cursor = {
+        x: Math.max(0, Math.min(1, panTiltXY.x / 100)),
+        y: Math.max(0, Math.min(1, panTiltXY.y / 100)),
+      };
+      const path = trailRef.current.length > 0 ? trailRef.current : [cursor];
+      paintRoliPanTiltFrame(cursor, path, 'health');
+    };
+    paintHealth();
+    const timer = window.setInterval(paintHealth, 2200);
+    return () => window.clearInterval(timer);
+  }, [roli.handshakeDone, panTiltXY.x, panTiltXY.y, paintRoliPanTiltFrame]);
+
   useEffect(() => {
     roli.onTouch((ev) => {
       // Always reflect the touch on the device + canvas, even without a
@@ -1383,26 +1517,12 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         }
       }
 
-      // LED feedback: paint *only* under the finger. On touch-end blank the
-      // pad immediately. We push LED frames directly from the touch handler
-      // (NOT a useEffect) so autopilot DMX polling can't redraw the pad while
-      // the user isn't touching it.
+      // LED feedback: paint a readable crosshair + trail. On touch-end, leave
+      // the completed stroke visible as a ghost trail instead of blanking.
       if (ev.phase === 'end') {
-        roli.clearFrame();
-        trailRef.current = [];
+        paintRoliPanTiltFrame({ x: ev.x, y: ev.y }, trailRef.current, 'ghost', ev.deviceId);
       } else {
-        const xyCanvas = xyPadHandleRef.current?.getCanvas?.() ?? null;
-        if (xyCanvas) {
-          roli.sendCanvasFrame(xyCanvas, {
-            cursor: { x: ev.x, y: ev.y },
-            path: trailRef.current,
-          });
-        } else {
-          roli.sendFrame({
-            cursor: { x: ev.x, y: ev.y },
-            path: trailRef.current,
-          });
-        }
+        paintRoliPanTiltFrame({ x: ev.x, y: ev.y }, trailRef.current, 'live', ev.deviceId);
       }
 
       // Route into the XY pad's path state so the canvas draws the touch
@@ -1451,10 +1571,11 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
       roliApplyRef.current.setPanValue(p);
       roliApplyRef.current.setTiltValue(t);
       roliApplyRef.current.setPanTiltXY({ x: (p / 255) * 100, y: (1 - t / 255) * 100 });
+      paintApc40Crosshair({ x: p / 255, y: 1 - t / 255, source: 'roli' });
       roliApplyRef.current.apply('pan', p);
       roliApplyRef.current.apply('tilt', t);
     });
-  }, [roli]);
+  }, [roli.onTouch, paintRoliPanTiltFrame]);
 
   // Ensure the pad is blanked on unmount / route-away so it doesn't keep
   // showing the last touch trail when the user navigates elsewhere.
@@ -1528,20 +1649,15 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
       if (!colorWheelRef.current) return;
 
       const rect = colorWheelRef.current.getBoundingClientRect();
-      const centerX = rect.width / 2;
-      const centerY = rect.height / 2;
-      const x = clientX - rect.left - centerX;
-      const y = clientY - rect.top - centerY;
+      const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      const y = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
+      const colour = colourFromTouch(x, y, 1);
 
-      const angle = Math.atan2(y, x) * (180 / Math.PI);
-      const hue = (angle + 360) % 360;
-      const distance = Math.min(Math.sqrt(x * x + y * y), centerX);
-      const saturation = (distance / centerX) * 100;
+      setColorHue(colour.h);
+      setColorSaturation(colour.v * 100);
+      setColorStripX(x * 100);
 
-      setColorHue(hue);
-      setColorSaturation(saturation);
-
-      const { r, g, b } = hsvToRgb(hue, saturation, 100);
+      const { r, g, b } = colour;
       setRed(r);
       setGreen(g);
       setBlue(b);
@@ -1577,9 +1693,10 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
 
   useEffect(() => {
     if (isDraggingColor) return;
-    const { h, s } = rgbToHsv(red, green, blue);
+    const { h, s, v } = rgbToHsv(red, green, blue);
     setColorHue(h);
-    setColorSaturation(s);
+    setColorSaturation(v);
+    setColorStripX(s < 5 && v > 0 ? 92 : Math.max(0, Math.min(80, (h / 360) * 80)));
   }, [red, green, blue, isDraggingColor]);
 
   const stopMidiLearn = useCallback(() => {
@@ -3109,6 +3226,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                   setPanValue(p);
                   setTiltValue(t);
                   setPanTiltXY({ x: (p / 255) * 100, y: (1 - t / 255) * 100 });
+                  paintApc40Crosshair({ x: p / 255, y: 1 - t / 255, source: 'supercontrol' });
                   applyControl('pan', p);
                   applyControl('tilt', t);
                 }}
@@ -3151,6 +3269,21 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                 >
                   <LucideIcon name="Target" />
                   Reset to Center
+                </button>
+                <button
+                  className={styles.centerResetBtn}
+                  onClick={() => {
+                    const cursor = {
+                      x: Math.max(0, Math.min(1, panTiltXY.x / 100)),
+                      y: Math.max(0, Math.min(1, panTiltXY.y / 100)),
+                    };
+                    paintRoliPanTiltFrame(cursor, trailRef.current.length > 0 ? trailRef.current : [cursor], 'health');
+                  }}
+                  disabled={!roli.handshakeDone}
+                  title="Force repaint the PAN/TILT ROLI crosshair and ghost trail"
+                >
+                  <LucideIcon name="RefreshCw" />
+                  Repaint ROLI
                 </button>
                 <button
                   className={styles.centerResetBtn}
@@ -3201,8 +3334,8 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                   <div
                     className={styles.colorHandle}
                     style={{
-                      left: `${50 + (colorSaturation / 100) * Math.cos((colorHue * Math.PI) / 180) * 50}%`,
-                      top: `${50 + (colorSaturation / 100) * Math.sin((colorHue * Math.PI) / 180) * 50}%`
+                      left: `${Math.max(0, Math.min(100, colorStripX))}%`,
+                      top: `${Math.max(0, Math.min(100, 100 - colorSaturation))}%`
                     }}
                   />
                 </div>

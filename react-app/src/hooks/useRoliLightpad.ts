@@ -10,6 +10,7 @@ import {
   disconnectRoliLightpad,
   getRoliDevices,
   getRoliStatus,
+  reconnectRoliLightpad,
   sendLedFrame,
   setOnDeviceChange,
   setOnHandshakeDone,
@@ -41,15 +42,15 @@ export interface UseRoliLightpadResult {
   devices: RoliDeviceInfo[];
   /** Subscribe to touch events from the matched block. Replaces prior handler. */
   onTouch: (cb: RoliTouchCallback | null) => void;
-  /** Build + send a 15x15 LED frame to the matched block (throttled to ~25Hz). */
-  sendFrame: (opts: Parameters<typeof composeLedFrame>[0]) => boolean;
+  /** Build + send a 15x15 LED frame to the matched block, or an exact device id. */
+  sendFrame: (opts: Parameters<typeof composeLedFrame>[0], deviceId?: string) => boolean;
   /** Downsample a screen canvas to 15x15 and send it to the matched block. */
   sendCanvasFrame: (
     canvas: HTMLCanvasElement | null,
     opts?: Parameters<typeof composeFrameFromCanvas>[1]
   ) => boolean;
   /** Send a raw RGBA 15x15 buffer (typed) to the matched block. */
-  sendRawFrame: (pixels: Uint8ClampedArray | Uint8Array) => boolean;
+  sendRawFrame: (pixels: Uint8ClampedArray | Uint8Array, deviceId?: string, forceFullFrame?: boolean) => boolean;
   /** Blank the matched block's LEDs immediately (bypasses throttle). */
   clearFrame: () => boolean;
 }
@@ -66,6 +67,7 @@ export function useRoliLightpad(options: UseRoliLightpadOptions = {}): UseRoliLi
   const role: RoliRole = options.role ?? 'primary';
   const [devices, setDevices] = useState<RoliDeviceInfo[]>(() => getRoliDevices());
   const touchRef = useRef<RoliTouchCallback | null>(null);
+  const lastRescanAtRef = useRef(0);
 
   const matched = useMemo(
     () => devices.find((d) => d.role === role) ?? null,
@@ -108,21 +110,48 @@ export function useRoliLightpad(options: UseRoliLightpadOptions = {}): UseRoliLi
     window.addEventListener('roli-device-change', handleDeviceChange);
     window.addEventListener('roli-touch', handleTouchEvent);
 
-    const connectApprovedRoli = () => {
+    const isRoliStateStale = () => {
+      const current = getRoliDevices();
+      return current.length === 0 || current.some((d) => !d.handshakeDone || d.lastError);
+    };
+
+    const finishConnect = () => {
+      if (cancelled) return;
+      setDevices(getRoliDevices());
+      const status = getRoliStatus();
+      const controller = describeDetectedMidiController(
+        status.inputName ?? status.outputName ?? 'ROLI Lightpad BLOCK',
+        'browser'
+      );
+      if (controller && status.connected) dispatchConnectedMidiController(controller);
+    };
+
+    const connectApprovedRoli = (forceRescan = false) => {
+      if (forceRescan || isRoliStateStale()) {
+        const now = Date.now();
+        if (now - lastRescanAtRef.current > 1000) {
+          lastRescanAtRef.current = now;
+          if (reconnectRoliLightpad()) {
+            finishConnect();
+            return;
+          }
+        }
+      }
       connectRoliLightpad().then(() => {
-        if (cancelled) return;
-        setDevices(getRoliDevices());
-        const status = getRoliStatus();
-        const controller = describeDetectedMidiController(
-          status.inputName ?? status.outputName ?? 'ROLI Lightpad BLOCK',
-          'browser'
-        );
-        if (controller && status.connected) dispatchConnectedMidiController(controller);
+        finishConnect();
       });
     };
 
-    const handleConnectRoli = () => connectApprovedRoli();
+    const handleConnectRoli = () => connectApprovedRoli(true);
+    const handleMaybeStaleBrowserResume = () => {
+      if (document.visibilityState === 'hidden') return;
+      if (isRoliStateStale()) connectApprovedRoli(true);
+    };
     window.addEventListener(MIDI_CONNECT_ROLI_EVENT, handleConnectRoli);
+    window.addEventListener('focus', handleMaybeStaleBrowserResume);
+    window.addEventListener('online', handleMaybeStaleBrowserResume);
+    window.addEventListener('pageshow', handleMaybeStaleBrowserResume);
+    document.addEventListener('visibilitychange', handleMaybeStaleBrowserResume);
     // Auto-connect on mount. SysEx is now granted by useGlobalBrowserMidi at
     // app load and the MIDIAccess object is shared via setRoliMidiAccess, so
     // no separate user approval is needed for the engine to enumerate ROLI
@@ -134,6 +163,10 @@ export function useRoliLightpad(options: UseRoliLightpadOptions = {}): UseRoliLi
       window.removeEventListener('roli-device-change', handleDeviceChange);
       window.removeEventListener('roli-touch', handleTouchEvent);
       window.removeEventListener(MIDI_CONNECT_ROLI_EVENT, handleConnectRoli);
+      window.removeEventListener('focus', handleMaybeStaleBrowserResume);
+      window.removeEventListener('online', handleMaybeStaleBrowserResume);
+      window.removeEventListener('pageshow', handleMaybeStaleBrowserResume);
+      document.removeEventListener('visibilitychange', handleMaybeStaleBrowserResume);
       // Leave engine-level callbacks installed — other mounts may still rely
       // on them. Full teardown happens via disconnectRoliLightpad().
     };
@@ -144,8 +177,8 @@ export function useRoliLightpad(options: UseRoliLightpadOptions = {}): UseRoliLi
   }, []);
 
   const sendFrame = useCallback(
-    (opts: Parameters<typeof composeLedFrame>[0]) => {
-      return sendLedFrame(composeLedFrame(opts), { role });
+    (opts: Parameters<typeof composeLedFrame>[0], deviceId?: string) => {
+      return sendLedFrame(composeLedFrame(opts), deviceId ? { deviceId } : { role });
     },
     [role]
   );
@@ -158,7 +191,10 @@ export function useRoliLightpad(options: UseRoliLightpadOptions = {}): UseRoliLi
   );
 
   const sendRawFrame = useCallback(
-    (pixels: Uint8ClampedArray | Uint8Array) => sendLedFrame(pixels, { role }),
+    (pixels: Uint8ClampedArray | Uint8Array, deviceId?: string, forceFullFrame = false) => sendLedFrame(
+      pixels,
+      deviceId ? { deviceId, forceFullFrame } : { role, forceFullFrame }
+    ),
     [role]
   );
 

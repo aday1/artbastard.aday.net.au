@@ -1,87 +1,80 @@
 /**
- * APC40 flourish overlays — short LED animations fired on meaningful app
- * events (fixture selection, crossfade, blackout, etc.). Designed to run in
- * parallel with the demoscene and the regular `useApc40LedFeedback` paint
- * loop. After a flourish completes it calls `invalidateApc40DemoDiff()` so
- * the demoscene re-asserts its pixels on the next tick.
- *
- * Pure module — caller invokes `triggerFlourish(kind)`; the engine resolves
- * APC40 outputs lazily and schedules its own intervals.
+ * APC40 flourish overlays: short, deterministic LED animations fired on
+ * meaningful app events. Each flourish kind resolves through persisted
+ * settings so operators get a consistent visual language by default, with
+ * optional curated randomness.
  */
 
-import { LED, APC40_GRID } from '../midi/generated';
-import { safeMidiSend } from '../midi/midiOutputGuard';
-import { invalidateApc40DemoDiff } from './apc40Demoscene';
+import { LED } from '../midi/generated';
+import {
+  APC40_ACTIVATOR_NOTE,
+  APC40_CLIP_ROW_BASE,
+  APC40_GRID_COLS,
+  APC40_GRID_ROWS,
+  getApc40Outputs,
+  notifyApc40LedDirty,
+  sendApc40NoteOn,
+} from '../midi/apc40LedRuntime';
+import {
+  Apc40FlourishKind,
+  resolveApc40FlourishPattern,
+} from './apc40FlourishSettings';
+import {
+  DemoPatternId,
+  getDemoPattern,
+  invalidateApc40DemoDiff,
+  isApc40DemoRunning,
+} from './apc40Demoscene';
 
-const ROWS = APC40_GRID.rows; // 5
-const COLS = APC40_GRID.cols; // 8
-const CLIP_ROW_BASE = 0x35;
-const ACTIVATOR_NOTE = 0x32;
-
-const APC40_NAME_RE = /\b(apc\s?40|apc40)\b/i;
-const isApc40Port = (p: WebMidi.MIDIPort) =>
-  APC40_NAME_RE.test(p.name || '') || APC40_NAME_RE.test(p.manufacturer || '');
-
-function sendNoteOn(out: WebMidi.MIDIOutput, channel: number, note: number, velocity: number) {
-  safeMidiSend(
-    out,
-    [0x90 | (channel & 0x0f), note & 0x7f, velocity & 0x7f],
-    'apc40-flourish',
-  );
-}
-
-async function getApcOutputs(): Promise<WebMidi.MIDIOutput[]> {
-  if (typeof navigator === 'undefined' || !navigator.requestMIDIAccess) return [];
-  try {
-    const access = await navigator.requestMIDIAccess({ sysex: false });
-    return Array.from(access.outputs.values()).filter(isApc40Port);
-  } catch {
-    return [];
-  }
-}
-
-const PALETTE = {
-  off: LED.LED_OFF,
-  green: LED.LED_GREEN,
-  red: LED.LED_RED,
-  orange: LED.LED_ORANGE,
-  greenBlink: LED.LED_GREEN_BLINK,
-  redBlink: LED.LED_RED_BLINK,
-  orangeBlink: LED.LED_ORANGE_BLINK,
-} as const;
+export type FlourishKind = Apc40FlourishKind;
 
 type Color = 'green' | 'red' | 'orange';
-const colorValue = (c: Color) =>
-  c === 'green' ? PALETTE.green : c === 'red' ? PALETTE.red : PALETTE.orange;
-
-export type FlourishKind =
-  | 'fixtureSelect'
-  | 'crossfade'
-  | 'clipLaunch'
-  | 'blackout'
-  | 'tabChange'
-  | 'deckSwitchA'
-  | 'deckSwitchB'
-  | 'connectionUp'
-  | 'connectionDown';
 
 export interface FlourishOpts {
-  /** Override the default duration. */
   durationMs?: number;
   color?: Color;
-  /** For column-aware flourishes (fixtureSelect, clipLaunch). 0..7 */
   column?: number;
-  /** For clip-launch flourishes. 0..4 */
   row?: number;
+  patternId?: DemoPatternId;
 }
 
 const ENABLED_KEY = 'apc40-flourishes-enabled';
+const MAX_ACTIVE = 3;
+
+const COOLDOWN_MS: Record<FlourishKind, number> = {
+  fixtureSelect: 180,
+  crossfade: 650,
+  clipLaunch: 160,
+  blackout: 700,
+  tabChange: 500,
+  deckSwitchA: 450,
+  deckSwitchB: 450,
+  connectionUp: 2500,
+  connectionDown: 2500,
+};
+
+const DEFAULT_DURATION_MS: Record<FlourishKind, number> = {
+  fixtureSelect: 720,
+  crossfade: 1000,
+  clipLaunch: 620,
+  blackout: 620,
+  tabChange: 420,
+  deckSwitchA: 620,
+  deckSwitchB: 620,
+  connectionUp: 520,
+  connectionDown: 520,
+};
 
 let enabled: boolean = (() => {
   if (typeof window === 'undefined') return true;
   const raw = window.localStorage.getItem(ENABLED_KEY);
   return raw == null ? true : raw === '1';
 })();
+
+let nextId = 1;
+const activeIds = new Set<number>();
+const activeKeys = new Set<string>();
+const lastTriggerAt = new Map<string, number>();
 
 export function isFlourishesEnabled(): boolean {
   return enabled;
@@ -94,260 +87,157 @@ export function setFlourishesEnabled(on: boolean): void {
   }
 }
 
-/**
- * Concurrent flourishes are allowed but we cap the active set to avoid
- * runaway interval timers if events fire faster than animations finish.
- */
-const MAX_ACTIVE = 6;
-const active = new Set<number>();
-let nextId = 1;
+export function getApc40FlourishDiagnostics() {
+  return {
+    active: activeIds.size,
+    activeKeys: Array.from(activeKeys),
+    enabled,
+  };
+}
 
-function track(
+function triggerKey(kind: FlourishKind, opts: FlourishOpts): string {
+  const row = opts.row == null ? '*' : Math.round(opts.row);
+  const column = opts.column == null ? '*' : Math.round(opts.column);
+  return `${kind}:${row}:${column}`;
+}
+
+function shouldRun(kind: FlourishKind, key: string): boolean {
+  if (!enabled) return false;
+  if (typeof window === 'undefined') return false;
+  if (isApc40DemoRunning()) return false;
+  if (activeIds.size >= MAX_ACTIVE) return false;
+  if (activeKeys.has(key)) return false;
+  const now = Date.now();
+  const last = lastTriggerAt.get(key) ?? 0;
+  if (now - last < COOLDOWN_MS[kind]) return false;
+  lastTriggerAt.set(key, now);
+  return true;
+}
+
+function cleanupCells(
+  outs: WebMidi.MIDIOutput[],
+  cells: Set<string>,
+  stripColumns: Set<number>,
+): void {
+  for (const out of outs) {
+    for (const key of cells) {
+      const [rowRaw, columnRaw] = key.split(':');
+      const row = Number(rowRaw);
+      const column = Number(columnRaw);
+      if (!Number.isFinite(row) || !Number.isFinite(column)) continue;
+      sendApc40NoteOn(out, column, APC40_CLIP_ROW_BASE + row, LED.LED_OFF, 'apc40-flourish-cleanup');
+    }
+    for (const column of stripColumns) {
+      sendApc40NoteOn(out, column, APC40_ACTIVATOR_NOTE, LED.LED_OFF, 'apc40-flourish-cleanup');
+    }
+  }
+}
+
+function runTracked(
+  key: string,
   outs: WebMidi.MIDIOutput[],
   durationMs: number,
   tickMs: number,
   step: (frame: number) => void,
   cleanup: () => void,
 ): void {
-  if (active.size >= MAX_ACTIVE) return;
   const id = nextId++;
-  active.add(id);
+  activeIds.add(id);
+  activeKeys.add(key);
   let frame = 0;
   const totalFrames = Math.max(1, Math.round(durationMs / tickMs));
-  const handle = window.setInterval(() => {
-    step(frame);
-    frame++;
-    if (frame >= totalFrames) {
+  let handle: number | null = null;
+
+  const finish = (reason: 'flourish-complete' | 'flourish-abort') => {
+    if (handle != null) {
       window.clearInterval(handle);
+      handle = null;
+    }
+    try {
       cleanup();
-      // Repaint any cells we touched (blank them) so demoscene/feedback
-      // re-assert on the next tick.
-      for (const out of outs) {
-        // local cleanup is per-flourish in the cleanup arg; nothing extra.
-        void out;
-      }
       invalidateApc40DemoDiff();
-      active.delete(id);
+    } finally {
+      activeIds.delete(id);
+      activeKeys.delete(key);
+      notifyApc40LedDirty(reason);
+    }
+  };
+
+  handle = window.setInterval(() => {
+    try {
+      step(frame);
+      frame += 1;
+      if (frame >= totalFrames) finish('flourish-complete');
+    } catch {
+      finish('flourish-abort');
     }
   }, tickMs);
 }
 
-const blankCells = (outs: WebMidi.MIDIOutput[], cells: Array<[number, number]>) => {
+async function runPatternFlourish(kind: FlourishKind, opts: FlourishOpts): Promise<void> {
+  const key = triggerKey(kind, opts);
+  if (!shouldRun(kind, key)) return;
+  const outs = await getApc40Outputs();
+  if (outs.length === 0) return;
+
+  const pattern = getDemoPattern(opts.patternId ?? resolveApc40FlourishPattern(kind));
+  const durationMs = opts.durationMs ?? DEFAULT_DURATION_MS[kind];
+  const tickMs = Math.max(40, Math.round(pattern.intervalMs));
+  const touchedCells = new Set<string>();
+  const touchedStripColumns = new Set<number>();
+  const lastGrid = new Map<WebMidi.MIDIOutput, Uint8Array>();
+  const lastStrip = new Map<WebMidi.MIDIOutput, Uint8Array>();
+
   for (const out of outs) {
-    for (const [r, c] of cells) {
-      sendNoteOn(out, c, CLIP_ROW_BASE + r, PALETTE.off);
-    }
+    lastGrid.set(out, new Uint8Array(APC40_GRID_ROWS * APC40_GRID_COLS).fill(0xff));
+    lastStrip.set(out, new Uint8Array(APC40_GRID_COLS).fill(0xff));
   }
-};
 
-const blankStripCols = (outs: WebMidi.MIDIOutput[], cols: number[]) => {
-  for (const out of outs) {
-    for (const c of cols) sendNoteOn(out, c, ACTIVATOR_NOTE, PALETTE.off);
-  }
-};
-
-async function runFixtureSelect(opts: FlourishOpts) {
-  const outs = await getApcOutputs();
-  if (outs.length === 0) return;
-  const col = (opts.column ?? Math.floor(Math.random() * COLS)) % COLS;
-  const v = colorValue(opts.color ?? 'green');
-  const tickMs = 70;
-  const duration = opts.durationMs ?? 720;
-  // Spread the sweep across 3 adjacent columns (centred on `col`) so a
-  // fixture-select flourish reads as a wider shimmer instead of a single
-  // vertical line. Each neighbour column is offset by one row so the wave
-  // cascades diagonally outward.
-  const cols: Array<{ c: number; offset: number }> = [];
-  for (let dc = -1; dc <= 1; dc++) {
-    const c = col + dc;
-    if (c < 0 || c >= COLS) continue;
-    cols.push({ c, offset: Math.abs(dc) });
-  }
-  const touched: Array<[number, number]> = [];
-  track(
+  runTracked(
+    key,
     outs,
-    duration,
+    durationMs,
     tickMs,
-    (f) => {
+    (frame) => {
+      const grid = pattern.render(frame);
+      const strip = pattern.renderStrip?.(frame) ?? null;
       for (const out of outs) {
-        for (const { c, offset } of cols) {
-          const r = ((f + offset) % ROWS + ROWS) % ROWS;
-          sendNoteOn(out, c, CLIP_ROW_BASE + r, v);
-          touched.push([r, c]);
+        const prevGrid = lastGrid.get(out)!;
+        for (let row = 0; row < APC40_GRID_ROWS; row += 1) {
+          for (let column = 0; column < APC40_GRID_COLS; column += 1) {
+            const index = row * APC40_GRID_COLS + column;
+            const velocity = grid[index] ?? LED.LED_OFF;
+            if (prevGrid[index] !== velocity) {
+              sendApc40NoteOn(out, column, APC40_CLIP_ROW_BASE + row, velocity, 'apc40-flourish');
+              prevGrid[index] = velocity;
+              touchedCells.add(`${row}:${column}`);
+            }
+          }
+        }
+        if (strip) {
+          const prevStrip = lastStrip.get(out)!;
+          for (let column = 0; column < APC40_GRID_COLS; column += 1) {
+            const velocity = strip[column] ?? LED.LED_OFF;
+            if (prevStrip[column] !== velocity) {
+              sendApc40NoteOn(out, column, APC40_ACTIVATOR_NOTE, velocity, 'apc40-flourish');
+              prevStrip[column] = velocity;
+              touchedStripColumns.add(column);
+            }
+          }
         }
       }
     },
-    () => blankCells(outs, touched),
-  );
-}
-
-async function runCrossfade(opts: FlourishOpts) {
-  const outs = await getApcOutputs();
-  if (outs.length === 0) return;
-  const v = colorValue(opts.color ?? 'orange');
-  const duration = opts.durationMs ?? 1200;
-  const tickMs = Math.max(40, Math.round(duration / COLS));
-  track(
-    outs,
-    duration,
-    tickMs,
-    (f) => {
-      const c = f % COLS;
-      for (const out of outs) sendNoteOn(out, c, ACTIVATOR_NOTE, v);
-    },
-    () => blankStripCols(outs, [0, 1, 2, 3, 4, 5, 6, 7]),
-  );
-}
-
-async function runClipLaunch(opts: FlourishOpts) {
-  const outs = await getApcOutputs();
-  if (outs.length === 0) return;
-  const col = (opts.column ?? 0) % COLS;
-  const row = (opts.row ?? 0) % ROWS;
-  const v = colorValue(opts.color ?? 'orange');
-  const tickMs = 100;
-  const duration = opts.durationMs ?? 600;
-  const ringCells: Array<[number, number]> = [
-    [row - 1, col], [row + 1, col], [row, col - 1], [row, col + 1],
-  ].filter(([r, c]) => r >= 0 && r < ROWS && c >= 0 && c < COLS) as Array<[number, number]>;
-  track(
-    outs,
-    duration,
-    tickMs,
-    (f) => {
-      const on = f % 2 === 0;
-      for (const out of outs) {
-        for (const [r, c] of ringCells) {
-          sendNoteOn(out, c, CLIP_ROW_BASE + r, on ? v : PALETTE.off);
-        }
-      }
-    },
-    () => blankCells(outs, ringCells),
-  );
-}
-
-async function runBlackout(opts: FlourishOpts) {
-  const outs = await getApcOutputs();
-  if (outs.length === 0) return;
-  const v = colorValue(opts.color ?? 'red');
-  const tickMs = 80;
-  const duration = opts.durationMs ?? 480;
-  const touched: Array<[number, number]> = [];
-  track(
-    outs,
-    duration,
-    tickMs,
-    (f) => {
-      const r = f % ROWS;
-      for (const out of outs) {
-        for (let c = 0; c < COLS; c++) {
-          sendNoteOn(out, c, CLIP_ROW_BASE + r, v);
-          touched.push([r, c]);
-        }
-        sendNoteOn(out, r % COLS, ACTIVATOR_NOTE, v);
-      }
-    },
-    () => {
-      blankCells(outs, touched);
-      blankStripCols(outs, [0, 1, 2, 3, 4, 5, 6, 7]);
-    },
-  );
-}
-
-async function runTabChange(opts: FlourishOpts) {
-  const outs = await getApcOutputs();
-  if (outs.length === 0) return;
-  const v = colorValue(opts.color ?? 'green');
-  const tickMs = 50;
-  const duration = opts.durationMs ?? 400;
-  track(
-    outs,
-    duration,
-    tickMs,
-    (f) => {
-      const c = f % COLS;
-      for (const out of outs) sendNoteOn(out, c, ACTIVATOR_NOTE, v);
-    },
-    () => blankStripCols(outs, [0, 1, 2, 3, 4, 5, 6, 7]),
-  );
-}
-
-async function runDeckSwitch(side: 'A' | 'B', opts: FlourishOpts) {
-  const outs = await getApcOutputs();
-  if (outs.length === 0) return;
-  const v = colorValue(opts.color ?? 'green');
-  const tickMs = 70;
-  const duration = opts.durationMs ?? 560;
-  // Chevron animation: pairs of cells form a > or < shape that fires sequentially.
-  const chevronA: Array<[number, number]> = [[0, 3], [1, 2], [2, 1], [3, 2], [4, 3]];
-  const chevronB: Array<[number, number]> = [[0, 4], [1, 5], [2, 6], [3, 5], [4, 4]];
-  const cells = side === 'A' ? chevronA : chevronB;
-  track(
-    outs,
-    duration,
-    tickMs,
-    (f) => {
-      const idx = f % cells.length;
-      const [r, c] = cells[idx];
-      for (const out of outs) sendNoteOn(out, c, CLIP_ROW_BASE + r, v);
-    },
-    () => blankCells(outs, cells),
-  );
-}
-
-async function runConnectionFlash(opts: FlourishOpts) {
-  const outs = await getApcOutputs();
-  if (outs.length === 0) return;
-  const v = colorValue(opts.color ?? 'green');
-  const tickMs = 120;
-  const duration = opts.durationMs ?? 360;
-  const touched: Array<[number, number]> = [];
-  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) touched.push([r, c]);
-  track(
-    outs,
-    duration,
-    tickMs,
-    (f) => {
-      const on = f % 2 === 0;
-      for (const out of outs) {
-        for (const [r, c] of touched) {
-          sendNoteOn(out, c, CLIP_ROW_BASE + r, on ? v : PALETTE.off);
-        }
-      }
-    },
-    () => blankCells(outs, touched),
+    () => cleanupCells(outs, touchedCells, touchedStripColumns),
   );
 }
 
 export function triggerFlourish(kind: FlourishKind, opts: FlourishOpts = {}): void {
-  if (!enabled) return;
-  switch (kind) {
-    case 'fixtureSelect':
-      void runFixtureSelect(opts);
-      return;
-    case 'crossfade':
-      void runCrossfade(opts);
-      return;
-    case 'clipLaunch':
-      void runClipLaunch(opts);
-      return;
-    case 'blackout':
-      void runBlackout(opts);
-      return;
-    case 'tabChange':
-      void runTabChange(opts);
-      return;
-    case 'deckSwitchA':
-      void runDeckSwitch('A', opts);
-      return;
-    case 'deckSwitchB':
-      void runDeckSwitch('B', opts);
-      return;
-    case 'connectionUp':
-      void runConnectionFlash({ color: 'green', ...opts });
-      return;
-    case 'connectionDown':
-      void runConnectionFlash({ color: 'red', ...opts });
-      return;
-  }
+  void runPatternFlourish(kind, opts);
+}
+
+export function __resetApc40FlourishesForTests(): void {
+  activeIds.clear();
+  activeKeys.clear();
+  lastTriggerAt.clear();
+  enabled = true;
 }

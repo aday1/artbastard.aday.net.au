@@ -2,7 +2,13 @@ import { useEffect, useRef } from 'react';
 import { useStore } from '../store';
 import { apc40DeckSceneName } from '../midi/apc40WorkflowHelpers';
 import { debugLog } from '../utils/debugLog';
-import { safeMidiSend } from '../midi/midiOutputGuard';
+import { resetPortHealth } from '../midi/midiOutputGuard';
+import {
+  isApc40Port,
+  sendApc40NoteOn,
+  subscribeApc40LedDirty,
+  notifyApc40LedDirty,
+} from '../midi/apc40LedRuntime';
 import {
   LED,
   BLINK_LED_VALUES,
@@ -38,18 +44,8 @@ const MASTER_CHANNEL = 8;
 const GRID_ROWS = APC40_GRID.rows;
 const GRID_COLS = APC40_GRID.cols;
 
-const APC40_NAME_RE = /\b(apc\s?40|apc40)\b/i;
-
-function isApc40Port(port: WebMidi.MIDIPort): boolean {
-  return APC40_NAME_RE.test(port.name || '') || APC40_NAME_RE.test(port.manufacturer || '');
-}
-
 function sendNoteOn(out: WebMidi.MIDIOutput, channel: number, note: number, velocity: number) {
-  safeMidiSend(
-    out,
-    [0x90 | (channel & 0x0f), note & 0x7f, velocity & 0x7f],
-    'apc40-led',
-  );
+  sendApc40NoteOn(out, channel, note, velocity, 'apc40-led');
 }
 
 function groupSelected(groupFixtureIds: string[], selectedIds: Set<string>): boolean {
@@ -207,6 +203,13 @@ export function useApc40LedFeedback() {
   };
 
   useEffect(() => {
+    return subscribeApc40LedDirty(() => {
+      lastLedValuesRef.current = new WeakMap();
+      paintAll();
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
     let cancelled = false;
     const init = async () => {
       try {
@@ -216,9 +219,11 @@ export function useApc40LedFeedback() {
         accessRef.current = access;
         const refresh = () => {
           outputsRef.current = Array.from(access.outputs.values()).filter(isApc40Port);
+          outputsRef.current.forEach(resetPortHealth);
           if (outputsRef.current.length > 0) {
             debugLog.log('[APC40-LED] outputs:', outputsRef.current.map(o => o.name));
             paintAll();
+            notifyApc40LedDirty('port-refresh');
           }
         };
         refresh();

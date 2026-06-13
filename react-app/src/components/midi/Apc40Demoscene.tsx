@@ -14,6 +14,22 @@ import {
   isFlourishesEnabled,
   setFlourishesEnabled,
 } from '../../engines/apc40Flourishes';
+import {
+  APC40_FLOURISH_KIND_LABELS,
+  APC40_FLOURISH_KINDS,
+  APC40_FLOURISH_PATTERN_OPTIONS,
+  getApc40FlourishSettings,
+  setApc40FlourishPattern,
+  setApc40RandomFlourishes,
+} from '../../engines/apc40FlourishSettings';
+import {
+  getApc40ScreensaverConfig,
+  setApc40ScreensaverConfig,
+} from '../../engines/apc40Screensaver';
+import {
+  isApc40XyCrosshairEnabled,
+  setApc40XyCrosshairEnabled,
+} from '../../engines/apc40XyCrosshair';
 import styles from './Apc40Demoscene.module.scss';
 
 /**
@@ -22,12 +38,16 @@ import styles from './Apc40Demoscene.module.scss';
  * (and activator strip) come alive.
  */
 const SPEED_STEPS = [0.25, 0.5, 1, 2, 4] as const;
+const SCREENSAVER_ROTATE_STEPS = [4000, 8000, 16000, 30000] as const;
 
 export const Apc40Demoscene: React.FC = () => {
   const [active, setActive] = useState<DemoPatternId | null>(null);
   const [shuffling, setShuffling] = useState<boolean>(false);
   const [speed, setSpeed] = useState<number>(() => getApc40DemoSpeed());
   const [flourishes, setFlourishes] = useState<boolean>(() => isFlourishesEnabled());
+  const [flourishSettings, setFlourishSettings] = useState(() => getApc40FlourishSettings());
+  const [screensaver, setScreensaver] = useState(() => getApc40ScreensaverConfig());
+  const [xyCrosshair, setXyCrosshair] = useState<boolean>(() => isApc40XyCrosshairEnabled());
 
   // Keep UI in sync if the engine stops on its own (e.g. page navigation).
   useEffect(() => {
@@ -94,6 +114,32 @@ export const Apc40Demoscene: React.FC = () => {
     setFlourishesEnabled(next);
   }, [flourishes]);
 
+  const handleRandomFlourishes = useCallback(() => {
+    setFlourishSettings(setApc40RandomFlourishes(!flourishSettings.random));
+  }, [flourishSettings.random]);
+
+  const handleFlourishPattern = useCallback((kind: (typeof APC40_FLOURISH_KINDS)[number], patternId: DemoPatternId) => {
+    setFlourishSettings(setApc40FlourishPattern(kind, patternId));
+  }, []);
+
+  const handleScreensaverEnabled = useCallback(() => {
+    setScreensaver(setApc40ScreensaverConfig({ enabled: !screensaver.enabled }));
+  }, [screensaver.enabled]);
+
+  const handleScreensaverRotate = useCallback((rotateMs: number) => {
+    setScreensaver(setApc40ScreensaverConfig({ rotateMs }));
+  }, []);
+
+  const handleScreensaverSpeed = useCallback((next: number) => {
+    setScreensaver(setApc40ScreensaverConfig({ speed: next }));
+  }, []);
+
+  const handleXyCrosshair = useCallback(() => {
+    const next = !xyCrosshair;
+    setXyCrosshair(next);
+    setApc40XyCrosshairEnabled(next);
+  }, [xyCrosshair]);
+
   const statusLabel = shuffling
     ? `shuffle · ${active ?? '…'}`
     : active
@@ -150,12 +196,88 @@ export const Apc40Demoscene: React.FC = () => {
         </button>
         <button
           type="button"
+          className={flourishSettings.random ? styles.active : ''}
+          onClick={handleRandomFlourishes}
+          title="Use curated random animations for each flourish kind"
+        >
+          {flourishSettings.random ? 'Random flourishes: ON' : 'Random flourishes: OFF'}
+        </button>
+        <button
+          type="button"
+          className={xyCrosshair ? styles.active : ''}
+          onClick={handleXyCrosshair}
+          title="Mirror SuperControl XY movement as a crosshair on the APC40 clip grid"
+        >
+          {xyCrosshair ? 'XY crosshair: ON' : 'XY crosshair: OFF'}
+        </button>
+        <button
+          type="button"
           className={styles.danger}
           onClick={handleStop}
           disabled={!active && !shuffling}
         >
           Stop
         </button>
+      </div>
+
+      <div className={styles.settingsGrid}>
+        {APC40_FLOURISH_KINDS.map((kind) => (
+          <label key={kind} className={styles.field}>
+            <span>{APC40_FLOURISH_KIND_LABELS[kind]}</span>
+            <select
+              value={flourishSettings.patterns[kind]}
+              onChange={(event) => handleFlourishPattern(kind, event.target.value as DemoPatternId)}
+              disabled={flourishSettings.random}
+            >
+              {APC40_FLOURISH_PATTERN_OPTIONS[kind].map((patternId) => {
+                const pattern = DEMO_PATTERNS.find((candidate) => candidate.id === patternId);
+                return (
+                  <option key={patternId} value={patternId}>
+                    {pattern?.label ?? patternId}
+                  </option>
+                );
+              })}
+            </select>
+          </label>
+        ))}
+      </div>
+
+      <div className={styles.actions}>
+        <button
+          type="button"
+          className={screensaver.enabled ? styles.active : ''}
+          onClick={handleScreensaverEnabled}
+        >
+          {screensaver.enabled ? 'Screensaver: ON' : 'Screensaver: OFF'}
+        </button>
+        {SCREENSAVER_ROTATE_STEPS.map((rotateMs) => (
+          <button
+            key={rotateMs}
+            type="button"
+            className={screensaver.rotateMs === rotateMs ? styles.active : ''}
+            onClick={() => handleScreensaverRotate(rotateMs)}
+            title={`${rotateMs / 1000}s`}
+          >
+            {rotateMs / 1000}s
+          </button>
+        ))}
+      </div>
+
+      <div className={styles.actions}>
+        <span style={{ alignSelf: 'center', fontSize: '0.7rem', opacity: 0.75 }}>
+          Saver speed
+        </span>
+        {SPEED_STEPS.map((step) => (
+          <button
+            key={step}
+            type="button"
+            className={Math.abs(screensaver.speed - step) < 0.01 ? styles.active : ''}
+            onClick={() => handleScreensaverSpeed(step)}
+            title={`${step}×`}
+          >
+            {step === 1 ? '1×' : `${step}×`}
+          </button>
+        ))}
       </div>
 
       <div className={styles.actions}>
@@ -178,7 +300,7 @@ export const Apc40Demoscene: React.FC = () => {
       <div className={styles.note}>
         Requires an APC40 plugged in and the browser MIDI permission granted.
         Patterns marked ✦ also light the activator row. Shuffle rotates every ~8s.
-        Flourishes are short overlays that play over your normal feedback.
+        Flourishes use the selected animation unless random mode is enabled.
       </div>
     </div>
   );
