@@ -93,7 +93,7 @@ export const DmxChannelsViewport: React.FC<DmxChannelsViewportProps> = ({
     }
     let minCol = '320px';
     if (faderOrientation === 'vertical') {
-      minCol = '9.5rem';
+      minCol = '13rem';
     } else if (viewMode === 'compact') {
       minCol = '280px';
     }

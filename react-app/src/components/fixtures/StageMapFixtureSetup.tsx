@@ -852,6 +852,10 @@ export const StageMapFixtureSetup: React.FC = () => {
         )}
       </header>
 
+      <div className={styles.drawerStack}>
+        <UnifiedStageWorkbench />
+      </div>
+
       <div className={styles.workspace}>
         <aside className={styles.libraryPane} aria-label="Fixture library">
           <div className={styles.paneHeader}>
@@ -1301,9 +1305,6 @@ export const StageMapFixtureSetup: React.FC = () => {
         </aside>
       </div>
 
-      <div className={styles.drawerStack}>
-        <UnifiedStageWorkbench />
-      </div>
     </section>
   );
 };

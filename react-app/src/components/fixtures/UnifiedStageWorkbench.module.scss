@@ -1,8 +1,8 @@
 .workbench {
-  height: 100%;
+  height: auto;
   min-height: 0;
   margin: 0;
-  padding: 1rem;
+  padding: 0.85rem;
   background: color-mix(in srgb, var(--bg-secondary, #2c2c34) 92%, #111 8%);
   border: 1px solid var(--border-color, #444);
   border-radius: 10px;
@@ -10,7 +10,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .tabStrip {
@@ -69,32 +69,116 @@
   line-height: 1.15;
 }
 
-.mapWrap {
-  flex: 0 1 46%;
-  min-height: 130px;
-  overflow: hidden;
-}
-
-.patchHint {
+.patchSummary {
   flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(110px, 1fr)) minmax(220px, 2fr);
+  gap: 0.65rem;
+  align-items: stretch;
   font-size: 0.82rem;
   color: var(--text-secondary, #b8b8c4);
-  opacity: 0.85;
-  padding: 0.35rem 0.55rem;
+
+  > div,
+  > p {
+    margin: 0;
+    min-width: 0;
+    padding: 0.7rem 0.8rem;
+    border: 1px solid var(--border-color-soft, rgba(255, 255, 255, 0.1));
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.16);
+  }
+
+  > div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  strong {
+    color: var(--text-primary, #fff);
+    font-size: 1.2rem;
+    line-height: 1;
+  }
+
+  span {
+    font-size: 0.72rem;
+    line-height: 1.2;
+  }
+
+  > p {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    line-height: 1.35;
+  }
 }
 
 .bodySlot {
   flex: 1 1 auto;
-  min-height: 0;
+  min-height: 420px;
   display: flex;
   flex-direction: column;
-  overflow: auto;
+  overflow: visible;
 
   > * {
     margin: 0 !important;
+  }
+}
+
+.showBody {
+  min-height: 680px;
+}
+
+.apcBody {
+  display: grid;
+  grid-template-rows: minmax(260px, 0.45fr) minmax(360px, 0.55fr);
+  gap: 0.85rem;
+  height: clamp(720px, 78vh, 940px);
+  min-height: 720px;
+  overflow: hidden;
+}
+
+.apcOverview,
+.superControlPanel {
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--border-color-soft, rgba(255, 255, 255, 0.1));
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.14);
+  overflow: auto;
+}
+
+.apcOverview {
+  padding: 0.85rem;
+}
+
+.superControlPanel {
+  padding: 0.75rem;
+}
+
+.apcModeHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border-color-soft, rgba(255, 255, 255, 0.1));
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.7);
+
+  span {
+    color: var(--text-secondary, #b8b8c4);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  strong {
+    min-width: 0;
+    color: var(--accent-color, #4ecdc4);
+    font-size: 0.86rem;
+    overflow-wrap: anywhere;
   }
 }
 
@@ -104,12 +188,22 @@
     overflow: visible;
   }
 
-  .mapWrap {
-    flex: 0 0 auto;
-    min-height: 180px;
+  .patchSummary {
+    grid-template-columns: 1fr;
   }
 
   .bodySlot {
+    min-height: 0;
     overflow: visible;
+  }
+
+  .showBody,
+  .apcBody {
+    min-height: 0;
+  }
+
+  .apcBody {
+    display: flex;
+    flex-direction: column;
   }
 }

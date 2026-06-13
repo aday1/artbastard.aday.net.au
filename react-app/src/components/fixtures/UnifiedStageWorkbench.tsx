@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../../store';
 import { LucideIcon } from '../ui/LucideIcon';
-import { StageMapDashboard } from './StageMapDashboard';
+import SuperControl from '../dmx/SuperControl';
 import { ShowBuilderPanel } from './ShowBuilderPanel';
 import { Apc40WorkflowBody } from './Apc40WorkflowPanel';
 import styles from './UnifiedStageWorkbench.module.scss';
@@ -23,31 +23,14 @@ const TABS: TabDef[] = [
 
 export const UnifiedStageWorkbench: React.FC = () => {
   const [mode, setMode] = useState<WorkbenchMode>('patch');
-  const { fixtures, groups, apc40State } = useStore((s) => ({
+  const { fixtures, groups, scenes, apc40State } = useStore((s) => ({
     fixtures: s.fixtures,
     groups: s.groups,
+    scenes: s.scenes,
     apc40State: s.apc40CrossfaderState,
   }));
 
-  const highlightGroupId = mode === 'apc' ? apc40State.activeGroupId : null;
-  const highlightFixtureIds = mode === 'apc' ? apc40State.activeFixtureIds : [];
-  const highlightLabel = mode === 'apc' ? apc40State.activeTargetLabel : null;
-
-  const subtitle =
-    mode === 'show'
-      ? `${fixtures.length} fixtures · ${groups.length} groups · build below to add more`
-      : mode === 'apc'
-        ? apc40State.activeTargetLabel
-          ? `APC target -> ${apc40State.activeTargetLabel}`
-          : `${fixtures.length} fixtures · ${groups.length} groups · tap to target the surface`
-        : undefined;
-
-  const title =
-    mode === 'show'
-      ? 'Show planning map'
-      : mode === 'apc'
-        ? 'APC40 live stage map'
-        : 'Live Stage Map';
+  const activeTarget = apc40State.activeTargetLabel || 'No APC40 target selected';
 
   return (
     <section className={styles.workbench} aria-label="Unified stage workbench">
@@ -68,32 +51,45 @@ export const UnifiedStageWorkbench: React.FC = () => {
         ))}
       </div>
 
-      <div className={styles.mapWrap}>
-        <StageMapDashboard
-          title={title}
-          subtitle={subtitle}
-          highlightGroupId={highlightGroupId}
-          highlightFixtureIds={highlightFixtureIds}
-          highlightLabel={highlightLabel}
-        />
-      </div>
-
       {mode === 'patch' && (
-        <div className={styles.patchHint}>
-          <LucideIcon name="ArrowDown" size={14} />
-          <span>Use the patch editor below to add, move, and address fixtures.</span>
+        <div className={styles.patchSummary} aria-label="Patch workspace summary">
+          <div>
+            <strong>{fixtures.length}</strong>
+            <span>patched fixtures</span>
+          </div>
+          <div>
+            <strong>{groups.length}</strong>
+            <span>groups ready</span>
+          </div>
+          <div>
+            <strong>{scenes.length}</strong>
+            <span>saved scenes</span>
+          </div>
+          <p>
+            <LucideIcon name="ArrowUp" size={14} />
+            Patch, place, select, and address fixtures in the stage editor above.
+          </p>
         </div>
       )}
 
       {mode === 'show' && (
-        <div className={styles.bodySlot}>
+        <div className={`${styles.bodySlot} ${styles.showBody}`}>
           <ShowBuilderPanel />
         </div>
       )}
 
       {mode === 'apc' && (
-        <div className={styles.bodySlot}>
-          <Apc40WorkflowBody withoutMap />
+        <div className={`${styles.bodySlot} ${styles.apcBody}`} aria-label="APC40 SuperControl workflow">
+          <div className={styles.apcOverview}>
+            <div className={styles.apcModeHeader}>
+              <span>APC40 target</span>
+              <strong>{activeTarget}</strong>
+            </div>
+            <Apc40WorkflowBody withoutMap />
+          </div>
+          <div className={styles.superControlPanel}>
+            <SuperControl isDockable={false} preferTouchLayout embeddedWorkbench />
+          </div>
         </div>
       )}
     </section>

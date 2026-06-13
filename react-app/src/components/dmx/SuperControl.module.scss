@@ -18,6 +18,31 @@
   }
 }
 
+.superControl[data-embedded-workbench='true'] {
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: var(--space-md);
+  overflow: auto;
+  border-radius: 8px;
+  box-shadow: none;
+  transform: none;
+
+  &:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  .header {
+    margin-bottom: var(--space-md);
+  }
+
+  .autoLayoutContainer {
+    gap: var(--space-md);
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  }
+}
+
 .touchLayout {
   padding: var(--space-md);
 

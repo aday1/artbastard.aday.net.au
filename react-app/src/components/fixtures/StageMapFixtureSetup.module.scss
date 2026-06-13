@@ -1,11 +1,11 @@
 .stageMapSetup {
-  height: clamp(720px, calc(100dvh - 14rem), 980px);
-  min-height: 720px;
+  height: auto;
+  min-height: clamp(720px, calc(100dvh - 14rem), 980px);
   max-height: none;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  overflow: hidden;
+  overflow: visible;
   color: var(--color-text-primary, #e5edf6);
 }
 
@@ -132,8 +132,9 @@
 }
 
 .workspace {
-  min-height: 560px;
-  flex: 1 1 auto;
+  height: clamp(540px, 58vh, 680px);
+  min-height: 540px;
+  flex: 0 0 auto;
   display: grid;
   grid-template-columns: minmax(260px, 320px) minmax(420px, 1fr) minmax(260px, 320px);
   gap: 0.75rem;
@@ -765,13 +766,13 @@
 }
 
 .drawerStack {
-  flex: 0 0 clamp(230px, 32vh, 360px);
+  flex: 0 0 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
   margin-top: 0;
-  overflow: hidden;
+  overflow: visible;
 
   > * {
     min-height: 0;
@@ -900,7 +901,7 @@
   }
 
   .drawerStack {
-    flex-basis: clamp(220px, 30vh, 320px);
+    flex-basis: auto;
   }
 }
 
@@ -929,6 +930,7 @@
   .workspace {
     display: flex;
     flex-direction: column;
+    height: auto;
     overflow: visible;
   }
 

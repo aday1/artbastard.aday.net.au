@@ -37,6 +37,8 @@ interface SuperControlProps {
   isDockable?: boolean;
   /** Force touch-oriented spacing when embedded in the touch panel type. */
   preferTouchLayout?: boolean;
+  /** Tighten chrome and spacing when embedded inside another workflow panel. */
+  embeddedWorkbench?: boolean;
 }
 
 type SelectionMode = 'channels' | 'fixtures' | 'groups' | 'capabilities';
@@ -441,7 +443,7 @@ function buildRoliPanTiltFrame(
   return frame;
 }
 
-const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferTouchLayout = false }) => {
+const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferTouchLayout = false, embeddedWorkbench = false }) => {
   const { isMobile, isTablet, isTouch } = useMobile();
   const { settings: superControlPrefs } = useSuperControlPreferences();
   const touchLayout =
@@ -2399,6 +2401,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
   return (
     <div
       className={['ab-rack-module', styles.superControl, touchLayout ? styles.touchLayout : ''].filter(Boolean).join(' ')}
+      data-embedded-workbench={embeddedWorkbench ? 'true' : undefined}
     >
       <div className={styles.header}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', flexWrap: 'wrap', gap: '12px' }}>

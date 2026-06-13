@@ -2257,8 +2257,8 @@
   }
 
   &.channelStrip {
-    grid-template-columns: repeat(auto-fill, minmax(9.5rem, 12.5rem));
-    gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(13rem, 15.5rem));
+    gap: 14px;
     align-items: start;
   }
 
@@ -2286,8 +2286,8 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  padding: 8px 6px 10px;
-  min-height: 22rem;
+  padding: 10px 10px 12px;
+  min-height: 24rem;
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
@@ -2334,8 +2334,8 @@
     display: flex;
     align-items: stretch;
     justify-content: center;
-    min-height: 15rem;
-    margin-bottom: 6px;
+    min-height: 17rem;
+    margin-bottom: 8px;
     width: 100%;
     overflow: visible;
     pointer-events: auto;
@@ -2346,7 +2346,7 @@
 
     > * {
       flex: 1;
-      min-height: 15rem;
+      min-height: 17rem;
       width: 100%;
       overflow: visible;
     }
@@ -2355,7 +2355,7 @@
   .channelRangeControls {
     margin-top: auto;
     font-size: 0.7rem;
-    padding: 6px 4px;
+    padding: 7px 6px;
     overflow: hidden;
   }
 
@@ -3751,8 +3751,8 @@
 
   .dmxChannelsContainer.channelStrip {
     order: 2;
-    gap: 8px;
-    grid-template-columns: repeat(auto-fill, minmax(8.4rem, 10.6rem));
+    gap: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(13rem, 15.5rem));
   }
 
   .dmxChannel {
@@ -3769,8 +3769,8 @@
   }
 
   .dmxChannel.channelStripCard {
-    min-height: 23rem;
-    padding: 10px 7px 9px;
+    min-height: 24.5rem;
+    padding: 12px 10px 11px;
     position: relative;
     overflow: visible;
 
@@ -3801,8 +3801,8 @@
     }
 
     .channelSliderVertical {
-      min-height: 16rem;
-      margin: 0.35rem 0 0.45rem;
+      min-height: 17rem;
+      margin: 0.45rem 0 0.55rem;
     }
 
     .channelActions,
@@ -3878,4 +3878,3 @@
     }
   }
 }
-
