@@ -29,6 +29,9 @@ settings/help). They are recorded straight off the running app via
   ON/OFF state semantics.
 - APC40 Record Arm, Solo/Cue, and Activator rows now treat ON as add/solo and
   OFF as remove/release so hardware LEDs can represent actual app state.
+- APC40 PAN selects all ON and clears OFF; SEND A/B/C toggle modular automation;
+  Clip/Track is FULL ON, Device On/Off is BLACKOUT, Master Select is FREEZE DMX,
+  and Track Select remains intentionally unmapped.
 - SuperControl Selection spans the card top, with Stage Map and Monitor filled
   underneath instead of squeezing the selector into a narrow column.
 
@@ -41,15 +44,17 @@ settings/help). They are recorded straight off the running app via
 - The active-channel tracker strip, envelope editor, and DMX transition pattern
   tracker can be toggled independently to keep the desk clear.
 
-### APC40 live controller refactor (v5.2.4.0)
+### APC40 live controller refactor (v5.2.4.0, current semantics refreshed in v5.2.12.0)
 
 - APC40 Clip Launch / Session View is now Deck A scene slots 1-40; hold SHIFT
   for independent Deck B slots 1-40.
-- Scene Launch buttons fire ACTS 1-5; Record Arm saves the next grid pad into
-  the current deck.
+- Scene Launch buttons fire ACTS 1-5; REC save mode saves the next grid pad
+  into the current deck; Record Arm now solos groups with explicit ON/OFF state.
 - Device Control knobs follow selected fixture/group gobo, wheel, prism, focus,
-  zoom, strobe, and other DMX roles; Cue Level pages role banks.
-- Crossfader blends active Deck A and Deck B scenes; Master Select is FULL ON.
+  zoom, strobe, and other DMX roles; Device Left/Right pages role banks.
+- Crossfader blends active Deck A and Deck B scenes; Clip/Track is FULL ON,
+  Device On/Off is BLACKOUT, Master Select is FREEZE, and Track Select stays
+  unmapped.
 
 ### Tracker columns and live theme (v5.15.0)
 

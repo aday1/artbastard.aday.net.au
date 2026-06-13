@@ -969,10 +969,10 @@ Content-Type: application/json
                   <tr><td><strong>Scene Launch 1-5</strong></td><td>Launch ACT 1-5</td><td>green = ACT exists, orange-blink = playing</td></tr>
                   <tr><td><strong>Clip Stop row</strong></td><td>Stop/unselect the active scene for the current deck</td><td>red while deck scene active</td></tr>
                   <tr><td><strong>Stop All Clips</strong></td><td>Stop Deck A/B scenes and ACT playback</td><td>red while active</td></tr>
-                  <tr><td><strong>TRACK SELECT 1-8</strong></td><td>Select fixture group N</td><td>green when selected</td></tr>
-                  <tr><td><strong>ACTIVATOR 1-8</strong></td><td>Toggle group auto control</td><td>orange-blink while active</td></tr>
-                  <tr><td><strong>SOLO/CUE 1-8</strong></td><td>Solo fixture N inside selected group</td><td>momentary</td></tr>
-                  <tr><td><strong>Master Select</strong></td><td>FULL ON latch; press again restores previous DMX</td><td>red while latched</td></tr>
+                  <tr><td><strong>TRACK SELECT 1-8</strong></td><td>Unmapped; selection lives on Solo/Cue + Activator</td><td>off</td></tr>
+                  <tr><td><strong>ACTIVATOR 1-8</strong></td><td>ON adds fixture group N, OFF removes it</td><td>green when group selected</td></tr>
+                  <tr><td><strong>SOLO/CUE 1-8</strong></td><td>ON selects fixture N, OFF removes it</td><td>green when selected</td></tr>
+                  <tr><td><strong>Master Select</strong></td><td>FREEZE DMX latch; press again unfreezes and flushes current state</td><td>red while frozen</td></tr>
                   <tr><td><strong>PAN</strong></td><td>Select all fixtures</td><td>n/a</td></tr>
                   <tr><td><strong>Nav ↑/↓</strong></td><td>Cycle fixtures</td><td>n/a</td></tr>
                   <tr><td><strong>Nav ←/→</strong></td><td>Cycle scenes</td><td>n/a</td></tr>

@@ -444,23 +444,22 @@ export const OscMonitor: React.FC<OscMonitorProps> = ({ footerDocked = false }) 
   return (
     <>
       <ResizableFloatingPanel
-        storageKey="artbastard.oscMonitor.size"
-        defaultWidth={400}
+        storageKey="artbastard.oscMonitor.size.v2"
+        defaultWidth={520}
         defaultHeight={300}
-        minWidth={260}
-        maxWidth={640}
+        minWidth={340}
+        maxWidth={960}
         minHeight={120}
         maxHeight={480}
         anchor="bottom-right"
         className={monitorClasses}
         style={footerDocked
           ? {
-              left: 'calc(50vw - 180px)',
+              left: '50%',
               right: 'auto',
               top: 'auto',
               bottom: '96px',
-              width: '360px',
-              height: '270px',
+              transform: 'translateX(-50%)',
             }
           : isCollapsed ? { width: 'auto', height: 'auto' } : undefined}
       >

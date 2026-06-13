@@ -54,6 +54,7 @@ export const DmxMonitor: React.FC<DmxMonitorProps> = ({ footerDocked = false }) 
   });
   const [editingScrollback, setEditingScrollback] = useState(false);
   const previousChannelsRef = useRef<number[] | null>(null);
+  const lastApc40EventAtRef = useRef<number | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
   // Minimised by default; first signal auto-expands + flashes unless the
@@ -117,6 +118,32 @@ export const DmxMonitor: React.FC<DmxMonitorProps> = ({ footerDocked = false }) 
   }, [dmxChannels, channelNames, fixtures, groups, selectedFixtures, latestMidiMessage, deviceRoleLabels, lastApc40Change, activeAutomationSource, isPaused]);
 
   useEffect(() => {
+    if (!lastApc40Change || isPaused) return;
+    if (lastApc40EventAtRef.current === lastApc40Change.at) return;
+    const text = `${lastApc40Change.controlLabel} ${lastApc40Change.summary} ${lastApc40Change.detail ?? ''}`.toLowerCase();
+    const isFreezeEvent = text.includes('freeze') || text.includes('frozen') || lastApc40Change.controlLabel === 'Master Select' || lastApc40Change.controlLabel === 'Detail View';
+    if (!isFreezeEvent) return;
+
+    lastApc40EventAtRef.current = lastApc40Change.at;
+    const eventMessage: DmxActivityMessage = {
+      id: `apc40-freeze-${lastApc40Change.at}`,
+      timestamp: lastApc40Change.at,
+      firstTimestamp: lastApc40Change.at,
+      channel: -1,
+      channelLabel: 'APC40',
+      kind: 'event',
+      value: lastApc40Change.summary.toLowerCase().includes('released') ? 0 : 1,
+      previousValue: lastApc40Change.summary.toLowerCase().includes('released') ? 1 : 0,
+      summary: `${lastApc40Change.controlLabel}: ${lastApc40Change.summary}`,
+      detail: lastApc40Change.detail ?? 'APC40 changed DMX output freeze state.',
+      roleLabel: 'APC40 FREEZE',
+      repeatCount: 1,
+    };
+    setMessages(prev => mergeDmxActivityMessages(prev, [eventMessage]));
+    triggerFlash();
+  }, [lastApc40Change, isPaused, triggerFlash]);
+
+  useEffect(() => {
     if (autoScroll && contentRef.current) {
       contentRef.current.scrollTop = contentRef.current.scrollHeight;
     }
@@ -148,11 +175,11 @@ export const DmxMonitor: React.FC<DmxMonitorProps> = ({ footerDocked = false }) 
 
   return (
     <ResizableFloatingPanel
-      storageKey="artbastard.dmxMonitor.size"
-      defaultWidth={500}
+      storageKey="artbastard.dmxMonitor.size.v2"
+      defaultWidth={620}
       defaultHeight={300}
-      minWidth={320}
-      maxWidth={640}
+      minWidth={380}
+      maxWidth={1040}
       minHeight={120}
       maxHeight={480}
       anchor="top-right"
@@ -160,11 +187,9 @@ export const DmxMonitor: React.FC<DmxMonitorProps> = ({ footerDocked = false }) 
       style={footerDocked
         ? {
             left: 'auto',
-            right: '260px',
+            right: '12px',
             top: 'auto',
             bottom: '96px',
-            width: '400px',
-            height: '270px',
           }
         : isCollapsed ? { width: 'auto', height: 'auto' } : undefined}
     >
@@ -243,8 +268,8 @@ export const DmxMonitor: React.FC<DmxMonitorProps> = ({ footerDocked = false }) 
                   <div key={msg.id} className={styles.messageRow}>
                     <div className={styles.messageRowMain}>
                       <span className={dmxStyles.timestamp}>{new Date(msg.timestamp).toLocaleTimeString()}</span>
-                      <span className={styles.type}>DMX</span>
-                      <span className={styles.channel}>CH {msg.channel + 1}</span>
+                      <span className={styles.type}>{msg.kind === 'event' ? 'APC40' : 'DMX'}</span>
+                      <span className={styles.channel}>{msg.channelLabel ?? `CH ${msg.channel + 1}`}</span>
                       <span className={dmxStyles.dmxValue}>
                         {msg.summary}
                       </span>

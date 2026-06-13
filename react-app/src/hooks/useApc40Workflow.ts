@@ -9,6 +9,7 @@ import {
   buildRandomLookUpdates,
   buildRoleUpdates,
   midiToDmx,
+  resolveApc40DeviceRoleCatalog,
   resolveApc40DeviceRoleSlots,
   type Apc40Deck,
   type Apc40RoleSlot,
@@ -163,6 +164,14 @@ export function useApc40Workflow() {
   };
   const publishSurfaceState = (patch: Parameters<typeof setApc40StatePatch>[0] = {}) => {
     const state = useStore.getState();
+    const deviceRoleCatalog = resolveApc40DeviceRoleCatalog(
+      state.fixtures,
+      state.selectedFixtures
+    );
+    const deviceBankCount = deviceRoleCatalog.length;
+    const maxDeviceBankIndex = Math.max(0, deviceBankCount - 1);
+    if (deviceRoleBankRef.current > maxDeviceBankIndex) deviceRoleBankRef.current = maxDeviceBankIndex;
+    if (deviceRoleBankRef.current < 0) deviceRoleBankRef.current = 0;
     const roles = resolveApc40DeviceRoleSlots(
       state.fixtures,
       state.selectedFixtures,
@@ -176,8 +185,13 @@ export function useApc40Workflow() {
       armedColumns: sortedColumns(armedColumnsRef.current),
       soloedGroups: sortedColumns(soloedGroupsRef.current),
       fullOn: fullOnSnapshotRef.current !== null,
+      blackout: blackoutSnapshotRef.current !== null,
       autoGroups: sortedColumns(autoGroupsRef.current),
       deviceRoleLabels: roles.map((role) => role.label),
+      deviceBankIndex: deviceRoleBankRef.current,
+      deviceBankCount,
+      deviceBankAtStart: deviceRoleBankRef.current <= 0,
+      deviceBankAtEnd: deviceBankCount <= 0 || deviceRoleBankRef.current >= maxDeviceBankIndex,
       ...patch,
     });
   };
@@ -711,7 +725,7 @@ export function useApc40Workflow() {
           `Changed ${role.label} on ${targetLabelForSelection(state, false)} to ${value}`,
           state.selectedFixtures.length > 0
             ? `Device Control bank ${deviceRoleBankRef.current + 1}; context-aware fixture capability.`
-            : 'Device Control needs Track Select or a fixture selection before it can write DMX.',
+            : 'Device Control needs a fixture/group selection before it can write DMX.',
           {
             fixtureNames: selectedFixtureNames(state),
             groupNames: selectedGroupNames(state),
@@ -736,7 +750,7 @@ export function useApc40Workflow() {
           `Changed ${role.label} on ${targetLabelForSelection(state, false)} to ${value}`,
           state.selectedFixtures.length > 0
             ? 'Track Control uses fixed ArtBastard roles.'
-            : 'Track Control needs Track Select or a fixture selection before it can write DMX.',
+            : 'Track Control needs a fixture/group selection before it can write DMX.',
           {
             fixtureNames: selectedFixtureNames(state),
             groupNames: selectedGroupNames(state),
@@ -772,29 +786,45 @@ export function useApc40Workflow() {
     }
 
     if (action.type === 'bank-prev' || action.type === 'bank-next') {
-      const roles = resolveApc40DeviceRoleSlots(state.fixtures, state.selectedFixtures, 0);
-      const total = roles.length || 1;
+      const roleCatalog = resolveApc40DeviceRoleCatalog(state.fixtures, state.selectedFixtures);
+      const total = roleCatalog.length;
       const delta = action.type === 'bank-next' ? 1 : -1;
-      deviceRoleBankRef.current = ((deviceRoleBankRef.current + delta) % total + total) % total;
+      const maxBankIndex = Math.max(0, total - 1);
+      const requestedBankIndex = deviceRoleBankRef.current + delta;
+      deviceRoleBankRef.current = Math.max(0, Math.min(maxBankIndex, requestedBankIndex));
       const activeRoles = resolveApc40DeviceRoleSlots(
         state.fixtures, state.selectedFixtures, deviceRoleBankRef.current,
       );
+      const direction = action.type === 'bank-next' ? 'next' : 'prev';
+      const hitBoundary = requestedBankIndex !== deviceRoleBankRef.current;
       publishSurfaceState({
+        deviceBankFlashDirection: direction,
+        deviceBankFlashUntil: Date.now() + 450,
         deviceRoleLabels: activeRoles.map((role) => role.label),
         lastChange: makeLastChange(
           'device',
           action.type === 'bank-next' ? 'Device Bank \u2192' : 'Device Bank \u2190',
-          `Rotated Device Control bank to ${deviceRoleBankRef.current + 1}`,
-          `D1-D8 now expose: ${formatList(activeRoles.map((role) => role.label))}.`,
+          hitBoundary
+            ? `Device Control bank at ${action.type === 'bank-next' ? 'last' : 'first'} page`
+            : `Moved Device Control bank to ${deviceRoleBankRef.current + 1} of ${Math.max(1, total)}`,
+          activeRoles.length > 0
+            ? `D1-D8 now expose: ${formatList(activeRoles.map((role) => role.label))}.`
+            : 'No selected fixture capabilities match the Device Control role bank.',
         ),
       });
       return;
     }
 
     if (action.type === 'full-on') {
-      if (fullOnSnapshotRef.current) {
+      const alreadyOn = fullOnSnapshotRef.current !== null;
+      if (action.pressed === alreadyOn) {
+        publishSurfaceState({ fullOn: alreadyOn });
+        return;
+      }
+
+      if (!action.pressed) {
         const restore: Record<number, number> = {};
-        fullOnSnapshotRef.current.forEach((value, channel) => {
+        fullOnSnapshotRef.current?.forEach((value, channel) => {
           if (state.dmxChannels[channel] !== value) restore[channel] = value;
         });
         fullOnSnapshotRef.current = null;
@@ -828,15 +858,22 @@ export function useApc40Workflow() {
     }
 
     if (action.type === 'blackout') {
-      // Toggle: latch all DMX to 0 (snapshot prev state), or restore snapshot.
-      if (blackoutSnapshotRef.current) {
+      const alreadyOn = blackoutSnapshotRef.current !== null;
+      if (action.pressed === alreadyOn) {
+        publishSurfaceState({ blackout: alreadyOn });
+        return;
+      }
+
+      // ON latches all DMX to 0 (snapshot prev state); OFF restores snapshot.
+      if (!action.pressed) {
         const restore: Record<number, number> = {};
-        blackoutSnapshotRef.current.forEach((value, channel) => {
+        blackoutSnapshotRef.current?.forEach((value, channel) => {
           if (state.dmxChannels[channel] !== value) restore[channel] = value;
         });
         blackoutSnapshotRef.current = null;
         if (Object.keys(restore).length > 0) state.setMultipleDmxChannels(restore, true);
         publishSurfaceState({
+          blackout: false,
           lastChange: makeLastChange(
             'effect',
             'Device On/Off',
@@ -853,6 +890,7 @@ export function useApc40Workflow() {
         });
         if (Object.keys(updates).length > 0) state.setMultipleDmxChannels(updates, true);
         publishSurfaceState({
+          blackout: true,
           lastChange: makeLastChange(
             'effect',
             'Device On/Off',
@@ -1047,27 +1085,52 @@ export function useApc40Workflow() {
 
     if (action.type === 'freeze-dmx') {
       const wasFrozen = state.dmxFrozen;
-      state.setDmxFrozen(!wasFrozen);
+      if (action.pressed === wasFrozen) {
+        publishSurfaceState();
+        return;
+      }
+      state.setDmxFrozen(action.pressed);
+      publishSurfaceState({
+        lastChange: makeLastChange(
+          'transport',
+          'Detail View',
+          action.pressed ? 'DMX OUTPUT FROZEN' : 'DMX output released',
+          action.pressed
+            ? 'Backend send suppressed. GUI keeps reflecting state; rig holds last value until released.'
+            : 'Backend send re-enabled. Current store state was flushed to the rig.'
+        ),
+      });
+      state.addNotification({
+        message: action.pressed ? 'APC40 DMX output FROZEN — press Detail View OFF to release' : 'APC40 DMX output released',
+        type: action.pressed ? 'warning' : 'info',
+        priority: action.pressed ? 'high' : 'normal',
+      });
+      return;
+    }
+
+    if (action.type === 'toggle-freeze-dmx') {
+      const nextFrozen = !state.dmxFrozen;
+      state.setDmxFrozen(nextFrozen);
       publishSurfaceState({
         lastChange: makeLastChange(
           'transport',
           'Master Select',
-          wasFrozen ? 'DMX output released' : 'DMX OUTPUT FROZEN',
-          wasFrozen
-            ? 'Backend send re-enabled. Current store state was flushed to the rig.'
-            : 'Backend send suppressed. GUI keeps reflecting state; rig holds last value until released.'
+          nextFrozen ? 'DMX OUTPUT FROZEN' : 'DMX output released',
+          nextFrozen
+            ? 'Master LED is on. Backend send is suppressed while the GUI keeps reflecting state.'
+            : 'Master LED is off. Backend send is re-enabled and the current store state was flushed to the rig.'
         ),
       });
       state.addNotification({
-        message: wasFrozen ? 'APC40 DMX output released' : 'APC40 DMX output FROZEN — press Master again to release',
-        type: wasFrozen ? 'info' : 'warning',
-        priority: wasFrozen ? 'normal' : 'high',
+        message: nextFrozen ? 'APC40 Master FREEZE latched — press Master again to unfreeze' : 'APC40 Master FREEZE released',
+        type: nextFrozen ? 'warning' : 'info',
+        priority: nextFrozen ? 'high' : 'normal',
       });
       return;
     }
 
     if (action.type === 'toggle-color-auto') {
-      if (shiftHeldRef.current) {
+      if (shiftHeldRef.current && action.pressed) {
         const nextPattern = nextInCycle(COLOR_PATTERNS, state.modularAutomation.color.type as typeof COLOR_PATTERNS[number]);
         state.setColorAutomation({ type: nextPattern });
         publishSurfaceState({
@@ -1081,7 +1144,9 @@ export function useApc40Workflow() {
         state.addNotification({ message: `APC40 color pattern: ${nextPattern}`, type: 'info', priority: 'low' });
         return;
       }
-      state.toggleColorAutomation();
+      if (state.modularAutomation.color.enabled !== action.pressed) {
+        state.toggleColorAutomation();
+      }
       const enabled = useStore.getState().modularAutomation.color.enabled;
       publishSurfaceState({
         lastChange: makeLastChange(
@@ -1100,7 +1165,7 @@ export function useApc40Workflow() {
     }
 
     if (action.type === 'toggle-pan-tilt-auto') {
-      if (shiftHeldRef.current) {
+      if (shiftHeldRef.current && action.pressed) {
         const nextPath = nextInCycle(PAN_TILT_PATHS, state.modularAutomation.panTilt.pathType as typeof PAN_TILT_PATHS[number]);
         state.setPanTiltAutomation({ pathType: nextPath });
         publishSurfaceState({
@@ -1114,7 +1179,9 @@ export function useApc40Workflow() {
         state.addNotification({ message: `APC40 pan/tilt path: ${nextPath}`, type: 'info', priority: 'low' });
         return;
       }
-      state.togglePanTiltAutomation();
+      if (state.modularAutomation.panTilt.enabled !== action.pressed) {
+        state.togglePanTiltAutomation();
+      }
       const enabled = useStore.getState().modularAutomation.panTilt.enabled;
       publishSurfaceState({
         lastChange: makeLastChange(
@@ -1133,7 +1200,7 @@ export function useApc40Workflow() {
     }
 
     if (action.type === 'toggle-effect-auto') {
-      if (shiftHeldRef.current) {
+      if (shiftHeldRef.current && action.pressed) {
         const nextType = nextInCycle(EFFECT_TYPES, state.modularAutomation.effects.type as typeof EFFECT_TYPES[number]);
         state.setEffectsAutomation({ type: nextType });
         publishSurfaceState({
@@ -1147,7 +1214,9 @@ export function useApc40Workflow() {
         state.addNotification({ message: `APC40 effect type: ${nextType}`, type: 'info', priority: 'low' });
         return;
       }
-      state.toggleEffectsAutomation();
+      if (state.modularAutomation.effects.enabled !== action.pressed) {
+        state.toggleEffectsAutomation();
+      }
       const enabled = useStore.getState().modularAutomation.effects.enabled;
       publishSurfaceState({
         lastChange: makeLastChange(
@@ -1202,20 +1271,23 @@ export function useApc40Workflow() {
     }
 
     if (action.type === 'select-all') {
-      state.selectAllFixtures();
+      if (action.pressed) state.selectAllFixtures();
+      else state.deselectAllFixtures();
       const nextState = useStore.getState();
       publishSurfaceState({
         lastChange: makeLastChange(
           'selection',
           'PAN',
-          `Selected all fixtures (${nextState.selectedFixtures.length})`,
-          'PAN utility button is mapped as Select All in ArtBastard.',
+          action.pressed
+            ? `Selected all fixtures (${nextState.selectedFixtures.length})`
+            : 'Deselected all fixtures',
+          'PAN ON selects all fixtures; PAN OFF clears fixture selection.',
           { fixtureNames: selectedFixtureNames(nextState) }
         ),
         ...apcTargetPatch(null, null, [...nextState.selectedFixtures], `All fixtures (${nextState.selectedFixtures.length})`),
       });
       state.addNotification({
-        message: 'APC40 selected all fixtures',
+        message: action.pressed ? 'APC40 selected all fixtures' : 'APC40 deselected all fixtures',
         type: 'info',
         priority: 'low',
       });

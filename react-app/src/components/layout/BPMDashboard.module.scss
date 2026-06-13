@@ -23,13 +23,13 @@
   
   &.collapsed {
     opacity: 0.9;
-    transform: translateX(-50%) translateY(-60%); // Show more of the header in collapsed state
+    transform: translateX(-50%) translateY(0);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
     
     &:hover {
       opacity: 1;
-      transform: translateX(-50%) translateY(-40%); // Show even more on hover
+      transform: translateX(-50%) translateY(0);
       box-shadow: 
         0 12px 40px rgba(0, 0, 0, 0.5),
         0 0 32px rgba(16, 185, 129, 0.3);
@@ -79,6 +79,8 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
+  flex-wrap: wrap;
 }
 
 .beatIndicator {
@@ -151,6 +153,23 @@
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
+.sourceBadge {
+  max-width: 12rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0.2rem 0.45rem;
+  border: 1px solid rgba(45, 212, 191, 0.34);
+  border-radius: 4px;
+  color: #99f6e4;
+  background: rgba(15, 23, 42, 0.48);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .quickStatus {
   display: flex;
   align-items: center;
@@ -160,7 +179,10 @@
   .playStatus {
     display: flex;
     align-items: center;
-    font-size: 16px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
     
     &.playing {
       animation: pulse 2s infinite;

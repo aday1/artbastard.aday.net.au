@@ -223,7 +223,7 @@ Mobile requirements:
 | `DOCS/APC40_CHEATSHEET.md` | Single-page button/LED/mode reference (linked from `DOCS/MIDI_TEMPLATES.md`, `DOCS/SHORTCUTS.md`, in-app Help "APC40 Live" tab, and the showcase docs grid) |
 | `DOCS/MIDI_TEMPLATES.md` | Template apply flow (POST `/api/midi/controller-template`) |
 
-APC40 must be practical, not decorative: Clip Launch / Session View is the 40-slot Deck A scene grid, SHIFT exposes the independent 40-slot Deck B grid, REC then Clip saves the current DMX look, SHIFT+REC rolls random DMX for preview only, Scene Launch fires ACTS 1-5, channel faders walk selected fixture dimmers through Super Control, Device Control follows selected fixture gobo/effects roles, Activator selects groups, Solo/Cue selects fixtures, Record Arm soloes groups, Master Select is FREEZE DMX, and the crossfader blends active Deck A/B scenes. The Help overlay (Ctrl+H → APC40 Live) and `DOCS/APC40_CHEATSHEET.md` are the operator reference.
+APC40 must be practical, not decorative: Clip Launch / Session View is the 40-slot Deck A scene grid, SHIFT exposes the independent 40-slot Deck B grid, REC then Clip saves the current DMX look, SHIFT+REC rolls random DMX for preview only, Scene Launch fires ACTS 1-5, channel faders walk selected fixture dimmers through Super Control, Device Control follows selected fixture gobo/effects roles, Activator selects groups, Solo/Cue selects fixtures, Record Arm soloes groups, Master Select is FREEZE DMX, Track Select stays unmapped, and the crossfader blends active Deck A/B scenes. The Help overlay (Ctrl+H → APC40 Live) and `DOCS/APC40_CHEATSHEET.md` are the operator reference.
 
 ## Show sequencing subsystems
 

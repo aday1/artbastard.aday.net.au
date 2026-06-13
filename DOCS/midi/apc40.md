@@ -22,13 +22,17 @@ transport:
   stop: 0x5c
   record: 0x5d
   recordAlt: 0x66
+  detailView: 0x3e
+  recQuantization: 0x3f
+  midiOverdub: 0x40
+  metronome: 0x41
   navFixturePrev: 0x5e
   navFixtureNext: 0x5f
   navScenePrev: 0x60
   navSceneNext: 0x61
   selectAll: 0x57
   stopAll: 0x51
-  masterButton: 0x33
+  masterButton: 0x33 # channel 8; toggles DMX FREEZE
 master:
   master: 0x0e
   crossfader: 0x0f
@@ -58,15 +62,18 @@ must match a variant of `Apc40Action` (see `react-app/src/midi/apc40.ts`).
 | clip-mk1        | 0..7     | 0x37   | clip-launch     | gt0           |
 | clip-mk1        | 0..7     | 0x38   | clip-launch     | gt0           |
 | clip-mk1        | 0..7     | 0x39   | clip-launch     | gt0           |
-| record-arm      | 0..7     | 0x30   | solo-group      | gt0           |
-| select-fixture  | 0..7     | 0x31   | select-fixture  | gt0           |
-| select-group    | 0..7     | 0x32   | select-group    | gt0           |
-| master-button   | 8        | 0x33   | freeze-dmx      | gt0           |
+| record-arm      | 0..7     | 0x30   | solo-group      | press-release |
+| select-fixture  | 0..7     | 0x31   | select-fixture  | press-release |
+| select-group    | 0..7     | 0x32   | select-group    | press-release |
 | track-stop      | 0..7     | 0x34   | track-stop      | gt0           |
-| full-on         | 0        | 0x3a   | full-on         | gt0           |
-| blackout        | 0        | 0x3b   | blackout        | gt0           |
+| full-on         | 0        | 0x3a   | full-on         | press-release |
+| blackout        | 0        | 0x3b   | blackout        | press-release |
 | bank-prev       | 0        | 0x3c   | bank-prev       | gt0           |
 | bank-next       | 0        | 0x3d   | bank-next       | gt0           |
+| freeze-dmx      | 0        | 0x3e   | freeze-dmx      | press-release |
+| record          | 0        | 0x3f   | record          | gt0           |
+| stop-all-clips  | 0        | 0x40   | stop-all-clips  | gt0           |
+| tap-tempo       | 0        | 0x41   | tap-tempo       | gt0           |
 | scene-launch    | 0        | 0x52   | scene-launch    | gt0           |
 | scene-launch    | 0        | 0x53   | scene-launch    | gt0           |
 | scene-launch    | 0        | 0x54   | scene-launch    | gt0           |
@@ -82,10 +89,10 @@ must match a variant of `Apc40Action` (see `react-app/src/midi/apc40.ts`).
 | nav-fixture     | any      | 0x5f   | nav-fixture-next| gt0           |
 | nav-scene       | any      | 0x60   | nav-scene-prev  | gt0           |
 | nav-scene       | any      | 0x61   | nav-scene-next  | gt0           |
-| select-all      | any      | 0x57   | select-all      | gt0           |
-| toggle-color-auto    | any | 0x58   | toggle-color-auto    | gt0      |
-| toggle-pan-tilt-auto | any | 0x59   | toggle-pan-tilt-auto | gt0      |
-| toggle-effect-auto   | any | 0x5a   | toggle-effect-auto   | gt0      |
+| select-all      | any      | 0x57   | select-all      | press-release |
+| toggle-color-auto    | any | 0x58   | toggle-color-auto    | press-release |
+| toggle-pan-tilt-auto | any | 0x59   | toggle-pan-tilt-auto | press-release |
+| toggle-effect-auto   | any | 0x5a   | toggle-effect-auto   | press-release |
 | tap-tempo       | any      | 0x63   | tap-tempo       | gt0           |
 | nudge-up        | any      | 0x64   | nudge-up        | gt0           |
 | nudge-down      | any      | 0x65   | nudge-down      | gt0           |
@@ -176,21 +183,25 @@ is in effect. `controlName` must be a SuperControl role name from
 | trackSelect    | selection  | Track Select (1-8) \u2014 UNMAPPED        | Reserved \u2014 APC40 hardware emits unreliable CCs in some modes, so selection lives on Solo/Cue and Activator instead.                                  |
 | trackStop      | utility    | Clip Stop row                        | Stop/unselect the active scene in that column for the current deck.                                                                                  |
 | stopAll        | utility    | Stop All Clips                       | Stop all Deck A/B scenes and ACT playback.                                                                                                           |
-| masterButton   | utility    | Master Select \u2014 FREEZE DMX latch   | Latch: press to freeze DMX output (rig holds last value, store keeps updating); press again to release and flush current store state to backend.   |
-| fullOn         | effect     | Clip/Track \u2014 FULL ON                | Toggle: raise patched fixture channels to 255 and snapshot prior DMX; press again to restore the snapshot.                                          |
-| blackout       | effect     | Device On/Off \u2014 BLACKOUT             | Toggle: snapshot DMX and zero all channels; press again to restore. LED on the device lights while latched.                                          |
+| masterButton   | utility    | Master Select \u2014 FREEZE DMX           | Press once to freeze DMX output and light the Master LED; press again to unfreeze and flush current store state.                                     |
+| fullOn         | effect     | Clip/Track \u2014 FULL ON                | ON raises patched fixture channels to 255 and snapshots prior DMX; OFF restores the snapshot.                                                        |
+| blackout       | effect     | Device On/Off \u2014 BLACKOUT             | ON snapshots DMX and zeros all channels; OFF restores. LED on the device lights while latched.                                                       |
+| freezeDmx      | utility    | Detail View \u2014 FREEZE DMX             | ON freezes DMX output while UI/store continues; OFF releases and flushes current state to backend.                                                   |
+| recQuant       | scene      | Rec Quantization \u2014 save mode         | Alias for REC save mode.                                                                                                                             |
+| midiOverdub    | utility    | MIDI Overdub \u2014 panic stop            | Alias for Stop All Clips.                                                                                                                            |
+| metronome      | transport  | Metronome \u2014 tap tempo                | Alias for Tap Tempo.                                                                                                                                 |
 | deviceBank     | device     | Device Left / Right \u2014 bank cycle    | Cycle the Device Control role bank backwards/forwards (replaces Cue Level for this purpose).                                                         |
 | cueLevel       | scene      | Cue Level \u2014 automation direction    | Endless rotary; CW step sets global automationDirection=forward, CCW step sets reverse. Inverts AutoScene index advance and pan/tilt autopilot track. |
 | transport      | scene      | PLAY \u2014 start Auto Scene             | PLAY enables Auto Scene playback (uses the existing list and tempo source). STOP disables it. Stop All Clips is the panic-safe stop.                |
 | stopTransport  | scene      | STOP \u2014 stop Auto Scene              | STOP disables Auto Scene playback. Stop All Clips still clears Deck A/B and ACT playback.                                                            |
 | tapTempo       | transport  | Tap Tempo                            | Tap on the beat. Each tap records a tempo sample and switches the Auto Scene tempo source to Tap Tempo.                                              |
 | nudge          | transport  | Nudge\u2212 / Nudge+                       | Decrease or increase the Auto Scene manual BPM by 1. Switches tempo source to Manual BPM.                                                            |
-| colorAuto      | effect     | SEND A \u2014 Color Automation          | Toggle the modular color automation engine on/off. SHIFT+SEND A cycles the color pattern.                                                            |
-| panTiltAuto    | effect     | SEND B \u2014 Pan/Tilt Automation       | Toggle the modular pan/tilt automation engine on/off. SHIFT+SEND B cycles the pan/tilt path.                                                          |
-| effectsAuto    | effect     | SEND C \u2014 Effects Automation        | Toggle the modular effects automation engine (gobo/strobe/shutter) on/off. SHIFT+SEND C cycles the effect type.                                       |
+| colorAuto      | effect     | SEND A \u2014 Color Automation          | ON enables color automation; OFF disables it. SHIFT+SEND A cycles the color pattern.                                                                  |
+| panTiltAuto    | effect     | SEND B \u2014 Pan/Tilt Automation       | ON enables pan/tilt automation; OFF disables it. SHIFT+SEND B cycles the pan/tilt path.                                                               |
+| effectsAuto    | effect     | SEND C \u2014 Effects Automation        | ON enables effects automation; OFF disables it. SHIFT+SEND C cycles the effect type.                                                                  |
 | record         | scene      | REC \u2014 save mode / roll dice        | Plain press enters/exits clip-grid save mode. SHIFT+REC rolls a fresh randomized look (random hue + dimmer + pan/tilt per fixture) live to DMX for preview \u2014 nothing is saved until the operator presses REC, then a clip pad. Hold SHIFT only for the clip-pad press to save Deck B. |
 | navFixture     | nav        | Up / Down arrows                     | Cycle through fixtures: Up = previous, Down = next.                                                                                                  |
 | navScene       | nav        | Left / Right arrows                  | Cycle through scenes: Left = previous, Right = next.                                                                                                 |
-| selectAll      | selection  | Pan button                           | Select all fixtures at once.                                                                                                                         |
+| selectAll      | selection  | Pan button                           | ON selects all fixtures; OFF clears fixture selection.                                                                                                |
 | clear          | selection  | Clear Selection                      | Deselects all fixtures.                                                                                                                              |
 | shift          | utility    | Shift                                | Modifier reserved for shift-combos and Deck A/B toggle on the clip grid.                                                                             |

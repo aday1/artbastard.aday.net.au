@@ -3,7 +3,6 @@ export type Apc40Model = 'apc40-mk1' | 'apc40-mk2';
 export type Apc40Action =
   | { type: 'clip-launch'; model: Apc40Model; row: number; column: number; index: number }
   | { type: 'scene-launch'; model: Apc40Model; sceneIndex: number }
-  | { type: 'track-select'; model: Apc40Model; trackIndex: number }
   | { type: 'select-fixture'; model: Apc40Model; trackIndex: number; pressed: boolean }
   | { type: 'select-group'; model: Apc40Model; trackIndex: number; pressed: boolean }
   | { type: 'track-stop'; model: Apc40Model; trackIndex: number }
@@ -16,9 +15,8 @@ export type Apc40Action =
   | { type: 'device-control'; model: Apc40Model; slotIndex: number; value: number }
   | { type: 'track-control'; model: Apc40Model; slotIndex: number; value: number }
   | { type: 'cue-level'; model: Apc40Model; value: number }
-  | { type: 'master-button'; model: Apc40Model }
-  | { type: 'blackout'; model: Apc40Model }
-  | { type: 'full-on'; model: Apc40Model }
+  | { type: 'blackout'; model: Apc40Model; pressed: boolean }
+  | { type: 'full-on'; model: Apc40Model; pressed: boolean }
   | { type: 'bank-prev'; model: Apc40Model }
   | { type: 'bank-next'; model: Apc40Model }
   | { type: 'stop-all-clips'; model: Apc40Model }
@@ -29,13 +27,14 @@ export type Apc40Action =
   | { type: 'shift'; model: Apc40Model; pressed: boolean }
   | { type: 'nav-fixture'; model: Apc40Model; direction: 'next' | 'prev' }
   | { type: 'nav-scene'; model: Apc40Model; direction: 'next' | 'prev' }
-  | { type: 'select-all'; model: Apc40Model }
+  | { type: 'select-all'; model: Apc40Model; pressed: boolean }
   | { type: 'tap-tempo'; model: Apc40Model }
   | { type: 'nudge'; model: Apc40Model; direction: 'up' | 'down' }
-  | { type: 'freeze-dmx'; model: Apc40Model }
-  | { type: 'toggle-color-auto'; model: Apc40Model }
-  | { type: 'toggle-pan-tilt-auto'; model: Apc40Model }
-  | { type: 'toggle-effect-auto'; model: Apc40Model };
+  | { type: 'freeze-dmx'; model: Apc40Model; pressed: boolean }
+  | { type: 'toggle-freeze-dmx'; model: Apc40Model }
+  | { type: 'toggle-color-auto'; model: Apc40Model; pressed: boolean }
+  | { type: 'toggle-pan-tilt-auto'; model: Apc40Model; pressed: boolean }
+  | { type: 'toggle-effect-auto'; model: Apc40Model; pressed: boolean };
 
 export interface MidiLikeMessage {
   channel?: number;
@@ -159,14 +158,25 @@ export function decodeApc40Message(message: MidiLikeMessage): Apc40Action | null
   if (note === 0x31 && (pressed || released)) return { type: 'select-fixture', model, trackIndex, pressed };
   // Activator row selects GROUPS (formerly auto-control toggle).
   if (note === 0x32 && (pressed || released)) return { type: 'select-group', model, trackIndex, pressed };
+  // Device Control block stateful buttons.
+  if (note === 0x3a && (message.channel ?? 0) === 0 && (pressed || released)) return { type: 'full-on', model, pressed };
+  if (note === 0x3b && (message.channel ?? 0) === 0 && (pressed || released)) return { type: 'blackout', model, pressed };
+  // Detail View remains an explicit ON/OFF freeze control.
+  if (note === 0x3e && (message.channel ?? 0) === 0 && (pressed || released)) return { type: 'freeze-dmx', model, pressed };
+  // Master Select is a latch-style FREEZE toggle: press once to freeze, press again to release.
+  // In APC40 toggle modes, the second physical press may arrive as delayed velocity 0.
+  if (note === 0x33 && (message.channel ?? 0) === 8 && (pressed || released)) return { type: 'toggle-freeze-dmx', model };
+  if (note === 0x57 && (pressed || released)) return { type: 'select-all', model, pressed };
+  if (note === 0x58 && (pressed || released)) return { type: 'toggle-color-auto', model, pressed };
+  if (note === 0x59 && (pressed || released)) return { type: 'toggle-pan-tilt-auto', model, pressed };
+  if (note === 0x5a && (pressed || released)) return { type: 'toggle-effect-auto', model, pressed };
 
   if (!pressed) return null;
 
   const scene = sceneLaunch(model, note);
   if (scene) return scene;
 
-  if (note === 0x33 && (message.channel ?? 0) === 8) return { type: 'freeze-dmx', model };
-  // Note 0x33 (Track Select row) is intentionally unmapped \u2014 the hardware
+  // Note 0x33 on channels 0-7 (Track Select row) is intentionally unmapped — the hardware
   // emits unreliable CCs in some modes. Selection lives on Solo/Cue + Activator.
   if (note === 0x34) return { type: 'track-stop', model, trackIndex };
   // Device Control cluster (right side of APC40, channel 0):
@@ -174,10 +184,15 @@ export function decodeApc40Message(message: MidiLikeMessage): Apc40Action | null
   // 0x3B = Device On/Off       → Blackout latch
   // 0x3C = Device Left         → previous device-knob bank
   // 0x3D = Device Right        → next device-knob bank
-  if (note === 0x3a && (message.channel ?? 0) === 0) return { type: 'full-on', model };
-  if (note === 0x3b && (message.channel ?? 0) === 0) return { type: 'blackout', model };
+  // 0x3E = Detail View         → Freeze DMX latch
+  // 0x3F = Rec Quantization    → REC/save-mode alias
+  // 0x40 = MIDI Overdub        → Stop All Clips / panic stop alias
+  // 0x41 = Metronome           → Tap Tempo alias
   if (note === 0x3c && (message.channel ?? 0) === 0) return { type: 'bank-prev', model };
   if (note === 0x3d && (message.channel ?? 0) === 0) return { type: 'bank-next', model };
+  if (note === 0x3f && (message.channel ?? 0) === 0) return { type: 'record', model };
+  if (note === 0x40 && (message.channel ?? 0) === 0) return { type: 'stop-all-clips', model };
+  if (note === 0x41 && (message.channel ?? 0) === 0) return { type: 'tap-tempo', model };
   if (note === 0x51) return { type: 'stop-all-clips', model };
   if (note === 0x5b) return { type: 'play', model };
   if (note === 0x5c) return { type: 'stop', model };
@@ -189,18 +204,11 @@ export function decodeApc40Message(message: MidiLikeMessage): Apc40Action | null
   if (note === 0x5f) return { type: 'nav-fixture', model, direction: 'next' };
   if (note === 0x60) return { type: 'nav-scene', model, direction: 'prev' };
   if (note === 0x61) return { type: 'nav-scene', model, direction: 'next' };
-  // Pan button (note 0x57) doubles as "select all fixtures" — easy to reach
-  // and the APC40 hardware LED gives positive feedback when pressed.
-  if (note === 0x57) return { type: 'select-all', model };
-
   // SEND row toggles modular automation engines (unshifted = toggle on/off;
   // SHIFT-combo handled in the workflow hook cycles the engine pattern).
   //   SEND A (0x58) = color engine
   //   SEND B (0x59) = pan/tilt engine
   //   SEND C (0x5A) = effects engine
-  if (note === 0x58) return { type: 'toggle-color-auto', model };
-  if (note === 0x59) return { type: 'toggle-pan-tilt-auto', model };
-  if (note === 0x5a) return { type: 'toggle-effect-auto', model };
 
   // Transport block extras on APC40 MK1 hardware:
   //   0x63 = Tap Tempo

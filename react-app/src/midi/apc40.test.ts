@@ -142,7 +142,7 @@ describe('APC40 workflow decoder', () => {
       model: 'apc40-mk1',
     });
 
-    // Master Select (note 0x33, channel 8) is FREEZE DMX latch.
+    // Master Select (note 0x33, channel 8) toggles the DMX FREEZE latch.
     expect(decodeApc40Message({
       _type: 'noteon',
       source: 'Akai APC40',
@@ -150,7 +150,18 @@ describe('APC40 workflow decoder', () => {
       note: 0x33,
       velocity: 127,
     })).toEqual({
-      type: 'freeze-dmx',
+      type: 'toggle-freeze-dmx',
+      model: 'apc40-mk1',
+    });
+
+    expect(decodeApc40Message({
+      _type: 'noteon',
+      source: 'Akai APC40',
+      channel: 8,
+      note: 0x33,
+      velocity: 0,
+    })).toEqual({
+      type: 'toggle-freeze-dmx',
       model: 'apc40-mk1',
     });
   });
@@ -181,6 +192,18 @@ describe('APC40 workflow decoder', () => {
     })).toEqual({
       type: 'toggle-color-auto',
       model: 'apc40-mk1',
+      pressed: true,
+    });
+
+    expect(decodeApc40Message({
+      _type: 'noteon',
+      source: 'Akai APC40',
+      note: 0x58,
+      velocity: 0,
+    })).toEqual({
+      type: 'toggle-color-auto',
+      model: 'apc40-mk1',
+      pressed: false,
     });
 
     expect(decodeApc40Message({
@@ -191,6 +214,7 @@ describe('APC40 workflow decoder', () => {
     })).toEqual({
       type: 'toggle-pan-tilt-auto',
       model: 'apc40-mk1',
+      pressed: true,
     });
 
     expect(decodeApc40Message({
@@ -201,6 +225,34 @@ describe('APC40 workflow decoder', () => {
     })).toEqual({
       type: 'toggle-effect-auto',
       model: 'apc40-mk1',
+      pressed: true,
+    });
+  });
+
+  it('decodes APC40 utility buttons used by ArtBastard healthcheck', () => {
+    expect(decodeApc40Message({ _type: 'noteon', source: 'Akai APC40', channel: 0, note: 0x3a, velocity: 127 })).toEqual({
+      type: 'full-on', model: 'apc40-mk1', pressed: true,
+    });
+    expect(decodeApc40Message({ _type: 'noteon', source: 'Akai APC40', channel: 0, note: 0x3b, velocity: 0 })).toEqual({
+      type: 'blackout', model: 'apc40-mk1', pressed: false,
+    });
+    expect(decodeApc40Message({ _type: 'noteon', source: 'Akai APC40', channel: 0, note: 0x3e, velocity: 127 })).toEqual({
+      type: 'freeze-dmx', model: 'apc40-mk1', pressed: true,
+    });
+    expect(decodeApc40Message({ _type: 'noteon', source: 'Akai APC40', channel: 0, note: 0x3f, velocity: 127 })).toEqual({
+      type: 'record', model: 'apc40-mk1',
+    });
+    expect(decodeApc40Message({ _type: 'noteon', source: 'Akai APC40', channel: 0, note: 0x40, velocity: 127 })).toEqual({
+      type: 'stop-all-clips', model: 'apc40-mk1',
+    });
+    expect(decodeApc40Message({ _type: 'noteon', source: 'Akai APC40', channel: 0, note: 0x41, velocity: 127 })).toEqual({
+      type: 'tap-tempo', model: 'apc40-mk1',
+    });
+    expect(decodeApc40Message({ _type: 'noteon', source: 'Akai APC40', channel: 8, note: 0x33, velocity: 127 })).toEqual({
+      type: 'toggle-freeze-dmx', model: 'apc40-mk1',
+    });
+    expect(decodeApc40Message({ _type: 'noteon', source: 'Akai APC40', channel: 8, note: 0x33, velocity: 0 })).toEqual({
+      type: 'toggle-freeze-dmx', model: 'apc40-mk1',
     });
   });
 

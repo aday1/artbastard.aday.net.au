@@ -127,6 +127,16 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
         ? autoSceneManualBpm
         : midiClockBpm;
   const isPlaying = midiClockIsPlaying;
+  const sourceLabel =
+    autoSceneTempoSource === 'ableton_link'
+      ? `Ableton Link${abletonLinkAvailable ? ` (${abletonLinkPeers})` : ' unavailable'}`
+      : autoSceneTempoSource === 'tap_tempo'
+        ? 'Tap Tempo'
+        : autoSceneTempoSource === 'internal_clock'
+          ? selectedMidiClockHostId === 'ableton-link'
+            ? `Ableton Link${abletonLinkAvailable ? ` (${abletonLinkPeers})` : ''}`
+            : 'MIDI Clock'
+          : 'Manual BPM';
 
   const selectTempoSource = (source: 'internal_clock' | 'manual_bpm' | 'tap_tempo' | 'ableton_link') => {
     setAutoSceneTempoSource(source);
@@ -199,18 +209,23 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
     <div className={`${styles.bpmDashboard} ${className || ''} ${isExpanded ? styles.expanded : styles.collapsed}`}>
       <div className={styles.header} onClick={handleHeaderClick}>
         <div className={styles.titleSection}>
-          <h3 className={styles.title}>BPM Control</h3>
+          <h3 className={styles.title}>BPM</h3>
+          <span className={styles.sourceBadge} title={`Tempo source: ${sourceLabel}`}>
+            {sourceLabel}
+          </span>
           <div style={{marginLeft:'0.5rem'}} onClick={e=>e.stopPropagation()}>
             <select value={autoSceneTempoSource} onChange={(e)=>{
               const v = e.target.value as any; setAutoSceneTempoSource(v);
             }} style={{fontSize:'0.6rem'}}>
               <option value="manual_bpm">Internal</option>
               <option value="tap_tempo">Tap</option>
+              <option value="internal_clock">MIDI Clock</option>
+              <option value="ableton_link">Ableton Link</option>
             </select>
           </div>
           <div className={`${styles.quickStatus} ${isPlaying ? styles.playing : ''}`}>
             <span className={styles.bpmValue}>{Math.round(currentBpm)}</span>
-            <span className={styles.playStatus}>{isPlaying ? 'On' : 'Off'}</span>
+            <span className={styles.playStatus}>{isPlaying ? 'Playing' : 'Stopped'}</span>
           </div>
         </div>
         <button className={styles.expandButton} onClick={toggleExpanded}>

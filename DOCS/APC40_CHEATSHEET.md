@@ -19,7 +19,7 @@ APC40 MK1 factory MIDI mode and works without applying a MIDI template.
   CLIP STOP    [stop col1] ... [stop col8]   release current deck scene
 
   FADERS       [slot 1] ... [slot 8]         SuperControl dimmer per selected slot
-  MASTER BTN   FREEZE DMX latch              press once to freeze rig at last value; press again to release + flush
+  MASTER BTN   FREEZE DMX                    LED on = frozen; press again to unfreeze
   MASTER FADER selected DIMMER/masterDimmer  not a raw-all-channel fader
 
   CLIP GRID / SESSION VIEW
@@ -29,19 +29,23 @@ APC40 MK1 factory MIDI mode and works without applying a MIDI template.
   SCENE LAUNCH 1-5   ACT 1-5 launch
   STOP ALL CLIPS     stop Deck A/B scenes and stop ACT playback
   CROSSFADER         blend active Deck A scene with active Deck B scene
-  CUE LEVEL          UNMAPPED (Device Left/Right cycles Device Control role bank)
+  CUE LEVEL          automation direction (CW forward / CCW reverse)
   PLAY               enable Auto Scene playback        (LED green-blink while running)
   STOP               disable Auto Scene playback       (LED red while running)
   REC                enter clip-grid save mode         (LED red-blink while save mode active)
                      SHIFT+REC = roll fresh random look across all fixtures (preview only)
-  SEND A             toggle Color modular automation   (SHIFT+SEND A cycles color pattern)
-  SEND B             toggle Pan/Tilt modular auto      (SHIFT+SEND B cycles pan/tilt path)
-  SEND C             toggle Effects modular auto       (SHIFT+SEND C cycles effect type)
+  SEND A             Color automation ON/OFF           (SHIFT+SEND A cycles color pattern)
+  SEND B             Pan/Tilt automation ON/OFF        (SHIFT+SEND B cycles pan/tilt path)
+  SEND C             Effects automation ON/OFF         (SHIFT+SEND C cycles effect type)
   TAP TEMPO          tap to set Auto Scene BPM
   NUDGE -/+          decrement/increment manual BPM by 1
   CLIP/TRACK         FULL ON latch (raise all patched channels to 255)
   DEVICE ON/OFF      BLACKOUT latch (snapshot + zero all channels)
   DEVICE LEFT/RIGHT  cycle Device Control role bank
+  DETAIL VIEW        FREEZE DMX latch
+  REC QUANTIZATION   REC/save-mode alias
+  MIDI OVERDUB       panic stop alias
+  METRONOME          tap tempo alias
 ```
 
 ## At a glance
@@ -56,27 +60,31 @@ APC40 MK1 factory MIDI mode and works without applying a MIDI template.
 | **Clip Stop row** | Stop/unselect the active scene for that column in the current deck | red while a deck scene is active |
 | **Stop All Clips** | Stop Deck A scene, Deck B scene, scene timeline playback, and ACT playback | red while a deck scene or ACT is active |
 | **Track Select 1-8** | **UNMAPPED** — APC40 hardware emits unreliable CCs in some modes (CC bleed). Selection lives on Solo/Cue + Activator. | LEDs always off |
-| **Master Track Select** | **FREEZE DMX latch**: press to freeze rig at last value (store state still updates, hardware stays frozen); press again to release and flush store state to backend | red while frozen |
+| **Master Track Select** | **FREEZE DMX latch** — press once to freeze rig output, press again to unfreeze and flush current store state. | red while frozen, off while live |
 | **Faders 1-8** | SuperControl dimmer for selected fixture slot 1-8 | n/a |
 | **Master fader** | SuperControl `masterDimmer`/DIMMER for current selection | n/a |
 | **Device Control knobs 1-8** | Dynamic fixture role controls, prioritizing gobo/effects roles for the selected fixture/group | in-app APC40 manual labels current roles |
 | **Cue Level** | **AUTOMATION DIRECTION** — endless rotary encoder. CW = forward, CCW = reverse. Inverts step direction in AutoScene index advance and pan/tilt autopilot track. Modular color/dimmer/effects phases run on wall-clock and are not affected. | n/a |
-| **Solo/Cue 1-8** | Toggle fixture N in multi-selection (positional, one per column). Press to add, press again to remove. | lit when fixture is selected, off otherwise (MK1: single-color amber row) |
-| **Activator 1-8** | Toggle fixture group N in multi-selection (positional, one per column). Press to add the whole group, press again to remove it. | lit when every fixture in the group is selected, off otherwise (MK1: single-color amber row) |
+| **Solo/Cue 1-8** | ON selects fixture N, OFF removes it from multi-selection. | lit when fixture is selected, off otherwise (MK1: single-color amber row) |
+| **Activator 1-8** | ON adds fixture group N, OFF removes it from multi-selection. | lit when every fixture in the group is selected, off otherwise (MK1: single-color amber row) |
 | **Crossfader** | Linear DMX blend between active Deck A and active Deck B scenes | n/a |
 | **Nav up/down** | Previous/next fixture | n/a |
 | **Nav left/right** | Previous/next ArtBastard scene | n/a |
-| **Pan** | Select all fixtures | n/a |
+| **Pan** | ON selects all fixtures, OFF clears fixture selection | green while all fixtures are selected |
 | **PLAY** | Enable Auto Scene playback | green-blink while Auto Scene running |
 | **STOP (transport)** | Disable Auto Scene playback | red while Auto Scene running |
-| **SEND A** | Toggle Color modular automation. SHIFT+SEND A cycles color pattern. | orange-blink while engine enabled |
-| **SEND B** | Toggle Pan/Tilt modular automation. SHIFT+SEND B cycles pan/tilt path. | orange-blink while engine enabled |
-| **SEND C** | Toggle Effects modular automation (gobo/strobe/shutter). SHIFT+SEND C cycles effect type. | orange-blink while engine enabled |
+| **SEND A** | ON enables Color modular automation, OFF disables it. SHIFT+SEND A cycles color pattern. | orange-blink while engine enabled |
+| **SEND B** | ON enables Pan/Tilt modular automation, OFF disables it. SHIFT+SEND B cycles pan/tilt path. | orange-blink while engine enabled |
+| **SEND C** | ON enables Effects modular automation, OFF disables it. SHIFT+SEND C cycles effect type. | orange-blink while engine enabled |
 | **Tap Tempo** | Tap to set Auto Scene BPM | n/a |
 | **Nudge -/+** | Decrement/increment manual BPM by 1 (switches tempo source to manual) | n/a |
-| **Clip/Track (DEVICE CONTROL block)** | FULL ON latch — raise patched channels to 255, snapshot prior DMX; press again to restore | red while latched |
-| **Device On/Off** | BLACKOUT latch — snapshot DMX and zero all channels; press again to restore | red while latched |
+| **Clip/Track (DEVICE CONTROL block)** | FULL ON latch — ON raises patched channels to 255 and snapshots prior DMX; OFF restores | red while latched |
+| **Device On/Off** | BLACKOUT latch — ON snapshots DMX and zeros all channels; OFF restores | red while latched |
 | **Device Left/Right** | Cycle Device Control role banks | n/a |
+| **Detail View** | Alternate FREEZE DMX ON/OFF control. Master Select is the main latch button. | red while frozen |
+| **Rec Quantization** | REC/save-mode alias | red-blink while save mode active |
+| **MIDI Overdub** | Stop All Clips / panic stop alias | red while deck scene or ACT active |
+| **Metronome** | Tap Tempo alias | n/a |
 
 ## Scene decks
 
@@ -202,9 +210,12 @@ If you don't, roll again (SHIFT+REC) or launch any saved scene to clear it.
 
 ## FREEZE DMX latch
 
-Press the **Master Select** button to freeze rig output at its current value.
+Press **Master Select** to freeze rig output at its current value. The Master
+LED turns on while output is frozen; press **Master Select** again to unfreeze
+and flush the current store state. **Detail View** remains an alternate
+explicit ON/OFF freeze control.
 The store keeps updating (so UI and automations still respond) but no bytes
-ship to the DMX backend. Press Master Select again to release the latch —
+ship to the DMX backend. Switch Detail View OFF to release the latch —
 the hook flushes the current store state to the backend so the rig catches
 up to whatever you changed during the freeze.
 
@@ -251,7 +262,7 @@ tests and overlay preferences:
 | 0 | off | empty/inactive |
 | 1 | green | saved deck slot, saved ACT, fixture/group selected (MK1 single-color rows display this as plain amber-on) |
 | 2 | green-blink | PLAY while Auto Scene running |
-| 3 | red | STOP active / FULL ON latched / Master Select frozen / active deck scene present (MK1 single-color rows display this as plain amber-on) |
+| 3 | red | STOP active / FULL ON latched / Detail View frozen / active deck scene present (MK1 single-color rows display this as plain amber-on) |
 | 4 | red-blink | REC save mode / armed clip pads **or** Solo Group latched |
 | 5 | orange | SHIFT latched |
 | 6 | orange-blink | active deck scene, playing ACT, SEND-row engine enabled |

@@ -640,7 +640,7 @@ interface State extends AutomationState, TransitionTrackerSlice {
   dmxChannels: number[]
   // When true, store DMX state continues to update locally (so the GUI keeps
   // reflecting new values) but backend / serial output is suppressed. Used by
-  // the APC40 Master Select button (panic FREEZE). Press again to unfreeze.
+  // the APC40 Master Select / Detail View freeze controls. Press again to unfreeze.
   dmxFrozen: boolean
   setDmxFrozen: (frozen: boolean) => void
   oscAssignments: string[]
@@ -722,8 +722,15 @@ interface State extends AutomationState, TransitionTrackerSlice {
     armedColumns: number[];
     soloedGroups: number[];
     fullOn: boolean;
+    blackout: boolean;
     autoGroups: number[];
     deviceRoleLabels: string[];
+    deviceBankIndex: number;
+    deviceBankCount: number;
+    deviceBankAtStart: boolean;
+    deviceBankAtEnd: boolean;
+    deviceBankFlashDirection: 'prev' | 'next' | null;
+    deviceBankFlashUntil: number;
     activeTrackIndex: number | null;
     activeGroupId: string | null;
     activeFixtureIds: string[];
@@ -743,8 +750,15 @@ interface State extends AutomationState, TransitionTrackerSlice {
     armedColumns: number[];
     soloedGroups: number[];
     fullOn: boolean;
+    blackout: boolean;
     autoGroups: number[];
     deviceRoleLabels: string[];
+    deviceBankIndex: number;
+    deviceBankCount: number;
+    deviceBankAtStart: boolean;
+    deviceBankAtEnd: boolean;
+    deviceBankFlashDirection: 'prev' | 'next' | null;
+    deviceBankFlashUntil: number;
     activeTrackIndex: number | null;
     activeGroupId: string | null;
     activeFixtureIds: string[];
@@ -1738,8 +1752,15 @@ export const useStore = create<State>()(
         armedColumns: [],
         soloedGroups: [],
         fullOn: false,
+        blackout: false,
         autoGroups: [],
         deviceRoleLabels: [],
+        deviceBankIndex: 0,
+        deviceBankCount: 0,
+        deviceBankAtStart: true,
+        deviceBankAtEnd: true,
+        deviceBankFlashDirection: null,
+        deviceBankFlashUntil: 0,
         activeTrackIndex: null,
         activeGroupId: null,
         activeFixtureIds: [],

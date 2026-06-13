@@ -5,6 +5,7 @@ import { debugLog } from '../utils/debugLog';
 import { resetPortHealth } from '../midi/midiOutputGuard';
 import {
   isApc40Port,
+  sendApc40ControlChange,
   sendApc40NoteOn,
   subscribeApc40LedDirty,
   notifyApc40LedDirty,
@@ -14,7 +15,13 @@ import {
   BLINK_LED_VALUES,
   APC40_GRID,
   APC40_TRANSPORT_NOTES,
+  LED_RING_CONFIG,
 } from '../midi/generated';
+import {
+  APC40_TRACK_CONTROL_ROLES,
+  readApc40RoleDmxValue,
+  resolveApc40DeviceRoleSlots,
+} from '../midi/apc40WorkflowHelpers';
 
 // APC40 MK1 LED velocity values are sourced from DOCS/midi/led-feedback.md
 // via the generated spec. Keep aliases for hot-path readability.
@@ -39,13 +46,28 @@ const STOP_NOTE = APC40_TRANSPORT_NOTES.stop;
 const SEND_A_NOTE = 0x58;
 const SEND_B_NOTE = 0x59;
 const SEND_C_NOTE = 0x5a;
+const PAN_NOTE = 0x57;
+const FULL_ON_NOTE = 0x3a;
+const BLACKOUT_NOTE = 0x3b;
+const DEVICE_LEFT_NOTE = 0x3c;
+const DEVICE_RIGHT_NOTE = 0x3d;
+const FREEZE_NOTE = 0x3e;
 const CLIP_ROW_BASE = 0x35;
 const MASTER_CHANNEL = 8;
 const GRID_ROWS = APC40_GRID.rows;
 const GRID_COLS = APC40_GRID.cols;
+const DEVICE_BANK_FLASH_MS = 450;
 
 function sendNoteOn(out: WebMidi.MIDIOutput, channel: number, note: number, velocity: number) {
   sendApc40NoteOn(out, channel, note, velocity, 'apc40-led');
+}
+
+function sendControlChange(out: WebMidi.MIDIOutput, channel: number, controller: number, value: number) {
+  sendApc40ControlChange(out, channel, controller, value, 'apc40-ring-led');
+}
+
+function dmxToMidiRingValue(value: number): number {
+  return Math.max(0, Math.min(127, Math.round((value / 255) * 127)));
 }
 
 function groupSelected(groupFixtureIds: string[], selectedIds: Set<string>): boolean {
@@ -62,7 +84,7 @@ function groupSelected(groupFixtureIds: string[], selectedIds: Set<string>): boo
  *   - Record Arm 1-8: red-blink while its Solo Group latch is active.
  *   - Activator 1-8: green when that group is fully selected.
  *   - Track Select 1-8: intentionally off/unmapped.
- *   - Master Track Select: red while FULL ON is latched.
+ *   - Master Track Select: red while DMX FREEZE is latched.
  */
 export function useApc40LedFeedback() {
   const scenes = useStore(s => s.scenes);
@@ -82,6 +104,7 @@ export function useApc40LedFeedback() {
   const outputsRef = useRef<WebMidi.MIDIOutput[]>([]);
   const accessRef = useRef<WebMidi.MIDIAccess | null>(null);
   const lastLedValuesRef = useRef<WeakMap<WebMidi.MIDIOutput, Map<string, number>>>(new WeakMap());
+  const bankFlashTimeoutRef = useRef<number | null>(null);
 
   const sendLed = (out: WebMidi.MIDIOutput, channel: number, note: number, velocity: number) => {
     let outputState = lastLedValuesRef.current.get(out);
@@ -90,7 +113,7 @@ export function useApc40LedFeedback() {
       lastLedValuesRef.current.set(out, outputState);
     }
 
-    const key = `${channel}:${note}`;
+    const key = `note:${channel}:${note}`;
     const previousVelocity = outputState.get(key);
 
     // Critical: skip the resend when nothing changed. APC40 blink LEDs reset
@@ -110,6 +133,20 @@ export function useApc40LedFeedback() {
     outputState.set(key, velocity);
   };
 
+  const sendRing = (out: WebMidi.MIDIOutput, controller: number, value: number) => {
+    let outputState = lastLedValuesRef.current.get(out);
+    if (!outputState) {
+      outputState = new Map();
+      lastLedValuesRef.current.set(out, outputState);
+    }
+
+    const velocity = Math.max(0, Math.min(127, Math.round(value)));
+    const key = `cc:${LED_RING_CONFIG.midiChannel}:${controller}`;
+    if (outputState.get(key) === velocity) return;
+    sendControlChange(out, LED_RING_CONFIG.midiChannel, controller, velocity);
+    outputState.set(key, velocity);
+  };
+
   const paintOutput = (out: WebMidi.MIDIOutput) => {
     const state = useStore.getState();
     const {
@@ -123,6 +160,7 @@ export function useApc40LedFeedback() {
       autoSceneEnabled,
       modularAutomation,
       dmxFrozen,
+      dmxChannels,
     } = state;
     const currentActId = actPlaybackState.currentActId;
     const crossfaderState = apc40CrossfaderState;
@@ -130,6 +168,12 @@ export function useApc40LedFeedback() {
     const armedColumns = new Set(crossfaderState.armedColumns);
     const soloedGroups = new Set(crossfaderState.soloedGroups);
     const selectedIds = new Set(selectedFixtures);
+    const allFixturesSelected = fixtures.length > 0 && fixtures.every((fixture) => selectedIds.has(fixture.id));
+    const deviceRoles = resolveApc40DeviceRoleSlots(fixtures, selectedFixtures, crossfaderState.deviceBankIndex ?? 0);
+    const now = Date.now();
+    const bankFlashActive = (crossfaderState.deviceBankFlashUntil ?? 0) > now
+      ? crossfaderState.deviceBankFlashDirection
+      : null;
     const activeDeckName = deck === 'A'
       ? crossfaderState.sceneAName
       : crossfaderState.sceneBName;
@@ -181,12 +225,17 @@ export function useApc40LedFeedback() {
       sendLed(out, column, TRACK_STOP_NOTE, activeDeckName ? LED_RED : LED_OFF);
     }
 
-    // Master Select button (note 0x33 ch 8) latches DMX FREEZE.
-    //   off = output flowing normally; red = output frozen (rig holds last value).
+    // Master Select mirrors DMX FREEZE state: red on = frozen, off = live output.
     sendLed(out, MASTER_CHANNEL, TRACK_SELECT_NOTE, dmxFrozen ? LED_RED : LED_OFF);
     sendLed(out, 0, STOP_ALL_CLIPS_NOTE, (crossfaderState.sceneAName || crossfaderState.sceneBName || currentActId) ? LED_RED : LED_OFF);
     sendLed(out, 0, SHIFT_NOTE, crossfaderState.shiftLatched ? LED_ORANGE : LED_OFF);
     sendLed(out, 0, REC_NOTE, armedColumns.size > 0 ? LED_RED_BLINK : LED_OFF);
+    sendLed(out, 0, PAN_NOTE, allFixturesSelected ? LED_GREEN : LED_OFF);
+    sendLed(out, 0, FULL_ON_NOTE, crossfaderState.fullOn ? LED_RED : LED_OFF);
+    sendLed(out, 0, BLACKOUT_NOTE, crossfaderState.blackout ? LED_RED : LED_OFF);
+    sendLed(out, 0, DEVICE_LEFT_NOTE, crossfaderState.deviceBankAtStart ? LED_RED : bankFlashActive === 'prev' ? LED_ORANGE : LED_OFF);
+    sendLed(out, 0, DEVICE_RIGHT_NOTE, crossfaderState.deviceBankAtEnd ? LED_RED : bankFlashActive === 'next' ? LED_ORANGE : LED_OFF);
+    sendLed(out, 0, FREEZE_NOTE, dmxFrozen ? LED_RED : LED_OFF);
     // PLAY = green-blink while Auto Scene is running, off otherwise.
     // STOP = red while Auto Scene is running (the button that will stop it), off otherwise.
     sendLed(out, 0, PLAY_NOTE, autoSceneEnabled ? LED.LED_GREEN_BLINK : LED_OFF);
@@ -195,6 +244,20 @@ export function useApc40LedFeedback() {
     sendLed(out, 0, SEND_A_NOTE, modularAutomation.color.enabled ? LED_ORANGE_BLINK : LED_OFF);
     sendLed(out, 0, SEND_B_NOTE, modularAutomation.panTilt.enabled ? LED_ORANGE_BLINK : LED_OFF);
     sendLed(out, 0, SEND_C_NOTE, modularAutomation.effects.enabled ? LED_ORANGE_BLINK : LED_OFF);
+
+    for (let slot = 0; slot < GRID_COLS; slot += 1) {
+      const trackRole = APC40_TRACK_CONTROL_ROLES[slot];
+      const trackValue = trackRole
+        ? readApc40RoleDmxValue(fixtures, selectedFixtures, dmxChannels, trackRole)
+        : null;
+      const deviceRole = deviceRoles[slot];
+      const deviceValue = deviceRole
+        ? readApc40RoleDmxValue(fixtures, selectedFixtures, dmxChannels, deviceRole)
+        : null;
+
+      sendRing(out, LED_RING_CONFIG.trackRingBaseCc + slot, trackValue === null ? LED_OFF : dmxToMidiRingValue(trackValue));
+      sendRing(out, LED_RING_CONFIG.deviceRingBaseCc + slot, deviceValue === null ? LED_OFF : dmxToMidiRingValue(deviceValue));
+    }
   };
 
   const paintAll = () => {
@@ -264,11 +327,41 @@ export function useApc40LedFeedback() {
         sendLed(out, 0, PLAY_NOTE, LED_OFF);
         sendLed(out, 0, STOP_NOTE, LED_OFF);
         sendLed(out, 0, SEND_A_NOTE, LED_OFF);
+        sendLed(out, 0, SEND_B_NOTE, LED_OFF);
+        sendLed(out, 0, SEND_C_NOTE, LED_OFF);
+        sendLed(out, 0, PAN_NOTE, LED_OFF);
+        sendLed(out, 0, FULL_ON_NOTE, LED_OFF);
+        sendLed(out, 0, BLACKOUT_NOTE, LED_OFF);
+        sendLed(out, 0, DEVICE_LEFT_NOTE, LED_OFF);
+        sendLed(out, 0, DEVICE_RIGHT_NOTE, LED_OFF);
+        sendLed(out, 0, FREEZE_NOTE, LED_OFF);
+        for (let slot = 0; slot < GRID_COLS; slot += 1) {
+          sendRing(out, LED_RING_CONFIG.trackRingBaseCc + slot, LED_OFF);
+          sendRing(out, LED_RING_CONFIG.deviceRingBaseCc + slot, LED_OFF);
+        }
       });
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     paintAll();
-  }, [scenes, fixtures, groups, selectedFixtures, acts, currentActId, crossfaderState, autoSceneEnabled, autoSceneMode, colorAutoEnabled]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (bankFlashTimeoutRef.current !== null) {
+      window.clearTimeout(bankFlashTimeoutRef.current);
+      bankFlashTimeoutRef.current = null;
+    }
+    const flashUntil = crossfaderState.deviceBankFlashUntil ?? 0;
+    const remainingMs = flashUntil - Date.now();
+    if (remainingMs > 0) {
+      bankFlashTimeoutRef.current = window.setTimeout(() => {
+        bankFlashTimeoutRef.current = null;
+        paintAll();
+      }, remainingMs + 20);
+    }
+    return () => {
+      if (bankFlashTimeoutRef.current !== null) {
+        window.clearTimeout(bankFlashTimeoutRef.current);
+        bankFlashTimeoutRef.current = null;
+      }
+    };
+  }, [scenes, fixtures, groups, selectedFixtures, acts, currentActId, crossfaderState, autoSceneEnabled, autoSceneMode, colorAutoEnabled, panTiltAutoEnabled, effectsAutoEnabled, dmxFrozen]); // eslint-disable-line react-hooks/exhaustive-deps
 }

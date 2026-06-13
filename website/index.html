@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ArtBastard DMX512 v5.2.4.2 - APC40 Deck A/B Edition</title>
-    <meta name="description" content="ArtBastard DMX512 v5.2.4.2 - APC40 Deck A/B scene workflow, optional fixture-aware scene and ACT seed templates, Record Arm scene saves, Device Control gobo roles, Roli Lightpad XY-pad path memory, fixture-aware transition tracker, live theme tuning, Super Control, scene timelines, MIDI templates, Art-Net, OSC, LAN bridge, mobile surface. Open source.">
+    <title>ArtBastard DMX512 v5.2.12.0 - APC40 State + SuperControl Edition</title>
+    <meta name="description" content="ArtBastard DMX512 v5.2.12.0 - stateful APC40 ON/OFF controls, Deck A/B scenes, BPM header dashboard, cream/synthwave SuperControl remaster, footer MIDI/OSC/DMX monitors, fixture-aware scene and ACT seed templates, Roli Lightpad XY-pad path memory, Art-Net, OSC, LAN bridge, mobile surface. Open source.">
     <link rel="stylesheet" href="theatrical.css?v=20260609-mobile">
     <link rel="stylesheet" href="styles.css?v=20260609-mobile">
     <link rel="stylesheet" href="showcase-shell.css?v=20260609-mobile">
@@ -80,7 +80,7 @@
                     <span class="showcase-banner-sub">Academie des Illuminations Pretentieuses</span>
                     <h1 class="hero-title marquee-title">
                         <span class="gradient-text">ArtBastard</span>
-                        <span class="hero-subtitle">DMX512 v5.2.4.2 - APC40 Deck A/B Edition</span>
+                        <span class="hero-subtitle">DMX512 v5.2.12.0 - APC40 State + SuperControl Edition</span>
                     </h1>
                     <p class="tagline">Breath of Light Manuscripts // Photonic Supremacy</p>
                     <span class="tagline-secondary">Theatre des Photons // ruelle parisienne</span>
@@ -100,10 +100,11 @@
                     <p class="hero-description">
                         <em>Elite illumination control for the discerning luminaire artist.</em><br>
                         512 channels per universe, Art-Net output, MIDI Learn with controller templates,
-                        two-way OSC, scene timelines, a clip launcher, optional fixture-aware scene
-                        and ACT seed templates, and one Super Control engine across desktop and mobile.
-                        Cloud hosting with an optional Raspberry Pi LAN bridge for home Art-Net and
-                        Ableton Link. Open source, MIT.
+                        two-way OSC, scene timelines, Deck A/B APC40 launching, stateful APC40 ON/OFF
+                        LEDs, a top-header BPM dashboard, optional fixture-aware scene and ACT seed
+                        templates, and one Super Control engine across desktop and mobile. Cloud hosting
+                        with an optional Raspberry Pi LAN bridge for home Art-Net and Ableton Link. Open
+                        source, MIT.
                     </p>
                     <div class="hero-actions">
                         <a href="https://artbastard.aday.net.au/" class="btn btn-live">Try it live</a>
@@ -140,8 +141,8 @@
                             <span class="stat-label">Demo Clips</span>
                         </div>
                         <div class="stat">
-                            <span class="stat-number">5.2.4</span>
-                            <span class="stat-label">APC40 Decks</span>
+                            <span class="stat-number">5.2.12</span>
+                            <span class="stat-label">Stateful APC40</span>
                         </div>
                         <div class="stat">
                             <span class="stat-number">100%</span>
@@ -191,7 +192,7 @@
                         <div class="rack-module-header">
                             <span class="rack-screw rack-screw-tl" aria-hidden="true"></span>
                             <span class="rack-screw rack-screw-tr" aria-hidden="true"></span>
-                            <span class="rack-module-title">RACK DOCTRINE v5.2.4</span>
+                            <span class="rack-module-title">RACK DOCTRINE v5.2.12</span>
                         </div>
                         <div class="rack-module-body">
                             <p>
@@ -426,17 +427,16 @@
                         <h3>APC40 MK1 Deep Integration</h3>
                         <p>The full surface, alive. Clip Launch / Session View is Deck A
                             scene slots 1-40; hold <strong>SHIFT</strong> for Deck B.
-                            <strong>Record Arm</strong> saves the next grid pad into the
-                            current deck. Scene Launch fires ACTS 1-5, Clip Stop unselects
-                            scenes, and Stop All clears scenes and acts. Channel faders drive
-                            Super Control, Device Control follows selected fixture gobo/effect
-                            roles, Master Select toggles FULL ON, and the crossfader blends
-                            the active Deck A/B scenes. Out-of-box APC defaults now auto-apply
-                            on first connect (without overwriting custom maps), the manual has a
-                            one-click Reset to APC defaults action, Focus Mode for declutter,
-                            and fixture-target tooltips that show exactly which selected fixtures
-                            each mapped control is driving. Even disconnected, the APC reference
-                            still shows what each knob, fader, and button does.</p>
+                            <strong>REC</strong> arms save mode for the next grid pad.
+                            <strong>Record Arm</strong> is now Solo Group, Solo/Cue selects fixtures,
+                            and Activator selects fixture groups with explicit hardware ON/OFF state.
+                            PAN selects all on ON and clears selection on OFF; SEND A/B/C toggle
+                            color, pan/tilt, and effects automation on/off. Clip/Track is FULL ON,
+                            Device On/Off is BLACKOUT, Master Select is FREEZE DMX, Rec Quantization is
+                            a REC alias, MIDI Overdub is panic stop, and Metronome is tap tempo. Track
+                            Select intentionally stays unmapped. Out-of-box APC defaults
+                            auto-apply on first connect, Focus Mode declutters the manual, and fixture-target
+                            tooltips show exactly which selected fixtures each mapped control is driving.</p>
                     </div>
                     <div class="feature-card">
                         <div class="feature-icon">ROLI</div>
@@ -458,12 +458,13 @@
                     </div>
                     <div class="feature-card">
                         <div class="feature-icon">APC4</div>
-                        <h3>APC40 MK1 Deck A/B Polish</h3>
-                        <p>Endless-rotary handling for the eight Track Control knobs, a stable
-                            blink-phase reset for LED feedback (no more drift after long sets),
-                            Activator/Solo/Record buttons mapped to group select and record-arm,
-                            and one-button data-driven seeding of the 5 scene-launch ACTS from
-                            markdown packs — edit a file, re-seed, the buttons reload.</p>
+                        <h3>APC40 LEDs + BPM Header</h3>
+                        <p>LEDs now mirror the real latched state: PAN, SEND A/B/C, FULL ON,
+                            BLACKOUT, FREEZE, REC/save mode, PLAY/STOP, Deck A/B clips, ACT launch,
+                            selected fixtures, selected groups, and Solo Group all repaint from the
+                            store. Delayed velocity-zero events are treated as hardware OFF, while
+                            immediate releases are ignored. The BPM dashboard stays visible in the
+                            top header with source and play-state controls.</p>
                     </div>
                     <div class="feature-card">
                         <div class="feature-icon">OOTB</div>
@@ -561,14 +562,14 @@
                             <code>http://localhost:3030</code>.</p>
                         <div class="download-buttons">
                             <a href="https://github.com/aday1/artbastard.aday.net.au/releases/latest" class="btn btn-primary btn-large">
-                                Download v5.2.4.2
+                                Download v5.2.12.0
                             </a>
                             <a href="https://github.com/aday1/artbastard.aday.net.au" target="_blank" rel="noopener" class="btn btn-secondary btn-large">
                                 View Source
                             </a>
                         </div>
                         <div class="version-info">
-                            <p>Latest Version: <span id="latest-version">v5.2.4.2</span> - APC40 Deck A/B Edition</p>
+                            <p>Latest Version: <span id="latest-version">v5.2.12.0</span> - APC40 State + SuperControl Edition</p>
                         </div>
                     </div>
                     <div class="install-steps">
@@ -615,7 +616,7 @@
                     </a>
                     <a href="DOCS/FEATURES.md" class="doc-card">
                         <h3>Features Guide</h3>
-                        <p>Full feature inventory by subsystem after the v5.2.4.2 release.</p>
+                        <p>Full feature inventory by subsystem after the v5.2.12.0 hard version bump.</p>
                     </a>
                     <a href="DOCS/FIXTURES.md" class="doc-card">
                         <h3>Fixture Setup</h3>
@@ -639,7 +640,7 @@
                     </a>
                     <a href="DOCS/APC40_CHEATSHEET.md" class="doc-card">
                         <h3>APC40 MK1 Cheatsheet</h3>
-                        <p>Live integration: Deck A/B grids, Record Arm scene saves, Device Control roles, FULL ON, LED legend.</p>
+                        <p>Live integration: Deck A/B grids, REC scene saves, Solo Group, PAN/SEND ON/OFF, FULL ON, BLACKOUT, FREEZE, LED legend.</p>
                     </a>
                     <a href="DOCS/OSC_REFERENCE.md" class="doc-card">
                         <h3>OSC Reference</h3>
@@ -689,7 +690,7 @@
                     "Light is not merely illumination &mdash; it is emotion made visible, dreams given form."
                 </p>
                 <p>
-                    &copy; 2026 ArtBastard DMX512 v5.2.4.2 - APC40 Deck A/B Edition. MIT licensed.
+                    &copy; 2026 ArtBastard DMX512 v5.2.12.0 - APC40 State + SuperControl Edition. MIT licensed.
                     <a href="DOCS/HISTORY.md">Chronicles</a>
                 </p>
             </div>

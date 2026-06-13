@@ -17,10 +17,10 @@ AKAI APC40 / ArtBastard live surface
 | +-------+ +-------+ +-------+ +-------+ +-------+ +-------+ +-------+ +-------+     +-----------+         |  |   (5)BLUE  (6)WHT   (7)STRB  (8)SPD |
 | |A01/B01| |A02/B02| |A03/B03| |A04/B04| |A05/B05| |A06/B06| |A07/B07| |A08/B08|     | ACT 1     |         |  |                                    |
 | +-------+ +-------+ +-------+ +-------+ +-------+ +-------+ +-------+ +-------+     +-----------+         |  | buttons below knobs:                |
-| |A09/B09| |A10/B10| |A11/B11| |A12/B12| |A13/B13| |A14/B14| |A15/B15| |A16/B16|     | ACT 2     |         |  | [PAN]=select all fixtures           |
-| +-------+ +-------+ +-------+ +-------+ +-------+ +-------+ +-------+ +-------+     +-----------+         |  | [SEND A]=toggle Color auto          |
-| |A17/B17| |A18/B18| |A19/B19| |A20/B20| |A21/B21| |A22/B22| |A23/B23| |A24/B24|     | ACT 3     |         |  | [SEND B]=toggle Pan/Tilt auto       |
-| +-------+ +-------+ +-------+ +-------+ +-------+ +-------+ +-------+ +-------+     +-----------+         |  | [SEND C]=toggle Effects auto        |
+| |A09/B09| |A10/B10| |A11/B11| |A12/B12| |A13/B13| |A14/B14| |A15/B15| |A16/B16|     | ACT 2     |         |  | [PAN]=all fixtures ON/OFF           |
+| +-------+ +-------+ +-------+ +-------+ +-------+ +-------+ +-------+ +-------+     +-----------+         |  | [SEND A]=Color auto ON/OFF          |
+| |A17/B17| |A18/B18| |A19/B19| |A20/B20| |A21/B21| |A22/B22| |A23/B23| |A24/B24|     | ACT 3     |         |  | [SEND B]=Pan/Tilt auto ON/OFF       |
+| +-------+ +-------+ +-------+ +-------+ +-------+ +-------+ +-------+ +-------+     +-----------+         |  | [SEND C]=Effects auto ON/OFF        |
 | |A25/B25| |A26/B26| |A27/B27| |A28/B28| |A29/B29| |A30/B30| |A31/B31| |A32/B32|     | ACT 4     |         |  | (SHIFT+SEND cycles patterns)        |
 | +-------+ +-------+ +-------+ +-------+ +-------+ +-------+ +-------+ +-------+     +-----------+         |  +------------------------------------+
 | |A33/B33| |A34/B34| |A35/B35| |A36/B36| |A37/B37| |A38/B38| |A39/B39| |A40/B40|     | ACT 5     |         |  +------------------------------------+
@@ -28,13 +28,13 @@ AKAI APC40 / ArtBastard live surface
 |                                                                                         STOP ALL CLIPS    |  | [UP]=prev fixture [DOWN]=next       |
 | CLIP STOP      [STOP1]  [STOP2]  [STOP3]  [STOP4]  [STOP5]  [STOP6]  [STOP7]  [STOP8]  [STOP ALL]         |  | [LEFT]=prev scene [RIGHT]=next      |
 |                                                                                                           |  | [SHIFT]=hold Deck B                 |
-| TRACK SELECTION [unmap]  [unmap]  [unmap]  [unmap]  [unmap]  [unmap]  [unmap]  [unmap]  [MASTER=FREEZE]   |  | TAP TEMPO=Auto Scene BPM tap        |
+| TRACK SELECTION [unmap]  [unmap]  [unmap]  [unmap]  [unmap]  [unmap]  [unmap]  [unmap]  [MASTER=UNMAP ]   |  | TAP TEMPO=Auto Scene BPM tap        |
 | ACTIVATOR       [GRP1]   [GRP2]   [GRP3]   [GRP4]   [GRP5]   [GRP6]   [GRP7]   [GRP8]                     |  | NUDGE -/+ = manual BPM delta        |
 | SOLO / CUE      [FIX1]   [FIX2]   [FIX3]   [FIX4]   [FIX5]   [FIX6]   [FIX7]   [FIX8]                     |  +------------------------------------+
 | RECORD ARM      [SOLO-G1][SOLO-G2][SOLO-G3][SOLO-G4][SOLO-G5][SOLO-G6][SOLO-G7][SOLO-G8]                  |  +------------------------------------+
 |                                                                                                           |  | DEVICE CONTROL                      |
 | FADERS          [DIM1]   [DIM2]   [DIM3]   [DIM4]   [DIM5]   [DIM6]   [DIM7]   [DIM8]   [MASTER DIMMER]  |  | context-aware fixture capabilities  |
-| CUE LEVEL knob  UNMAPPED (Device Left/Right cycles role bank instead)                                     |  |                                    |
+| CUE LEVEL knob  Automation direction (CW forward / CCW reverse)                                           |  |                                    |
 +-----------------------------------------------------------------------------------------------------------+  |   (D1)     (D2)     (D3)     (D4)   |
                                                                                                               |   (D5)     (D6)     (D7)     (D8)   |
                                                                                                               | Device Left/Right = cycle role bank |
@@ -67,9 +67,9 @@ AKAI APC40 / ArtBastard live surface
 | APC40 hardware label | ArtBastard meaning | LED feedback |
 | --- | --- | --- |
 | Track Selection 1-8 | **UNMAPPED** — APC40 hardware emits unreliable CCs in some modes (CC bleed). Selection lives on Solo/Cue + Activator instead. | LEDs always off. |
-| Master Track Selection | **FREEZE DMX latch.** Press to freeze rig at last value (store keeps updating, no bytes ship to backend). Press again to release and flush current store state. | Red while DMX is frozen. |
-| Activator 1-8 | Toggle fixture group N in multi-selection (positional, one per column). Press to add the whole group, press again to remove it. | Lit when every fixture in the group is selected, off otherwise. (MK1 single-color amber row.) |
-| Solo/Cue 1-8 | Toggle fixture N in multi-selection (positional, one per column). Press to add, press again to remove. | Lit when the fixture is selected, off otherwise. (MK1 single-color amber row.) |
+| Master Track Selection | **FREEZE DMX latch.** Press once to freeze rig output; press again to unfreeze and flush current store state. | Red while frozen, off while live. |
+| Activator 1-8 | ON adds fixture group N to multi-selection; OFF removes it. | Lit when every fixture in the group is selected, off otherwise. (MK1 single-color amber row.) |
+| Solo/Cue 1-8 | ON selects fixture N; OFF removes it from multi-selection. | Lit when the fixture is selected, off otherwise. (MK1 single-color amber row.) |
 | Record Arm 1-8 | **SOLO GROUP N latch.** Snapshots DMX on first solo, blacks out fixtures not in soloed groups, restores snapshot when last solo released. | Red-blink while group is soloed, off otherwise. (MK1 single-color amber row — blink/off is the only distinguishable state.) |
 | Track faders 1-8 | Dimmer/intensity for selected fixture slot 1-8. If no fixture is selected, the fader intentionally does nothing. | No motor/LED feedback on APC40 MK1 faders. |
 | Master fader | Master dimmer for the selected lighting context. If no fixture is selected, it intentionally does nothing. | No motor/LED feedback on APC40 MK1 fader. |
@@ -78,30 +78,33 @@ AKAI APC40 / ArtBastard live surface
 
 | APC40 hardware label | ArtBastard meaning | LED feedback |
 | --- | --- | --- |
-| Track Control encoder push/ring buttons 1-8 | **UNMAPPED** (CC 0x38-0x3f are output-only ring LEDs in this build; press behavior is intentionally not routed because the APC40 emits bleed CCs in some modes). | n/a |
-| Track Control knob 1 | Pan for selected fixtures/groups; with no selection, targets all patched fixtures. | No APC40 LED ring feedback wired today. |
-| Track Control knob 2 | Tilt for selected fixtures/groups; with no selection, targets all patched fixtures. | No APC40 LED ring feedback wired today. |
-| Track Control knob 3 | Red color channel for selected fixtures/groups. | No APC40 LED ring feedback wired today. |
-| Track Control knob 4 | Green color channel for selected fixtures/groups. | No APC40 LED ring feedback wired today. |
-| Track Control knob 5 | Blue color channel for selected fixtures/groups. | No APC40 LED ring feedback wired today. |
-| Track Control knob 6 | White/amber/UV style color channel where the fixture supports it. | No APC40 LED ring feedback wired today. |
-| Track Control knob 7 | Strobe/shutter role where the fixture supports it. | No APC40 LED ring feedback wired today. |
-| Track Control knob 8 | Speed/rate/effect-speed role where the fixture supports it. | No APC40 LED ring feedback wired today. |
-| Track Control `PAN` button | Select all fixtures. | Button LED is not currently repainted. |
+| Track Control encoder ring CCs 1-8 | Output-only LED ring/control feedback CCs in this build; not counted as assignable button surfaces. | Rings mirror the current DMX value for that role only when the selected fixture/group has that capability; otherwise off. |
+| Track Control knob 1 | Pan for selected fixtures/groups; with no selection, targets all patched fixtures. | Ring mirrors current pan DMX value when available, otherwise off. |
+| Track Control knob 2 | Tilt for selected fixtures/groups; with no selection, targets all patched fixtures. | Ring mirrors current tilt DMX value when available, otherwise off. |
+| Track Control knob 3 | Red color channel for selected fixtures/groups. | Ring mirrors current red DMX value when available, otherwise off. |
+| Track Control knob 4 | Green color channel for selected fixtures/groups. | Ring mirrors current green DMX value when available, otherwise off. |
+| Track Control knob 5 | Blue color channel for selected fixtures/groups. | Ring mirrors current blue DMX value when available, otherwise off. |
+| Track Control knob 6 | White/amber/UV style color channel where the fixture supports it. | Ring mirrors current white/UV-style DMX value when available, otherwise off. |
+| Track Control knob 7 | Strobe/shutter role where the fixture supports it. | Ring mirrors current strobe/shutter DMX value when available, otherwise off. |
+| Track Control knob 8 | Speed/rate/effect-speed role where the fixture supports it. | Ring mirrors current speed/rate DMX value when available, otherwise off. |
+| Track Control `PAN` button | ON selects all fixtures; OFF clears fixture selection. | Green while all fixtures are selected. |
 | Track Control `SEND A` button | Toggle modular **Color** automation engine. SHIFT+SEND A cycles color pattern. | Orange-blink while engine is enabled. |
 | Track Control `SEND B` button | Toggle modular **Pan/Tilt** automation engine. SHIFT+SEND B cycles pan/tilt path. | Orange-blink while engine is enabled. |
 | Track Control `SEND C` button | Toggle modular **Effects** automation engine (gobo/strobe/shutter). SHIFT+SEND C cycles effect type. | Orange-blink while engine is enabled. |
-| Device Control knobs 1-8 | Context-aware fixture capabilities. Default priority is Gobo, Gobo Rotate, Color Wheel, Prism, Iris, Focus, Zoom, Strobe, then adapts to selected fixtures. | Role names appear in the ArtBastard APC40 UI; no APC40 LED ring feedback wired today. |
+| Device Control knobs 1-8 | Context-aware fixture capabilities. Default priority is Gobo, Gobo Rotate, Color Wheel, Prism, Iris, Focus, Zoom, Strobe, then adapts to selected fixtures. | Rings mirror current DMX values for available selected-fixture capabilities; unavailable slots stay off. |
 | Cue Level knob | **AUTOMATION DIRECTION.** Endless rotary encoder. CW step flips global automation direction to forward, CCW step flips to reverse. Inverts AutoScene index advance and pan/tilt autopilot track. Modular color/dimmer/effects phases are wall-clock based and unaffected. | n/a |
-| Device Left / Right (Device Control block) | Cycle Device Control role bank backwards/forwards. | n/a |
-| Clip/Track (Device Control block) | FULL ON latch — raise patched fixture channels to 255 and snapshot prior DMX; press again to restore. | Red while latched. |
-| Device On/Off (Device Control block) | BLACKOUT latch — snapshot DMX and zero all channels; press again to restore. | Red while latched. |
+| Device Left / Right (Device Control block) | Cycle Device Control role bank backwards/forwards without wrapping. | Momentary orange while moving; red when held at first/last bank. |
+| Clip/Track (Device Control block) | FULL ON latch — ON raises patched fixture channels to 255 and snapshots prior DMX; OFF restores. | Red while latched. |
+| Device On/Off (Device Control block) | BLACKOUT latch — ON snapshots DMX and zeros all channels; OFF restores. | Red while latched. |
 | Bank Select Up/Down | Previous/next fixture selection. | No active ArtBastard feedback. |
 | Bank Select Left/Right | Previous/next saved scene selection. | No active ArtBastard feedback. |
 | `SHIFT` | Hold for Deck B grid layer. Release returns to Deck A. | Orange while held. |
 | Tap Tempo | Tap on the beat. Switches Auto Scene tempo source to Tap Tempo. | n/a |
 | Nudge -, Nudge + | Decrement/increment Auto Scene manual BPM by 1; switches tempo source to manual. | n/a |
-| Detail View, Rec Quantization, MIDI Overdub, Metronome | Reserved/unmapped today. They should appear in the MIDI monitor but should not change DMX. | No active ArtBastard feedback. |
+| Detail View | Alternate FREEZE DMX ON/OFF control. Master Select is the main latch button. | Red while frozen. |
+| Rec Quantization | Alias for REC save mode. | Same as REC save mode. |
+| MIDI Overdub | Panic stop alias for Stop All Clips. | Same as Stop All Clips. |
+| Metronome | Tap Tempo alias. | n/a |
 | Transport `PLAY` | Enable Auto Scene playback. | Green-blink while Auto Scene is running. |
 | Transport `STOP` | Disable Auto Scene playback. | Red while Auto Scene is running. |
 | Transport `REC` | Enter/exit clip-grid save mode. Hold SHIFT with REC for roll-dice preview instead. | Red blink while save mode is active. |
@@ -162,7 +165,7 @@ AKAI APC40 / ArtBastard live surface
 - Activator 1-8 toggle APC auto-control for existing fixture groups and select that group.
 - Track Stop 1-8 stops the active scene in that column when it matches the current deck; otherwise it stops the current deck scene.
 - Stop All and STOP stop Deck A/B scenes and ACT playback in a predictable panic-safe way.
-- Master Track Select should act as FULL ON / blackout-safe performance emphasis according to the live mode state.
+- Master Track Select is the primary DMX FREEZE latch: LED on means frozen, pressing again unfreezes.
 
 ### Faders and knobs
 
@@ -219,24 +222,24 @@ This section is the code-backed truth table for the current app. If the implemen
 | Device Control knobs 1-8 | CC `0x10`-`0x17`, channel `0` | `device-control` -> `resolveApc40DeviceRoleSlots` -> `buildRoleUpdates` | Context-aware roles from selected fixture capabilities; targets selected fixtures, or all fixtures if no selection exists. |
 | Cue Level | CC `0x2f`, channel `0` | `cue-level` -> `setAutomationDirection` | Endless rotary; value 1-63 = CW (forward), 65-127 = CCW (reverse), 0/64 = no-movement. Flips AutoScene index step and pan/tilt autopilot direction. |
 | Device Left / Right | Notes `0x3c` / `0x3d`, channel `0` | `bank-prev` / `bank-next` | Cycle Device Control role bank backwards/forwards. |
-| Clip/Track (Device block) | Note `0x3a`, channel `0` | `full-on` -> FULL ON latch | Raise patched fixture channels to 255, snapshot prior DMX; press again to restore. |
-| Device On/Off (Device block) | Note `0x3b`, channel `0` | `blackout` -> BLACKOUT latch | Snapshot DMX, zero all channels; press again to restore. |
+| Clip/Track (Device block) | Note `0x3a`, channel `0` | `full-on` -> FULL ON latch | ON raises patched fixture channels to 255 and snapshots prior DMX; OFF restores. |
+| Device On/Off (Device block) | Note `0x3b`, channel `0` | `blackout` -> BLACKOUT latch | ON snapshots DMX and zeros all channels; OFF restores. |
 | Crossfader | CC `0x0f`, channel `0` | `crossfader` -> `blendApc40DeckScenes` | Blends the currently assigned Deck A and Deck B scenes. If either deck has no scene, there is no DMX blend update. |
 | Track Select 1-8 | Note `0x33`, MIDI channels `0`-`7` | unmapped | Intentionally not routed; APC40 emits unreliable CCs in some modes. Selection lives on Solo/Cue + Activator. |
-| Master Select | Note `0x33`, MIDI channel `8` | `freeze-dmx` -> `setDmxFrozen` | FREEZE DMX latch. First press freezes rig at last value (store state still updates, no bytes ship to backend). Second press releases and flushes current store state. |
-| Solo/Cue 1-8 | Note `0x31`, MIDI channel = track index | `select-fixture` | Selects fixture N (positional, one per column). |
-| Activator 1-8 | Note `0x32`, MIDI channel = track index | `select-group` | Selects fixture group N (positional, one per column). |
+| Master Select | Note `0x33`, MIDI channel `8` | `toggle-freeze-dmx` -> `setDmxFrozen(!dmxFrozen)` | Press once to freeze output and light the Master LED; press again to unfreeze and flush current state. |
+| Solo/Cue 1-8 | Note `0x31`, MIDI channel = track index | `select-fixture` | ON selects fixture N; OFF removes it. |
+| Activator 1-8 | Note `0x32`, MIDI channel = track index | `select-group` | ON adds fixture group N; OFF removes it. |
 | Track Stop 1-8 | Note `0x34`, MIDI channel = track index | `track-stop` | Clears the current deck scene in that column when it matches; otherwise clears the current deck scene. |
 | Stop All Clips | Note `0x51` | `stop-all-clips` | Clears Deck A/B scene refs, clears save mode, stops ACT playback, stops scene timelines. |
 | SHIFT | Note `0x62`, press/release aware | `shift` | Held state switches clip grid operations and LED paint to Deck B. |
-| PAN utility button | Note `0x57` | `select-all` | Selects all fixtures. |
+| PAN utility button | Note `0x57` | `select-all` | ON selects all fixtures; OFF clears fixture selection. |
 | Fixture navigation | Notes `0x5e` / `0x5f` | `nav-fixture` | Previous/next fixture. |
 | Scene navigation | Notes `0x60` / `0x61` | `nav-scene` | Previous/next scene. |
 | Tap Tempo | Note `0x63` | `tap-tempo` | Tap to set Auto Scene BPM; switches tempo source to Tap Tempo. |
 | Nudge +/- | Notes `0x64` / `0x65` | `nudge` | Increment/decrement manual BPM by 1; switches tempo source to manual. |
-| SEND A | Note `0x58` | `toggle-color-auto` | Toggle modular color automation engine. SHIFT+SEND A cycles color pattern. |
-| SEND B | Note `0x59` | `toggle-pan-tilt-auto` | Toggle modular pan/tilt automation engine. SHIFT+SEND B cycles pan/tilt path. |
-| SEND C | Note `0x5a` | `toggle-effect-auto` | Toggle modular effects automation engine. SHIFT+SEND C cycles effect type. |
+| SEND A | Note `0x58` | `toggle-color-auto` | ON enables color automation; OFF disables it. SHIFT+SEND A cycles color pattern. |
+| SEND B | Note `0x59` | `toggle-pan-tilt-auto` | ON enables pan/tilt automation; OFF disables it. SHIFT+SEND B cycles pan/tilt path. |
+| SEND C | Note `0x5a` | `toggle-effect-auto` | ON enables effects automation; OFF disables it. SHIFT+SEND C cycles effect type. |
 | PLAY transport | Note `0x5b` | `play` | Enable Auto Scene playback. |
 | STOP transport | Note `0x5c` | `stop` | Disable Auto Scene playback. |
 
@@ -251,7 +254,8 @@ This section is the code-backed truth table for the current app. If the implemen
 | Activator row | Red when group exists; green while that group is selected. |
 | Solo/Cue row | Red when fixture exists; green while that fixture is selected. |
 | Track Stop row | Red while the current deck has an active scene in that column. |
-| Master Select | Red while DMX freeze latch is engaged. |
+| Master Select | Red while DMX freeze latch is engaged; off while live. |
+| Detail View (FREEZE) | Red while DMX freeze latch is engaged. |
 | Stop All Clips | Red while Deck A/B scene or ACT playback is active. |
 | SHIFT | Orange while SHIFT is held. |
 | REC | Red blink while any save column is armed. |

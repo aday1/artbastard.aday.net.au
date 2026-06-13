@@ -97,7 +97,7 @@ Full reference: [APC40_CHEATSHEET.md](APC40_CHEATSHEET.md). Quick gestures:
 | Crossfader             | Blend active Deck A scene with active Deck B scene  |
 | Channel faders 1-8     | Super Control: selected fixture slot dimmers        |
 | Master fader           | Super Control: selected DIMMER/masterDimmer         |
-| Master Select          | FULL ON latch; press again restores previous DMX    |
+| Master Select          | FREEZE DMX latch; press again unfreezes output      |
 | Device Control 1-8     | Dynamic gobo/effects/DMX roles for selection        |
 | Cue Level              | Page Device Control role banks                      |
 | TRACK SELECT 1-8       | Pick fixture group N                                |

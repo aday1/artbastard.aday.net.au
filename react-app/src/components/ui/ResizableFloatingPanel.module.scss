@@ -1,6 +1,6 @@
 .shell {
   position: fixed;
-  z-index: 1050;
+  z-index: 10003;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -76,30 +76,52 @@
   position: absolute;
   top: 4px;
   right: 0;
-  width: 8px;
-  bottom: 8px;
+  width: 12px;
+  bottom: 12px;
   cursor: ew-resize;
-  z-index: 3;
+  z-index: 8;
+
+  &:hover {
+    background: color-mix(in srgb, var(--color-primary, #d68706) 28%, transparent);
+  }
+}
+
+.gripLeft {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  width: 12px;
+  bottom: 12px;
+  cursor: ew-resize;
+  z-index: 8;
+
+  &:hover {
+    background: color-mix(in srgb, var(--color-primary, #d68706) 28%, transparent);
+  }
 }
 
 .gripBottom {
   position: absolute;
   left: 0;
-  right: 8px;
+  right: 12px;
   bottom: 0;
-  height: 8px;
+  height: 12px;
   cursor: ns-resize;
-  z-index: 3;
+  z-index: 8;
+
+  &:hover {
+    background: color-mix(in srgb, var(--color-primary, #d68706) 28%, transparent);
+  }
 }
 
 .gripCorner {
   position: absolute;
   right: 0;
   bottom: 0;
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
   cursor: nwse-resize;
-  z-index: 4;
+  z-index: 9;
   background: linear-gradient(
     135deg,
     transparent 45%,

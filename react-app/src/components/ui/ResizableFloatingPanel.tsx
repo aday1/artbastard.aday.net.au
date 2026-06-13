@@ -70,9 +70,10 @@ export const ResizableFloatingPanel: React.FC<ResizableFloatingPanelProps> = ({
   );
   const shellRef = useRef<HTMLDivElement>(null);
   const resizeRef = useRef<{
-    edge: 'right' | 'bottom' | 'corner';
+    edge: 'left' | 'right' | 'bottom' | 'corner';
     startX: number;
     startY: number;
+    startLeft: number;
     startW: number;
     startH: number;
   } | null>(null);
@@ -121,13 +122,21 @@ export const ResizableFloatingPanel: React.FC<ResizableFloatingPanelProps> = ({
       setState((prev) => {
         let width = prev.width;
         let height = prev.height;
+        let x = prev.x;
+        if (drag.edge === 'left') {
+          width = clamp(drag.startW - dw, minWidth, maxWidth);
+          if (prev.x !== undefined) {
+            const deltaW = width - drag.startW;
+            x = clamp(drag.startLeft - deltaW, 0, Math.max(0, window.innerWidth - width));
+          }
+        }
         if (drag.edge === 'right' || drag.edge === 'corner') {
           width = clamp(drag.startW + dw * signW, minWidth, maxWidth);
         }
         if (drag.edge === 'bottom' || drag.edge === 'corner') {
           height = clamp(drag.startH + dh * signH, minHeight, maxHeight);
         }
-        return { ...prev, width, height };
+        return { ...prev, width, height, x };
       });
     },
     [anchor, maxWidth, minWidth, maxHeight, minHeight, state.x]
@@ -141,7 +150,7 @@ export const ResizableFloatingPanel: React.FC<ResizableFloatingPanelProps> = ({
     document.body.style.userSelect = '';
   }, [onResizeMove]);
 
-  const startResize = (edge: 'right' | 'bottom' | 'corner', e: React.PointerEvent) => {
+  const startResize = (edge: 'left' | 'right' | 'bottom' | 'corner', e: React.PointerEvent) => {
     const el = shellRef.current;
     if (!el) return;
     e.preventDefault();
@@ -151,11 +160,12 @@ export const ResizableFloatingPanel: React.FC<ResizableFloatingPanelProps> = ({
       edge,
       startX: e.clientX,
       startY: e.clientY,
+      startLeft: rect.left,
       startW: rect.width,
       startH: rect.height,
     };
     document.body.style.cursor =
-      edge === 'corner' ? 'nwse-resize' : edge === 'right' ? 'ew-resize' : 'ns-resize';
+      edge === 'corner' ? 'nwse-resize' : edge === 'right' || edge === 'left' ? 'ew-resize' : 'ns-resize';
     document.body.style.userSelect = 'none';
     window.addEventListener('pointermove', onResizeMove);
     window.addEventListener('pointerup', endResize);
@@ -188,7 +198,7 @@ export const ResizableFloatingPanel: React.FC<ResizableFloatingPanelProps> = ({
     // Don't drag from interactive elements
     if (target.closest('button, input, select, textarea, a, [role="button"], [contenteditable="true"]')) return;
     // Don't drag from resize grips
-    if (target.closest(`.${styles.gripRight}, .${styles.gripBottom}, .${styles.gripCorner}`)) return;
+    if (target.closest(`.${styles.gripLeft}, .${styles.gripRight}, .${styles.gripBottom}, .${styles.gripCorner}`)) return;
     // Only drag from a marked handle (or the top drag strip)
     if (!target.closest('.handle, [data-drag-handle]')) return;
     const el = shellRef.current;
@@ -226,14 +236,14 @@ export const ResizableFloatingPanel: React.FC<ResizableFloatingPanelProps> = ({
   // When user has dragged, override anchor positioning with absolute left/top
   const positionedStyle: React.CSSProperties =
     state.x !== undefined && state.y !== undefined
-      ? { left: state.x, top: state.y, right: 'auto', bottom: 'auto' }
+      ? { left: state.x, top: state.y, right: 'auto', bottom: 'auto', transform: 'none' }
       : {};
 
   return (
     <div
       ref={shellRef}
       className={shellClass}
-      style={{ width: state.width, height: state.height, ...positionedStyle, ...style }}
+      style={{ width: state.width, height: state.height, ...style, ...positionedStyle }}
       onPointerDown={onShellPointerDown}
     >
       <div
@@ -244,6 +254,12 @@ export const ResizableFloatingPanel: React.FC<ResizableFloatingPanelProps> = ({
         aria-hidden
       />
       <div className={bodyClass}>{children}</div>
+      <div
+        className={styles.gripLeft}
+        onPointerDown={(e) => startResize('left', e)}
+        title="Resize width"
+        aria-hidden
+      />
       <div
         className={styles.gripRight}
         onPointerDown={(e) => startResize('right', e)}

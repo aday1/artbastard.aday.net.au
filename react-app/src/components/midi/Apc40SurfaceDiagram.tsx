@@ -51,6 +51,8 @@ type FlashKey =
   | 'send-a'
   | 'send-b'
   | 'send-c'
+  | 'full-on'
+  | 'blackout'
   | 'freeze-dmx';
 
 const describeFlashKey = (key: FlashKey): string => {
@@ -73,7 +75,7 @@ const describeFlashKey = (key: FlashKey): string => {
   if (key === 'play') return 'Play';
   if (key === 'stop') return 'Stop';
   if (key === 'record') return 'Record';
-  if (key === 'master-button') return 'Master button (Freeze DMX)';
+  if (key === 'master-button') return 'Master FREEZE DMX';
   if (key === 'stop-all') return 'Stop all clips';
   if (key === 'shift') return 'SHIFT';
   if (key === 'nav-fixture-prev') return 'Fixture previous';
@@ -87,7 +89,9 @@ const describeFlashKey = (key: FlashKey): string => {
   if (key === 'send-a') return 'SEND A (Color auto)';
   if (key === 'send-b') return 'SEND B (Pan/Tilt auto)';
   if (key === 'send-c') return 'SEND C (Effects auto)';
-  if (key === 'freeze-dmx') return 'FREEZE DMX';
+  if (key === 'full-on') return 'Clip/Track FULL ON';
+  if (key === 'blackout') return 'Device On/Off BLACKOUT';
+  if (key === 'freeze-dmx') return 'Detail View FREEZE DMX';
   return key;
 };
 
@@ -267,9 +271,6 @@ export const Apc40SurfaceDiagram: React.FC<Props> = ({
       case 'scene-launch':
         flash(`scene-${action.sceneIndex}`);
         break;
-      case 'track-select':
-        flash(`track-select-${action.trackIndex}`);
-        break;
       case 'select-fixture':
         flash(`solo-${action.trackIndex}`);
         break;
@@ -315,11 +316,17 @@ export const Apc40SurfaceDiagram: React.FC<Props> = ({
       case 'record':
         flash('record');
         break;
-      case 'master-button':
-        flash('master-button');
+      case 'full-on':
+        flash('full-on');
+        break;
+      case 'blackout':
+        flash('blackout');
         break;
       case 'freeze-dmx':
         flash('freeze-dmx');
+        break;
+      case 'toggle-freeze-dmx':
+        flash('master-button');
         break;
       case 'tap-tempo':
         flash('tap-tempo');

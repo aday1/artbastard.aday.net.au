@@ -6,6 +6,10 @@ All notable changes to this project are documented here.
 
 ### Added
 
+- Public showcase and docs index now advertise the v5.2.12.0 hard line, including the SuperControl remaster, BPM header, and stateful APC40 surface.
+- APC40 healthcheck coverage for PAN, SEND A/B/C, FULL ON, BLACKOUT, FREEZE, Rec Quantization, MIDI Overdub, Metronome, nav arrows, Master Select FREEZE, and the intentionally unmapped Track Select row.
+- DMX Activity monitor now logs APC40 FREEZE/UNFREEZE events even when no DMX channel value changes.
+- APC40 Track Control and Device Control encoder rings now mirror current ArtBastard DMX values only for capabilities that exist on the selected fixture/group; unavailable rings stay off.
 - Project YAML round-trip extended to a full backup/restore: new `config.yaml` (Art-Net/OSC), `layout.yaml` (stage map + master sliders), and `presets.yaml` (browser preset library) sections. `Download all (full backup)` button bundles all eight files so a clean install can be losslessly restored.
 - Fixture docs reorganised by category (`DOCS/fixtures/{LASER,LED-EFFECT,MOVING-HEAD,PAR,UV}/`) so the catalog can be browsed by type. Favourites unaffected — they reference stable fixture id.
 - New fixture profiles: **AB-FIX-014** Mini Moving Head Gobo Light (light strips, 10/12-channel) and **AB-FIX-015** Mini Moving Head Gobo Spot (9/11-channel).
@@ -18,11 +22,14 @@ All notable changes to this project are documented here.
 
 ### Changed
 
+- Showcase APC40 feature copy now reflects current ON/OFF semantics: REC handles scene-save arming, Record Arm is Solo Group, PAN/SEND controls are stateful, and Master Select owns the visible FREEZE DMX latch.
+- APC40 Device Left/Right bank buttons no longer wrap; they flash momentarily while moving and stay lit at the first/last bank boundary.
 - APC40 mapping metadata is consolidated into a shared module (`apc40Metadata.ts`) used by template generation and APC UI surfaces.
 - APC40 Manual and APC surface assignment board now show default APC mapping reference even when the controller is disconnected or live mappings are not yet applied.
 
 ### Fixed
 
+- Removed stale public/docs wording that described Master Select as FULL ON, Record Arm as scene save, or Cue Level as unmapped.
 - Factory reset now fully removes per-fixture files in `data/fixtures/*.json` and emits `fixtureLayoutUpdate` / `groupsUpdated` clears, preventing stale stage fixtures from reappearing after reset.
 - `deploy-linode` workflow now honors the effective lane ref (`dev` for dev track, `main` for live track) instead of always resetting the VPS repo to `main`.
 

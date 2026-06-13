@@ -185,9 +185,9 @@ export function describeApc40DmxSource(
       return 'APC40 Master fader: Master dimmer';
     case 'crossfader':
       return 'APC40 crossfader: Deck A/B blend';
-    case 'master-button':
-      return 'APC40 Master Select: FREEZE DMX latch';
     case 'freeze-dmx':
+      return 'APC40 Detail View: FREEZE DMX latch';
+    case 'toggle-freeze-dmx':
       return 'APC40 Master Select: FREEZE DMX latch';
     case 'tap-tempo':
       return 'APC40 Tap Tempo: Auto Scene BPM tap';
@@ -209,8 +209,6 @@ export function describeApc40DmxSource(
       return `APC40 Activator ${action.trackIndex + 1}: group auto-control`;
     case 'select-group':
       return `APC40 Activator ${action.trackIndex + 1}: select fixture group`;
-    case 'track-select':
-      return `APC40 Track Select ${action.trackIndex + 1}: fixture/group selection`;
     case 'solo-cue':
       return `APC40 Solo/Cue ${action.trackIndex + 1}: fixture isolation`;
     case 'select-fixture':

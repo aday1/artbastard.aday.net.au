@@ -73,20 +73,50 @@ export function resolveApc40DeviceRoleSlots(
   selectedFixtureIds: string[],
   bankOffset = 0
 ): Apc40RoleSlot[] {
+  const matching = resolveApc40DeviceRoleCatalog(fixtures, selectedFixtureIds);
+  const roles = matching;
+  const offset = roles.length === 0 ? 0 : Math.max(0, bankOffset) % roles.length;
+  const rotated = [...roles.slice(offset), ...roles.slice(0, offset)];
+  return rotated.slice(0, 8);
+}
+
+export function resolveApc40DeviceRoleCatalog(
+  fixtures: Fixture[],
+  selectedFixtureIds: string[]
+): Apc40RoleSlot[] {
   const selected = selectedFixtureIds.length > 0
     ? fixtures.filter((fixture) => selectedFixtureIds.includes(fixture.id))
     : fixtures;
 
-  const matching = DEVICE_ROLE_PRIORITY.filter((slot) =>
+  return DEVICE_ROLE_PRIORITY.filter((slot) =>
     selected.some((fixture) =>
       fixture.channels.some((channel) => channelMatchesRoleAliases(channel, slot.aliases))
     )
   );
+}
 
-  const roles = matching.length > 0 ? matching : DEVICE_ROLE_PRIORITY;
-  const offset = roles.length === 0 ? 0 : Math.max(0, bankOffset) % roles.length;
-  const rotated = [...roles.slice(offset), ...roles.slice(0, offset)];
-  return rotated.slice(0, 8);
+export function readApc40RoleDmxValue(
+  fixtures: Fixture[],
+  selectedFixtureIds: string[],
+  dmxChannels: number[],
+  role: Apc40RoleSlot
+): number | null {
+  const targets = selectedFixtureIds.length > 0
+    ? fixtures.filter((fixture) => selectedFixtureIds.includes(fixture.id))
+    : fixtures;
+  const values: number[] = [];
+
+  targets.forEach((fixture) => {
+    const channelIndex = fixture.channels.findIndex((channel) =>
+      channelMatchesRoleAliases(channel, role.aliases)
+    );
+    if (channelIndex >= 0) {
+      values.push(dmxChannels[fixtureDmxAddress(fixture, channelIndex)] ?? 0);
+    }
+  });
+
+  if (values.length === 0) return null;
+  return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
 }
 
 export function buildRoleUpdates(

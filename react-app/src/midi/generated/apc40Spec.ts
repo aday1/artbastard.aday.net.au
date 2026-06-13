@@ -64,6 +64,10 @@ export const APC40_TRANSPORT_NOTES = {
   "stop": 92,
   "record": 93,
   "recordAlt": 102,
+  "detailView": 62,
+  "recQuantization": 63,
+  "midiOverdub": 64,
+  "metronome": 65,
   "navFixturePrev": 94,
   "navFixtureNext": 95,
   "navScenePrev": 96,
@@ -142,7 +146,7 @@ export const APC40_NOTE_BINDINGS: Apc40NoteBinding[] = [
     },
     "note": 48,
     "action": "solo-group",
-    "velocityCheck": "gt0"
+    "velocityCheck": "press-release"
   },
   {
     "controlKey": "select-fixture",
@@ -153,7 +157,7 @@ export const APC40_NOTE_BINDINGS: Apc40NoteBinding[] = [
     },
     "note": 49,
     "action": "select-fixture",
-    "velocityCheck": "gt0"
+    "velocityCheck": "press-release"
   },
   {
     "controlKey": "select-group",
@@ -164,17 +168,7 @@ export const APC40_NOTE_BINDINGS: Apc40NoteBinding[] = [
     },
     "note": 50,
     "action": "select-group",
-    "velocityCheck": "gt0"
-  },
-  {
-    "controlKey": "master-button",
-    "channels": {
-      "kind": "single",
-      "channel": 8
-    },
-    "note": 51,
-    "action": "freeze-dmx",
-    "velocityCheck": "gt0"
+    "velocityCheck": "press-release"
   },
   {
     "controlKey": "track-stop",
@@ -195,7 +189,7 @@ export const APC40_NOTE_BINDINGS: Apc40NoteBinding[] = [
     },
     "note": 58,
     "action": "full-on",
-    "velocityCheck": "gt0"
+    "velocityCheck": "press-release"
   },
   {
     "controlKey": "blackout",
@@ -205,7 +199,7 @@ export const APC40_NOTE_BINDINGS: Apc40NoteBinding[] = [
     },
     "note": 59,
     "action": "blackout",
-    "velocityCheck": "gt0"
+    "velocityCheck": "press-release"
   },
   {
     "controlKey": "bank-prev",
@@ -225,6 +219,46 @@ export const APC40_NOTE_BINDINGS: Apc40NoteBinding[] = [
     },
     "note": 61,
     "action": "bank-next",
+    "velocityCheck": "gt0"
+  },
+  {
+    "controlKey": "freeze-dmx",
+    "channels": {
+      "kind": "single",
+      "channel": 0
+    },
+    "note": 62,
+    "action": "freeze-dmx",
+    "velocityCheck": "press-release"
+  },
+  {
+    "controlKey": "record",
+    "channels": {
+      "kind": "single",
+      "channel": 0
+    },
+    "note": 63,
+    "action": "record",
+    "velocityCheck": "gt0"
+  },
+  {
+    "controlKey": "stop-all-clips",
+    "channels": {
+      "kind": "single",
+      "channel": 0
+    },
+    "note": 64,
+    "action": "stop-all-clips",
+    "velocityCheck": "gt0"
+  },
+  {
+    "controlKey": "tap-tempo",
+    "channels": {
+      "kind": "single",
+      "channel": 0
+    },
+    "note": 65,
+    "action": "tap-tempo",
     "velocityCheck": "gt0"
   },
   {
@@ -355,28 +389,28 @@ export const APC40_NOTE_BINDINGS: Apc40NoteBinding[] = [
     "channels": "any",
     "note": 87,
     "action": "select-all",
-    "velocityCheck": "gt0"
+    "velocityCheck": "press-release"
   },
   {
     "controlKey": "toggle-color-auto",
     "channels": "any",
     "note": 88,
     "action": "toggle-color-auto",
-    "velocityCheck": "gt0"
+    "velocityCheck": "press-release"
   },
   {
     "controlKey": "toggle-pan-tilt-auto",
     "channels": "any",
     "note": 89,
     "action": "toggle-pan-tilt-auto",
-    "velocityCheck": "gt0"
+    "velocityCheck": "press-release"
   },
   {
     "controlKey": "toggle-effect-auto",
     "channels": "any",
     "note": 90,
     "action": "toggle-effect-auto",
-    "velocityCheck": "gt0"
+    "velocityCheck": "press-release"
   },
   {
     "controlKey": "tap-tempo",
@@ -855,20 +889,44 @@ export const APC40_CATALOG: Apc40CatalogEntry[] = [
   {
     "key": "masterButton",
     "category": "utility",
-    "label": "Master Select \\u2014 FREEZE DMX latch",
-    "description": "Latch: press to freeze DMX output (rig holds last value, store keeps updating); press again to release and flush current store state to backend."
+    "label": "Master Select \\u2014 FREEZE DMX",
+    "description": "Press once to freeze DMX output and light the Master LED; press again to unfreeze and flush current store state."
   },
   {
     "key": "fullOn",
     "category": "effect",
     "label": "Clip/Track \\u2014 FULL ON",
-    "description": "Toggle: raise patched fixture channels to 255 and snapshot prior DMX; press again to restore the snapshot."
+    "description": "ON raises patched fixture channels to 255 and snapshots prior DMX; OFF restores the snapshot."
   },
   {
     "key": "blackout",
     "category": "effect",
     "label": "Device On/Off \\u2014 BLACKOUT",
-    "description": "Toggle: snapshot DMX and zero all channels; press again to restore. LED on the device lights while latched."
+    "description": "ON snapshots DMX and zeros all channels; OFF restores. LED on the device lights while latched."
+  },
+  {
+    "key": "freezeDmx",
+    "category": "utility",
+    "label": "Detail View \\u2014 FREEZE DMX",
+    "description": "ON freezes DMX output while UI/store continues; OFF releases and flushes current state to backend."
+  },
+  {
+    "key": "recQuant",
+    "category": "scene",
+    "label": "Rec Quantization \\u2014 save mode",
+    "description": "Alias for REC save mode."
+  },
+  {
+    "key": "midiOverdub",
+    "category": "utility",
+    "label": "MIDI Overdub \\u2014 panic stop",
+    "description": "Alias for Stop All Clips."
+  },
+  {
+    "key": "metronome",
+    "category": "transport",
+    "label": "Metronome \\u2014 tap tempo",
+    "description": "Alias for Tap Tempo."
   },
   {
     "key": "deviceBank",
@@ -910,19 +968,19 @@ export const APC40_CATALOG: Apc40CatalogEntry[] = [
     "key": "colorAuto",
     "category": "effect",
     "label": "SEND A \\u2014 Color Automation",
-    "description": "Toggle the modular color automation engine on/off. SHIFT+SEND A cycles the color pattern."
+    "description": "ON enables color automation; OFF disables it. SHIFT+SEND A cycles the color pattern."
   },
   {
     "key": "panTiltAuto",
     "category": "effect",
     "label": "SEND B \\u2014 Pan/Tilt Automation",
-    "description": "Toggle the modular pan/tilt automation engine on/off. SHIFT+SEND B cycles the pan/tilt path."
+    "description": "ON enables pan/tilt automation; OFF disables it. SHIFT+SEND B cycles the pan/tilt path."
   },
   {
     "key": "effectsAuto",
     "category": "effect",
     "label": "SEND C \\u2014 Effects Automation",
-    "description": "Toggle the modular effects automation engine (gobo/strobe/shutter) on/off. SHIFT+SEND C cycles the effect type."
+    "description": "ON enables effects automation; OFF disables it. SHIFT+SEND C cycles the effect type."
   },
   {
     "key": "record",
@@ -946,7 +1004,7 @@ export const APC40_CATALOG: Apc40CatalogEntry[] = [
     "key": "selectAll",
     "category": "selection",
     "label": "Pan button",
-    "description": "Select all fixtures at once."
+    "description": "ON selects all fixtures; OFF clears fixture selection."
   },
   {
     "key": "clear",

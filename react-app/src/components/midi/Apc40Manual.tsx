@@ -474,8 +474,8 @@ export const Apc40Manual: React.FC = () => {
                 <div
                   className={`${styles.trackButton} ${shouldMuteControl('note:0:80', false) ? styles.focusMuted : ''}`}
                   style={{ background: dmxFrozen ? '#ef4444' : APC40_CATEGORY_COLORS.utility }}
-                  title="Master Select → FREEZE DMX latch (press once to freeze rig at last value; press again to release and flush store state)"
-                >{dmxFrozen ? 'FRZN' : 'FRZ'}</div>
+                  title="Master Select → FREEZE DMX latch. Press once to freeze output; press again to unfreeze and flush current state."
+                >{dmxFrozen ? 'MSTR FRZ' : 'FREEZE'}</div>
                 <div
                   className={`${styles.fader} ${styles.masterFader} ${activeKey === `cc:${masterFaderBinding?.channel ?? 0}:${masterFaderBinding?.controller ?? 14}` ? styles.active : ''} ${isLearningKey('masterDimmer') ? styles.learning : ''} ${shouldMuteControl(`cc:${masterFaderBinding?.channel ?? 0}:${masterFaderBinding?.controller ?? 14}`, Boolean(masterFaderBinding)) ? styles.focusMuted : ''}`}
                   title={`${masterFaderBinding?.label ?? 'Master Fader -> Master Dimmer'} - click to re-learn\n${bindingTargetSummary(masterFaderBinding)}`}
@@ -516,13 +516,13 @@ export const Apc40Manual: React.FC = () => {
                 <div
                   className={`${styles.knob} ${activeKey === `cc:${cueBinding?.channel ?? 0}:${cueBinding?.controller ?? 47}` ? styles.active : ''} ${shouldMuteControl(`cc:${cueBinding?.channel ?? 0}:${cueBinding?.controller ?? 47}`, Boolean(cueBinding)) ? styles.focusMuted : ''}`}
                   style={{ borderColor: '#475569' }}
-                  title="Cue Level → UNMAPPED (Device Left/Right cycles Device Control role banks instead)"
+                  title="Cue Level → automation direction. CW = forward, CCW = reverse."
                   role="button"
                   tabIndex={0}
                 >
                   <div className={styles.knobDot} />
                 </div>
-                <div className={styles.controlBlockLabel}>Cue (unmapped)</div>
+                <div className={styles.controlBlockLabel}>Cue dir</div>
                 <div className={styles.controlBlockSig}>CC47</div>
               </div>
               <div className={styles.knobBlock}>

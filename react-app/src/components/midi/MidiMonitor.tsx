@@ -486,11 +486,11 @@ export const MidiMonitor: React.FC<MidiMonitorProps> = ({ footerDocked = false }
   return (
     <>
       <ResizableFloatingPanel
-        storageKey="artbastard.midiMonitor.size"
-        defaultWidth={500}
+        storageKey="artbastard.midiMonitor.size.v2"
+        defaultWidth={600}
         defaultHeight={340}
-        minWidth={280}
-        maxWidth={720}
+        minWidth={360}
+        maxWidth={1040}
         minHeight={140}
         maxHeight={560}
         anchor="bottom-left"
@@ -501,8 +501,6 @@ export const MidiMonitor: React.FC<MidiMonitorProps> = ({ footerDocked = false }
               right: 'auto',
               top: 'auto',
               bottom: '96px',
-              width: '400px',
-              height: '300px',
             }
           : isCollapsed ? { width: 'auto', height: 'auto' } : undefined}
       >

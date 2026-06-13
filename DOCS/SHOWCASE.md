@@ -4,10 +4,12 @@ How the public showcase page is built, recorded, and deployed. Useful if you
 want to rebuild it locally, change the operator videos, or audit the deploy
 path.
 
-Last content refresh: 2026-06-10 (v5.2.4.0 APC40 Deck A/B workflow,
-canvas-first stage fixture setup, optional fixture-aware scene and ACT seed
-templates, REC then Clip scene saves, Device Control gobo roles, Roli Lightpad
-LED drawing, mobile showcase layout, and six-clip operator how-to tour).
+Last content refresh: 2026-06-14 (v5.2.12.0 hard line: APC40 ON/OFF state
+semantics, BPM header dashboard, SuperControl layout remaster, cream/synthwave
+light theme, footer monitor controls, canvas-first stage fixture setup,
+fixture-aware scene and ACT seed templates, REC then Clip scene saves, Device
+Control gobo roles, Roli Lightpad LED drawing, mobile showcase layout, and
+six-clip operator how-to tour).
 Website feature grid mentions the stage canvas, seed workflow, and LAN / Pi
 bridge for cloud-hosted Art-Net on home LANs.
 

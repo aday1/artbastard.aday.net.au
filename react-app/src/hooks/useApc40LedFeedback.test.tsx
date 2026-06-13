@@ -31,8 +31,15 @@ const defaultApc40State = () => ({
   activeDeck: 'A' as const,
   armedColumns: [],
   fullOn: false,
+  blackout: false,
   autoGroups: [],
   deviceRoleLabels: [],
+  deviceBankIndex: 0,
+  deviceBankCount: 0,
+  deviceBankAtStart: true,
+  deviceBankAtEnd: true,
+  deviceBankFlashDirection: null,
+  deviceBankFlashUntil: 0,
   lastChange: null,
 });
 
@@ -102,5 +109,140 @@ describe('useApc40LedFeedback', () => {
       [0x90, 0x53, 6],
       [0x90, 0x5d, 4],
     ].forEach((message) => expect(messages).toContainEqual(message));
+  });
+
+  it('paints PAN, FULL ON, BLACKOUT, Detail View, and Master FREEZE state LEDs', async () => {
+    useStore.setState({
+      fixtures: [
+        { id: 'fixture-a', name: 'Wash A', type: 'RGB Wash', startAddress: 1, channels: [] },
+        { id: 'fixture-b', name: 'Wash B', type: 'RGB Wash', startAddress: 3, channels: [] },
+      ] as any,
+      selectedFixtures: ['fixture-a', 'fixture-b'],
+      dmxFrozen: true,
+      apc40CrossfaderState: {
+        ...defaultApc40State(),
+        fullOn: true,
+        blackout: true,
+      },
+    });
+
+    renderHook(() => useApc40LedFeedback());
+
+    await waitFor(() => expect(sent()).toContainEqual([0x90, 0x57, 1]));
+
+    const messages = sent();
+    expect(messages).toContainEqual([0x90, 0x3a, 3]);
+    expect(messages).toContainEqual([0x90, 0x3b, 3]);
+    expect(messages).toContainEqual([0x90, 0x3e, 3]);
+    expect(messages).toContainEqual([0x98, 0x33, 3]);
+  });
+
+  it('paints device bank arrows as momentary movement and boundary indicators', async () => {
+    useStore.setState({
+      apc40CrossfaderState: {
+        ...defaultApc40State(),
+        deviceBankCount: 4,
+        deviceBankIndex: 0,
+        deviceBankAtStart: true,
+        deviceBankAtEnd: false,
+        deviceBankFlashDirection: 'next',
+        deviceBankFlashUntil: Date.now() + 1000,
+      },
+    });
+
+    renderHook(() => useApc40LedFeedback());
+
+    await waitFor(() => expect(sent()).toContainEqual([0x90, 0x3c, 3]));
+
+    const messages = sent();
+    expect(messages).toContainEqual([0x90, 0x3c, 3]);
+    expect(messages).toContainEqual([0x90, 0x3d, 5]);
+  });
+
+  it('turns encoder rings off when the selected fixture lacks track/device capabilities', async () => {
+    useStore.setState({
+      fixtures: [
+        {
+          id: 'fixture-dimmer',
+          name: 'Dimmer Only',
+          type: 'Dimmer',
+          startAddress: 1,
+          channels: [{ name: 'Dimmer', type: 'dimmer' }],
+        },
+      ] as any,
+      selectedFixtures: ['fixture-dimmer'],
+      dmxChannels: [255, ...new Array(511).fill(0)],
+      apc40CrossfaderState: {
+        ...defaultApc40State(),
+        deviceBankCount: 0,
+        deviceBankAtStart: true,
+        deviceBankAtEnd: true,
+      },
+    });
+
+    renderHook(() => useApc40LedFeedback());
+
+    await waitFor(() => expect(sent()).toContainEqual([0xb0, 0x38, 0]));
+
+    const messages = sent();
+    expect(messages).toContainEqual([0xb0, 0x38, 0]);
+    expect(messages).toContainEqual([0xb0, 0x39, 0]);
+    expect(messages).toContainEqual([0xb0, 0x18, 0]);
+  });
+
+  it('paints track encoder rings from selected fixture track-control values', async () => {
+    useStore.setState({
+      fixtures: [
+        {
+          id: 'fixture-pan',
+          name: 'Pan Only',
+          type: 'Moving Head',
+          startAddress: 1,
+          channels: [{ name: 'Pan', type: 'pan' }],
+        },
+      ] as any,
+      selectedFixtures: ['fixture-pan'],
+      dmxChannels: [255, ...new Array(511).fill(0)],
+      apc40CrossfaderState: defaultApc40State(),
+    });
+
+    renderHook(() => useApc40LedFeedback());
+
+    await waitFor(() => expect(sent()).toContainEqual([0xb0, 0x38, 127]));
+
+    const messages = sent();
+    expect(messages).toContainEqual([0xb0, 0x38, 127]);
+    expect(messages).toContainEqual([0xb0, 0x39, 0]);
+  });
+
+  it('paints device encoder rings from selected fixture device capability values', async () => {
+    useStore.setState({
+      fixtures: [
+        {
+          id: 'fixture-gobo',
+          name: 'Gobo Spot',
+          type: 'Moving Head',
+          startAddress: 1,
+          channels: [{ name: 'Gobo Wheel', type: 'gobo_wheel' }],
+        },
+      ] as any,
+      selectedFixtures: ['fixture-gobo'],
+      dmxChannels: [128, ...new Array(511).fill(0)],
+      apc40CrossfaderState: {
+        ...defaultApc40State(),
+        deviceBankCount: 1,
+        deviceBankAtStart: true,
+        deviceBankAtEnd: true,
+      },
+    });
+
+    renderHook(() => useApc40LedFeedback());
+
+    await waitFor(() => expect(sent()).toContainEqual([0xb0, 0x18, 64]));
+
+    const messages = sent();
+    expect(messages).toContainEqual([0xb0, 0x18, 64]);
+    expect(messages).toContainEqual([0xb0, 0x19, 0]);
+    expect(messages).toContainEqual([0xb0, 0x38, 0]);
   });
 });

@@ -6,8 +6,8 @@ import { PinnedChannels } from './PinnedChannels'
 import { ToastContainer } from './ToastContainer'
 import { NetworkStatus } from './NetworkStatus'
 import { DmxActivityGlow } from './DmxActivityGlow'
-import BpmIndicator from '../audio/BpmIndicator'
 import SignalFlashIndicator from '../midi/SignalFlashIndicator'
+import { BPMDashboard } from './BPMDashboard'
 import PageRouter from '../router/PageRouter'
 import { useStore } from '../../store'
 import { GlobalMonitors } from '../monitors/GlobalMonitors'
@@ -186,7 +186,7 @@ const LayoutBody: React.FC<LayoutProps> = ({ children }) => {
       >
         {/* Global UI Effects */}
         <DmxActivityGlow />
-        {/* <BpmIndicator /> */}
+        <BPMDashboard className={styles.headerBpmDashboard} />
         {/* <SignalFlashIndicator position="bottom-left" /> */}
 
         {/* On mobile/tablet, the sidebars become drawers spawned by the

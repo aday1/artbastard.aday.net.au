@@ -1,7 +1,40 @@
-# ArtBastard Features (v5.2.4.0)
+# ArtBastard Features (v5.2.12.0)
 
 Feature inventory after the rebuild consolidation. Subsystem first, then
 notable shipped features.
+
+## Release highlight: v5.2.12.0 hard version bump
+
+- SuperControl card layout rebuild with a top-spanning Selection card,
+  filled Stage Map / Monitor areas, card width controls, and hidden-card restore.
+- Softer cream/synthwave light theme with stronger cyan, magenta, and amber
+  accents across DMX, SuperControl, monitors, footer controls, and deploy metadata.
+- BPM dashboard restored to the top header with tempo source, BPM value, and
+  play/stop state visible while operating the desk.
+- Footer-level MIDI, OSC, DMX, Help, theme, ArtSnob, and Reset controls keep
+  monitoring tools available without permanently occupying the show surface.
+- Experimental DMX Tracker is feature-flagged; stable envelopes and channel
+  controls stay the production default.
+
+## APC40 MK1 stateful live surface (v5.2.12.0)
+
+- APC40 hardware buttons now use explicit ON/OFF semantics instead of blind
+  toggles. Immediate note-off / velocity-zero releases are ignored; delayed
+  velocity-zero events are treated as the hardware OFF state.
+- Record Arm 1-8 is Solo Group: ON snapshots DMX and blacks out non-soloed
+  fixtures, OFF releases the group and restores when the last solo ends.
+- Solo/Cue 1-8 selects fixture N on ON and removes it on OFF. Activator 1-8
+  adds/removes fixture group N the same way.
+- PAN ON selects all fixtures; PAN OFF clears fixture selection. SEND A/B/C
+  ON enables Color, Pan/Tilt, and Effects automation; OFF disables each engine.
+- Clip/Track is FULL ON, Device On/Off is BLACKOUT, Master Select is FREEZE DMX,
+  Rec Quantization aliases REC, MIDI Overdub aliases Stop All Clips, and
+  Metronome aliases Tap Tempo.
+- Track Select is the remaining unmapped button row; its LEDs stay off by design
+  because APC40 hardware can emit unreliable CC bleed in some modes.
+- APC40 LEDs mirror selected fixtures/groups, Solo Group, PAN, SEND A/B/C,
+  FULL ON, BLACKOUT, FREEZE, REC/save mode, PLAY/STOP, Deck A/B clip state,
+  ACT launch state, and Stop All Clips.
 
 ## Control and runtime
 
@@ -132,7 +165,7 @@ ranges where low traffic warrants it.
   fixtures, and direct DMX channels; see DOCS/OSC_REFERENCE.md.
 - Legacy TouchOSC XML generator code remains test-covered by
   `test:touchosc-workflow`, but it is not a primary routed surface in
-  v5.2.4.0.
+  v5.2.12.0.
 
 ## MIDI and OSC
 

@@ -3,6 +3,8 @@ export interface DmxActivityMessage {
   timestamp: number;
   firstTimestamp: number;
   channel: number;
+  channelLabel?: string;
+  kind?: 'dmx' | 'event';
   value: number;
   previousValue: number;
   summary: string;
@@ -16,7 +18,9 @@ const REPEATED_CHANGE_WINDOW_MS = 5000;
 
 function messageKey(message: DmxActivityMessage): string {
   return [
+    message.kind || 'dmx',
     message.channel,
+    message.channelLabel || '',
     message.fixtureName || '',
     message.roleLabel,
   ].join(':');

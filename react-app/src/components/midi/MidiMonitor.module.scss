@@ -36,6 +36,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
   background-color: #333;
   padding: 6px 10px; /* Adjusted padding */
   /* cursor: grab; */ /* Indicate draggable - REMOVED */
@@ -59,7 +60,10 @@
   margin-right: auto; /* Push controls to the right */
   display: flex;
   align-items: center;
+  flex: 1 1 auto;
   gap: 0.25rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .scrollbackSetting {
@@ -97,12 +101,14 @@
 .status {
   /* margin-left: auto; */ /* Removed this */
   margin-right: 10px; /* Adjusted margin */
+  flex: 0 0 auto;
   font-size: 0.9em;
   color: #aaa;
 }
 
 .filterBadge {
   margin-right: 10px;
+  min-width: 0;
   font-size: 0.8em;
   color: #ffaa00;
   background: rgba(255, 170, 0, 0.15);
@@ -114,6 +120,7 @@
 .controls {
   display: flex;
   align-items: center;
+  flex: 0 0 auto;
   gap: 6px; /* Space between buttons */
 
   button {
@@ -152,8 +159,10 @@
 
 .content {
   padding: 10px;
-  max-height: 400px; /* Increased to show more messages with scrolling */
+  min-height: 0;
+  max-height: none;
   overflow-y: auto;
+  overflow-x: hidden;
   background-color: #222; /* Slightly different background for content area */
   border-top: 1px solid #444; /* Separator line */
   flex-grow: 1; /* Allow content to take available space */
@@ -194,6 +203,8 @@
   font-size: 0.9em;
   border-radius: 3px;
   gap: 4px;
+  min-width: 0;
+  overflow-wrap: anywhere;
   
   &:last-child {
     margin-bottom: 0;
@@ -202,8 +213,15 @@
 
 .messageRowMain {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  flex-wrap: wrap;
   gap: 8px;
+  min-width: 0;
+}
+
+.messageRowMain > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .type {
@@ -228,11 +246,13 @@
 }
 
 .source {
-  flex: 1;
-  text-align: right;
+  flex: 1 1 14rem;
+  min-width: 8rem;
+  text-align: left;
   color: #aaa;
   font-size: 0.8em;
   align-self: center;
+  overflow-wrap: anywhere;
 }
 
 .dmxInfo {

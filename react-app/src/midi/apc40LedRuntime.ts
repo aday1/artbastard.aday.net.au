@@ -50,6 +50,20 @@ export function sendApc40NoteOn(
   );
 }
 
+export function sendApc40ControlChange(
+  out: WebMidi.MIDIOutput,
+  channel: number,
+  controller: number,
+  value: number,
+  label = 'apc40-led',
+): boolean {
+  return safeMidiSend(
+    out,
+    [0xb0 | (channel & 0x0f), controller & 0x7f, value & 0x7f],
+    label,
+  );
+}
+
 export function sendApc40ClipCell(
   out: WebMidi.MIDIOutput,
   row: number,
