@@ -141,6 +141,16 @@
   overflow: hidden;
 }
 
+.workspaceMapOnly {
+  grid-template-columns: minmax(0, 1fr);
+  height: clamp(640px, calc(100dvh - 20rem), 900px);
+  min-height: 640px;
+}
+
+.workspaceMapOnly .mapPane {
+  grid-column: 1;
+}
+
 .libraryPane,
 .inspectorPane,
 .mapPane {

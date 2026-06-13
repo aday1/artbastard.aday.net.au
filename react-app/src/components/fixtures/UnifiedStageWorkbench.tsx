@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { useStore } from '../../store';
 import { LucideIcon } from '../ui/LucideIcon';
-import SuperControl from '../dmx/SuperControl';
 import { ShowBuilderPanel } from './ShowBuilderPanel';
 import { Apc40WorkflowBody } from './Apc40WorkflowPanel';
 import styles from './UnifiedStageWorkbench.module.scss';
 
-type WorkbenchMode = 'patch' | 'show' | 'apc';
+export type WorkbenchMode = 'patch' | 'show' | 'apc';
 
 interface TabDef {
   id: WorkbenchMode;
@@ -21,8 +20,18 @@ const TABS: TabDef[] = [
   { id: 'apc', label: 'APC40', icon: 'Cable', sub: 'Drive the rig from the APC40 surface' },
 ];
 
-export const UnifiedStageWorkbench: React.FC = () => {
-  const [mode, setMode] = useState<WorkbenchMode>('patch');
+interface UnifiedStageWorkbenchProps {
+  mode?: WorkbenchMode;
+  onModeChange?: (mode: WorkbenchMode) => void;
+}
+
+export const UnifiedStageWorkbench: React.FC<UnifiedStageWorkbenchProps> = ({ mode: controlledMode, onModeChange }) => {
+  const [localMode, setLocalMode] = useState<WorkbenchMode>('patch');
+  const mode = controlledMode ?? localMode;
+  const setMode = (nextMode: WorkbenchMode) => {
+    if (controlledMode === undefined) setLocalMode(nextMode);
+    onModeChange?.(nextMode);
+  };
   const { fixtures, groups, scenes, apc40State } = useStore((s) => ({
     fixtures: s.fixtures,
     groups: s.groups,
@@ -79,16 +88,13 @@ export const UnifiedStageWorkbench: React.FC = () => {
       )}
 
       {mode === 'apc' && (
-        <div className={`${styles.bodySlot} ${styles.apcBody}`} aria-label="APC40 SuperControl workflow">
+        <div className={`${styles.bodySlot} ${styles.apcBody}`} aria-label="APC40 map-first workflow">
           <div className={styles.apcOverview}>
             <div className={styles.apcModeHeader}>
               <span>APC40 target</span>
               <strong>{activeTarget}</strong>
             </div>
             <Apc40WorkflowBody withoutMap />
-          </div>
-          <div className={styles.superControlPanel}>
-            <SuperControl isDockable={false} preferTouchLayout embeddedWorkbench />
           </div>
         </div>
       )}

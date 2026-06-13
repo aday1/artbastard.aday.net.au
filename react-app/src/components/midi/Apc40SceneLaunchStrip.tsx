@@ -14,6 +14,9 @@ const APC40_FIRST_NOTE = 0x52; // see midi/apc40.ts:69-74
 export const Apc40SceneLaunchStrip: React.FC = () => {
   const acts = useStore((s) => s.acts);
   const activeActId = useStore((s) => s.actPlaybackState?.currentActId ?? null);
+  const launchActs = acts.slice(0, APC40_SCENE_LAUNCH_COUNT);
+
+  if (launchActs.length === 0) return null;
 
   return (
     <div className={styles.strip} aria-label="APC40 SCENE LAUNCH bindings">
@@ -23,25 +26,20 @@ export const Apc40SceneLaunchStrip: React.FC = () => {
         <span>buttons trigger acts 1–5</span>
       </div>
       <div className={styles.row}>
-        {Array.from({ length: APC40_SCENE_LAUNCH_COUNT }).map((_, i) => {
-          const act = acts[i];
+        {launchActs.map((act, i) => {
           const noteHex = (APC40_FIRST_NOTE + i).toString(16).toUpperCase().padStart(2, '0');
-          const active = act && activeActId === act.id;
+          const active = activeActId === act.id;
           return (
             <button
-              key={i}
+              key={act.id}
               type="button"
-              className={`${styles.cell} ${active ? styles.active : ''} ${!act ? styles.empty : ''}`}
-              title={
-                act
-                  ? `SCENE LAUNCH ${i + 1} (MIDI note 0x${noteHex}) → ${act.name}`
-                  : `SCENE LAUNCH ${i + 1} (MIDI note 0x${noteHex}) — no act assigned`
-              }
+              className={`${styles.cell} ${active ? styles.active : ''}`}
+              title={`SCENE LAUNCH ${i + 1} (MIDI note 0x${noteHex}) → ${act.name}`}
               aria-pressed={!!active}
               tabIndex={-1}
             >
               <span className={styles.number}>{i + 1}</span>
-              <span className={styles.label}>{act ? act.name : 'empty'}</span>
+              <span className={styles.label}>{act.name}</span>
               <span className={styles.note}>0x{noteHex}</span>
             </button>
           );

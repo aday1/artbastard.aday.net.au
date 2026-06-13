@@ -130,12 +130,9 @@
 }
 
 .apcBody {
-  display: grid;
-  grid-template-rows: minmax(260px, 0.45fr) minmax(360px, 0.55fr);
-  gap: 0.85rem;
-  height: clamp(720px, 78vh, 940px);
-  min-height: 720px;
-  overflow: hidden;
+  min-height: 0;
+  height: auto;
+  overflow: visible;
 }
 
 .apcOverview,
@@ -150,6 +147,10 @@
 
 .apcOverview {
   padding: 0.85rem;
+}
+
+.apcBody .apcOverview {
+  overflow: visible;
 }
 
 .superControlPanel {

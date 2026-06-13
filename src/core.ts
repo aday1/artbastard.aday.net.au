@@ -32,6 +32,8 @@ export const saveFixtures = index.saveFixtures;
 export const loadGroups = index.loadGroups;
 export const saveGroups = index.saveGroups;
 export const pingArtNetDevice = index.pingArtNetDevice;
+export const getArtNetPingHistory = index.getArtNetPingHistory;
+export const getLastArtNetPing = index.getLastArtNetPing;
 export const clearMidiMappings = index.clearMidiMappings;
 export const updateArtNetConfig = index.updateArtNetConfig;
 

@@ -886,7 +886,7 @@ function createServer() {
         allowedHeaders: ['Content-Type', 'Authorization']
     }));
 
-    app.use(json());
+    app.use(json({ limit: '10mb' }));
 
     // Socket.IO setup
     const io = new Server(server, {

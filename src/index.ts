@@ -10,6 +10,7 @@ import path from 'path';
 import EffectsEngine from './effects';
 import ping from 'ping';
 import { loadFixturesData, saveFixturesData } from './fixturesPersistence';
+import { recordArtNetPingSample, getArtNetPingHistory, getLastArtNetPing } from './artnetMonitor';
 
 // Import our separate logger to avoid circular dependencies
 import { log } from './logger';
@@ -1874,7 +1875,14 @@ function pingArtNetDevice(io: Server, ip?: string) {
                     artNetFailureCount = 0;
                 }
                 (global as any).artNetPingStatus = 'alive'; // Update global status
-                io.emit('artnetStatus', { ip: targetIp, status: 'alive' });
+                const sample = recordArtNetPingSample({
+                    ip: targetIp,
+                    status: 'alive',
+                    ok: true,
+                    latencyMs: result.time,
+                });
+                io.emit('artnetPingUpdate', sample);
+                io.emit('artnetStatus', { ip: targetIp, status: 'alive', latencyMs: sample.latencyMs });
             } else {
                 // Device is unreachable - suppress warnings, only log on status change
                 const newStatus = 'unreachable';
@@ -1888,6 +1896,14 @@ function pingArtNetDevice(io: Server, ip?: string) {
                 // Suppress repeated warnings - don't log if already unreachable
 
                 lastArtNetStatus = newStatus;
+                const sample = recordArtNetPingSample({
+                    ip: targetIp,
+                    status: newStatus,
+                    ok: false,
+                    latencyMs: result.time,
+                    message: `ArtNet device at ${targetIp} is not responding to ping`,
+                });
+                io.emit('artnetPingUpdate', sample);
                 io.emit('artnetStatus', {
                     ip: targetIp,
                     status: newStatus,
@@ -1908,6 +1924,14 @@ function pingArtNetDevice(io: Server, ip?: string) {
             // Suppress repeated warnings
 
             lastArtNetStatus = newStatus;
+            const sample = recordArtNetPingSample({
+                ip: targetIp,
+                status: newStatus,
+                ok: false,
+                latencyMs: null,
+                message: `ArtNet device at ${targetIp} is not responding to ping`,
+            });
+            io.emit('artnetPingUpdate', sample);
             io.emit('artnetStatus', {
                 ip: targetIp,
                 status: newStatus,
@@ -2371,7 +2395,7 @@ export {
     saveFixtures,
     loadGroups,
     saveGroups,
-    pingArtNetDevice, clearMidiMappings,
+    pingArtNetDevice, getArtNetPingHistory, getLastArtNetPing, clearMidiMappings,
     updateArtNetConfig,
     updateOscConfig,
     sendOscMessage

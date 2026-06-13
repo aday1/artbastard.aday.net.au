@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import StageMapFixtureSetup from './StageMapFixtureSetup';
 import { useStore } from '../../store';
 
@@ -78,6 +78,39 @@ describe('StageMapFixtureSetup', () => {
     });
 
     expect(useStore.getState().selectedFixtures).toEqual(['fixture-wash-1']);
+  });
+
+  it('releases fixture pointer capture when dragging completes', async () => {
+    render(<StageMapFixtureSetup />);
+
+    const stageCanvas = screen.getByRole('application', { name: /canvas-first fixture stage map/i });
+    const pointerDown = new Event('pointerdown', { bubbles: true, cancelable: true });
+    Object.defineProperties(pointerDown, {
+      button: { value: 0 },
+      pointerId: { value: 7 },
+      clientX: { value: 100 },
+      clientY: { value: 100 },
+    });
+    fireEvent(within(stageCanvas).getByTitle(/Wash 1.*DMX 1-4/), pointerDown);
+    await waitFor(() => expect(useStore.getState().selectedFixtures).toEqual(['fixture-wash-1']));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    await act(async () => {
+      window.dispatchEvent(new Event('blur'));
+    });
+
+    await waitFor(() => expect(HTMLElement.prototype.releasePointerCapture).toHaveBeenCalledWith(7));
+  });
+
+  it('hides fixture side panes in APC40 map-only drive mode', () => {
+    render(<StageMapFixtureSetup />);
+
+    fireEvent.click(screen.getByRole('tab', { name: /APC40/i }));
+
+    expect(screen.getByRole('application', { name: /canvas-first fixture stage map/i })).toBeDefined();
+    expect(screen.queryByText('Fixture Library')).toBeNull();
+    expect(screen.queryByText('Inspector')).toBeNull();
   });
 
   it('does not start fixture dragging from a right-click', () => {

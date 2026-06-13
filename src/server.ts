@@ -52,7 +52,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-app.use(json());
+app.use(json({ limit: '10mb' }));
 
 // Ensure all required directories exist before proceeding
 ensureDirectoriesExist();

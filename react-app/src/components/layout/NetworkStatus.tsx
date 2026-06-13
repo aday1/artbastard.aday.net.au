@@ -3,6 +3,8 @@ import { useSocket } from '../../context/SocketContext'
 import { useTheme } from '../../context/ThemeContext'
 import { useBrowserMidi } from '../../hooks/useBrowserMidi'
 import { useStore } from '../../store'
+import { RoliDebugPanel } from '../settings/RoliDebugPanel'
+import ArtNetPingGraph, { type ArtNetPingSample } from './ArtNetPingGraph'
 import styles from './NetworkStatus.module.scss'
 
 interface HealthStatus {
@@ -18,6 +20,8 @@ interface HealthStatus {
   }
   midiDevicesConnected: number
   artnetStatus: string // This will now receive more detailed statuses
+  artnetLastPing?: ArtNetPingSample | null
+  artnetPingHistory?: ArtNetPingSample[]
 }
 
 interface Props {
@@ -38,6 +42,7 @@ export const NetworkStatus: React.FC<Props> = ({ isModal = false, onClose, compa
   const { socket, connected } = useSocket()
   const { theme } = useTheme()
   const [health, setHealth] = useState<HealthStatus | null>(null)
+  const [artnetSamples, setArtnetSamples] = useState<ArtNetPingSample[]>([])
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [dmxMessages, setDmxMessages] = useState<DmxMessage[]>([])
@@ -65,6 +70,7 @@ export const NetworkStatus: React.FC<Props> = ({ isModal = false, onClose, compa
         const response = await fetch('/api/health')
         const data = await response.json()
         setHealth(data)
+        setArtnetSamples(Array.isArray(data.artnetPingHistory) ? data.artnetPingHistory : [])
         setLastUpdate(new Date())
       } catch (error) {
         console.error('Failed to fetch health status:', error)
@@ -79,6 +85,25 @@ export const NetworkStatus: React.FC<Props> = ({ isModal = false, onClose, compa
 
     return () => clearInterval(interval)
   }, [])
+
+  useEffect(() => {
+    if (!socket || !connected) return;
+    const handleArtNetPingUpdate = (sample: ArtNetPingSample) => {
+      setArtnetSamples((prev) => [...prev, sample].slice(-120));
+      setHealth((prev) => prev
+        ? {
+            ...prev,
+            artnetStatus: sample.status,
+            artnetLastPing: sample,
+            artnetPingHistory: [...(prev.artnetPingHistory ?? []), sample].slice(-120),
+          }
+        : prev);
+    };
+    socket.on('artnetPingUpdate', handleArtNetPingUpdate);
+    return () => {
+      socket.off('artnetPingUpdate', handleArtNetPingUpdate);
+    };
+  }, [socket, connected])
 
   useEffect(() => {
     if (isModal) {
@@ -236,6 +261,10 @@ export const NetworkStatus: React.FC<Props> = ({ isModal = false, onClose, compa
         </div>
 
         {!navbar && (
+          <ArtNetPingGraph samples={artnetSamples} targetStatus={getArtNetDisplayDetails(health?.artnetStatus).fullText} />
+        )}
+
+        {!navbar && (
           <>
             <div className={styles.statsSection}>
               <div className={styles.stat}>
@@ -249,6 +278,10 @@ export const NetworkStatus: React.FC<Props> = ({ isModal = false, onClose, compa
                 </span>
               </div>
             </div>
+
+            <section className={styles.roliSection} aria-label="ROLI Blocks debug">
+              <RoliDebugPanel />
+            </section>
 
             {/* DMX Message Log */}
             <div className={styles.dmxLogSection}>

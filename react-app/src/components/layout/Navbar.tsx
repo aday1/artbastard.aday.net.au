@@ -3,10 +3,8 @@ import { useTheme } from '../../context/ThemeContext'
 import { useStore } from '../../store'
 import { useSocket } from '../../context/SocketContext'
 import { useBrowserMidi } from '../../hooks/useBrowserMidi'
-import { DmxChannelStats } from '../dmx/DmxChannelStats'
 import styles from './Navbar.module.scss'
 import { LucideIcon } from '../ui/LucideIcon'
-import { ThemeToggleButton } from './ThemeToggleButton'
 import * as Icons from 'lucide-react'
 import { ViewType } from '../../context/RouterContext'
 import { useRouter } from '../../context/RouterContext'
@@ -16,6 +14,7 @@ import { openMobileSurface } from '../../utils/openPopupSurface'
 
 // Active navigation items used by both desktop sidebar and drawer.
 const navItems: NavItem[] = SHARED_NAV_ITEMS
+const NAVBAR_COLLAPSED_KEY = 'artbastard.navbar.collapsed.v1'
 
 export interface NavbarProps {
   /**
@@ -35,7 +34,10 @@ export interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({ variant = 'sidebar', onItemSelected }) => {
   const { theme, setTheme } = useTheme()
   const { currentView, setCurrentView } = useRouter()
-  const [isCollapsed, setIsCollapsed] = useState(false)
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.localStorage.getItem(NAVBAR_COLLAPSED_KEY) === '1'
+  })
   const navVisibility = useStore((state) => state.navVisibility)
   const { connected } = useSocket()
   const { activeBrowserInputs } = useBrowserMidi()
@@ -116,6 +118,9 @@ export const Navbar: React.FC<NavbarProps> = ({ variant = 'sidebar', onItemSelec
     setIsCollapsed(!isCollapsed)
   }
 
+  useEffect(() => {
+    window.localStorage.setItem(NAVBAR_COLLAPSED_KEY, isCollapsed ? '1' : '0')
+  }, [isCollapsed])
 
   useEffect(() => {
     if (isCollapsed) {

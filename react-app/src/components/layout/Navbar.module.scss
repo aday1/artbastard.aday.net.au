@@ -17,14 +17,14 @@
   display: flex;
   flex-direction: row;
   align-items: flex-start;
-  gap: 0.5rem;
+  gap: 0.4rem;
   font-family: var(--font-body);
-  letter-spacing: -0.2px;
+  letter-spacing: 0;
   background: var(--color-surface);
   backdrop-filter: blur(15px);
   -webkit-backdrop-filter: blur(15px);
   border: 1px solid var(--color-border);
-  border-radius: 12px;
+  border-radius: 8px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
 
   :root[style*='--ab-rack-ui'] &,
@@ -38,14 +38,14 @@
       0 6px 20px rgb(0 0 0 / 0.45);
   }
   transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  padding: 0.5rem 0.6rem;
+  padding: 0.35rem 0.45rem;
   overflow-x: auto;
   overflow-y: auto;
   scrollbar-width: thin;
 }
 
 .navBarCollapsedState {
-  max-height: 58px;
+  max-height: 50px;
   overflow-y: hidden;
   align-items: center;
 
@@ -56,10 +56,10 @@
 
 .navContent {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   justify-content: flex-start;
-  align-items: stretch;
-  gap: 0.4rem;
+  align-items: center;
+  gap: 0.35rem;
   flex: 1;
   min-width: 0;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -111,8 +111,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   margin-top: 0;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
@@ -145,7 +145,7 @@
   flex-direction: row;
   flex-wrap: wrap;
   align-items: flex-start;
-  gap: 0.35rem 0.5rem;
+  gap: 0.25rem 0.35rem;
   pointer-events: auto;
   width: 100%;
 }
@@ -190,7 +190,7 @@
   align-items: center;
   gap: var(--space-sm);
   position: relative;
-  padding: var(--space-sm) var(--space-md);
+  padding: 0.45rem 0.65rem;
   border: none;
   border-radius: var(--radius-md);
   background: transparent;
@@ -200,7 +200,7 @@
   font-weight: var(--font-medium);
   cursor: pointer;
   width: auto;
-  min-width: min(160px, 100%);
+  min-width: min(132px, 100%);
   justify-content: flex-start;
   transition: all var(--transition-fast);
   text-rendering: optimizeLegibility;
@@ -692,11 +692,12 @@
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.35rem;
   align-items: center;
-  border-top: 1px solid var(--color-border, rgba(71, 85, 105, 0.3));
-  padding-top: 0.4rem;
-  margin-top: 0.1rem;
+  border-top: 0;
+  padding-top: 0;
+  margin-top: 0;
+  margin-left: auto;
 }
 
 // Reset Layout Section
@@ -710,7 +711,7 @@
 .resetLayoutButton {
   @extend .navButton !optional;
   width: auto;
-  min-width: 120px;
+  min-width: 42px;
   background: rgba(139, 92, 246, 0.1);
   border: 1px solid rgba(139, 92, 246, 0.3);
   color: #a78bfa;
@@ -718,12 +719,12 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 10px 16px;
-  font-size: 13px;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.78rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-  border-radius: 8px;
+  border-radius: 6px;
 
   &:hover {
     background: rgba(139, 92, 246, 0.2);

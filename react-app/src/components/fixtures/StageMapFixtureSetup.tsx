@@ -25,7 +25,7 @@ import { loadShowPreset } from '../../fixtures/showPresets/loadShow';
 import { getTemplateMode } from '../../fixtures/showBuilder/showPlan';
 import { SceneSeedButton } from '../scenes/SceneSeedButton';
 import { ActSeedButton } from '../acts/ActSeedButton';
-import { UnifiedStageWorkbench } from './UnifiedStageWorkbench';
+import { UnifiedStageWorkbench, type WorkbenchMode } from './UnifiedStageWorkbench';
 import { LucideIcon } from '../ui/LucideIcon';
 import { FixtureIdentityVisual } from './FixtureIdentityVisual';
 import styles from './StageMapFixtureSetup.module.scss';
@@ -35,6 +35,7 @@ type StageTool = 'select' | 'box';
 interface DragState {
   fixtureId: string;
   pointerId: number;
+  captureTarget: HTMLElement;
   startClient: { x: number; y: number };
   origin: { x: number; y: number };
 }
@@ -121,6 +122,7 @@ export const StageMapFixtureSetup: React.FC = () => {
   const [isLoadingStandardShow, setIsLoadingStandardShow] = useState(false);
   const [showAutoAdd, setShowAutoAdd] = useState(false);
   const [autoAddBusy, setAutoAddBusy] = useState<string | null>(null);
+  const [workbenchMode, setWorkbenchMode] = useState<WorkbenchMode>('patch');
   const [stageToolsOpen, setStageToolsOpen] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     return window.localStorage.getItem('stage-map-tools-open') === '1';
@@ -167,6 +169,7 @@ export const StageMapFixtureSetup: React.FC = () => {
   const primaryVisibleChannels = primaryChannelsExpanded
     ? primaryChannels
     : primaryChannels.slice(0, CHANNEL_PREVIEW_LIMIT);
+  const apcDriveMode = workbenchMode === 'apc';
 
   const templateTypes = useMemo(() => {
     const values = fixtureTemplates
@@ -668,13 +671,15 @@ export const StageMapFixtureSetup: React.FC = () => {
     } else if (!selectedFixtures.includes(fixtureId)) {
       setSelectedFixtures([fixtureId]);
     }
+    const captureTarget = event.currentTarget as HTMLElement;
     setDragState({
       fixtureId,
       pointerId: event.pointerId,
+      captureTarget,
       startClient: { x: event.clientX, y: event.clientY },
       origin: { x: item.x, y: item.y },
     });
-    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    captureTarget.setPointerCapture(event.pointerId);
   };
 
   const handleFixtureContextMenu = (event: React.MouseEvent, fixtureId: string) => {
@@ -704,6 +709,15 @@ export const StageMapFixtureSetup: React.FC = () => {
 
   useEffect(() => {
     if (!dragState) return;
+    const releaseDragCapture = (pointerId = dragState.pointerId) => {
+      try {
+        if (!dragState.captureTarget.hasPointerCapture || dragState.captureTarget.hasPointerCapture(pointerId)) {
+          dragState.captureTarget.releasePointerCapture(pointerId);
+        }
+      } catch {
+        // Pointer capture may already be gone if the browser cancelled the gesture.
+      }
+    };
     const handleMove = (event: PointerEvent) => {
       if (event.pointerId !== dragState.pointerId) return;
       const rect = stageRef.current?.getBoundingClientRect();
@@ -723,6 +737,7 @@ export const StageMapFixtureSetup: React.FC = () => {
     const handleUp = async (event: PointerEvent) => {
       if (event.pointerId !== dragState.pointerId) return;
       const item = useStore.getState().fixtureLayout.find((entry) => entry.fixtureId === dragState.fixtureId);
+      releaseDragCapture(event.pointerId);
       setDragState(null);
       if (item) {
         try {
@@ -733,8 +748,10 @@ export const StageMapFixtureSetup: React.FC = () => {
         }
       }
     };
-    const handleCancel = (event?: PointerEvent) => {
-      if (event && event.pointerId !== dragState.pointerId) return;
+    const handleCancel = (event?: PointerEvent | Event) => {
+      const pointerId = event && 'pointerId' in event ? event.pointerId : undefined;
+      if (typeof pointerId === 'number' && pointerId !== dragState.pointerId) return;
+      releaseDragCapture(pointerId);
       setDragState(null);
     };
     window.addEventListener('pointermove', handleMove);
@@ -879,11 +896,11 @@ export const StageMapFixtureSetup: React.FC = () => {
       </header>
 
       <div className={styles.drawerStack}>
-        <UnifiedStageWorkbench />
+        <UnifiedStageWorkbench mode={workbenchMode} onModeChange={setWorkbenchMode} />
       </div>
 
-      <div className={styles.workspace}>
-        <aside className={styles.libraryPane} aria-label="Fixture library">
+      <div className={`${styles.workspace} ${apcDriveMode ? styles.workspaceMapOnly : ''}`} data-apc-drive-mode={apcDriveMode ? 'true' : undefined}>
+        {!apcDriveMode && <aside className={styles.libraryPane} aria-label="Fixture library">
           <div className={styles.paneHeader}>
             <div>
               <strong>Fixture Library</strong>
@@ -977,7 +994,7 @@ export const StageMapFixtureSetup: React.FC = () => {
               );
             })}
           </div>
-        </aside>
+        </aside>}
 
         <main className={styles.mapPane}>
           <div className={styles.stageHeader}>
@@ -1156,7 +1173,7 @@ export const StageMapFixtureSetup: React.FC = () => {
           );
         })()}
 
-        <aside className={styles.inspectorPane} aria-label="Stage map inspector">
+        {!apcDriveMode && <aside className={styles.inspectorPane} aria-label="Stage map inspector">
           <div className={styles.paneHeader}>
             <div>
               <strong>Inspector</strong>
@@ -1345,7 +1362,7 @@ export const StageMapFixtureSetup: React.FC = () => {
             </div>
           </section>
 
-        </aside>
+        </aside>}
       </div>
 
     </section>

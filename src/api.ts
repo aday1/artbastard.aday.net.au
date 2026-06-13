@@ -7,6 +7,7 @@ import os from 'os';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { log } from './logger';
+import { getArtNetPingHistory, getLastArtNetPing } from './artnetMonitor';
 
 const execAsync = promisify(exec);
 import {
@@ -119,7 +120,7 @@ apiRouter.use((req, res, next) => {
 });
 
 // Middleware to parse JSON
-apiRouter.use(express.json());
+apiRouter.use(express.json({ limit: '10mb' }));
 
 // Add global error handler for API routes
 apiRouter.use((err: Error, req: Request, res: Response, next: NextFunction) => {
@@ -145,7 +146,9 @@ apiRouter.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
     memoryUsage: process.memoryUsage(),
     midiDevicesConnected: Object.keys(global.activeMidiInputs || {}).length,
-    artnetStatus: (global as any).artNetPingStatus || 'unknown'
+    artnetStatus: (global as any).artNetPingStatus || 'unknown',
+    artnetLastPing: getLastArtNetPing(),
+    artnetPingHistory: getArtNetPingHistory()
   };
 
   const isHealthy = stats.serverStatus === 'healthy';

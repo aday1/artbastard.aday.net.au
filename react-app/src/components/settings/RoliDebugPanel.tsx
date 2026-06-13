@@ -17,6 +17,7 @@ import {
   type RoliDebugEvent,
 } from '../../engines/roliLightpad';
 import { pairRoliOverBluetooth } from '../../engines/roliBleTransport';
+import { RoliPatternEditor } from './RoliPatternEditor';
 import styles from './RoliDebugPanel.module.scss';
 
 const formatTime = (ts: number): string => {
@@ -170,6 +171,8 @@ export const RoliDebugPanel: React.FC = () => {
         Live touch + handshake state per Lightpad. Primary block drives PAN/TILT;
         Colour block drives the colour wheel. Swap to flip the assignment.
       </div>
+
+      <RoliPatternEditor />
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.4rem 0.6rem', flexWrap: 'wrap' }}>
         <button

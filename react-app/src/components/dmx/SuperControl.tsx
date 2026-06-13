@@ -27,6 +27,7 @@ import { SkeuoButton } from '../ui/SkeuoButton';
 import { SelectedChannelsFaderStrip } from './SelectedChannelsFaderStrip';
 import { SuperControlMidiBindingsBar } from './SuperControlMidiBindingsBar';
 import { Apc40SurfaceDiagram, useApc40DiagramVisible } from '../midi/Apc40SurfaceDiagram';
+import { StageMapDashboard } from '../fixtures/StageMapDashboard';
 import { debugLog } from '../../utils/debugLog';
 import { rangesToTickSteps } from '../../utils/fixtureChannelTicks';
 import type { FixtureChannelRange } from '../../store/types';
@@ -45,6 +46,7 @@ type SelectionMode = 'channels' | 'fixtures' | 'groups' | 'capabilities';
 type SuperControlPanelId =
   | 'selection'
   | 'monitoring'
+  | 'stageMap'
   | 'midiOsc'
   | 'scenes'
   | 'basic'
@@ -148,6 +150,7 @@ function loadPathSlots(): PathSlotsState {
 const DEFAULT_SUPER_CONTROL_PANEL_ORDER: SuperControlPanelId[] = [
   'selection',
   'monitoring',
+  'stageMap',
   'basic',
   'panTilt',
   'rgb',
@@ -161,6 +164,7 @@ const DEFAULT_SUPER_CONTROL_PANEL_ORDER: SuperControlPanelId[] = [
 const SUPER_CONTROL_PANEL_LABELS: Record<SuperControlPanelId, string> = {
   selection: 'Selection',
   monitoring: 'Monitoring',
+  stageMap: 'Stage Map',
   midiOsc: 'MIDI/OSC',
   scenes: 'Scenes',
   basic: 'Basic',
@@ -244,6 +248,9 @@ function normalizeSuperControlPanelLayout(raw: unknown): SuperControlPanelLayout
   const parsed = raw && typeof raw === 'object' ? raw as Partial<SuperControlPanelLayoutState> : {};
   const incomingOrder = Array.isArray(parsed.order) ? parsed.order : [];
   const validIds = new Set(DEFAULT_SUPER_CONTROL_PANEL_ORDER);
+  const defaultHidden: Partial<Record<SuperControlPanelId, boolean>> = incomingOrder.includes('stageMap')
+    ? {}
+    : { stageMap: true };
   const order = [
     ...incomingOrder.filter((id): id is SuperControlPanelId => validIds.has(id as SuperControlPanelId)),
     ...DEFAULT_SUPER_CONTROL_PANEL_ORDER.filter((id) => !incomingOrder.includes(id)),
@@ -275,7 +282,10 @@ function normalizeSuperControlPanelLayout(raw: unknown): SuperControlPanelLayout
   return {
     order,
     collapsed: parsed.collapsed && typeof parsed.collapsed === 'object' ? parsed.collapsed : {},
-    hidden: parsed.hidden && typeof parsed.hidden === 'object' ? parsed.hidden : {},
+    hidden: {
+      ...defaultHidden,
+      ...(parsed.hidden && typeof parsed.hidden === 'object' ? parsed.hidden : {}),
+    },
     columns,
     spans: cleanSpans,
     heights: cleanHeights,
@@ -814,6 +824,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     () => Object.values(panelLayout.hidden).filter(Boolean).length,
     [panelLayout.hidden]
   );
+  const stageMapVisible = !panelLayout.hidden.stageMap;
 
   const renderPanelHeader = useCallback((
     panelId: SuperControlPanelId,
@@ -2457,6 +2468,16 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
             )}
             <button
               type="button"
+              onClick={() => togglePanelHidden('stageMap')}
+              title={stageMapVisible ? 'Hide Stage Map card' : 'Show Stage Map card'}
+              aria-pressed={stageMapVisible}
+              className={stageMapVisible ? styles.columnPickerActive : ''}
+            >
+              <LucideIcon name="Map" />
+              <span>Map</span>
+            </button>
+            <button
+              type="button"
               onClick={() => setShowApc40Diagram((v) => !v)}
               title={showApc40Diagram ? 'Hide APC40 surface diagram' : 'Show APC40 surface diagram'}
               aria-pressed={showApc40Diagram}
@@ -2782,6 +2803,25 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
             ) : (
               <div className={styles.placeholder}>Select fixtures, groups, or channels to monitor.</div>
             )}
+          </div>
+        </div>
+
+        <div {...panelProps('stageMap')}>
+          {renderPanelHeader(
+            'stageMap',
+            <LucideIcon name="Map" />,
+            'Stage Map',
+            <span>{fixtures.length} fixtures · {selectedFixtures.length} selected</span>
+          )}
+          <div className={`${styles.gridItemContent} ${styles.stageMapCardContent}`}>
+            <StageMapDashboard
+              title="Super Control Stage Map"
+              subtitle={selectedFixtures.length
+                ? `${selectedFixtures.length} selected · selection follows fixture and APC40 targeting`
+                : `${fixtures.length} fixtures · ${groups.length} groups`}
+              showGroupPicker={false}
+              maxGroupChips={6}
+            />
           </div>
         </div>
 
