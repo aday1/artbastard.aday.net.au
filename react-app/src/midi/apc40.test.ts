@@ -187,7 +187,7 @@ describe('APC40 workflow decoder', () => {
     });
   });
 
-  it('decodes device control and shift press/release; cue level is unmapped', () => {
+  it('decodes device control, cue level, and shift press/release', () => {
     expect(decodeApc40Message({
       _type: 'cc',
       source: 'Akai APC40',
@@ -201,14 +201,17 @@ describe('APC40 workflow decoder', () => {
       value: 64,
     });
 
-    // Cue Level (CC 0x2f) is intentionally unmapped; Device Left/Right cycles role banks instead.
     expect(decodeApc40Message({
       _type: 'cc',
       source: 'Akai APC40',
       channel: 0,
       controller: 0x2f,
       value: 32,
-    })).toBeNull();
+    })).toEqual({
+      type: 'cue-level',
+      model: 'apc40-mk1',
+      value: 32,
+    });
 
     expect(decodeApc40Message({
       _type: 'noteon',

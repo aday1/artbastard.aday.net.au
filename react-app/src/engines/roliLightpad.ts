@@ -13,14 +13,17 @@ export const ROLI_GRID_COLS = 15;
 export const ROLI_GRID_ROWS = 15;
 
 const DEVICE_INDEX = 0x00;
+const HOST_DEVICE_INDEX = 0x00;
 const LED_DATA_OFFSET = 113;
 const LED_PIXEL_COUNT = ROLI_GRID_COLS * ROLI_GRID_ROWS;
 const LED_BYTE_COUNT = LED_PIXEL_COUNT * 2;
-const LED_SEND_INTERVAL_MS = 40;
 const MAX_PACKET_SIZE = 200;
 const PACKET_COUNTER_MAX = 0x03ff;
 
 const ROLE_STORAGE_KEY = 'roli-device-roles';
+const ROLI_TAB_LOCK_KEY = 'artbastard.roli.activeTab.v1';
+const ROLI_TAB_LOCK_TTL_MS = 3500;
+const ROLI_TAB_ID = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 
 export type TouchPhase = 'start' | 'move' | 'end';
 export type RoliRole = 'primary' | 'colour-wheel';
@@ -33,14 +36,18 @@ export interface RoliTouchEvent {
   phase: TouchPhase;
   deviceId: string;
   role: RoliRole;
+  topologyIndex: number;
 }
 
 export interface RoliDeviceInfo {
   deviceId: string;
+  parentDeviceId: string | null;
   inputName: string | null;
   outputName: string | null;
   handshakeDone: boolean;
   role: RoliRole;
+  topologyIndex: number;
+  topologySerial: string | null;
   lastX: number;
   lastY: number;
   lastZ: number;
@@ -55,16 +62,26 @@ export type RoliHandshakeCallback = (deviceId: string, done: boolean) => void;
 
 interface DeviceState {
   deviceId: string; // stable id from MIDIPort.id (falls back to port name)
+  parentDeviceId: string | null;
   input: WebMidi.MIDIInput | null;
   output: WebMidi.MIDIOutput | null;
   inputName: string | null;
   outputName: string | null;
   role: RoliRole;
+  topologyIndex: number;
+  topologySerial: string | null;
+  hidden: boolean;
   handshakeDone: boolean;
   packetCounter: number;
   prevLedData: Uint8Array;
   lastLedSend: number;
   ledFailCount: number;
+  ledQueue: number[][];
+  ledQueueActive: boolean;
+  pendingLedData: Uint8Array | null;
+  nextLedData: Uint8Array | null;
+  nextLedForceFull: boolean;
+  ledRetryTimer: number | null;
   sysexBuf: number[];
   lastX: number;
   lastY: number;
@@ -79,6 +96,30 @@ interface DeviceState {
   ackTimer: number | null;
   lastAckedCounter: number;
   pingTimer: number | null;
+  topologyTimer: number | null;
+}
+
+interface TopologyDeviceInfo {
+  blockSerialNumber: string;
+  topologyIndex: number;
+  batteryLevel: number;
+  batteryCharging: number;
+}
+
+interface TopologyConnectionInfo {
+  deviceIndex1: number;
+  portIndex1: number;
+  deviceIndex2: number;
+  portIndex2: number;
+}
+
+interface DeviceTopologyInfo {
+  messageType: number;
+  protocolVersion: number;
+  deviceCount: number;
+  connectionCount: number;
+  devices: TopologyDeviceInfo[];
+  connections: TopologyConnectionInfo[];
 }
 
 export type RoliDebugKind = 'tx' | 'rx' | 'ack' | 'handshake' | 'error';
@@ -93,6 +134,8 @@ export interface RoliDebugEvent {
 interface EngineState {
   midiAccess: WebMidi.MIDIAccess | null;
   devices: Map<string, DeviceState>;
+  activeLedOutputOwner: Map<string, string>;
+  activeLedOutputClaimedAt: Map<string, number>;
   onTouch: RoliTouchCallback | null;
   onDevice: RoliDeviceChangeCallback | null;
   onHandshake: RoliHandshakeCallback | null;
@@ -101,10 +144,62 @@ interface EngineState {
 const engine: EngineState = {
   midiAccess: null,
   devices: new Map(),
+  activeLedOutputOwner: new Map(),
+  activeLedOutputClaimedAt: new Map(),
   onTouch: null,
   onDevice: null,
   onHandshake: null,
 };
+
+interface RoliTabLock {
+  id: string;
+  expiresAt: number;
+}
+
+function readRoliTabLock(): RoliTabLock | null {
+  if (typeof localStorage === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(ROLI_TAB_LOCK_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed.id !== 'string' || typeof parsed.expiresAt !== 'number') return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeRoliTabLock(): void {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem(ROLI_TAB_LOCK_KEY, JSON.stringify({
+      id: ROLI_TAB_ID,
+      expiresAt: Date.now() + ROLI_TAB_LOCK_TTL_MS,
+    }));
+  } catch {
+    // ignore storage failures; Web MIDI can still work in single-tab contexts
+  }
+}
+
+export function hasRoliTabControl(): boolean {
+  const lock = readRoliTabLock();
+  return Boolean(lock && lock.id === ROLI_TAB_ID && lock.expiresAt > Date.now());
+}
+
+export function claimRoliTabControl(force = false): boolean {
+  if (typeof document !== 'undefined' && document.hidden && !hasRoliTabControl()) {
+    return false;
+  }
+
+  const lock = readRoliTabLock();
+  const now = Date.now();
+  const focused = typeof document !== 'undefined' && typeof document.hasFocus === 'function' && document.hasFocus();
+  const canClaim = force || focused || !lock || lock.id === ROLI_TAB_ID || lock.expiresAt <= now;
+  if (!canClaim) return false;
+
+  writeRoliTabLock();
+  return true;
+}
 
 // Debug ring buffer — TX/ACK/handshake/error events for the RoliDebugPanel.
 // Capacity is intentionally small (high-frequency touch events are NOT pushed).
@@ -155,16 +250,26 @@ function saveRoleAssignments(map: Record<string, RoliRole>): void {
 function newDeviceState(deviceId: string, role: RoliRole): DeviceState {
   return {
     deviceId,
+    parentDeviceId: null,
     input: null,
     output: null,
     inputName: null,
     outputName: null,
     role,
+    topologyIndex: DEVICE_INDEX,
+    topologySerial: null,
+    hidden: false,
     handshakeDone: false,
     packetCounter: 0,
     prevLedData: new Uint8Array(LED_BYTE_COUNT),
     lastLedSend: 0,
     ledFailCount: 0,
+    ledQueue: [],
+    ledQueueActive: false,
+    pendingLedData: null,
+    nextLedData: null,
+    nextLedForceFull: false,
+    ledRetryTimer: null,
     sysexBuf: [],
     lastX: 0.5,
     lastY: 0.5,
@@ -178,6 +283,7 @@ function newDeviceState(deviceId: string, role: RoliRole): DeviceState {
     ackTimer: null,
     lastAckedCounter: -1,
     pingTimer: null,
+    topologyTimer: null,
   };
 }
 
@@ -251,7 +357,7 @@ function buildBlockSysEx(deviceIndex: number, payload: number[]): Uint8Array {
 function sendSysExTo(dev: DeviceState, payload: number[], note?: string): void {
   if (!dev.output) return;
   try {
-    dev.output.send(buildBlockSysEx(DEVICE_INDEX, payload));
+    dev.output.send(buildBlockSysEx(dev.topologyIndex, payload));
     pushDebugEvent({ ts: Date.now(), kind: 'tx', deviceId: dev.deviceId, bytes: payload, note });
   } catch (err) {
     dev.ledFailCount++;
@@ -260,6 +366,22 @@ function sendSysExTo(dev: DeviceState, payload: number[], note?: string): void {
       kind: 'error',
       deviceId: dev.deviceId,
       note: `tx failed: ${(err as Error).message || 'unknown'}`,
+    });
+  }
+}
+
+function sendSysExToHost(dev: DeviceState, payload: number[], note?: string): void {
+  if (!dev.output) return;
+  try {
+    dev.output.send(buildBlockSysEx(HOST_DEVICE_INDEX, payload));
+    pushDebugEvent({ ts: Date.now(), kind: 'tx', deviceId: dev.deviceId, bytes: payload, note });
+  } catch (err) {
+    dev.ledFailCount++;
+    pushDebugEvent({
+      ts: Date.now(),
+      kind: 'error',
+      deviceId: dev.deviceId,
+      note: `host tx failed: ${(err as Error).message || 'unknown'}`,
     });
   }
 }
@@ -351,88 +473,149 @@ function buildDataChangeMessages(
   newData: Uint8Array,
   oldData: Uint8Array
 ): number[][] {
-  const b = new Packed7BitBuilder();
   const queued: number[][] = [];
-  let pktIdx = dev.packetCounter;
+  const startPacketIndex = dev.packetCounter;
+  let packetIndex = startPacketIndex;
+  let builder = new Packed7BitBuilder();
 
   function initPacket(): void {
-    b._data = [];
-    b._written = 0;
-    b._bits = 0;
-    b.writeBits(0x02, 7);
-    b.writeBits(pktIdx & PACKET_COUNTER_MAX, 16);
+    builder = new Packed7BitBuilder();
+    builder.writeBits(0x02, 7);
+    builder.writeBits(packetIndex & PACKET_COUNTER_MAX, 16);
   }
 
-  function flushPacket(endOfChanges: boolean): void {
-    const fin = b.clone();
-    fin.writeBits(endOfChanges ? 1 : 0, 3);
-    queued.push(fin.getData());
-    pktIdx++;
-    if (!endOfChanges) initPacket();
+  function appendEndOfPacket(target: Packed7BitBuilder): void {
+    target.writeBits(0, 3);
   }
 
-  function skipBytes(count: number): void {
-    while (count > 0) {
-      if (b.size() >= MAX_PACKET_SIZE - 3) {
-        flushPacket(false);
-        appendSkipToOffset();
-      }
-      if (count > 15) {
-        const chunk = Math.min(255, count);
-        b.writeBits(3, 3);
-        b.writeBits(chunk, 8);
-        count -= chunk;
+  function appendEndOfChanges(target: Packed7BitBuilder): void {
+    target.writeBits(1, 3);
+  }
+
+  function getAvailableDataSizeForCurrentPacket(): number {
+    return MAX_PACKET_SIZE - builder.size();
+  }
+
+  function queueDataAndCreateNewPacket(skipBase: number): void {
+    const finalizedBuilder = builder.clone();
+    appendEndOfPacket(finalizedBuilder);
+    queued.push(finalizedBuilder.getData());
+    packetIndex++;
+    initPacket();
+    appendSkipBytes(skipBase, skipBase);
+  }
+
+  function queueDataAndCreateNewPacketIfNecessary(startIndex: number, sizeToAdd: number): number {
+    const availableSize = getAvailableDataSizeForCurrentPacket();
+    if (availableSize < sizeToAdd) {
+      queueDataAndCreateNewPacket(startIndex);
+      return MAX_PACKET_SIZE;
+    }
+    return availableSize;
+  }
+
+  function appendSkipBytes(startIndex: number, skipCount: number): number {
+    let absoluteIndex = startIndex;
+    let remaining = skipCount;
+
+    while (remaining > 0) {
+      queueDataAndCreateNewPacketIfNecessary(absoluteIndex, 3);
+
+      if (remaining > 255) {
+        builder.writeBits(3, 3);
+        builder.writeBits(255, 8);
+        absoluteIndex += 255;
+        remaining -= 255;
+      } else if (remaining > 15) {
+        builder.writeBits(3, 3);
+        builder.writeBits(remaining, 8);
+        absoluteIndex += remaining;
+        remaining = 0;
       } else {
-        b.writeBits(2, 3);
-        b.writeBits(count, 4);
-        count = 0;
+        builder.writeBits(2, 3);
+        builder.writeBits(remaining, 4);
+        absoluteIndex += remaining;
+        remaining = 0;
       }
     }
+
+    return absoluteIndex;
   }
 
-  let currentOffset = 0;
-  function appendSkipToOffset(): void {
-    skipBytes(LED_DATA_OFFSET + currentOffset);
+  function appendSetSequenceOfBytes(startIndex: number, byteSequence: Uint8Array): number {
+    let bytesWritten = 0;
+    let absoluteIndex = startIndex;
+
+    while (bytesWritten < byteSequence.length) {
+      const bytesRemaining = byteSequence.length - bytesWritten;
+      const packetSizeToAdd = Math.ceil(3 / 8 + bytesRemaining * (9 / 7));
+      const availablePacketSize = getAvailableDataSizeForCurrentPacket();
+      let bytesToAdd = bytesRemaining;
+
+      if (availablePacketSize < packetSizeToAdd) {
+        bytesToAdd = Math.floor((availablePacketSize - 3 / 8) / (9 / 7));
+      }
+
+      if (bytesToAdd < 1) {
+        queueDataAndCreateNewPacket(absoluteIndex);
+        continue;
+      }
+
+      builder.writeBits(4, 3);
+      for (let i = 0; i < bytesToAdd; i++) {
+        const sourceIndex = bytesWritten + i;
+        builder.writeBits(byteSequence[sourceIndex], 8);
+        builder.writeBits(i < bytesToAdd - 1 && sourceIndex < byteSequence.length - 1 ? 1 : 0, 1);
+      }
+
+      bytesWritten += bytesToAdd;
+      absoluteIndex += bytesToAdd;
+
+      if (availablePacketSize < packetSizeToAdd) {
+        queueDataAndCreateNewPacket(absoluteIndex);
+      }
+    }
+
+    return absoluteIndex;
+  }
+
+  function getFinalizedQueuedData(): number[][] {
+    const finalizedBuilder = builder.clone();
+    appendEndOfChanges(finalizedBuilder);
+    queued.push(finalizedBuilder.getData());
+    return queued;
   }
 
   initPacket();
-  skipBytes(LED_DATA_OFFSET);
 
+  let count = LED_DATA_OFFSET;
+  let isSkipping = true;
   let i = 0;
   while (i < LED_BYTE_COUNT) {
-    if (newData[i] === oldData[i]) {
-      i++;
-      currentOffset = i;
-      continue;
+    let toPos = i;
+    while (
+      toPos < LED_BYTE_COUNT &&
+      ((isSkipping && newData[toPos] === oldData[toPos]) ||
+        (!isSkipping && newData[toPos] !== oldData[toPos]))
+    ) {
+      toPos++;
+      count++;
     }
-    let runEnd = i;
-    while (runEnd < LED_BYTE_COUNT && newData[runEnd] !== oldData[runEnd]) runEnd++;
-    const seq = newData.subarray(i, runEnd);
-    if (i > currentOffset) skipBytes(i - currentOffset);
-    let written = 0;
-    while (written < seq.length) {
-      const avail = MAX_PACKET_SIZE - b.size();
-      if (avail < 4) {
-        currentOffset = i + written;
-        flushPacket(false);
-        appendSkipToOffset();
-      }
-      let chunk = Math.min(seq.length - written, Math.floor((MAX_PACKET_SIZE - b.size() - 1) * 7 / 9));
-      if (chunk < 1) chunk = 1;
-      b.writeBits(4, 3);
-      for (let j = 0; j < chunk; j++) {
-        b.writeBits(seq[written + j], 8);
-        b.writeBits(j < chunk - 1 ? 1 : 0, 1);
-      }
-      written += chunk;
+
+    if (isSkipping && toPos < LED_BYTE_COUNT) {
+      appendSkipBytes(LED_DATA_OFFSET + i, count);
+    } else if (!isSkipping) {
+      appendSetSequenceOfBytes(LED_DATA_OFFSET + i, newData.subarray(i, toPos));
     }
-    i = runEnd;
-    currentOffset = i;
+
+    isSkipping = !isSkipping;
+    i = toPos;
+    count = 0;
   }
 
-  flushPacket(true);
-  dev.packetCounter = pktIdx;
-  return queued;
+  const finalized = getFinalizedQueuedData();
+  dev.packetCounter = (startPacketIndex + finalized.length) & PACKET_COUNTER_MAX;
+  return finalized;
 }
 
 const BITMAP_LED_DUMP_1 =
@@ -442,6 +625,203 @@ const BITMAP_LED_DUMP_2 =
 
 function parseDump(hex: string): number[] {
   return hex.trim().split(/\s+/).map((h) => parseInt(h, 16));
+}
+
+function createTopologyChildId(parentDeviceId: string, topologyIndex: number, serial?: string): string {
+  const suffix = serial?.trim() || topologyIndex.toString(16).padStart(2, '0');
+  return `${parentDeviceId}#${suffix}`;
+}
+
+function getVisibleDevices(): DeviceState[] {
+  return Array.from(engine.devices.values()).filter((d) => !d.hidden);
+}
+
+function hasTopologyChildren(parentDeviceId: string): boolean {
+  for (const candidate of engine.devices.values()) {
+    if (candidate.parentDeviceId === parentDeviceId) return true;
+  }
+  return false;
+}
+
+function pickRoleForTopologyIndex(childId: string, position: number): RoliRole {
+  const stored = loadRoleAssignments();
+  if (stored[childId] === 'primary' || stored[childId] === 'colour-wheel') {
+    return stored[childId];
+  }
+  if (position === 0) return 'primary';
+  if (position === 1) return 'colour-wheel';
+  return assignRoleForNewDevice(childId);
+}
+
+function updateTopologyChildFromParent(child: DeviceState, parent: DeviceState): void {
+  const outputChanged = child.output !== parent.output;
+  const inputChanged = child.input !== parent.input;
+  child.input = parent.input;
+  child.output = parent.output;
+  child.inputName = parent.inputName;
+  child.outputName = parent.outputName;
+  child.transport = parent.transport;
+  if (outputChanged || inputChanged) {
+    child.handshakeDone = false;
+    child.ledFailCount = 0;
+    child.needsFullRepaint = true;
+    clearLedQueue(child);
+  }
+}
+
+function updateChildrenForParent(parent: DeviceState): void {
+  engine.devices.forEach((candidate) => {
+    if (candidate.parentDeviceId === parent.deviceId) {
+      updateTopologyChildFromParent(candidate, parent);
+      if (!candidate.handshakeDone && candidate.output && !candidate.ackResolver) {
+        void doHandshake(candidate);
+      }
+    }
+  });
+}
+
+function findDeviceForPacket(parentDev: DeviceState, topologyIndex: number): DeviceState {
+  for (const candidate of engine.devices.values()) {
+    if (candidate.parentDeviceId === parentDev.deviceId && candidate.topologyIndex === topologyIndex) {
+      return candidate;
+    }
+  }
+  if (parentDev.topologyIndex === topologyIndex || topologyIndex === HOST_DEVICE_INDEX) {
+    return parentDev;
+  }
+  return parentDev;
+}
+
+function readAscii7(data: Uint8Array, bitPos: number, length: number): { value: string; next: number } {
+  let value = '';
+  let pos = bitPos;
+  for (let i = 0; i < length; i++) {
+    value += String.fromCharCode(read7BitBits(data, pos, 7));
+    pos += 7;
+  }
+  return { value, next: pos };
+}
+
+function parseTopologyMessage(msgData: Uint8Array): DeviceTopologyInfo | null {
+  let pos = 39;
+  const messageType = read7BitBits(msgData, pos, 7);
+  pos += 7;
+  if (messageType !== 0x01) return null;
+
+  const protocolVersion = read7BitBits(msgData, pos, 8);
+  pos += 8;
+  const deviceCount = read7BitBits(msgData, pos, 7);
+  pos += 7;
+  const connectionCount = read7BitBits(msgData, pos, 8);
+  pos += 8;
+
+  const devices: TopologyDeviceInfo[] = [];
+  for (let i = 0; i < deviceCount; i++) {
+    const serial = readAscii7(msgData, pos, 16);
+    pos = serial.next;
+    const topologyIndex = read7BitBits(msgData, pos, 7);
+    pos += 7;
+    const batteryLevel = read7BitBits(msgData, pos, 5);
+    pos += 5;
+    const batteryCharging = read7BitBits(msgData, pos, 1);
+    pos += 1;
+    devices.push({ blockSerialNumber: serial.value, topologyIndex, batteryLevel, batteryCharging });
+  }
+
+  const connections: TopologyConnectionInfo[] = [];
+  for (let i = 0; i < connectionCount; i++) {
+    const deviceIndex1 = read7BitBits(msgData, pos, 7);
+    pos += 7;
+    const portIndex1 = read7BitBits(msgData, pos, 5);
+    pos += 5;
+    const deviceIndex2 = read7BitBits(msgData, pos, 7);
+    pos += 7;
+    const portIndex2 = read7BitBits(msgData, pos, 5);
+    pos += 5;
+    connections.push({ deviceIndex1, portIndex1, deviceIndex2, portIndex2 });
+  }
+
+  return { messageType, protocolVersion, deviceCount, connectionCount, devices, connections };
+}
+
+function clearTopologyTimer(dev: DeviceState): void {
+  if (dev.topologyTimer != null) {
+    window.clearTimeout(dev.topologyTimer);
+    dev.topologyTimer = null;
+  }
+}
+
+function requestTopology(dev: DeviceState): void {
+  if (!dev.output) return;
+  sendSysExToHost(dev, [0x01, 0x01, 0x00], 'request topology');
+}
+
+function scheduleTopologyProbe(dev: DeviceState): void {
+  if (!dev.output || !dev.input) return;
+  clearTopologyTimer(dev);
+  requestTopology(dev);
+  dev.topologyTimer = window.setTimeout(() => {
+    dev.topologyTimer = null;
+    if (!dev.hidden && !dev.handshakeDone && !dev.ackResolver) {
+      void doHandshake(dev);
+    }
+  }, 700);
+}
+
+function ensureTopologyDevices(parent: DeviceState, topology: DeviceTopologyInfo): void {
+  if (!topology.devices.length) return;
+
+  clearTopologyTimer(parent);
+  const childIds = new Set<string>();
+
+  if (topology.devices.length === 1) {
+    const only = topology.devices[0];
+    parent.topologyIndex = only.topologyIndex;
+    parent.topologySerial = only.blockSerialNumber;
+    parent.hidden = false;
+    if (!parent.handshakeDone && parent.output && !parent.ackResolver) {
+      void doHandshake(parent);
+    }
+    notifyDeviceChange();
+    return;
+  }
+
+  parent.hidden = true;
+  clearPingTimer(parent);
+
+  topology.devices.forEach((topologyDevice, index) => {
+    const childId = createTopologyChildId(parent.deviceId, topologyDevice.topologyIndex, topologyDevice.blockSerialNumber);
+    childIds.add(childId);
+
+    let child = engine.devices.get(childId);
+    if (!child) {
+      child = newDeviceState(childId, pickRoleForTopologyIndex(childId, index));
+      engine.devices.set(childId, child);
+      persistRole(childId, child.role);
+    }
+
+    updateTopologyChildFromParent(child, parent);
+    child.parentDeviceId = parent.deviceId;
+    child.topologyIndex = topologyDevice.topologyIndex;
+    child.topologySerial = topologyDevice.blockSerialNumber;
+    child.hidden = false;
+    child.lastError = parent.lastError;
+
+    if (!child.handshakeDone && child.output && !child.ackResolver) {
+      void doHandshake(child);
+    }
+  });
+
+  for (const candidate of Array.from(engine.devices.values())) {
+    if (candidate.parentDeviceId === parent.deviceId && !childIds.has(candidate.deviceId)) {
+      clearPingTimer(candidate);
+      clearTopologyTimer(candidate);
+      clearLedQueue(candidate);
+      engine.devices.delete(candidate.deviceId);
+    }
+  }
+
+  notifyDeviceChange();
 }
 
 /**
@@ -474,12 +854,161 @@ function clearPingTimer(dev: DeviceState): void {
   }
 }
 
+function clearLedRetryTimer(dev: DeviceState): void {
+  if (dev.ledRetryTimer != null) {
+    window.clearTimeout(dev.ledRetryTimer);
+    dev.ledRetryTimer = null;
+  }
+}
+
+function ledOutputKey(dev: DeviceState): string | null {
+  if (!dev.output) return null;
+  return dev.output.id || dev.outputName || dev.deviceId;
+}
+
+function claimLedOutput(dev: DeviceState): boolean {
+  const key = ledOutputKey(dev);
+  if (!key) return false;
+  const owner = engine.activeLedOutputOwner.get(key);
+  if (owner && owner !== dev.deviceId) return false;
+  engine.activeLedOutputOwner.set(key, dev.deviceId);
+  engine.activeLedOutputClaimedAt.set(key, Date.now());
+  return true;
+}
+
+function releaseLedOutput(dev: DeviceState): void {
+  const key = ledOutputKey(dev);
+  if (!key) return;
+  if (engine.activeLedOutputOwner.get(key) === dev.deviceId) {
+    engine.activeLedOutputOwner.delete(key);
+    engine.activeLedOutputClaimedAt.delete(key);
+  }
+}
+
+function releaseStaleLedOutputOwner(key: string): boolean {
+  const owner = engine.activeLedOutputOwner.get(key);
+  if (!owner) return false;
+  const ownerDev = engine.devices.get(owner);
+  const claimedAt = engine.activeLedOutputClaimedAt.get(key) ?? 0;
+  const stale = Date.now() - claimedAt > 1200;
+  const ownerIdle = !ownerDev || (!ownerDev.ledQueueActive && ownerDev.ledQueue.length === 0);
+  if (!stale && !ownerIdle) return false;
+
+  if (ownerDev) {
+    ownerDev.ledQueueActive = false;
+    ownerDev.ledQueue = [];
+    ownerDev.pendingLedData = null;
+    ownerDev.needsFullRepaint = true;
+    pushDebugEvent({
+      ts: Date.now(),
+      kind: 'error',
+      deviceId: ownerDev.deviceId,
+      note: stale ? 'released stale LED output lock' : 'released idle LED output lock',
+    });
+  }
+  engine.activeLedOutputOwner.delete(key);
+  engine.activeLedOutputClaimedAt.delete(key);
+  return true;
+}
+
+function hasOtherLedOutputOwner(dev: DeviceState): boolean {
+  const key = ledOutputKey(dev);
+  if (!key) return false;
+  const owner = engine.activeLedOutputOwner.get(key);
+  if (owner && owner !== dev.deviceId && releaseStaleLedOutputOwner(key)) return false;
+  const currentOwner = engine.activeLedOutputOwner.get(key);
+  return Boolean(currentOwner && currentOwner !== dev.deviceId);
+}
+
+function flushNextPendingLedForOutput(dev: DeviceState): boolean {
+  const key = ledOutputKey(dev);
+  if (!key) return false;
+  for (const candidate of engine.devices.values()) {
+    if (candidate.deviceId === dev.deviceId || ledOutputKey(candidate) !== key) continue;
+    if (!candidate.nextLedData || !candidate.output || !candidate.handshakeDone) continue;
+    const nextLedData = candidate.nextLedData;
+    const forceFullFrame = candidate.nextLedForceFull;
+    candidate.nextLedData = null;
+    candidate.nextLedForceFull = false;
+    return sendRawLedFrame(candidate, nextLedData, forceFullFrame);
+  }
+  return false;
+}
+
+function schedulePendingLedRetry(dev: DeviceState, delayMs = 160): void {
+  if (dev.ledRetryTimer != null) return;
+  dev.ledRetryTimer = window.setTimeout(() => {
+    dev.ledRetryTimer = null;
+    if (!dev.nextLedData || !dev.output || !dev.handshakeDone) return;
+    const nextLedData = dev.nextLedData;
+    const forceFullFrame = dev.nextLedForceFull;
+    dev.nextLedData = null;
+    dev.nextLedForceFull = false;
+    sendRawLedFrame(dev, nextLedData, forceFullFrame);
+  }, delayMs);
+}
+
+function clearLedQueue(dev: DeviceState): void {
+  clearLedRetryTimer(dev);
+  dev.ledQueue = [];
+  dev.ledQueueActive = false;
+  dev.pendingLedData = null;
+  dev.nextLedData = null;
+  dev.nextLedForceFull = false;
+  dev.needsFullRepaint = true;
+  releaseLedOutput(dev);
+}
+
+function sendNextQueuedLedPacket(dev: DeviceState): boolean {
+  if (!dev.output || !dev.handshakeDone) {
+    clearLedQueue(dev);
+    return false;
+  }
+
+  const next = dev.ledQueue.shift();
+  if (!next) {
+    dev.ledQueueActive = false;
+    if (dev.pendingLedData) {
+      dev.prevLedData = dev.pendingLedData;
+      dev.pendingLedData = null;
+    }
+    dev.ledFailCount = 0;
+    releaseLedOutput(dev);
+    if (dev.nextLedData) {
+      const nextLedData = dev.nextLedData;
+      const forceFullFrame = dev.nextLedForceFull;
+      dev.nextLedData = null;
+      dev.nextLedForceFull = false;
+      return sendRawLedFrame(dev, nextLedData, forceFullFrame);
+    }
+    flushNextPendingLedForOutput(dev);
+    return true;
+  }
+
+  try {
+    dev.output.send(buildBlockSysEx(dev.topologyIndex, next));
+    dev.ledQueueActive = true;
+    return true;
+  } catch (err) {
+    dev.ledFailCount++;
+    dev.needsFullRepaint = true;
+    clearLedQueue(dev);
+    pushDebugEvent({
+      ts: Date.now(),
+      kind: 'error',
+      deviceId: dev.deviceId,
+      note: `led tx failed: ${(err as Error).message || 'unknown'}`,
+    });
+    return false;
+  }
+}
+
 function startPingTimer(dev: DeviceState): void {
   clearPingTimer(dev);
   // Reference ping interval is 500ms (BlocksDevice.js:395). Without periodic
   // ping the block stops processing commands after a few seconds of silence.
   dev.pingTimer = window.setInterval(() => {
-    if (!dev.output || !dev.handshakeDone) return;
+    if (!dev.output || !dev.handshakeDone || dev.ledQueueActive || dev.ledQueue.length > 0) return;
     sendSysExTo(dev, [0x01, 0x03, 0x00], 'ping');
   }, 500);
 }
@@ -490,6 +1019,8 @@ async function doHandshake(dev: DeviceState): Promise<void> {
     notifyDeviceChange();
     return;
   }
+  clearTopologyTimer(dev);
+  clearLedQueue(dev);
   clearPingTimer(dev);
   dev.handshakeDone = false;
   dev.lastError = null;
@@ -571,38 +1102,59 @@ function emitTouch(dev: DeviceState, x: number, y: number, z: number, phase: Tou
     dev.isTouching = false;
     dev.lastZ = 0;
   }
-  engine.onTouch?.({ x, y, z, phase, deviceId: dev.deviceId, role: dev.role });
+  engine.onTouch?.({ x, y, z, phase, deviceId: dev.deviceId, role: dev.role, topologyIndex: dev.topologyIndex });
 }
 
 function parseRoliTouchSysex(dev: DeviceState, data: Uint8Array): void {
   if (data.length < 8) return;
   const msgData = data.subarray(5, data.length - 2);
+  const packetDeviceIndex = msgData[0] & 0x3f;
   let bitPos = 39;
   // First message in the packet — may be an ACK rather than touch.
   const firstType = read7BitBits(msgData, bitPos, 7);
+  if (firstType === 0x01) {
+    const topology = parseTopologyMessage(msgData);
+    if (topology) {
+      pushDebugEvent({
+        ts: Date.now(),
+        kind: 'rx',
+        deviceId: dev.deviceId,
+        note: `topology ${topology.deviceCount} block${topology.deviceCount === 1 ? '' : 's'}`,
+      });
+      ensureTopologyDevices(dev, topology);
+    }
+    return;
+  }
+
+  const packetDevice = findDeviceForPacket(dev, packetDeviceIndex);
   if (firstType === 0x02) {
     // packetACK: next field is 10-bit packetCounter (reference: DeviceAckMessage).
     bitPos += 7;
     const ackedCounter = read7BitBits(msgData, bitPos, 10);
-    dev.lastAckedCounter = ackedCounter;
+    packetDevice.lastAckedCounter = ackedCounter;
     pushDebugEvent({
       ts: Date.now(),
       kind: 'ack',
-      deviceId: dev.deviceId,
+      deviceId: packetDevice.deviceId,
       note: `counter=${ackedCounter}`,
     });
-    if (dev.ackResolver) {
-      if (dev.ackTimer != null) {
-        window.clearTimeout(dev.ackTimer);
-        dev.ackTimer = null;
+    if (packetDevice.ackResolver) {
+      if (packetDevice.ackTimer != null) {
+        window.clearTimeout(packetDevice.ackTimer);
+        packetDevice.ackTimer = null;
       }
-      const r = dev.ackResolver;
-      dev.ackResolver = null;
-      dev.ackRejecter = null;
+      const r = packetDevice.ackResolver;
+      packetDevice.ackResolver = null;
+      packetDevice.ackRejecter = null;
       r();
+    } else if (packetDevice.ledQueueActive) {
+      packetDevice.ledQueueActive = false;
+      sendNextQueuedLedPacket(packetDevice);
     }
     return;
   }
+
+  const targetDev = packetDevice;
   while (bitPos + 7 <= msgData.length * 7) {
     const msgType = read7BitBits(msgData, bitPos, 7);
     bitPos += 7;
@@ -612,8 +1164,8 @@ function parseRoliTouchSysex(dev: DeviceState, data: Uint8Array): void {
       bitPos += 12;
       const y = read7BitBits(msgData, bitPos, 12);
       bitPos += 12 + 8;
-      if (!dev.isTouching) return;
-      emitTouch(dev, x / 4095, y / 4095, dev.lastZ || 0.5, 'move');
+      if (!targetDev.isTouching) return;
+      emitTouch(targetDev, x / 4095, y / 4095, targetDev.lastZ || 0.5, 'move');
       return;
     }
     if (msgType === 0x13 || msgType === 0x15) {
@@ -623,7 +1175,7 @@ function parseRoliTouchSysex(dev: DeviceState, data: Uint8Array): void {
       const y = read7BitBits(msgData, bitPos, 12);
       bitPos += 8;
       if (msgType === 0x13) bitPos += 24;
-      emitTouch(dev, x / 4095, y / 4095, msgType === 0x13 ? 0.7 : 0, msgType === 0x13 ? 'start' : 'end');
+      emitTouch(targetDev, x / 4095, y / 4095, msgType === 0x13 ? 0.7 : 0, msgType === 0x13 ? 'start' : 'end');
       return;
     }
     break;
@@ -699,6 +1251,10 @@ function detectTransportFromName(name: string): RoliTransport {
   return 'usb';
 }
 
+function isMidiPortUsable(port: WebMidi.MIDIPort): boolean {
+  return port.state !== 'disconnected';
+}
+
 function notifyDeviceChange(): void {
   engine.onDevice?.(getRoliDevices());
 }
@@ -710,7 +1266,7 @@ function assignRoleForNewDevice(deviceId: string): RoliRole {
   }
   // First device gets primary, second gets colour-wheel, beyond that → primary.
   const rolesInUse = new Set<RoliRole>();
-  engine.devices.forEach((d) => rolesInUse.add(d.role));
+  getVisibleDevices().forEach((d) => rolesInUse.add(d.role));
   if (!rolesInUse.has('primary')) return 'primary';
   if (!rolesInUse.has('colour-wheel')) return 'colour-wheel';
   return 'primary';
@@ -729,10 +1285,10 @@ function refreshAndAutoMap(): void {
   const inputs: WebMidi.MIDIInput[] = [];
   const outputs: WebMidi.MIDIOutput[] = [];
   engine.midiAccess.inputs.forEach((inp) => {
-    if (isRoliblockLike(inp.name || '')) inputs.push(inp);
+    if (isMidiPortUsable(inp) && isRoliblockLike(inp.name || '')) inputs.push(inp);
   });
   engine.midiAccess.outputs.forEach((out) => {
-    if (isRoliblockLike(out.name || '')) outputs.push(out);
+    if (isMidiPortUsable(out) && isRoliblockLike(out.name || '')) outputs.push(out);
   });
 
   // Stable id = MIDIPort.id (unique per physical port even when names collide,
@@ -762,7 +1318,9 @@ function refreshAndAutoMap(): void {
       dev.transport = detectTransportFromName(outName);
       dev.handshakeDone = false;
       dev.ledFailCount = 0;
-      void doHandshake(dev);
+      dev.needsFullRepaint = true;
+      dev.hidden = false;
+      updateChildrenForParent(dev);
     }
 
     // Pair this output with an input. Prefer exact-id match (Web MIDI gives
@@ -779,6 +1337,11 @@ function refreshAndAutoMap(): void {
       dev.input = matchedInput;
       dev.inputName = matchedInput.name || null;
       matchedInput.onmidimessage = makeOnMidiMessage(dev);
+      updateChildrenForParent(dev);
+    }
+
+    if (dev.output && dev.input && !dev.handshakeDone && !dev.ackResolver && !dev.topologyTimer && !hasTopologyChildren(dev.deviceId)) {
+      scheduleTopologyProbe(dev);
     }
   }
 
@@ -801,17 +1364,21 @@ function refreshAndAutoMap(): void {
       dev.input = inp;
       dev.inputName = inp.name || null;
       dev.transport = detectTransportFromName(inp.name || '');
+        dev.hidden = false;
       inp.onmidimessage = makeOnMidiMessage(dev);
     }
   }
 
   // Drop devices that vanished from the MIDI list.
   for (const id of Array.from(engine.devices.keys())) {
-    if (!newIds.has(id)) {
-      const dev = engine.devices.get(id);
+    const dev = engine.devices.get(id);
+    const parentStillPresent = dev?.parentDeviceId != null && newIds.has(dev.parentDeviceId);
+    if (!newIds.has(id) && !parentStillPresent) {
       if (dev?.input) dev.input.onmidimessage = null;
       if (dev) {
         clearPingTimer(dev);
+        clearTopologyTimer(dev);
+        clearLedQueue(dev);
         if (dev.ackTimer != null) {
           window.clearTimeout(dev.ackTimer);
           dev.ackTimer = null;
@@ -824,17 +1391,43 @@ function refreshAndAutoMap(): void {
   notifyDeviceChange();
 }
 
+export function reconnectRoliLightpad(): boolean {
+  claimRoliTabControl(true);
+  if (!engine.midiAccess) return false;
+  engine.devices.forEach((dev) => {
+    clearPingTimer(dev);
+    clearTopologyTimer(dev);
+    clearLedQueue(dev);
+    if (dev.ackTimer != null) {
+      window.clearTimeout(dev.ackTimer);
+      dev.ackTimer = null;
+    }
+    dev.ackResolver = null;
+    dev.ackRejecter = null;
+    dev.handshakeDone = false;
+    dev.lastError = null;
+    dev.ledFailCount = 0;
+    dev.needsFullRepaint = true;
+    if (dev.parentDeviceId != null) {
+      engine.devices.delete(dev.deviceId);
+    }
+  });
+  refreshAndAutoMap();
+  return getVisibleDevices().length > 0;
+}
+
 export async function connectRoliLightpad(): Promise<boolean> {
+  claimRoliTabControl(true);
   if (engine.midiAccess) {
     refreshAndAutoMap();
-    return engine.devices.size > 0;
+    return getVisibleDevices().length > 0;
   }
   if (typeof navigator === 'undefined' || !navigator.requestMIDIAccess) return false;
   try {
     engine.midiAccess = await navigator.requestMIDIAccess({ sysex: true });
     engine.midiAccess.onstatechange = () => refreshAndAutoMap();
     refreshAndAutoMap();
-    return engine.devices.size > 0;
+    return getVisibleDevices().length > 0;
   } catch {
     return false;
   }
@@ -847,6 +1440,7 @@ export async function connectRoliLightpad(): Promise<boolean> {
  */
 export function setRoliMidiAccess(access: WebMidi.MIDIAccess | null): void {
   if (!access) return;
+  claimRoliTabControl(true);
   if (engine.midiAccess === access) {
     refreshAndAutoMap();
     return;
@@ -907,6 +1501,8 @@ export function unregisterVirtualRoliDevice(deviceId: string): void {
   if (!dev) return;
   if (dev.input) dev.input.onmidimessage = null;
   clearPingTimer(dev);
+  clearTopologyTimer(dev);
+  clearLedQueue(dev);
   if (dev.ackTimer != null) {
     window.clearTimeout(dev.ackTimer);
     dev.ackTimer = null;
@@ -937,6 +1533,8 @@ export function disconnectRoliLightpad(): void {
   engine.devices.forEach((dev) => {
     if (dev.input) dev.input.onmidimessage = null;
     clearPingTimer(dev);
+    clearTopologyTimer(dev);
+    clearLedQueue(dev);
     if (dev.ackTimer != null) {
       window.clearTimeout(dev.ackTimer);
       dev.ackTimer = null;
@@ -963,12 +1561,15 @@ export function setOnHandshakeDone(cb: RoliHandshakeCallback | null): void {
 }
 
 export function getRoliDevices(): RoliDeviceInfo[] {
-  return Array.from(engine.devices.values()).map((d) => ({
+  return getVisibleDevices().map((d) => ({
     deviceId: d.deviceId,
+    parentDeviceId: d.parentDeviceId,
     inputName: d.inputName,
     outputName: d.outputName,
     handshakeDone: d.handshakeDone,
     role: d.role,
+    topologyIndex: d.topologyIndex,
+    topologySerial: d.topologySerial,
     lastX: d.lastX,
     lastY: d.lastY,
     lastZ: d.lastZ,
@@ -1009,41 +1610,60 @@ export function setRoliDeviceRole(deviceId: string, role: RoliRole): void {
 function pickDevice(opts?: { role?: RoliRole; deviceId?: string }): DeviceState | null {
   if (!opts) {
     // Default: primary (back-compat with the old single-device API).
-    for (const d of engine.devices.values()) if (d.role === 'primary') return d;
-    return engine.devices.values().next().value ?? null;
+    for (const d of getVisibleDevices()) if (d.role === 'primary') return d;
+    return getVisibleDevices()[0] ?? null;
   }
-  if (opts.deviceId) return engine.devices.get(opts.deviceId) ?? null;
+  if (opts.deviceId) {
+    const device = engine.devices.get(opts.deviceId) ?? null;
+    return device && !device.hidden ? device : null;
+  }
   if (opts.role) {
-    for (const d of engine.devices.values()) if (d.role === opts.role) return d;
+    for (const d of getVisibleDevices()) if (d.role === opts.role) return d;
   }
   return null;
 }
 
-function sendRawLedFrame(dev: DeviceState, newLed: Uint8Array): boolean {
+function sendRawLedFrame(dev: DeviceState, newLed: Uint8Array, forceFullFrame = false): boolean {
   if (!dev.output || !dev.handshakeDone) return false;
+  if (!claimRoliTabControl()) return false;
   if (dev.ledFailCount > 20) return false;
+  if (hasOtherLedOutputOwner(dev)) {
+    dev.nextLedData = newLed;
+    dev.nextLedForceFull = dev.nextLedForceFull || forceFullFrame;
+    schedulePendingLedRetry(dev, 220);
+    return true;
+  }
+  if (dev.ledQueueActive || dev.ledQueue.length > 0) {
+    dev.nextLedData = newLed;
+    dev.nextLedForceFull = dev.nextLedForceFull || forceFullFrame;
+    schedulePendingLedRetry(dev, 1300);
+    return true;
+  }
   const now = Date.now();
-  if (now - dev.lastLedSend < LED_SEND_INTERVAL_MS) return false;
   dev.lastLedSend = now;
 
   let prevForDiff = dev.prevLedData;
-  if (dev.needsFullRepaint) {
+  if (dev.needsFullRepaint || forceFullFrame) {
     prevForDiff = new Uint8Array(LED_BYTE_COUNT);
     for (let i = 0; i < LED_BYTE_COUNT; i++) prevForDiff[i] = newLed[i] ^ 0xff;
     dev.needsFullRepaint = false;
   }
   const messages = buildDataChangeMessages(dev, newLed, prevForDiff);
-  for (const msg of messages) {
-    try {
-      dev.output.send(buildBlockSysEx(DEVICE_INDEX, msg));
-    } catch {
-      dev.ledFailCount++;
-      return false;
-    }
+  if (messages.length === 0) {
+    dev.prevLedData = newLed;
+    dev.ledFailCount = 0;
+    return true;
   }
-  dev.ledFailCount = 0;
-  dev.prevLedData = newLed;
-  return true;
+  dev.ledQueue = messages;
+  dev.pendingLedData = newLed;
+  if (!claimLedOutput(dev)) {
+    dev.ledQueue = [];
+    dev.pendingLedData = null;
+    dev.nextLedData = newLed;
+    dev.nextLedForceFull = dev.nextLedForceFull || forceFullFrame;
+    return true;
+  }
+  return sendNextQueuedLedPacket(dev);
 }
 
 /**
@@ -1053,12 +1673,12 @@ function sendRawLedFrame(dev: DeviceState, newLed: Uint8Array): boolean {
  */
 export function sendLedFrame(
   pixels: Uint8ClampedArray | Uint8Array,
-  opts?: { role?: RoliRole; deviceId?: string }
+  opts?: { role?: RoliRole; deviceId?: string; forceFullFrame?: boolean }
 ): boolean {
   if (pixels.length < LED_PIXEL_COUNT * 4) return false;
   const dev = pickDevice(opts);
   if (!dev) return false;
-  return sendRawLedFrame(dev, rgbaFrameToRoliLedData(pixels));
+  return sendRawLedFrame(dev, rgbaFrameToRoliLedData(pixels), Boolean(opts?.forceFullFrame));
 }
 
 /**
@@ -1068,9 +1688,10 @@ export function sendLedFrame(
 export function clearLeds(opts?: { role?: RoliRole; deviceId?: string }): boolean {
   const dev = pickDevice(opts);
   if (!dev || !dev.output || !dev.handshakeDone) return false;
+  clearLedQueue(dev);
   dev.lastLedSend = 0;
   const blank = new Uint8Array(LED_BYTE_COUNT);
-  return sendRawLedFrame(dev, blank);
+  return sendRawLedFrame(dev, blank, true);
 }
 
 /**
@@ -1080,8 +1701,12 @@ export function clearLeds(opts?: { role?: RoliRole; deviceId?: string }): boolea
 export function composeLedFrame(opts: {
   path?: Array<{ x: number; y: number }>;
   cursor?: { x: number; y: number } | null;
+  cursorRadius?: number;
   trailColor?: LedRgba;
   cursorColor?: LedRgba;
+  crosshair?: boolean;
+  crosshairRadius?: number;
+  crosshairColor?: LedRgba;
   bgColor?: LedRgba;
 }): Uint8ClampedArray {
   const pixels = new Uint8ClampedArray(LED_PIXEL_COUNT * 4);
@@ -1094,6 +1719,8 @@ export function composeLedFrame(opts: {
   }
   const trail = opts.trailColor ?? [110, 40, 210, 255];
   const cursorC = opts.cursorColor ?? [255, 120, 255, 255];
+  const crosshair = opts.crosshairColor ?? [60, 180, 255, 180];
+  const cursorRadius = Math.max(0, Math.min(3, Math.round(opts.cursorRadius ?? 0)));
 
   const toCell = (nx: number, ny: number) => ({
     x: Math.round(clamp01(nx) * (ROLI_GRID_COLS - 1)),
@@ -1141,6 +1768,17 @@ export function composeLedFrame(opts: {
       for (let i = 1; i < opts.path.length; i++) line(opts.path[i - 1], opts.path[i], trail);
     }
   }
+  if (opts.crosshair && opts.cursor) {
+    const cursorCell = toCell(opts.cursor.x, opts.cursor.y);
+    if (opts.crosshairRadius != null) {
+      const radius = Math.max(1, Math.min(7, Math.round(opts.crosshairRadius)));
+      for (let dx = -radius; dx <= radius; dx++) putCell(cursorCell.x + dx, cursorCell.y, crosshair);
+      for (let dy = -radius; dy <= radius; dy++) putCell(cursorCell.x, cursorCell.y + dy, crosshair);
+    } else {
+      for (let x = 0; x < ROLI_GRID_COLS; x++) putCell(x, cursorCell.y, crosshair);
+      for (let y = 0; y < ROLI_GRID_ROWS; y++) putCell(cursorCell.x, y, crosshair);
+    }
+  }
   if (opts.cursor) {
     const { x, y } = opts.cursor;
     const cursorCell = toCell(x, y);
@@ -1150,11 +1788,14 @@ export function composeLedFrame(opts: {
       Math.round(cursorC[2] / 2),
       Math.round(cursorC[3] / 2),
     ];
-    putCell(cursorCell.x + 1, cursorCell.y, halo);
-    putCell(cursorCell.x - 1, cursorCell.y, halo);
-    putCell(cursorCell.x, cursorCell.y + 1, halo);
-    putCell(cursorCell.x, cursorCell.y - 1, halo);
-    putCell(cursorCell.x, cursorCell.y, cursorC);
+    const outerRadius = cursorRadius + 1;
+    for (let dy = -outerRadius; dy <= outerRadius; dy++) {
+      for (let dx = -outerRadius; dx <= outerRadius; dx++) {
+        const distance = Math.abs(dx) + Math.abs(dy);
+        if (distance > outerRadius) continue;
+        putCell(cursorCell.x + dx, cursorCell.y + dy, distance <= cursorRadius ? cursorC : halo);
+      }
+    }
   }
   return pixels;
 }

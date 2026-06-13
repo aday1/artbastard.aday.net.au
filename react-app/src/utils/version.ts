@@ -16,7 +16,7 @@ export const CURRENT_VERSION: VersionInfo = {
   buildDate: '2026-06-09',
   releaseType: 'stable',
   features: [
-    'APC40 Deck A/B scene grid, ACT launch buttons, Record Arm saves, Device Control role feedback',
+    'APC40 Deck A/B scene grid, ACT launch buttons, REC then Clip saves, Device Control role feedback',
     'Confirmed ArtBastard line promoted across dev/live lanes (GHCR + Linode)',
     'DMX512 desk: Art-Net, scenes, fixtures, MIDI/OSC, LAN bridge',
     'Reason rack + workbench envelopes + DMX transition tracker',
@@ -28,7 +28,7 @@ export const CURRENT_VERSION: VersionInfo = {
   ],
   changelog: [
     'v5.2.4.0: APC40 grid is Deck A, SHIFT grid is Deck B, Scene Launch buttons fire ACTS 1-5',
-    'v5.2.4.0: APC40 Record Arm saves deck scene slots; crossfader blends active Deck A/B scenes',
+    'v5.2.4.0: APC40 REC then Clip saves deck scene slots; crossfader blends active Deck A/B scenes',
     'v5.2.4.0: APC40 Device Control follows selected fixture gobo/effects roles; Cue Level pages role banks',
     'v5.2.4.0: APC40 Activator toggles group auto; Solo/Cue isolates fixtures inside selected groups; Master Select is FULL ON',
     'v5.2.0.1: Particle Sparkles removed; DMX sends now pulse a single lightweight page glow',

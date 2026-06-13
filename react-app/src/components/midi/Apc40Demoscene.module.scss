@@ -136,6 +136,36 @@
   }
 }
 
+.settingsGrid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.45rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.66rem;
+  color: rgba(203, 213, 225, 0.82);
+
+  select {
+    width: 100%;
+    min-height: 2rem;
+    border-radius: 6px;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    background: rgba(15, 23, 42, 0.78);
+    color: rgba(226, 232, 240, 0.95);
+    font-size: 0.72rem;
+    padding: 0.25rem 0.35rem;
+
+    &:disabled {
+      opacity: 0.5;
+    }
+  }
+}
+
 .note {
   position: relative;
   font-size: 0.7rem;

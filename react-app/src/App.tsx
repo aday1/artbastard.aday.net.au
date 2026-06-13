@@ -11,6 +11,7 @@ import { useGlobalBrowserMidi } from './hooks/useGlobalBrowserMidi'
 import { useApc40Workflow } from './hooks/useApc40Workflow'
 import { useApc40LedFeedback } from './hooks/useApc40LedFeedback'
 import { useApc40FlourishOrchestrator } from './hooks/useApc40FlourishOrchestrator'
+import { useApc40ScreensaverManager } from './hooks/useApc40ScreensaverManager'
 import { useApc40Health } from './hooks/useApc40Health'
 import { useActsPlaybackEngine } from './hooks/useActsPlaybackEngine'
 import { useActsOscProcessor } from './hooks/useActsOscProcessor'
@@ -86,6 +87,8 @@ function App() {
   useApc40LedFeedback();
   // Fire short LED flourishes on meaningful app events (fixture select, crossfade, blackout, tab change, etc.)
   useApc40FlourishOrchestrator();
+  // Run APC40 screensaver patterns while the browser tab is hidden.
+  useApc40ScreensaverManager();
   
   // Initialize ACTS playback engine
   useActsPlaybackEngine();

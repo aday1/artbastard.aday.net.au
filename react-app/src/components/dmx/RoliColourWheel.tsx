@@ -6,86 +6,75 @@ import {
   composeColourWheelFrame,
   paintColourWheel,
 } from '../../engines/roliColourWheel';
-import type { Fixture } from '../../store';
 import styles from './RoliColourWheel.module.scss';
 
 type ColourTriplet = { r: number; g: number; b: number; hex: string } | null;
 
-const findRgbChannels = (fixture: Fixture) => {
-  const lookup: Record<string, number | undefined> = {};
-  fixture.channels.forEach((ch) => {
-    const t = (ch.type || '').toLowerCase();
-    if ((t === 'red' || t === 'r') && lookup.r == null) lookup.r = ch.dmxAddress;
-    if ((t === 'green' || t === 'g') && lookup.g == null) lookup.g = ch.dmxAddress;
-    if ((t === 'blue' || t === 'b') && lookup.b == null) lookup.b = ch.dmxAddress;
-  });
-  return lookup;
-};
+export const ROLI_RGB_STRIP_CHANGE_EVENT = 'artbastard:roli-rgb-strip-change';
 
 export const RoliColourWheel: React.FC = () => {
   const roli = useRoliLightpad({ role: 'colour-wheel' });
   const selectedIds = useStore((s) => s.selectedFixtures);
   const fixtures = useStore((s) => s.fixtures);
-  const setDmxChannelValue = useStore((s) => s.setDmxChannelValue);
 
   const [colour, setColour] = useState<ColourTriplet>(null);
   const lastTouchAtRef = useRef<number>(0);
-  // The last touched point on the wheel — keeps the bright cursor painted at
-  // the released spot as a "locked colour" indicator until the next touch.
-  const lockedCursorRef = useRef<{ x: number; y: number } | null>(null);
+  const liveCursorRef = useRef<{ x: number; y: number } | null>(null);
 
   // Selected fixtures resolved to objects that actually have RGB channels.
   const rgbTargets = useMemo(() => {
-    const targets: Array<{ fixture: Fixture; r?: number; g?: number; b?: number }> = [];
+    const targets: Array<{ id: string; name: string }> = [];
     for (const id of selectedIds) {
       const fixture = fixtures.find((f) => f.id === id);
       if (!fixture) continue;
-      const ch = findRgbChannels(fixture);
-      if (ch.r != null || ch.g != null || ch.b != null) {
-        targets.push({ fixture, r: ch.r, g: ch.g, b: ch.b });
+      const hasRgb = fixture.channels.some((ch) => {
+        const t = (ch.type || '').toLowerCase();
+        return t === 'red' || t === 'r' || t === 'green' || t === 'g' || t === 'blue' || t === 'b';
+      });
+      if (hasRgb) {
+        targets.push({ id: fixture.id, name: fixture.name });
       }
     }
     return targets;
   }, [selectedIds, fixtures]);
 
-  // Repaint the wheel once on handshake and again whenever the engine
+  // Repaint the strip once on handshake and again whenever the engine
   // reports a new device list (e.g. the colour-wheel block reconnected).
   useEffect(() => {
     if (!roli.handshakeDone) return;
-    paintColourWheel({ cursor: lockedCursorRef.current });
+    liveCursorRef.current = null;
+    paintColourWheel();
   }, [roli.handshakeDone, roli.devices]);
 
-  // Touch handler — convert touch coords to HSV colour and write RGB DMX.
-  // Also tracks a live cursor on the wheel: bright pixel follows the finger
+  // Touch handler — convert touch coords to RGB colour and write RGB DMX.
+  // Also tracks a live cursor on the strip: bright pixel follows the finger
   // while pressed, and stays painted at the release spot ("locked colour").
   useEffect(() => {
     roli.onTouch((ev) => {
       if (ev.phase === 'end') {
-        // Wheel stays painted; locked cursor remains at last touched point.
-        paintColourWheel({ cursor: lockedCursorRef.current });
+        liveCursorRef.current = null;
+        paintColourWheel();
         return;
       }
       if (ev.z < 0.05) return;
       const c = colourFromTouch(ev.x, ev.y, 1);
       lastTouchAtRef.current = Date.now();
-      lockedCursorRef.current = { x: ev.x, y: ev.y };
+      liveCursorRef.current = { x: ev.x, y: ev.y };
       setColour({ r: c.r, g: c.g, b: c.b, hex: c.hex });
-      // Repaint wheel with the live cursor on top. This is cheap (225 px).
-      paintColourWheel({ cursor: lockedCursorRef.current });
-      for (const t of rgbTargets) {
-        if (t.r != null) setDmxChannelValue(t.r, c.r);
-        if (t.g != null) setDmxChannelValue(t.g, c.g);
-        if (t.b != null) setDmxChannelValue(t.b, c.b);
-      }
+      window.dispatchEvent(new CustomEvent(ROLI_RGB_STRIP_CHANGE_EVENT, {
+        detail: { r: c.r, g: c.g, b: c.b },
+      }));
+      paintColourWheel({ cursor: liveCursorRef.current });
     });
     return () => roli.onTouch(null);
-  }, [roli, rgbTargets, setDmxChannelValue]);
+  }, [roli]);
 
   const handleRepaint = useCallback(() => {
-    paintColourWheel({ cursor: lockedCursorRef.current });
+    liveCursorRef.current = null;
+    paintColourWheel();
   }, []);
 
-  // Render a small 1:1 preview of the wheel pattern in the panel so the user
+  // Render a small preview of the strip pattern in the panel so the user
   // can see what the physical block looks like, even when it's not visible.
   const previewRef = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -114,7 +103,7 @@ export const RoliColourWheel: React.FC = () => {
   return (
     <div className={styles.panel}>
       <div className={styles.header}>
-        <span className={styles.title}>ROLI Colour Wheel</span>
+        <span className={styles.title}>ROLI RGB Strip</span>
         <span className={`${styles.status} ${statusClass}`}>
           {roli.connected
             ? roli.handshakeDone
@@ -127,9 +116,9 @@ export const RoliColourWheel: React.FC = () => {
       <div className={styles.row}>
         <canvas
           ref={previewRef}
-          width={60}
-          height={60}
-          className={styles.swatch}
+          width={96}
+          height={48}
+          className={`${styles.swatch} ${styles.surfacePreview}`}
           style={{ imageRendering: 'pixelated', padding: 0 }}
         />
         <div
@@ -140,14 +129,14 @@ export const RoliColourWheel: React.FC = () => {
         <div className={styles.info}>
           <span className={styles.hex}>{colour?.hex ?? '—'}</span>
           <span className={styles.triplet}>
-            {colour ? `R ${colour.r}  G ${colour.g}  B ${colour.b}` : 'touch the wheel to paint'}
+            {colour ? `R ${colour.r}  G ${colour.g}  B ${colour.b}` : 'touch the strip to paint'}
           </span>
         </div>
       </div>
 
       <div className={styles.targets}>
         {rgbTargets.length > 0 ? (
-          <>Targets: {rgbTargets.map((t) => t.fixture.name).join(', ')}</>
+          <>Targets: {rgbTargets.map((t) => t.name).join(', ')}</>
         ) : (
           <span className={styles.none}>Select RGB fixtures to drive their colour.</span>
         )}
@@ -155,7 +144,7 @@ export const RoliColourWheel: React.FC = () => {
 
       <div className={styles.actions}>
         <button type="button" onClick={handleRepaint} disabled={!roli.handshakeDone}>
-          Repaint wheel
+          Repaint strip
         </button>
       </div>
     </div>

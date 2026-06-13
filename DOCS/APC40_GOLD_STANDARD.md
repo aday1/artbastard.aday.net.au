@@ -11,7 +11,7 @@ AKAI APC40 / ArtBastard live surface
 
 +-----------------------------------------------------------------------------------------------------------+  +------------------------------------+
 | CLIP LAUNCH / SESSION OVERVIEW                                                                            |  | TRACK CONTROL                       |
-| Deck A by default. Hold SHIFT for Deck B. Armed columns save; unarmed saved pads launch.                   |  | fixed live fixture roles            |
+| Deck A by default. Hold SHIFT for Deck B. REC save mode flashes pads; saved pads launch.                   |  | fixed live fixture roles            |
 |                                                                                                           |  |                                    |
 |  COL 1     COL 2     COL 3     COL 4     COL 5     COL 6     COL 7     COL 8        SCENE LAUNCH          |  |   (1)PAN   (2)TILT  (3)RED   (4)GRN |
 | +-------+ +-------+ +-------+ +-------+ +-------+ +-------+ +-------+ +-------+     +-----------+         |  |   (5)BLUE  (6)WHT   (7)STRB  (8)SPD |
@@ -45,7 +45,7 @@ AKAI APC40 / ArtBastard live surface
                                                                                                               | TRANSPORT / CROSSFADER             |
                                                                                                               | PLAY=enable Auto Scene             |
                                                                                                               | STOP=disable Auto Scene            |
-                                                                                                              | REC=arm/clear all save columns     |
+                                                                                                              | REC=clip-grid save mode            |
                                                                                                               | CROSSFADER: Deck A <-> Deck B      |
                                                                                                               +------------------------------------+
 ```
@@ -104,7 +104,7 @@ AKAI APC40 / ArtBastard live surface
 | Detail View, Rec Quantization, MIDI Overdub, Metronome | Reserved/unmapped today. They should appear in the MIDI monitor but should not change DMX. | No active ArtBastard feedback. |
 | Transport `PLAY` | Enable Auto Scene playback. | Green-blink while Auto Scene is running. |
 | Transport `STOP` | Disable Auto Scene playback. | Red while Auto Scene is running. |
-| Transport `REC` | Arm all save columns, or clear all armed columns if any are already armed. | Red blink while any save column is armed. |
+| Transport `REC` | Enter/exit clip-grid save mode. Hold SHIFT with REC for roll-dice preview instead. | Red blink while save mode is active. |
 | Crossfader | Blend Deck A scene values on the left with Deck B scene values on the right. Center is a 50/50 blend. | No APC40 LED feedback. |
 
 ### LED legend
@@ -141,13 +141,14 @@ AKAI APC40 / ArtBastard live surface
 - The 8x5 clip grid controls Deck A by default.
 - Holding SHIFT switches grid operations to Deck B.
 - Pressing a saved slot launches that deck scene.
-- Pressing an empty armed slot saves the current lighting state into that deck slot.
-- Record Arm buttons arm/unarm save columns.
+- Pressing a flashing red save-mode slot saves the current lighting state into that deck slot.
+- REC enters save mode; Record Arm buttons do not save clips.
+- To save Deck B, press REC first, then hold SHIFT while pressing the clip-grid pad.
 - LEDs are contextual:
   - Off = empty slot.
   - Green = saved scene.
   - Orange blink = active scene for the current deck.
-  - Red blink = save mode; armed Record Arm/REC controls and all clip pads in armed columns.
+  - Red blink = save mode on REC and clip pads, or solo-group latch on Record Arm.
 
 ### Scene Launch buttons
 
@@ -188,7 +189,7 @@ AKAI APC40 / ArtBastard live surface
 - The APC40 visual diagram should always show the last touched control.
 - The APC40 visual diagram should also show the last meaningful change: fixture, scene, device role, effect, selection, or transport action.
 - The touched control should flash immediately when a MIDI message arrives.
-- The visual state should show current deck, armed columns, saved slots, active scenes, ACT state, selected groups, and whether FULL ON/SHIFT is latched.
+- The visual state should show current deck, save-mode targets, saved slots, active scenes, ACT state, selected groups, and whether FULL ON/SHIFT is latched.
 - If a MIDI message is seen in the monitor but not reflected in the visual, that is a bug.
 - The DMX Activity monitor should display the same last APC40 change context and attach recent APC40 source context to DMX rows.
 
@@ -206,11 +207,11 @@ This section is the code-backed truth table for the current app. If the implemen
 
 | Hardware control | MIDI signature currently decoded | App code path | Current behavior |
 | --- | --- | --- | --- |
-| Clip grid, APC40 MK1 | Notes `0x35`-`0x39`, MIDI channel = column | `decodeApc40Message` -> `clip-launch` -> `useApc40Workflow` | Launches/saves `APC40 Deck A/B 01` through `40`, depending on SHIFT/deck and armed columns. |
+| Clip grid, APC40 MK1 | Notes `0x35`-`0x39`, MIDI channel = column | `decodeApc40Message` -> `clip-launch` -> `useApc40Workflow` | Launches/saves `APC40 Deck A/B 01` through `40`, depending on SHIFT/deck and whether REC save mode is active. |
 | Clip grid, APC40 MK2 | Notes `0x00`-`0x27` | `decodeApc40Message` -> `clip-launch` -> `useApc40Workflow` | Same scene-slot model as MK1, with row/column derived directly from note number. |
 | Scene Launch 1-5 | Notes `0x52`-`0x56` | `scene-launch` -> `playAct` | Launches ACT 1-5 when the corresponding ACT exists. |
 | Record Arm 1-8 | Note `0x30`, MIDI channel = column | `solo-group` -> Solo Group latch | Latches solo for fixture group N; snapshots DMX on first solo, blacks out fixtures not in soloed groups, restores snapshot when last solo released. |
-| REC transport | Note `0x5d` or `0x66` | `record` -> `toggleAllRecordColumns` or `buildRandomLookUpdates` (SHIFT) | Plain press arms all columns, or clears all armed columns. SHIFT+REC rolls a fresh randomized look (random hue + dimmer + pan/tilt per fixture) and writes it live to DMX — preview only, no scene save. |
+| REC transport | Note `0x5d` or `0x66` | `record` -> clip-grid save mode, or `buildRandomLookUpdates` when SHIFT is held | Plain press enters/exits clip-grid save mode. SHIFT+REC rolls a fresh randomized look (random hue + dimmer + pan/tilt per fixture) and writes it live to DMX — preview only, no scene save. |
 | Track faders 1-8 | CC `0x07`, MIDI channel = track index | `channel-fader` -> `applySuperControlMidi('dimmer', slotIndex)` | Dims selected fixture slot 1-8. Requires selected fixtures. |
 | Master fader | CC `0x0e`, channel `0` | `master-fader` -> `applySuperControlMidi('masterDimmer')` | Dims all selected fixtures. Requires selected fixtures. |
 | Track Control knobs 1-8 | CC `0x30`-`0x37`, channel `0` | `track-control` -> `APC40_TRACK_CONTROL_ROLES` -> `buildRoleUpdates` | Fixed roles: Pan, Tilt, Red, Green, Blue, White, Strobe, Speed. Targets selected fixtures, or all fixtures if no selection exists. |
@@ -226,7 +227,7 @@ This section is the code-backed truth table for the current app. If the implemen
 | Solo/Cue 1-8 | Note `0x31`, MIDI channel = track index | `select-fixture` | Selects fixture N (positional, one per column). |
 | Activator 1-8 | Note `0x32`, MIDI channel = track index | `select-group` | Selects fixture group N (positional, one per column). |
 | Track Stop 1-8 | Note `0x34`, MIDI channel = track index | `track-stop` | Clears the current deck scene in that column when it matches; otherwise clears the current deck scene. |
-| Stop All Clips | Note `0x51` | `stop-all-clips` | Clears Deck A/B scene refs, clears armed columns, stops ACT playback, stops scene timelines. |
+| Stop All Clips | Note `0x51` | `stop-all-clips` | Clears Deck A/B scene refs, clears save mode, stops ACT playback, stops scene timelines. |
 | SHIFT | Note `0x62`, press/release aware | `shift` | Held state switches clip grid operations and LED paint to Deck B. |
 | PAN utility button | Note `0x57` | `select-all` | Selects all fixtures. |
 | Fixture navigation | Notes `0x5e` / `0x5f` | `nav-fixture` | Previous/next fixture. |

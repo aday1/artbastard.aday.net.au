@@ -927,8 +927,8 @@ export const APC40_CATALOG: Apc40CatalogEntry[] = [
   {
     "key": "record",
     "category": "scene",
-    "label": "REC \\u2014 arm save / roll dice",
-    "description": "Plain press arms/clears save columns. SHIFT+REC rolls a fresh randomized look (random hue + dimmer + pan/tilt per fixture) live to DMX for preview \\u2014 nothing is saved until the operator follows the normal save flow."
+    "label": "REC \\u2014 save mode / roll dice",
+    "description": "Plain press enters/exits clip-grid save mode. SHIFT+REC rolls a fresh randomized look (random hue + dimmer + pan/tilt per fixture) live to DMX for preview \\u2014 nothing is saved until the operator presses REC, then a clip pad. Hold SHIFT only for the clip-pad press to save Deck B."
   },
   {
     "key": "navFixture",

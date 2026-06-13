@@ -32,7 +32,7 @@ APC40 MK1 factory MIDI mode and works without applying a MIDI template.
   CUE LEVEL          UNMAPPED (Device Left/Right cycles Device Control role bank)
   PLAY               enable Auto Scene playback        (LED green-blink while running)
   STOP               disable Auto Scene playback       (LED red while running)
-  REC                arm grid column for clip save     (LED red-blink while any column armed)
+  REC                enter clip-grid save mode         (LED red-blink while save mode active)
                      SHIFT+REC = roll fresh random look across all fixtures (preview only)
   SEND A             toggle Color modular automation   (SHIFT+SEND A cycles color pattern)
   SEND B             toggle Pan/Tilt modular auto      (SHIFT+SEND B cycles pan/tilt path)
@@ -50,7 +50,7 @@ APC40 MK1 factory MIDI mode and works without applying a MIDI template.
 | --- | --- | --- |
 | **Clip Launch / Session View 8x5** | Launch Deck A scene slots `APC40 Deck A 01` through `APC40 Deck A 40` | green = saved, orange-blink = active deck scene, off = empty |
 | **SHIFT + Clip Grid** | Hold SHIFT to use Deck B scene slots `APC40 Deck B 01` through `APC40 Deck B 40` | SHIFT orange while held; grid repaints for Deck B |
-| **REC (transport)** | Arm a grid column (cycles each press). Next grid pad in any armed column saves current DMX into the current deck slot. SHIFT+REC rolls a fresh random look across all fixtures (preview only — does not save). | red-blink on REC and every armed clip pad |
+| **REC (transport)** | Enter/exit save mode for the clip grid. Next clip-grid pad saves current DMX into that deck slot; hold SHIFT only for the pad press to save Deck B. SHIFT+REC rolls a fresh random look across all fixtures (preview only, does not save). | red-blink on REC and every save-mode clip pad |
 | **Record Arm 1-8 (top row)** | **SOLO GROUP N** latch. Snapshots DMX on first solo, blacks out fixtures not in soloed groups, restores snapshot when last solo released. | red-blink while soloed, off otherwise (MK1: single-color amber row) |
 | **Scene Launch 1-5** | Launch ACT 1-5 | green = ACT exists, orange-blink = playing ACT |
 | **Clip Stop row** | Stop/unselect the active scene for that column in the current deck | red while a deck scene is active |
@@ -181,9 +181,9 @@ The SEND-row LED is orange-blink while its engine is enabled.
 
 ## Save scene workflow
 
-1. Choose the deck: leave SHIFT released for Deck A, hold SHIFT for Deck B.
-2. Press **REC** (transport row) once per grid column you want armed. ArtBastard enters **SAVE MODE** and flashes those columns red.
-3. Press a flashing red grid pad in any armed column. Empty pads are spare save targets; saved pads will be overwritten.
+1. Press **REC** on the transport row. ArtBastard enters **SAVE MODE** and flashes the clip grid red.
+2. Choose the deck when pressing the pad: leave SHIFT released for Deck A, or hold SHIFT while pressing the clip-grid pad for Deck B.
+3. Press the clip-grid pad you want to save into. Empty pads are spare save targets; saved pads will be overwritten.
 4. ArtBastard saves the current DMX state into that deck slot name.
 
 To launch a scene, press any saved grid pad in the current deck.
@@ -196,7 +196,8 @@ dimmer between 140 and 255, and random pan/tilt where present. Strobe and white
 are forced to 0 so the roll never blasts the room.
 
 The roll writes DMX **live for preview only** — no scene is saved. If you like
-the look, follow the normal save workflow: press REC, then a flashing grid pad.
+the look, release SHIFT, press REC, then press a flashing grid pad. For Deck B,
+hold SHIFT only for the grid-pad press.
 If you don't, roll again (SHIFT+REC) or launch any saved scene to clear it.
 
 ## FREEZE DMX latch
@@ -223,6 +224,26 @@ snapshot.
   stops scene timeline playback, and stops ACT playback.
 - Stop All Clips does not delete saved scenes.
 
+## LED overlays and screensaver
+
+The MIDI/OSC hardware panel includes an **APC40 Demoscene** card for manual LED
+tests and overlay preferences:
+
+- **Flourishes** are short LED overlays for explicit actions such as fixture
+  selection, clip launch, blackout, crossfade, and deck switching. Navigation
+  and ROLI device-list changes do not auto-flash the grid by default.
+- Each flourish type has its own selected animation. This is deterministic by
+  default so the same action has the same visual signature every time.
+- **Random flourishes** is opt-in. When enabled, each flourish type chooses from
+  a curated pattern pool for that action rather than from the entire demoscene
+  catalog.
+- **Screensaver** defaults on and runs randomized demoscene patterns only while
+  the browser tab is hidden. It stops when the tab becomes visible and normal
+  APC40 feedback repaints.
+- **XY crosshair** mirrors SuperControl pan/tilt XY movement, including ROLI
+  Lightpad input, as a throttled crosshair on the APC40 clip grid. It has its
+  own toggle and does not disable SuperControl or ROLI drawing when off.
+
 ## LED legend
 
 | Velocity | Color | Meaning |
@@ -231,7 +252,7 @@ snapshot.
 | 1 | green | saved deck slot, saved ACT, fixture/group selected (MK1 single-color rows display this as plain amber-on) |
 | 2 | green-blink | PLAY while Auto Scene running |
 | 3 | red | STOP active / FULL ON latched / Master Select frozen / active deck scene present (MK1 single-color rows display this as plain amber-on) |
-| 4 | red-blink | record-armed save column (REC + armed clip pads) **or** Solo Group latched |
+| 4 | red-blink | REC save mode / armed clip pads **or** Solo Group latched |
 | 5 | orange | SHIFT latched |
 | 6 | orange-blink | active deck scene, playing ACT, SEND-row engine enabled |
 
@@ -240,5 +261,5 @@ snapshot.
 ## Debugging
 
 Open the in-app Help overlay and choose the APC40 visual reference. It shows
-the live deck, Deck A/B scene names, armed columns, Device Control role labels,
+the live deck, Deck A/B scene names, save-mode targets, Device Control role labels,
 ACT state, and the last MIDI messages received.

@@ -2,7 +2,13 @@ import { useEffect, useRef } from 'react';
 import { useStore } from '../store';
 import { apc40DeckSceneName } from '../midi/apc40WorkflowHelpers';
 import { debugLog } from '../utils/debugLog';
-import { safeMidiSend } from '../midi/midiOutputGuard';
+import { resetPortHealth } from '../midi/midiOutputGuard';
+import {
+  isApc40Port,
+  sendApc40NoteOn,
+  subscribeApc40LedDirty,
+  notifyApc40LedDirty,
+} from '../midi/apc40LedRuntime';
 import {
   LED,
   BLINK_LED_VALUES,
@@ -38,18 +44,8 @@ const MASTER_CHANNEL = 8;
 const GRID_ROWS = APC40_GRID.rows;
 const GRID_COLS = APC40_GRID.cols;
 
-const APC40_NAME_RE = /\b(apc\s?40|apc40)\b/i;
-
-function isApc40Port(port: WebMidi.MIDIPort): boolean {
-  return APC40_NAME_RE.test(port.name || '') || APC40_NAME_RE.test(port.manufacturer || '');
-}
-
 function sendNoteOn(out: WebMidi.MIDIOutput, channel: number, note: number, velocity: number) {
-  safeMidiSend(
-    out,
-    [0x90 | (channel & 0x0f), note & 0x7f, velocity & 0x7f],
-    'apc40-led',
-  );
+  sendApc40NoteOn(out, channel, note, velocity, 'apc40-led');
 }
 
 function groupSelected(groupFixtureIds: string[], selectedIds: Set<string>): boolean {
@@ -61,11 +57,11 @@ function groupSelected(groupFixtureIds: string[], selectedIds: Set<string>): boo
  *
  * Surface contract:
  *   - Clip grid: Deck A by default, Deck B while SHIFT is held. Green = saved,
- *     orange-blink = active deck slot, red-blink = record-armed save column.
+ *     orange-blink = active deck slot, red-blink = REC save-mode target.
  *   - Scene Launch 1-5: ACT 1-5. Green = saved act, orange-blink = current act.
- *   - Record Arm 1-8: red-blink when that grid column is armed for save.
- *   - Activator 1-8: green = group exists, orange-blink = APC40 auto running.
- *   - Track Select 1-8: green when that group/fixture is selected.
+ *   - Record Arm 1-8: red-blink while its Solo Group latch is active.
+ *   - Activator 1-8: green when that group is fully selected.
+ *   - Track Select 1-8: intentionally off/unmapped.
  *   - Master Track Select: red while FULL ON is latched.
  */
 export function useApc40LedFeedback() {
@@ -174,8 +170,7 @@ export function useApc40LedFeedback() {
       // Encode only selection state, not "exists vs absent", since the operator
       // can't distinguish multiple non-off colors on these pads.
       const soloed = soloedGroups.has(column);
-      // Record Arm row = Solo Group latch. Red-blink so it stands out from the
-      // (single-color) selection rows below — blink still reads as "lit" on MK1.
+      // Record Arm row = Solo Group latch. Save mode is shown on REC and clip-grid pads.
       sendLed(out, column, RECORD_ARM_NOTE, soloed ? LED_RED_BLINK : LED_OFF);
       // Solo/Cue row = toggle FIXTURE in multi-selection. On = selected.
       sendLed(out, column, SOLO_NOTE, fixtureSelected ? LED_GREEN : LED_OFF);
@@ -207,6 +202,13 @@ export function useApc40LedFeedback() {
   };
 
   useEffect(() => {
+    return subscribeApc40LedDirty(() => {
+      lastLedValuesRef.current = new WeakMap();
+      paintAll();
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
     let cancelled = false;
     const init = async () => {
       try {
@@ -216,9 +218,11 @@ export function useApc40LedFeedback() {
         accessRef.current = access;
         const refresh = () => {
           outputsRef.current = Array.from(access.outputs.values()).filter(isApc40Port);
+          outputsRef.current.forEach(resetPortHealth);
           if (outputsRef.current.length > 0) {
             debugLog.log('[APC40-LED] outputs:', outputsRef.current.map(o => o.name));
             paintAll();
+            notifyApc40LedDirty('port-refresh');
           }
         };
         refresh();

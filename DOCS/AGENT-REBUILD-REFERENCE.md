@@ -215,15 +215,15 @@ Mobile requirements:
 | Path | Role |
 | --- | --- |
 | `react-app/src/midi/apc40.ts` | APC40 MK1/MK2 source detection + message decoder (notes, CCs, transport, navigation) |
-| `react-app/src/hooks/useApc40Workflow.ts` | Live scene/fixture workflow: grid = Deck A scenes, SHIFT+grid = Deck B scenes, Record Arm saves deck slots, Scene Launch = ACTS, Clip Stop/Stop All release scenes/acts, faders = SuperControl dimmers, Device Control = dynamic gobo/effects roles, Activator = group auto, Solo/Cue = fixture solo inside selected group |
-| `react-app/src/hooks/useApc40LedFeedback.ts` | LED state: deck grid saved/active/armed slots, ACT launch state, record arm columns, group auto row, selected groups, FULL ON latch, STOP ALL, SHIFT held deck mode, hot-plug repaint |
+| `react-app/src/hooks/useApc40Workflow.ts` | Live scene/fixture workflow: grid = Deck A scenes, SHIFT+grid = Deck B scenes, REC then Clip saves deck slots, Record Arm = Solo Group, Scene Launch = ACTS, Clip Stop/Stop All release scenes/acts, faders = SuperControl dimmers, Device Control = dynamic gobo/effects roles, Activator = group select, Solo/Cue = fixture select |
+| `react-app/src/hooks/useApc40LedFeedback.ts` | LED state: deck grid saved/active/save-mode slots, ACT launch state, solo group row, selected fixtures/groups, FULL ON latch, STOP ALL, SHIFT held deck mode, hot-plug repaint |
 | `react-app/src/components/fixtures/Apc40WorkflowPanel.tsx` | Fixture-page APC40 status/help |
 | `react-app/src/components/midi/midiControllerTemplates.ts` | X-Touch/APC40 templates (backwards-compatible fallback under the live integration) |
 | `react-app/src/hooks/useRoliLightpad.ts` + `react-app/src/engines/roliLightpad.ts` | Bidirectional XY-pad path mirror to Roli Lightpad Block (touch in, LED out, continuous 15x15 LED paths) |
 | `DOCS/APC40_CHEATSHEET.md` | Single-page button/LED/mode reference (linked from `DOCS/MIDI_TEMPLATES.md`, `DOCS/SHORTCUTS.md`, in-app Help "APC40 Live" tab, and the showcase docs grid) |
 | `DOCS/MIDI_TEMPLATES.md` | Template apply flow (POST `/api/midi/controller-template`) |
 
-APC40 must be practical, not decorative: Clip Launch / Session View is the 40-slot Deck A scene grid, SHIFT exposes the independent 40-slot Deck B grid, Record Arm saves the next grid pad in the current deck, Scene Launch fires ACTS 1-5, channel faders walk selected fixture dimmers through Super Control, Device Control follows selected fixture gobo/effects roles, Activator toggles per-group auto, Solo/Cue isolates fixtures inside the selected group, Master Select is FULL ON, and the crossfader blends active Deck A/B scenes. The Help overlay (Ctrl+H → APC40 Live) and `DOCS/APC40_CHEATSHEET.md` are the operator reference.
+APC40 must be practical, not decorative: Clip Launch / Session View is the 40-slot Deck A scene grid, SHIFT exposes the independent 40-slot Deck B grid, REC then Clip saves the current DMX look, SHIFT+REC rolls random DMX for preview only, Scene Launch fires ACTS 1-5, channel faders walk selected fixture dimmers through Super Control, Device Control follows selected fixture gobo/effects roles, Activator selects groups, Solo/Cue selects fixtures, Record Arm soloes groups, Master Select is FREEZE DMX, and the crossfader blends active Deck A/B scenes. The Help overlay (Ctrl+H → APC40 Live) and `DOCS/APC40_CHEATSHEET.md` are the operator reference.
 
 ## Show sequencing subsystems
 

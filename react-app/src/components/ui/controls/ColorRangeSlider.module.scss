@@ -154,26 +154,11 @@ $theme-g: repeating-conic-gradient(hsla(0, 0%, 0%, 0.235) 0% 25%, transparent 0%
 .variantRed {
   --track-c0: #cc040d;
   --track-c1: #ff5a3a;
-  --thumb-p: polygon(
-    50% 0%,
-    61% 35%,
-    98% 35%,
-    68% 57%,
-    79% 91%,
-    50% 70%,
-    21% 91%,
-    32% 57%,
-    2% 35%,
-    39% 35%
-  );
 }
 
 .variantGreen {
   --track-c0: #08c300;
   --track-c1: #aaca00;
-  --thumb-w: 2em;
-  --thumb-h: 1.125em;
-  --thumb-r: var(--thumb-h);
 }
 
 .variantBlue {

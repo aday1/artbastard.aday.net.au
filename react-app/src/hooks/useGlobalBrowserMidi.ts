@@ -129,6 +129,7 @@ export const useGlobalBrowserMidi = () => {
           const handleStateChange = () => {
             const newInputs = Array.from(access.inputs.values());
             setInputs(newInputs);
+            setRoliMidiAccess(access);
             debugLog.log('[GlobalBrowserMidi] MIDI devices changed:', newInputs.map(i => i.name));
           };
           access.addEventListener('statechange', handleStateChange);

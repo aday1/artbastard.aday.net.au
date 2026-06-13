@@ -357,7 +357,7 @@ export const Apc40Manual: React.FC = () => {
 
           {/* Clip grid + scene launch column */}
           <div className={`${styles.cluster} ${styles.clipGrid}`}>
-            <div className={styles.clusterLabel}>Clip Grid 8×5 → Deck {apc40State.activeDeck} scene slots · REC arms columns, then Clip pad saves current DMX</div>
+            <div className={styles.clusterLabel}>Clip Grid 8×5 → Deck {apc40State.activeDeck} scene slots · REC enters save mode, then Clip pad saves current DMX</div>
             <div className={styles.gridAndScenes}>
               <div className={styles.grid}>
                 {Array.from({ length: 5 }).map((_, row) => (
@@ -499,7 +499,7 @@ export const Apc40Manual: React.FC = () => {
             <div className={styles.transportRow}>
               <div className={`${styles.transportButton} ${shouldMuteControl('note:0:91', false) ? styles.focusMuted : ''}`} style={{ background: APC40_CATEGORY_COLORS.scene }} title="PLAY → enable Auto Scene playback (LED green-blink while running)">▶ PLAY</div>
               <div className={`${styles.transportButton} ${shouldMuteControl('note:0:92', false) ? styles.focusMuted : ''}`} style={{ background: APC40_CATEGORY_COLORS.utility }} title="STOP → disable Auto Scene playback (LED red while Auto Scene running)">■ STOP</div>
-              <div className={`${styles.transportButton} ${shouldMuteControl('note:0:93', false) ? styles.focusMuted : ''}`} style={{ background: apc40State.armedColumns.length > 0 ? '#ef4444' : APC40_CATEGORY_COLORS.transport }} title="Record → arm or clear all record columns. SHIFT+REC = roll fresh random look across all fixtures (preview only)">● REC</div>
+              <div className={`${styles.transportButton} ${shouldMuteControl('note:0:93', false) ? styles.focusMuted : ''}`} style={{ background: apc40State.armedColumns.length > 0 ? '#ef4444' : APC40_CATEGORY_COLORS.transport }} title="REC → enter/exit clip-grid save mode. REC then SHIFT+Clip saves Deck B. SHIFT+REC rolls a fresh random look (preview only).">● REC</div>
               <div className={`${styles.transportButton} ${shouldMuteControl('note:0:82', false) ? styles.focusMuted : ''}`} style={{ background: APC40_CATEGORY_COLORS.utility }} title="Clear Selection">CLEAR</div>
               <div className={`${styles.transportButton} ${shouldMuteControl('note:0:98', false) ? styles.focusMuted : ''}`} style={{ background: apc40State.shiftLatched ? '#f59e0b' : APC40_CATEGORY_COLORS.utility }} title="Hold SHIFT → Deck B grid mode">SHIFT</div>
               <div className={`${styles.transportButton} ${shouldMuteControl('note:0:87', false) ? styles.focusMuted : ''}`} style={{ background: APC40_CATEGORY_COLORS.selection }} title="Pan button → Select All fixtures">SEL ALL</div>

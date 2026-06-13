@@ -88,7 +88,9 @@ Full reference: [APC40_CHEATSHEET.md](APC40_CHEATSHEET.md). Quick gestures:
 | ---------------------- | --------------------------------------------------- |
 | Clip grid 8x5          | Launch 40 Deck A scene slots                        |
 | SHIFT + clip grid      | Launch/save 40 Deck B scene slots                   |
-| Record Arm 1-8         | Arm column; next grid pad saves current deck slot   |
+| REC then clip grid     | Save current DMX into the pressed deck slot         |
+| SHIFT+REC              | Roll random DMX values for preview only             |
+| Record Arm 1-8         | Solo Group latch                                    |
 | Scene Launch 1-5       | Launch ACT 1-5                                      |
 | Stop All Clips         | Stop Deck A/B scenes and ACT playback               |
 | Clip Stop row          | Stop/unselect current deck scene                    |

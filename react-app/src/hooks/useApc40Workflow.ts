@@ -201,7 +201,7 @@ export function useApc40Workflow() {
     return true;
   };
 
-  const toggleAllRecordColumns = () => {
+  const toggleClipGridSaveMode = () => {
     if (armedColumnsRef.current.size > 0) {
       armedColumnsRef.current.clear();
     } else {
@@ -375,22 +375,22 @@ export function useApc40Workflow() {
           ),
         });
         state.addNotification({
-          message: `APC40 rolled fresh random look (${touchedFixtures} fixtures). Press REC + a pad to save.`,
+          message: `APC40 rolled fresh random look (${touchedFixtures} fixtures). Press REC, then a pad to save.`,
           type: 'success',
           priority: 'normal',
         });
         return;
       }
 
-      toggleAllRecordColumns();
+      toggleClipGridSaveMode();
       publishSurfaceState({
         mode: armedColumnsRef.current.size > 0 ? 'save' : null,
         lastChange: makeLastChange(
           'scene',
           'REC',
           armedColumnsRef.current.size > 0
-            ? `Armed all save columns for Deck ${deck}`
-            : 'Cleared all armed save columns',
+            ? `Clip-grid save mode active for Deck ${deck}`
+            : 'Clip-grid save mode cleared',
           armedColumnsRef.current.size > 0
             ? `Any clip-grid pad can now save the current DMX look into Deck ${deck}.`
             : 'Clip-grid pads are back to launch mode.'
@@ -398,8 +398,8 @@ export function useApc40Workflow() {
       });
       state.addNotification({
         message: armedColumnsRef.current.size > 0
-          ? `APC40 record armed all grid columns for Deck ${deck}`
-          : 'APC40 record arms cleared',
+          ? `APC40 save mode active for Deck ${deck}. Press a flashing clip pad to save.`
+          : 'APC40 save mode cleared',
         type: 'info',
         priority: 'normal',
       });
@@ -438,12 +438,12 @@ export function useApc40Workflow() {
             'scene',
             `Deck ${deck} clip ${action.index + 1}`,
             `${name} is empty`,
-            `Press Record Arm ${action.column + 1}, then this pad to save the current DMX look.`,
+            `Press REC, then this pad to save the current DMX look. Hold SHIFT for the pad press to save Deck B.`,
             { sceneName: name }
           ),
         });
         state.addNotification({
-          message: `${name} is empty. Press Record Arm ${action.column + 1}, then this pad to save it.`,
+          message: `${name} is empty. Press REC, then this pad to save it.`,
           type: 'warning',
           priority: 'normal',
         });
@@ -485,11 +485,11 @@ export function useApc40Workflow() {
             'scene',
             `Scene Launch ${action.sceneIndex + 1}`,
             'Scene Launch buttons start ACTS; they do not save Deck scenes',
-            `Save mode is armed for Deck ${deck}. Press a clip-grid pad in an armed Record Arm column to save or overwrite a Deck scene.`
+            `Save mode is active for Deck ${deck}. Press a clip-grid pad to save or overwrite a Deck scene.`
           ),
         });
         state.addNotification({
-          message: 'APC40 save mode uses the clip grid, not Scene Launch. Press an armed column pad to save.',
+          message: 'APC40 save mode uses the clip grid, not Scene Launch. Press a clip pad to save.',
           type: 'warning',
           priority: 'normal',
         });
@@ -585,7 +585,7 @@ export function useApc40Workflow() {
           hadPlayback
             ? 'Stopped Deck A/B scenes and ACT playback'
             : 'Stop All Clips pressed with no active Deck scene or ACT playback',
-          'Panic-safe stop clears active decks, armed columns, ACT playback, and scene timeline playback.'
+          'Panic-safe stop clears active decks, save mode, ACT playback, and scene timeline playback.'
         ),
       });
       state.addNotification({

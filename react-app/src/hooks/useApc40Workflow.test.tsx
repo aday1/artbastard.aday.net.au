@@ -16,15 +16,21 @@ const fixtureA: Fixture = {
   name: 'Wash A',
   type: 'RGB Wash',
   startAddress: 1,
-  channels: [{ name: 'Dimmer', type: 'dimmer' }],
+  channels: [
+    { name: 'Dimmer', type: 'dimmer' },
+    { name: 'Red', type: 'red' },
+  ],
 };
 
 const fixtureB: Fixture = {
   id: 'fixture-b',
   name: 'Wash B',
   type: 'RGB Wash',
-  startAddress: 2,
-  channels: [{ name: 'Dimmer', type: 'dimmer' }],
+  startAddress: 3,
+  channels: [
+    { name: 'Dimmer', type: 'dimmer' },
+    { name: 'Pan', type: 'pan' },
+  ],
 };
 
 const groupA: Group = {
@@ -39,15 +45,13 @@ const groupA: Group = {
 
 function apcMessage(message: Record<string, unknown>) {
   act(() => {
-    useStore.setState((state) => ({
-      midiMessages: [...state.midiMessages, {
+    useStore.getState().addMidiMessage({
         _type: 'noteon',
         source: 'Akai APC40',
         velocity: 127,
         ...message,
-        timestamp: Date.now() + state.midiMessages.length,
-      } as any],
-    }));
+        timestamp: Date.now() + useStore.getState().midiMessages.length,
+      } as any);
   });
 }
 
@@ -81,10 +85,10 @@ describe('useApc40Workflow', () => {
     } as any);
   });
 
-  it('publishes live APC target state when Track Select chooses a group', async () => {
+  it('publishes live APC target state when Activator chooses a group', async () => {
     renderHook(() => useApc40Workflow());
 
-    apcMessage({ channel: 0, note: 0x33 });
+    apcMessage({ channel: 0, note: 0x32 });
 
     await waitFor(() => {
       const state = useStore.getState();
@@ -92,14 +96,14 @@ describe('useApc40Workflow', () => {
       expect(state.apc40CrossfaderState.activeTrackIndex).toBe(0);
       expect(state.apc40CrossfaderState.activeGroupId).toBe('group-a');
       expect(state.apc40CrossfaderState.activeFixtureIds).toEqual(['fixture-a', 'fixture-b']);
-      expect(state.apc40CrossfaderState.activeTargetLabel).toBe('Track 1: Front Wash');
+      expect(state.apc40CrossfaderState.activeTargetLabel).toBe('Group 1: Front Wash');
     });
   });
 
-  it('saves then recalls a Deck A scene from Record Arm plus clip grid', async () => {
+  it('saves then recalls a Deck A scene from transport REC plus clip grid', async () => {
     renderHook(() => useApc40Workflow());
 
-    apcMessage({ channel: 1, note: 0x30 });
+    apcMessage({ channel: 0, note: 0x5d });
     apcMessage({ channel: 1, note: 0x35 });
 
     await waitFor(() => {
@@ -116,6 +120,36 @@ describe('useApc40Workflow', () => {
 
     await waitFor(() => {
       expect(useStore.getState().activeSceneName).toBe('APC40 Deck A 02');
+    });
+  });
+
+  it('saves Deck B when SHIFT is held for the clip after transport REC', async () => {
+    renderHook(() => useApc40Workflow());
+
+    apcMessage({ channel: 0, note: 0x5d });
+    apcMessage({ channel: 0, note: 0x62 });
+    apcMessage({ channel: 1, note: 0x35 });
+
+    await waitFor(() => {
+      const scene = useStore.getState().scenes.find((candidate) => candidate.name === 'APC40 Deck B 02');
+      expect(scene?.channelValues[0]).toBe(111);
+      expect(scene?.channelValues[1]).toBe(77);
+      expect(useStore.getState().apc40CrossfaderState.sceneBName).toBe('APC40 Deck B 02');
+    });
+  });
+
+  it('rolls dice on SHIFT+REC without entering save mode or saving a clip', async () => {
+    renderHook(() => useApc40Workflow());
+
+    apcMessage({ channel: 0, note: 0x62 });
+    apcMessage({ channel: 0, note: 0x5d });
+
+    await waitFor(() => {
+      const state = useStore.getState();
+      expect(state.scenes).toEqual([]);
+      expect(state.apc40CrossfaderState.mode).toBeNull();
+      expect(state.apc40CrossfaderState.armedColumns).toEqual([]);
+      expect(state.dmxChannels.some((value, index) => index < 4 && value !== [111, 77, 77, 0][index])).toBe(true);
     });
   });
 });

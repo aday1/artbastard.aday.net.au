@@ -921,7 +921,7 @@ export const HelpOverlay: React.FC<HelpOverlayProps> = ({ embedded = false }) =>
 
             <div className={styles.section}>
               <h5>Akai APC40 MK1</h5>
-              <p><strong>The APC40 has a dedicated live integration that runs without applying any template — see the <em>APC40 Live</em> tab.</strong> Plug the device in and you get Deck A/B scene grids, ACT launch buttons, Record Arm scene saves, Super Control dimmers, Device Control gobo/effects roles, group auto, Solo/Cue, FULL ON, and crossfader scene blending. The template entries below remain as fallback SuperControl bindings.</p>
+              <p><strong>The APC40 has a dedicated live integration that runs without applying any template — see the <em>APC40 Live</em> tab.</strong> Plug the device in and you get Deck A/B scene grids, ACT launch buttons, REC then Clip scene saves, Super Control dimmers, Device Control gobo/effects roles, group/fixture selection, Record Arm solo groups, FULL ON, and crossfader scene blending. The template entries below remain as fallback SuperControl bindings.</p>
               <ul>
                 <li><strong>Track faders 1-8:</strong> SuperControl dimmer for selected fixture slots 1-8.</li>
                 <li><strong>Master fader:</strong> SuperControl masterDimmer for the current selection.</li>
@@ -951,7 +951,7 @@ Content-Type: application/json
         return (
           <div className={styles.tabContent}>
             <h4>🎛️ APC40 MK1 Live Integration</h4>
-            <p>The APC40 MK1 binds to ArtBastard automatically — no template apply required. Clip Launch / Session View is Deck A, hold SHIFT for Deck B, Scene Launch fires ACTS, Record Arm saves scene slots, Device Control follows selected fixture roles, and the crossfader blends active Deck A/B scenes. Optional ACT seeds can fill Scene Launch 1-5 after scenes exist. Full button-by-button reference: <code>DOCS/APC40_CHEATSHEET.md</code>.</p>
+            <p>The APC40 MK1 binds to ArtBastard automatically — no template apply required. Clip Launch / Session View is Deck A, hold SHIFT for Deck B, REC then Clip saves scene slots, Scene Launch fires ACTS, Record Arm soloes groups, Device Control follows selected fixture roles, and the crossfader blends active Deck A/B scenes. Optional ACT seeds can fill Scene Launch 1-5 after scenes exist. Full button-by-button reference: <code>DOCS/APC40_CHEATSHEET.md</code>.</p>
 
             <div className={styles.section}>
               <h5>At a glance</h5>
@@ -962,7 +962,9 @@ Content-Type: application/json
                 <tbody>
                   <tr><td><strong>Clip Grid 8x5</strong></td><td>Launch 40 Deck A scene slots</td><td>green = saved, orange-blink = active</td></tr>
                   <tr><td><strong>SHIFT + Grid</strong></td><td>Launch/save 40 Deck B scene slots</td><td>SHIFT orange while held</td></tr>
-                  <tr><td><strong>Record Arm 1-8</strong></td><td>Arm column; next grid pad saves current deck slot</td><td>red on armed columns</td></tr>
+                  <tr><td><strong>REC then Clip Grid</strong></td><td>Save current DMX into the pressed deck slot</td><td>REC and grid red-blink in save mode</td></tr>
+                  <tr><td><strong>SHIFT+REC</strong></td><td>Roll fresh random DMX values for preview</td><td>n/a</td></tr>
+                  <tr><td><strong>Record Arm 1-8</strong></td><td>Solo Group N latch</td><td>red-blink while soloed</td></tr>
                   <tr><td><strong>Scene Launch 1-5</strong></td><td>Launch ACT 1-5</td><td>green = ACT exists, orange-blink = playing</td></tr>
                   <tr><td><strong>Clip Stop row</strong></td><td>Stop/unselect the active scene for the current deck</td><td>red while deck scene active</td></tr>
                   <tr><td><strong>Stop All Clips</strong></td><td>Stop Deck A/B scenes and ACT playback</td><td>red while active</td></tr>
@@ -984,7 +986,8 @@ Content-Type: application/json
               <p>Scene slot names are stable: <code>APC40 Deck A 01</code> through <code>APC40 Deck A 40</code>, and <code>APC40 Deck B 01</code> through <code>APC40 Deck B 40</code>.</p>
               <ul>
                 <li>Leave SHIFT released for Deck A, or hold SHIFT for Deck B.</li>
-                <li>Press Record Arm for a column, then press a grid pad in that column to save current DMX into that deck slot.</li>
+                <li>Press REC, then press a grid pad to save current DMX into that deck slot.</li>
+                <li>For Deck B, press REC first, then hold SHIFT while pressing the grid pad. SHIFT+REC rolls dice and does not save.</li>
                 <li>Press a saved grid pad to launch it. Empty pads warn instead of capturing accidentally.</li>
               </ul>
             </div>

@@ -6,7 +6,7 @@
  * Event sources, in order:
  *  - Zustand store: selectedFixtures, isTransitioning, apc40CrossfaderState.activeDeck, bridgeConnected
  *  - dmxStore: blackout
- *  - window CustomEvents: apc40:clip-launch, router:view-change, roli-device-change
+ *  - window CustomEvents: apc40:clip-launch
  */
 
 import { useEffect, useRef } from 'react';
@@ -82,18 +82,7 @@ export function useApc40FlourishOrchestrator(): void {
       const detail = (ev as CustomEvent<{ row: number; col: number }>).detail;
       triggerFlourish('clipLaunch', { row: detail?.row ?? 0, column: detail?.col ?? 0 });
     };
-    const onViewChange = () => {
-      triggerFlourish('tabChange');
-    };
-    const onRoliChange = () => {
-      // Treat any ROLI device-list change as a connection event; the engine
-      // dedupes via diff-skip on the APC40 side.
-      triggerFlourish('connectionUp', { durationMs: 240 });
-    };
-
     window.addEventListener('apc40:clip-launch', onClipLaunch);
-    window.addEventListener('router:view-change', onViewChange);
-    window.addEventListener('roli-device-change', onRoliChange);
 
     return () => {
       // Hook is single-mount; cast through unknown so TS accepts the
@@ -102,8 +91,6 @@ export function useApc40FlourishOrchestrator(): void {
       (unsubMain as unknown as (() => void) | undefined)?.();
       (unsubDmx as unknown as (() => void) | undefined)?.();
       window.removeEventListener('apc40:clip-launch', onClipLaunch);
-      window.removeEventListener('router:view-change', onViewChange);
-      window.removeEventListener('roli-device-change', onRoliChange);
     };
   }, []);
 }
