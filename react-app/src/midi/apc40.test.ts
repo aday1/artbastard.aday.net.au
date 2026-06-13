@@ -256,6 +256,15 @@ describe('APC40 workflow decoder', () => {
     });
   });
 
+  it('does not decode standalone APC40 channel-9 CC burst fragments as Master Select', () => {
+    expect(decodeApc40Message({ _type: 'cc', source: 'Akai APC40', channel: 8, controller: 0x12, value: 0 })).toBeNull();
+    expect(decodeApc40Message({ _type: 'cc', source: 'Akai APC40', channel: 8, controller: 0x13, value: 0 })).toBeNull();
+    expect(decodeApc40Message({ _type: 'cc', source: 'Akai APC40', channel: 8, controller: 0x14, value: 4 })).toBeNull();
+    expect(decodeApc40Message({ _type: 'cc', source: 'Akai APC40', channel: 8, controller: 0x15, value: 0 })).toBeNull();
+    expect(decodeApc40Message({ _type: 'cc', source: 'Akai APC40', channel: 8, controller: 0x16, value: 1 })).toBeNull();
+    expect(decodeApc40Message({ _type: 'cc', source: 'Akai APC40', channel: 8, controller: 0x17, value: 0 })).toBeNull();
+  });
+
   it('decodes device control, cue level, and shift press/release', () => {
     expect(decodeApc40Message({
       _type: 'cc',

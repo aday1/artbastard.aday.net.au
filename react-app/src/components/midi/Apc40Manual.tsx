@@ -471,11 +471,21 @@ export const Apc40Manual: React.FC = () => {
                 {Array.from({ length: 4 }).map((_, idx) => (
                   <div key={idx} className={styles.trackButton} style={{ background: APC40_CATEGORY_COLORS.utility, visibility: 'hidden' }}>·</div>
                 ))}
+                {(() => {
+                  const masterFreezeActive = activeKey === 'cc:8:20'
+                    || activeKey === 'note:8:51'
+                    || activeKey === 'note:0:80';
+                  const masterFreezeMuted = shouldMuteControl('cc:8:20', false)
+                    && shouldMuteControl('note:8:51', false)
+                    && shouldMuteControl('note:0:80', false);
+                  return (
                 <div
-                  className={`${styles.trackButton} ${shouldMuteControl('note:0:80', false) ? styles.focusMuted : ''}`}
+                  className={`${styles.trackButton} ${masterFreezeActive ? styles.active : ''} ${masterFreezeMuted ? styles.focusMuted : ''}`}
                   style={{ background: dmxFrozen ? '#ef4444' : APC40_CATEGORY_COLORS.utility }}
-                  title="Master Select → FREEZE DMX latch. Press once to freeze output; press again to unfreeze and flush current state."
+                  title="Master Select → FREEZE DMX latch. APC40 may emit this as Ch 9 CC20. Press once to freeze output; press again to unfreeze and flush current state."
                 >{dmxFrozen ? 'MSTR FRZ' : 'FREEZE'}</div>
+                  );
+                })()}
                 <div
                   className={`${styles.fader} ${styles.masterFader} ${activeKey === `cc:${masterFaderBinding?.channel ?? 0}:${masterFaderBinding?.controller ?? 14}` ? styles.active : ''} ${isLearningKey('masterDimmer') ? styles.learning : ''} ${shouldMuteControl(`cc:${masterFaderBinding?.channel ?? 0}:${masterFaderBinding?.controller ?? 14}`, Boolean(masterFaderBinding)) ? styles.focusMuted : ''}`}
                   title={`${masterFaderBinding?.label ?? 'Master Fader -> Master Dimmer'} - click to re-learn\n${bindingTargetSummary(masterFaderBinding)}`}

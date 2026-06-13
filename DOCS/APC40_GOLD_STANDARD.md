@@ -226,7 +226,7 @@ This section is the code-backed truth table for the current app. If the implemen
 | Device On/Off (Device block) | Note `0x3b`, channel `0` | `blackout` -> BLACKOUT latch | ON snapshots DMX and zeros all channels; OFF restores. |
 | Crossfader | CC `0x0f`, channel `0` | `crossfader` -> `blendApc40DeckScenes` | Blends the currently assigned Deck A and Deck B scenes. If either deck has no scene, there is no DMX blend update. |
 | Track Select 1-8 | Note `0x33`, MIDI channels `0`-`7` | unmapped | Intentionally not routed; APC40 emits unreliable CCs in some modes. Selection lives on Solo/Cue + Activator. |
-| Master Select | Note `0x33`, MIDI channel `8` | `toggle-freeze-dmx` -> `setDmxFrozen(!dmxFrozen)` | Press once to freeze output and light the Master LED; press again to unfreeze and flush current state. |
+| Master Select | Note `0x33`, MIDI channel `8`; observed APC40 MK1 alternate: Ch 9 CC20 value > 0 | `toggle-freeze-dmx` -> `setDmxFrozen(!dmxFrozen)` | Press once to freeze output and light the Master LED; press again to unfreeze and flush current state. CC18/19/21/23 zeroes and CC22 status in the same burst are ignored. |
 | Solo/Cue 1-8 | Note `0x31`, MIDI channel = track index | `select-fixture` | ON selects fixture N; OFF removes it. |
 | Activator 1-8 | Note `0x32`, MIDI channel = track index | `select-group` | ON adds fixture group N; OFF removes it. |
 | Track Stop 1-8 | Note `0x34`, MIDI channel = track index | `track-stop` | Clears the current deck scene in that column when it matches; otherwise clears the current deck scene. |

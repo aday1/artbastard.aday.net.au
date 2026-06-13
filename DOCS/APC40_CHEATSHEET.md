@@ -60,7 +60,7 @@ APC40 MK1 factory MIDI mode and works without applying a MIDI template.
 | **Clip Stop row** | Stop/unselect the active scene for that column in the current deck | red while a deck scene is active |
 | **Stop All Clips** | Stop Deck A scene, Deck B scene, scene timeline playback, and ACT playback | red while a deck scene or ACT is active |
 | **Track Select 1-8** | **UNMAPPED** — APC40 hardware emits unreliable CCs in some modes (CC bleed). Selection lives on Solo/Cue + Activator. | LEDs always off |
-| **Master Track Select** | **FREEZE DMX latch** — press once to freeze rig output, press again to unfreeze and flush current store state. | red while frozen, off while live |
+| **Master Track Select** | **FREEZE DMX latch** — press once to freeze rig output, press again to unfreeze and flush current store state. APC40 MK1 may report this as Ch 9 CC20. | red while frozen, off while live |
 | **Faders 1-8** | SuperControl dimmer for selected fixture slot 1-8 | n/a |
 | **Master fader** | SuperControl `masterDimmer`/DIMMER for current selection | n/a |
 | **Device Control knobs 1-8** | Dynamic fixture role controls, prioritizing gobo/effects roles for the selected fixture/group | in-app APC40 manual labels current roles |

@@ -36,6 +36,8 @@ function nextInCycle<T extends string>(values: readonly T[], current: T): T {
 
 const TRACK_SELECT_ENCODER_SUPPRESSION_MS = 250;
 const APC40_NOTE_RELEASE_WINDOW_MS = 350;
+const APC40_FREEZE_TOGGLE_DEBOUNCE_MS = 450;
+const APC40_MASTER_CC_BURST_WINDOW_MS = 180;
 
 function sortedColumns(columns: Set<number>): number[] {
   return Array.from(columns).sort((a, b) => a - b);
@@ -123,6 +125,8 @@ export function useApc40Workflow() {
 
   const lastSignature = useRef('');
   const lastSignatureAtRef = useRef(0);
+  const lastFreezeToggleAtRef = useRef(0);
+  const masterCcBurstRef = useRef<Map<number, { value: number; at: number }>>(new Map());
   const recentPositiveNoteRef = useRef<Map<string, number>>(new Map());
   const handleApc40MessageRef = useRef<(message: any) => void>(() => {});
   const shiftHeldRef = useRef(false);
@@ -194,6 +198,66 @@ export function useApc40Workflow() {
       deviceBankAtEnd: deviceBankCount <= 0 || deviceRoleBankRef.current >= maxDeviceBankIndex,
       ...patch,
     });
+  };
+
+  const toggleMasterFreeze = (state: StoreState, now: number) => {
+    if (now - lastFreezeToggleAtRef.current <= APC40_FREEZE_TOGGLE_DEBOUNCE_MS) {
+      publishSurfaceState();
+      return true;
+    }
+    lastFreezeToggleAtRef.current = now;
+    const nextFrozen = !state.dmxFrozen;
+    state.setDmxFrozen(nextFrozen);
+    publishSurfaceState({
+      lastChange: makeLastChange(
+        'transport',
+        'Master Select',
+        nextFrozen ? 'DMX OUTPUT FROZEN' : 'DMX output released',
+        nextFrozen
+          ? 'Master LED is on. Backend send is suppressed while the GUI keeps reflecting state.'
+          : 'Master LED is off. Backend send is re-enabled and the current store state was flushed to the rig.'
+      ),
+    });
+    state.addNotification({
+      message: nextFrozen ? 'APC40 Master FREEZE latched — press Master again to unfreeze' : 'APC40 Master FREEZE released',
+      type: nextFrozen ? 'warning' : 'info',
+      priority: nextFrozen ? 'high' : 'normal',
+    });
+    return true;
+  };
+
+  const consumeMasterCcBurst = (message: any, now: number): boolean => {
+    const type = message.type || message._type;
+    const channel = typeof message.channel === 'number' ? message.channel : 0;
+    if (type !== 'cc' && type !== 'controlchange') return false;
+    if (channel !== 8 || typeof message.controller !== 'number') return false;
+    if (message.controller < 0x12 || message.controller > 0x17) return false;
+
+    const value = message.value ?? message.velocity ?? 0;
+    masterCcBurstRef.current.set(message.controller, { value, at: now });
+    for (const [controller, entry] of masterCcBurstRef.current.entries()) {
+      if (now - entry.at > APC40_MASTER_CC_BURST_WINDOW_MS) {
+        masterCcBurstRef.current.delete(controller);
+      }
+    }
+
+    // Observed APC40 MK1 Master Select burst:
+    // Ch 9 CC18=0, CC19=0, CC20=4, CC21=0, CC22=1, CC23=0.
+    // Device Control knob 5 can also emit CC20, so CC20 alone must never toggle.
+    if (message.controller !== 0x16 || value <= 0) return false;
+    const hasRecent = (controller: number, expectedValue: number) => {
+      const entry = masterCcBurstRef.current.get(controller);
+      return Boolean(entry && entry.value === expectedValue && now - entry.at <= APC40_MASTER_CC_BURST_WINDOW_MS);
+    };
+    const matchesMasterBurst =
+      hasRecent(0x12, 0) &&
+      hasRecent(0x13, 0) &&
+      hasRecent(0x14, 4) &&
+      hasRecent(0x15, 0);
+    if (!matchesMasterBurst) return false;
+
+    masterCcBurstRef.current.clear();
+    return toggleMasterFreeze(useStore.getState(), now);
   };
 
   const setDeckScene = (deck: Apc40Deck, slotIndex: number | null, sceneName: string | null) => {
@@ -319,6 +383,8 @@ export function useApc40Workflow() {
     if (signature === lastSignature.current && now - lastSignatureAtRef.current < 35) return;
     lastSignature.current = signature;
     lastSignatureAtRef.current = now;
+
+    if (consumeMasterCcBurst(message, now)) return;
 
     const action = decodeApc40Message(message);
     if (!action) return;
@@ -1109,23 +1175,7 @@ export function useApc40Workflow() {
     }
 
     if (action.type === 'toggle-freeze-dmx') {
-      const nextFrozen = !state.dmxFrozen;
-      state.setDmxFrozen(nextFrozen);
-      publishSurfaceState({
-        lastChange: makeLastChange(
-          'transport',
-          'Master Select',
-          nextFrozen ? 'DMX OUTPUT FROZEN' : 'DMX output released',
-          nextFrozen
-            ? 'Master LED is on. Backend send is suppressed while the GUI keeps reflecting state.'
-            : 'Master LED is off. Backend send is re-enabled and the current store state was flushed to the rig.'
-        ),
-      });
-      state.addNotification({
-        message: nextFrozen ? 'APC40 Master FREEZE latched — press Master again to unfreeze' : 'APC40 Master FREEZE released',
-        type: nextFrozen ? 'warning' : 'info',
-        priority: nextFrozen ? 'high' : 'normal',
-      });
+      toggleMasterFreeze(state, now);
       return;
     }
 

@@ -32,7 +32,7 @@ transport:
   navSceneNext: 0x61
   selectAll: 0x57
   stopAll: 0x51
-  masterButton: 0x33 # channel 8; toggles DMX FREEZE
+  masterButton: 0x33 # channel 8 note fallback; Ch 9 CC20 burst toggles DMX FREEZE in some modes
 master:
   master: 0x0e
   crossfader: 0x0f
@@ -183,7 +183,7 @@ is in effect. `controlName` must be a SuperControl role name from
 | trackSelect    | selection  | Track Select (1-8) \u2014 UNMAPPED        | Reserved \u2014 APC40 hardware emits unreliable CCs in some modes, so selection lives on Solo/Cue and Activator instead.                                  |
 | trackStop      | utility    | Clip Stop row                        | Stop/unselect the active scene in that column for the current deck.                                                                                  |
 | stopAll        | utility    | Stop All Clips                       | Stop all Deck A/B scenes and ACT playback.                                                                                                           |
-| masterButton   | utility    | Master Select \u2014 FREEZE DMX           | Press once to freeze DMX output and light the Master LED; press again to unfreeze and flush current store state.                                     |
+| masterButton   | utility    | Master Select \u2014 FREEZE DMX           | Press once to freeze DMX output and light the Master LED; press again to unfreeze and flush current store state. APC40 MK1 may emit this as Ch 9 CC20 instead of Note 0x33. |
 | fullOn         | effect     | Clip/Track \u2014 FULL ON                | ON raises patched fixture channels to 255 and snapshots prior DMX; OFF restores the snapshot.                                                        |
 | blackout       | effect     | Device On/Off \u2014 BLACKOUT             | ON snapshots DMX and zeros all channels; OFF restores. LED on the device lights while latched.                                                       |
 | freezeDmx      | utility    | Detail View \u2014 FREEZE DMX             | ON freezes DMX output while UI/store continues; OFF releases and flushes current state to backend.                                                   |

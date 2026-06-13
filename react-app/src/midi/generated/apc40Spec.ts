@@ -890,7 +890,7 @@ export const APC40_CATALOG: Apc40CatalogEntry[] = [
     "key": "masterButton",
     "category": "utility",
     "label": "Master Select \\u2014 FREEZE DMX",
-    "description": "Press once to freeze DMX output and light the Master LED; press again to unfreeze and flush current store state."
+    "description": "Press once to freeze DMX output and light the Master LED; press again to unfreeze and flush current store state. APC40 MK1 may emit this as Ch 9 CC20 instead of Note 0x33."
   },
   {
     "key": "fullOn",

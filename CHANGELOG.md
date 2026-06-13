@@ -9,6 +9,7 @@ All notable changes to this project are documented here.
 - Public showcase and docs index now advertise the v5.2.12.0 hard line, including the SuperControl remaster, BPM header, and stateful APC40 surface.
 - APC40 healthcheck coverage for PAN, SEND A/B/C, FULL ON, BLACKOUT, FREEZE, Rec Quantization, MIDI Overdub, Metronome, nav arrows, Master Select FREEZE, and the intentionally unmapped Track Select row.
 - DMX Activity monitor now logs APC40 FREEZE/UNFREEZE events even when no DMX channel value changes.
+- Master Select FREEZE now recognizes the observed APC40 MK1 Ch 9 CC20 burst and ignores the surrounding CC18/19/21/22/23 status noise.
 - APC40 Track Control and Device Control encoder rings now mirror current ArtBastard DMX values only for capabilities that exist on the selected fixture/group; unavailable rings stay off.
 - Project YAML round-trip extended to a full backup/restore: new `config.yaml` (Art-Net/OSC), `layout.yaml` (stage map + master sliders), and `presets.yaml` (browser preset library) sections. `Download all (full backup)` button bundles all eight files so a clean install can be losslessly restored.
 - Fixture docs reorganised by category (`DOCS/fixtures/{LASER,LED-EFFECT,MOVING-HEAD,PAR,UV}/`) so the catalog can be browsed by type. Favourites unaffected — they reference stable fixture id.

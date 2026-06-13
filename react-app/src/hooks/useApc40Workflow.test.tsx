@@ -325,6 +325,52 @@ describe('useApc40Workflow', () => {
     });
   });
 
+  it('toggles DMX FREEZE from the APC40 channel-9 CC burst Master Select emits', async () => {
+    renderHook(() => useApc40Workflow());
+
+    apcMessage({ _type: 'cc', type: 'cc', channel: 8, controller: 0x12, value: 0, timestamp: 1000 });
+    apcMessage({ _type: 'cc', type: 'cc', channel: 8, controller: 0x13, value: 0, timestamp: 1010 });
+    apcMessage({ _type: 'cc', type: 'cc', channel: 8, controller: 0x14, value: 4, timestamp: 1020 });
+    apcMessage({ _type: 'cc', type: 'cc', channel: 8, controller: 0x15, value: 0, timestamp: 1030 });
+    apcMessage({ _type: 'cc', type: 'cc', channel: 8, controller: 0x16, value: 1, timestamp: 1040 });
+    apcMessage({ _type: 'cc', type: 'cc', channel: 8, controller: 0x17, value: 0, timestamp: 1050 });
+
+    await waitFor(() => {
+      const state = useStore.getState();
+      expect(state.dmxFrozen).toBe(true);
+      expect(state.apc40CrossfaderState.lastChange?.controlLabel).toBe('Master Select');
+      expect(state.apc40CrossfaderState.lastChange?.summary).toContain('FROZEN');
+    });
+
+    apcMessage({ _type: 'cc', type: 'cc', channel: 8, controller: 0x14, value: 4, timestamp: 1080 });
+
+    await waitFor(() => {
+      expect(useStore.getState().dmxFrozen).toBe(true);
+    });
+
+    apcMessage({ _type: 'cc', type: 'cc', channel: 8, controller: 0x12, value: 0, timestamp: 1700 });
+    apcMessage({ _type: 'cc', type: 'cc', channel: 8, controller: 0x13, value: 0, timestamp: 1710 });
+    apcMessage({ _type: 'cc', type: 'cc', channel: 8, controller: 0x14, value: 4, timestamp: 1720 });
+    apcMessage({ _type: 'cc', type: 'cc', channel: 8, controller: 0x15, value: 0, timestamp: 1730 });
+    apcMessage({ _type: 'cc', type: 'cc', channel: 8, controller: 0x16, value: 1, timestamp: 1740 });
+    apcMessage({ _type: 'cc', type: 'cc', channel: 8, controller: 0x17, value: 0, timestamp: 1750 });
+
+    await waitFor(() => {
+      expect(useStore.getState().dmxFrozen).toBe(false);
+    });
+  });
+
+  it('does not toggle DMX FREEZE from standalone Device Control knob 5 CC20', async () => {
+    renderHook(() => useApc40Workflow());
+
+    apcMessage({ _type: 'cc', type: 'cc', channel: 8, controller: 0x14, value: 4, timestamp: 1000 });
+    apcMessage({ _type: 'cc', type: 'cc', channel: 8, controller: 0x14, value: 8, timestamp: 1400 });
+
+    await waitFor(() => {
+      expect(useStore.getState().dmxFrozen).toBe(false);
+    });
+  });
+
   it('clamps APC40 Device Left/Right banks at first and last pages', async () => {
     renderHook(() => useApc40Workflow());
 
