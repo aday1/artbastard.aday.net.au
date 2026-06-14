@@ -14,6 +14,7 @@ const SCREENSAVER_IDLE_MS = Math.max(1000, Math.min(600000, Number(process.env.R
 const SCREENSAVER_FRAME_MS = Math.max(40, Math.min(1000, Number(process.env.ROLI_SERVER_SCREENSAVER_FRAME_MS) || 140));
 const TOUCH_TRAIL_POINTS = Math.max(8, Math.min(120, Number(process.env.ROLI_SERVER_TOUCH_TRAIL_POINTS) || 56));
 const SERVER_ROLI_ROLE = /^colou?r|wheel|strip$/i.test(process.env.ROLI_SERVER_ROLE || '') ? 'colour-wheel' : 'primary';
+const LED_SEND_RETRY_MS = Math.max(1000, Math.min(60000, Number(process.env.ROLI_SERVER_LED_RETRY_MS) || 8000));
 
 const BITMAP_LED_DUMP_1 =
   '02 01 00 30 5A 3E 47 0B 20 01 3A 00 10 71 01 12 4B 31 09 08 60 46 5F 25 11 40 05 02 28 61 01 17 54 11 40 10 36 78 21 12 6D 1C 30 5B 00 2E 28 63 00 23 6C 70 43 24 5A 39 60 32 01 28 09 41 0D 3E 28 24 10 1B 04 51 48 1A 0A 08 22 09 1B 2C 30 45 0D 2E 08 24 20 1B 1C 00 5B 6C 50 41 16 36 58 20 10 01 6D 50 40 2D 36 58 60 0B 01 6D 70 40 2D 3A 78 3F 00 0F 1C 78 4F 07 2E 28 78 08 19 04 52 06 15 01 48 24 00 21 64 10 48 1A 02 18 60 0C 01 4C 70 40 05 7C 3F 00 7F 0F 60 7F 03 78 7F 00 7E 1F 40 7F 07 70 7F 01 7C 3F 00 7F 0F 60 7F 03 78 7F 00 7E 1F 40 7F 07 70 7F 01 7C 3F 00 7F 0F 00';
@@ -37,6 +38,9 @@ export interface ServerRoliStatus {
   screensaverActive: boolean;
   browserClientCount: number;
   lastBrowserSeenAt: number | null;
+  ledSendFailureCount: number;
+  nextLedSendAttemptAt: number | null;
+  lastLedSendErrorAt: number | null;
 }
 
 interface ServerRoliState {
@@ -70,6 +74,9 @@ interface ServerRoliState {
   browserClientCount: number;
   lastBrowserSeenAt: number | null;
   touchTrail: Array<{ x: number; y: number }>;
+  nextLedSendAttemptAt: number | null;
+  ledSendFailureCount: number;
+  lastLedSendErrorAt: number | null;
 }
 
 const state: ServerRoliState = {
@@ -103,6 +110,9 @@ const state: ServerRoliState = {
   browserClientCount: 0,
   lastBrowserSeenAt: Date.now(),
   touchTrail: [],
+  nextLedSendAttemptAt: null,
+  ledSendFailureCount: 0,
+  lastLedSendErrorAt: null,
 };
 
 function isRoliLikeName(name: string): boolean {
@@ -617,15 +627,37 @@ function sendNextLedPacket(): void {
     }
     return;
   }
+  if (state.nextLedSendAttemptAt && Date.now() < state.nextLedSendAttemptAt) return;
   const next = state.ledQueue.shift()!;
-  state.output.send('sysex', buildBlockSysEx(HOST_DEVICE_INDEX, next));
-  state.sysexTx += 1;
-  state.lastEventAt = Date.now();
-  log('ROLI server LED packet', 'MIDI', { remaining: state.ledQueue.length, bytes: next.length, output: state.outputName, verboseOnly: true });
+  try {
+    state.output.send('sysex', buildBlockSysEx(HOST_DEVICE_INDEX, next));
+    state.sysexTx += 1;
+    state.lastEventAt = Date.now();
+    state.ledSendFailureCount = 0;
+    state.nextLedSendAttemptAt = null;
+    log('ROLI server LED packet', 'MIDI', { remaining: state.ledQueue.length, bytes: next.length, output: state.outputName, verboseOnly: true });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    state.lastError = `ROLI LED send failed: ${errorMessage}`;
+    state.ledSendFailureCount += 1;
+    state.nextLedSendAttemptAt = Date.now() + LED_SEND_RETRY_MS;
+    state.lastLedSendErrorAt = Date.now();
+    state.ledQueue = [];
+    state.pendingLedData = null;
+    stopServerRoliScreensaver('led-send-error');
+    log('ROLI server LED send failed; pausing LED output', 'WARN', {
+      error: errorMessage,
+      output: state.outputName,
+      retryMs: LED_SEND_RETRY_MS,
+      failureCount: state.ledSendFailureCount,
+    });
+    emitStatus();
+  }
 }
 
 function sendLedData(newLed: Uint8Array, forceFullFrame = false): boolean {
   if (!state.output || !state.handshakeDone) return false;
+  if (state.nextLedSendAttemptAt && Date.now() < state.nextLedSendAttemptAt) return false;
   if (state.ledQueue.length > 0) return false;
   let prev = state.prevLedData;
   if (forceFullFrame) {
@@ -635,7 +667,7 @@ function sendLedData(newLed: Uint8Array, forceFullFrame = false): boolean {
   state.ledQueue = buildDataChangeMessages(newLed, prev);
   state.pendingLedData = newLed;
   sendNextLedPacket();
-  return true;
+  return state.ledQueue.length > 0 || state.pendingLedData !== newLed || !state.lastError?.startsWith('ROLI LED send failed:');
 }
 
 function createTestFrame(): Uint8ClampedArray {
@@ -768,6 +800,7 @@ export function disconnectServerRoli(): void {
   state.pingTimer = null;
   state.ledQueue = [];
   state.pendingLedData = null;
+  state.nextLedSendAttemptAt = null;
   emitStatus();
 }
 
@@ -798,5 +831,8 @@ export function getServerRoliStatus(): ServerRoliStatus {
     screensaverActive: state.screensaverActive,
     browserClientCount: state.browserClientCount,
     lastBrowserSeenAt: state.lastBrowserSeenAt,
+    ledSendFailureCount: state.ledSendFailureCount,
+    nextLedSendAttemptAt: state.nextLedSendAttemptAt,
+    lastLedSendErrorAt: state.lastLedSendErrorAt,
   };
 }
