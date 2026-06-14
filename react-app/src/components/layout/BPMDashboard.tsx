@@ -36,6 +36,13 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
     abletonLinkPeers,
     abletonLinkAvailable,
     selectedMidiClockHostId,
+    midiClockInputs,
+    selectedMidiClockInputName,
+    lastMidiClockInputName,
+    lastMidiClockInputAt,
+    midiClockInputStatus,
+    requestMidiClockInputList,
+    requestSetMidiClockInput,
     setManualBpm,
     recordTapTempo,
     requestToggleMasterClockPlayPause,
@@ -175,6 +182,18 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
   const quickSceneBName = apc40DeckSceneName('B', quickSceneSlotIndex);
   const quickSceneAReady = scenes.some((scene) => scene.name === quickSceneAName);
   const quickSceneBReady = scenes.some((scene) => scene.name === quickSceneBName);
+  const externalMidiClockDevice = lastMidiClockInputName || selectedMidiClockInputName;
+  const lastMidiClockSeenLabel = lastMidiClockInputAt
+    ? new Date(lastMidiClockInputAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    : 'No clock seen';
+  const midiClockStatusLabel =
+    midiClockInputStatus === 'receiving'
+      ? 'Receiving'
+      : midiClockInputStatus === 'listening'
+        ? 'Listening'
+        : midiClockInputStatus === 'selected'
+          ? 'Selected'
+          : 'No input';
   const sourceLabel =
     autoSceneTempoSource === 'ableton_link'
       ? `Ableton Link${abletonLinkAvailable ? ` (${abletonLinkPeers})` : ' unavailable'}`
@@ -183,8 +202,15 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
         : autoSceneTempoSource === 'internal_clock'
           ? selectedMidiClockHostId === 'ableton-link'
             ? `Ableton Link${abletonLinkAvailable ? ` (${abletonLinkPeers})` : ''}`
-            : 'MIDI Clock'
+            : selectedMidiClockHostId === 'midi-input'
+              ? `MIDI In${externalMidiClockDevice ? `: ${externalMidiClockDevice}` : ''}`
+              : 'Server Clock'
           : 'Manual BPM';
+
+  useEffect(() => {
+    if (!socketIsConnected) return;
+    requestMidiClockInputList();
+  }, [socketIsConnected, requestMidiClockInputList]);
 
   useEffect(() => {
     if (!midiClockIsPlaying) return;
@@ -221,6 +247,20 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
       requestMasterClockSourceChange('ableton-link');
     } else if (source === 'internal_clock' || source === 'tap_tempo') {
       requestMasterClockSourceChange('internal');
+    }
+  };
+
+  const selectExternalMidiClock = () => {
+    setAutoSceneTempoSource('internal_clock');
+    requestMidiClockInputList();
+    if (selectedMidiClockInputName) {
+      requestMasterClockSourceChange('midi-input');
+    } else {
+      addNotification({
+        message: 'Pick a MIDI clock input in Settings > MIDI & OSC first',
+        type: 'warning',
+        priority: 'normal',
+      });
     }
   };
 
@@ -294,10 +334,10 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
             <select value={autoSceneTempoSource} onChange={(e)=>{
               const v = e.target.value as any; selectTempoSource(v);
             }} className={styles.sourceSelect}>
-              <option value="manual_bpm">Internal</option>
+              <option value="manual_bpm">Manual</option>
               <option value="tap_tempo">Tap</option>
-              <option value="internal_clock">MIDI Clock</option>
-              <option value="ableton_link">Ableton Link</option>
+              <option value="internal_clock">Server</option>
+              <option value="ableton_link">Link</option>
             </select>
           </div>
           <div className={`${styles.quickStatus} ${isPlaying ? styles.playing : ''}`}>
@@ -331,7 +371,7 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
                 className={`${styles.sourceButton} ${autoSceneTempoSource === 'manual_bpm' ? styles.active : ''}`}
                 onClick={() => selectTempoSource('manual_bpm')}
               >
-                Internal
+                Manual
               </button>
               <button
                 className={`${styles.sourceButton} ${autoSceneTempoSource === 'tap_tempo' ? styles.active : ''}`}
@@ -340,10 +380,17 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
                 Tap
               </button>
               <button
-                className={`${styles.sourceButton} ${autoSceneTempoSource === 'internal_clock' ? styles.active : ''}`}
+                className={`${styles.sourceButton} ${autoSceneTempoSource === 'internal_clock' && selectedMidiClockHostId !== 'midi-input' ? styles.active : ''}`}
                 onClick={() => selectTempoSource('internal_clock')}
               >
-                MIDI Clock
+                Server
+              </button>
+              <button
+                className={`${styles.sourceButton} ${selectedMidiClockHostId === 'midi-input' ? styles.active : ''}`}
+                onClick={selectExternalMidiClock}
+                title={externalMidiClockDevice ? `Use external MIDI clock from ${externalMidiClockDevice}` : 'Pick a MIDI clock input in MIDI & OSC settings'}
+              >
+                MIDI In
               </button>
               <button
                 className={`${styles.sourceButton} ${autoSceneTempoSource === 'ableton_link' ? styles.active : ''}`}
@@ -358,6 +405,38 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
                 Session tempo from Ableton Link. Install optional dependency on the Node server if unavailable.
               </p>
             )}
+            <div className={styles.clockDeviceRow}>
+              <label htmlFor="bpm-midi-clock-input">Clock input</label>
+              <select
+                id="bpm-midi-clock-input"
+                value={selectedMidiClockInputName || ''}
+                onChange={(event) => {
+                  const inputName = event.target.value;
+                  if (!inputName) return;
+                  setAutoSceneTempoSource('internal_clock');
+                  requestSetMidiClockInput(inputName);
+                }}
+                disabled={midiClockInputs.length === 0}
+                title="Server MIDI input used for external MIDI clock"
+              >
+                <option value="">
+                  {midiClockInputs.length === 0 ? 'No inputs' : 'Select input'}
+                </option>
+                {midiClockInputs.map((inputName) => (
+                  <option key={inputName} value={inputName}>
+                    {inputName}
+                  </option>
+                ))}
+              </select>
+              <span className={`${styles.clockDeviceStatus} ${styles[midiClockInputStatus]}`}>
+                {midiClockStatusLabel}
+              </span>
+            </div>
+            <p className={styles.linkHint}>
+              {externalMidiClockDevice
+                ? `External source ${externalMidiClockDevice} · ${lastMidiClockSeenLabel}`
+                : 'No external MIDI clock input selected.'}
+            </p>
           </div>
 
           <div className={styles.transportSection}>
@@ -389,6 +468,9 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
               <span>{midiClockCurrentBar || 1}.{midiClockCurrentBeat || 1}</span>
               <span>{Math.round(currentBpm)} BPM</span>
               <span>{sourceLabel}</span>
+              {selectedMidiClockHostId === 'midi-input' && (
+                <span>{midiClockStatusLabel}</span>
+              )}
             </div>
           </div>
 
@@ -715,9 +797,17 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
               <div className={styles.statusItem}>
                 <span className={styles.statusLabel}>Source:</span>
                 <span className={styles.statusValue}>
-                  {autoSceneTempoSource === 'tap_tempo' ? 'MIDI Clock' : 'Internal'}
+                  {sourceLabel}
                 </span>
               </div>
+              {selectedMidiClockHostId === 'midi-input' && (
+                <div className={styles.statusItem}>
+                  <span className={styles.statusLabel}>Clock Input:</span>
+                  <span className={styles.statusValue}>
+                    {externalMidiClockDevice || 'None'} · {midiClockStatusLabel}
+                  </span>
+                </div>
+              )}
               <div className={styles.statusItem}>
                 <span className={styles.statusLabel}>Current BPM:</span>
                 <span className={`${styles.statusValue} ${styles.bpmHighlight}`}>{currentBpm}</span>

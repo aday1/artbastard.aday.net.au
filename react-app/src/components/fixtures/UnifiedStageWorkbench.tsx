@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { useStore } from '../../store';
 import { LucideIcon } from '../ui/LucideIcon';
+import SuperControl from '../dmx/SuperControl';
 import { ShowBuilderPanel } from './ShowBuilderPanel';
+import { StageMapDashboard } from './StageMapDashboard';
 import { Apc40SurfaceDiagram } from '../midi/Apc40SurfaceDiagram';
 import styles from './UnifiedStageWorkbench.module.scss';
 
@@ -39,10 +41,13 @@ export const UnifiedStageWorkbench: React.FC<UnifiedStageWorkbenchProps> = ({ mo
     apc40State: s.apc40CrossfaderState,
   }));
 
-  const activeTarget = apc40State.activeTargetLabel;
+  const activeTarget = apc40State.activeTargetLabel || 'No APC40 target selected';
+  const highlightedGroup = apc40State.activeGroupId
+    ? groups.find((group) => group.id === apc40State.activeGroupId)
+    : null;
 
   return (
-    <section className={styles.workbench} aria-label="Unified stage workbench">
+    <section className={`${styles.workbench} ${mode === 'apc' ? styles.apcWorkbench : ''}`} aria-label="Unified stage workbench">
       <div className={styles.tabStrip} role="tablist">
         {TABS.map((tab) => (
           <button
@@ -88,21 +93,34 @@ export const UnifiedStageWorkbench: React.FC<UnifiedStageWorkbenchProps> = ({ mo
       )}
 
       {mode === 'apc' && (
-        <div className={`${styles.bodySlot} ${styles.apcBody}`} aria-label="APC40 map-first workflow">
-          <div className={styles.apcVisualizerPanel}>
-            <div className={styles.apcVisualHeader}>
-              <div>
-                <span>APC40 Visualizer</span>
-                <strong>{activeTarget || 'Track Select chooses groups or fixtures'}</strong>
-              </div>
-              <ul>
-                <li><b>Track Select</b><span>stage target</span></li>
-                <li><b>Faders</b><span>dimmers</span></li>
-                <li><b>Device Control</b><span>gobo / color / prism / focus</span></li>
-                <li><b>Grid + Crossfader</b><span>Deck A/B scenes</span></li>
-              </ul>
+        <div className={`${styles.bodySlot} ${styles.apcBody}`} aria-label="APC40 SuperControl workflow">
+          <div className={styles.stagePanel}>
+            <div className={styles.apcModeHeader}>
+              <span>Stage view</span>
+              <strong>{activeTarget}</strong>
             </div>
-            <Apc40SurfaceDiagram mode="fixtures" compact showBothDecks title="APC40 Visualizer" />
+            <StageMapDashboard
+              title="APC40 stage view"
+              subtitle={
+                highlightedGroup
+                  ? `Track ${(apc40State.activeTrackIndex ?? 0) + 1} -> ${highlightedGroup.name} (${highlightedGroup.fixtureIndices.length} fixtures)`
+                  : `${fixtures.length} fixtures · ${groups.length} groups · ${scenes.length} scenes`
+              }
+              highlightGroupId={apc40State.activeGroupId}
+              highlightFixtureIds={apc40State.activeFixtureIds}
+              highlightLabel={apc40State.activeTargetLabel}
+              maxGroupChips={6}
+            />
+          </div>
+          <div className={styles.apcOverview}>
+            <div className={styles.apcModeHeader}>
+              <span>APC40 map</span>
+              <strong>Deck {apc40State.activeDeck} · {scenes.length} scene slots</strong>
+            </div>
+            <Apc40SurfaceDiagram mode="fixtures" compact showBothDecks title="controls, labels, assignments" />
+          </div>
+          <div className={styles.superControlPanel}>
+            <SuperControl isDockable={false} preferTouchLayout embeddedWorkbench />
           </div>
         </div>
       )}

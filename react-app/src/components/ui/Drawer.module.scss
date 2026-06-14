@@ -2,7 +2,7 @@
   position: fixed;
   inset: 0;
   z-index: var(--z-modal-backdrop, 1040);
-  background: rgba(2, 6, 23, 0.55);
+  background: color-mix(in srgb, var(--color-background, #020617) 58%, transparent);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   display: flex;
@@ -15,11 +15,15 @@
 }
 
 .panel {
-  background: var(--color-surface, #1a1a1a);
+  --color-text-primary: var(--modal-text, var(--window-text, #ffffff));
+  --text-primary: var(--modal-text, var(--window-text, #ffffff));
+  --text-secondary: var(--modal-text-secondary, var(--window-text-secondary, #cbd5e1));
+  --text-tertiary: var(--modal-text-tertiary, var(--window-text-tertiary, #94a3b8));
+  background: var(--modal-bg, var(--color-surface, #1a1a1a));
   color: var(--color-text-primary, #ffffff);
   display: flex;
   flex-direction: column;
-  box-shadow: 0 24px 48px -8px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-strong, 0 24px 48px -8px rgba(0, 0, 0, 0.5));
   outline: none;
   overflow: hidden;
   // Default panel surface is full-bleed; the side variants pin it.

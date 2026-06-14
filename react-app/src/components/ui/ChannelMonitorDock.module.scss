@@ -1,20 +1,24 @@
 .dock {
+  --text-primary: var(--dock-text, var(--window-text, #dbeafe));
+  --text-secondary: var(--dock-text-secondary, var(--window-text-secondary, #94a3b8));
+  --text-tertiary: var(--dock-text-tertiary, var(--window-text-tertiary, #64748b));
   position: fixed;
   z-index: 120;
   display: flex;
   flex-direction: column;
-  border: 1px solid rgba(0, 212, 255, 0.3);
+  border: 1px solid var(--dock-border, color-mix(in srgb, var(--color-primary, #00d4ff) 45%, transparent));
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 4.5rem),
-    linear-gradient(90deg, rgba(8, 12, 22, 0.82), rgba(12, 18, 32, 0.98));
+    linear-gradient(180deg, color-mix(in srgb, var(--color-primary, #00d4ff) 7%, transparent), transparent 4.5rem),
+    var(--dock-bg, var(--modal-bg, var(--color-card-bg, rgba(12, 18, 32, 0.98))));
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  box-shadow: -8px 0 28px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--shadow-strong, -8px 0 28px rgba(0, 0, 0, 0.45));
   overflow: hidden;
   min-width: 42px;
   min-height: 42px;
   max-width: calc(100vw - 24px);
   max-height: calc(100dvh - 24px - var(--safe-top, 0px) - var(--safe-bottom, 0px));
+  color: var(--dock-text, var(--text-primary, #dbeafe));
 }
 
 .dockRight {
@@ -29,19 +33,19 @@
   right: calc(0.75rem + var(--safe-right, 0px));
   bottom: calc(0.75rem + var(--safe-bottom, 0px));
   border-radius: 10px;
-  box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--shadow-strong, 0 -8px 28px rgba(0, 0, 0, 0.45));
 }
 
 .dockFloating {
   border-radius: 10px;
-  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-strong, 0 14px 36px rgba(0, 0, 0, 0.5));
 }
 
 .collapsed {
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.42);
+  box-shadow: var(--shadow-md, 0 8px 24px rgba(0, 0, 0, 0.42));
 }
 
 .dockRight.collapsed {
@@ -61,8 +65,8 @@
   justify-content: space-between;
   gap: 5px;
   padding: 4px 5px 4px 8px;
-  border-bottom: 1px solid rgba(0, 212, 255, 0.22);
-  background: rgba(5, 8, 16, 0.78);
+  border-bottom: 1px solid color-mix(in srgb, var(--dock-border, var(--color-primary, #00d4ff)) 66%, transparent);
+  background: color-mix(in srgb, var(--window-bg, var(--color-card-bg, #050810)) 86%, var(--color-primary, #00d4ff) 14%);
   min-height: 31px;
 }
 
@@ -75,7 +79,7 @@
   align-items: center;
   gap: 6px;
   min-width: 0;
-  color: #9deaff;
+  color: var(--color-primary, #9deaff);
   font-size: 0.62rem;
   font-weight: 800;
   letter-spacing: 0;
@@ -104,9 +108,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(148, 163, 184, 0.3);
-  background: rgba(15, 23, 42, 0.78);
-  color: #dbeafe;
+  border: 1px solid var(--window-border, rgba(148, 163, 184, 0.3));
+  background: var(--input-bg, rgba(15, 23, 42, 0.78));
+  color: var(--text-primary, #dbeafe);
   cursor: pointer;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
@@ -117,9 +121,9 @@
     transform 0.15s ease;
 
   &:hover {
-    border-color: rgba(0, 212, 255, 0.72);
-    background: rgba(14, 34, 55, 0.88);
-    color: #ffffff;
+    border-color: color-mix(in srgb, var(--color-primary, #00d4ff) 72%, var(--window-border, transparent));
+    background: var(--bg-hover, rgba(14, 34, 55, 0.88));
+    color: var(--text-primary, #ffffff);
   }
 
   &:active {
@@ -154,9 +158,9 @@
 }
 
 .active {
-  border-color: rgba(0, 212, 255, 0.9);
-  background: rgba(0, 212, 255, 0.18);
-  color: #ffffff;
+  border-color: color-mix(in srgb, var(--color-primary, #00d4ff) 82%, var(--window-border, transparent));
+  background: color-mix(in srgb, var(--color-primary, #00d4ff) 20%, transparent);
+  color: var(--text-primary, #ffffff);
 }
 
 .collapsedButton {
@@ -174,7 +178,7 @@
   min-height: 34px;
   padding: 0 9px;
   border-radius: 999px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.42);
+  box-shadow: var(--shadow-md, 0 8px 24px rgba(0, 0, 0, 0.42));
   font-size: 0.66rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -187,13 +191,17 @@
   cursor: ns-resize;
   background: linear-gradient(
     180deg,
-    rgba(0, 212, 255, 0.26) 0%,
-    rgba(0, 212, 255, 0.06) 100%
+    color-mix(in srgb, var(--color-primary, #00d4ff) 28%, transparent) 0%,
+    color-mix(in srgb, var(--color-primary, #00d4ff) 8%, transparent) 100%
   );
-  border-bottom: 1px solid rgba(0, 212, 255, 0.18);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-primary, #00d4ff) 18%, transparent);
 
   &:hover {
-    background: linear-gradient(180deg, rgba(0, 212, 255, 0.5), rgba(0, 212, 255, 0.12));
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-primary, #00d4ff) 50%, transparent),
+      color-mix(in srgb, var(--color-primary, #00d4ff) 12%, transparent)
+    );
   }
 }
 
@@ -207,12 +215,16 @@
   cursor: ew-resize;
   background: linear-gradient(
     90deg,
-    rgba(0, 212, 255, 0.28) 0%,
-    rgba(0, 212, 255, 0.06) 100%
+    color-mix(in srgb, var(--color-primary, #00d4ff) 28%, transparent) 0%,
+    color-mix(in srgb, var(--color-primary, #00d4ff) 6%, transparent) 100%
   );
 
   &:hover {
-    background: linear-gradient(90deg, rgba(0, 212, 255, 0.5), rgba(0, 212, 255, 0.14));
+    background: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--color-primary, #00d4ff) 50%, transparent),
+      color-mix(in srgb, var(--color-primary, #00d4ff) 14%, transparent)
+    );
   }
 }
 
@@ -227,7 +239,7 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
-  scrollbar-color: rgba(0, 212, 255, 0.45) rgba(255, 255, 255, 0.06);
+  scrollbar-color: color-mix(in srgb, var(--color-primary, #00d4ff) 45%, transparent) color-mix(in srgb, var(--text-primary, #fff) 6%, transparent);
 
   &::-webkit-scrollbar {
     width: 6px;
@@ -235,12 +247,12 @@
   }
 
   &::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.06);
+    background: color-mix(in srgb, var(--text-primary, #fff) 6%, transparent);
     border-radius: 999px;
   }
 
   &::-webkit-scrollbar-thumb {
-    background: rgba(0, 212, 255, 0.45);
+    background: color-mix(in srgb, var(--color-primary, #00d4ff) 45%, transparent);
     border-radius: 999px;
   }
 }

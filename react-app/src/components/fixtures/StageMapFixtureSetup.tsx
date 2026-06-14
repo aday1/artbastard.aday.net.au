@@ -65,13 +65,15 @@ const makeGroup = (name: string, fixtureIndices: number[]): Group => ({
 const fixtureEndAddress = (fixture: Fixture) => fixture.startAddress + fixture.channels.length - 1;
 const CHANNEL_PREVIEW_LIMIT = 8;
 const STAGE_MAP_LAYOUT_KEY = 'artbastard.stageMap.layout.v1';
+const MIN_APC_WORKBENCH_HEIGHT = 460;
+const MAX_APC_WORKBENCH_HEIGHT = 720;
 
 interface StagePaneLayoutState {
   apcWorkbenchHeight: number;
 }
 
 const DEFAULT_STAGE_PANE_LAYOUT: StagePaneLayoutState = {
-  apcWorkbenchHeight: 360,
+  apcWorkbenchHeight: 460,
 };
 
 const clampNumber = (value: number, min: number, max: number) => Math.max(min, Math.min(max, Math.round(value)));
@@ -79,7 +81,11 @@ const clampNumber = (value: number, min: number, max: number) => Math.max(min, M
 function normalizeStagePaneLayout(raw: unknown): StagePaneLayoutState {
   const parsed = raw && typeof raw === 'object' ? raw as Partial<StagePaneLayoutState> : {};
   return {
-    apcWorkbenchHeight: clampNumber(typeof parsed.apcWorkbenchHeight === 'number' ? parsed.apcWorkbenchHeight : DEFAULT_STAGE_PANE_LAYOUT.apcWorkbenchHeight, 220, 720),
+    apcWorkbenchHeight: clampNumber(
+      typeof parsed.apcWorkbenchHeight === 'number' ? parsed.apcWorkbenchHeight : DEFAULT_STAGE_PANE_LAYOUT.apcWorkbenchHeight,
+      MIN_APC_WORKBENCH_HEIGHT,
+      MAX_APC_WORKBENCH_HEIGHT
+    ),
   };
 }
 
@@ -179,7 +185,10 @@ export const StageMapFixtureSetup: React.FC = () => {
       const deltaY = clientY - drag.startY;
       setPaneLayout((prev) => {
         if (drag.target === 'apcWorkbench') {
-          return { ...prev, apcWorkbenchHeight: clampNumber(drag.startValue + deltaY, 220, 720) };
+          return {
+            ...prev,
+            apcWorkbenchHeight: clampNumber(drag.startValue + deltaY, MIN_APC_WORKBENCH_HEIGHT, MAX_APC_WORKBENCH_HEIGHT),
+          };
         }
         return prev;
       });

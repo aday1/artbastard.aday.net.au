@@ -96,6 +96,87 @@
   padding: 1rem;
 }
 
+.clockSourcePanel {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.clockSourceReadout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+  font-size: 0.78rem;
+  color: var(--text-secondary, var(--color-text-secondary, #94a3b8));
+
+  span {
+    min-height: 1.65rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.55rem;
+    border: 1px solid var(--border-color-subtle, rgba(148, 163, 184, 0.18));
+    border-radius: 4px;
+    background: var(--bg-primary-accent, rgba(0, 0, 0, 0.06));
+  }
+
+  b {
+    color: var(--text-primary, var(--color-text, #fff));
+  }
+}
+
+.clockStatusPill {
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+
+  &.receiving {
+    color: var(--color-success, #22c55e);
+    border-color: color-mix(in srgb, var(--color-success, #22c55e) 55%, transparent);
+    background: color-mix(in srgb, var(--color-success, #22c55e) 15%, transparent);
+  }
+
+  &.listening,
+  &.selected {
+    color: var(--color-warning, #f59e0b);
+    border-color: color-mix(in srgb, var(--color-warning, #f59e0b) 48%, transparent);
+    background: color-mix(in srgb, var(--color-warning, #f59e0b) 12%, transparent);
+  }
+
+  &.none {
+    color: var(--text-secondary, #94a3b8);
+  }
+}
+
+.clockSourceControls {
+  display: grid;
+  grid-template-columns: auto minmax(220px, 1fr) auto auto;
+  gap: 0.5rem;
+  align-items: center;
+
+  label {
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: var(--text-secondary, var(--color-text-secondary, #94a3b8));
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  select {
+    min-width: 0;
+    width: 100%;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--color-card-border, var(--border-color, #334155));
+    border-radius: var(--border-radius-sm, 4px);
+    background: var(--input-bg, var(--color-card-bg, #0f172a));
+    color: var(--text-primary, var(--color-text, #fff));
+  }
+
+  .refreshButton {
+    margin-top: 0;
+  }
+}
+
 .interfaceList {
   display: flex;
   flex-direction: column;
@@ -658,4 +739,16 @@
   color: var(--color-text-secondary);
   font-style: italic;
   font-size: 0.9rem;
+}
+
+@media (max-width: 760px) {
+  .clockSourceControls {
+    grid-template-columns: 1fr;
+
+    .refreshButton,
+    .actionButton {
+      width: 100%;
+      justify-content: center;
+    }
+  }
 }

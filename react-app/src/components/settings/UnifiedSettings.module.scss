@@ -11,6 +11,21 @@
   background: var(--bg-primary, #1a1a1a);
 
   .panel {
+    --settings-text: var(--window-text, var(--text-primary, #ffffff));
+    --settings-text-muted: var(--window-text-secondary, var(--text-secondary, #cccccc));
+    --settings-text-dim: var(--window-text-tertiary, var(--text-tertiary, #999999));
+    --text-primary: var(--settings-text);
+    --text-secondary: var(--settings-text-muted);
+    --text-tertiary: var(--settings-text-dim);
+    --color-text: var(--settings-text);
+    --color-text-muted: var(--settings-text-muted);
+    --border-color: var(--window-border, #333);
+    --bg-primary: color-mix(in srgb, var(--window-bg, #1a1a1a) 88%, var(--settings-text, #ffffff) 12%);
+    --bg-secondary: var(--window-bg, #2a2a2a);
+    --bg-tertiary: color-mix(in srgb, var(--window-bg, #2a2a2a) 82%, var(--settings-text, #ffffff) 18%);
+    --bg-hover: color-mix(in srgb, var(--window-bg, #2a2a2a) 84%, var(--color-primary, #007acc) 16%);
+    --input-bg: color-mix(in srgb, var(--window-bg, #1a1a1a) 90%, var(--settings-text, #ffffff) 10%);
+    --header-bg: color-mix(in srgb, var(--window-bg, #2a2a2a) 88%, var(--settings-text, #ffffff) 12%);
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -19,33 +34,51 @@
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     overflow: hidden;
+    color: var(--settings-text, #ffffff);
 
     .panelHeader {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 16px 20px;
+      gap: 12px;
+      padding: 10px 12px;
       background: var(--header-bg, #333);
       border-bottom: 1px solid var(--border-color, #444);
+
+      .panelTitleBlock {
+        min-width: 0;
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
 
       .panelTitle {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 8px;
         margin: 0;
-        font-size: 18px;
+        font-size: 15px;
         font-weight: 600;
         color: var(--text-primary, #ffffff);
 
         i {
           color: var(--accent-color, #007acc);
-          font-size: 20px;
+          font-size: 15px;
         }
+      }
+
+      .panelMeta {
+        color: var(--text-secondary, #cccccc);
+        font-size: 11px;
+        font-weight: 600;
       }
 
       .panelActions {
         display: flex;
-        gap: 8px;
+        gap: 6px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
 
         .actionButton,
         .dangerButton {
@@ -87,6 +120,54 @@
             background: rgba(255, 68, 68, 0.1);
             border-color: var(--error-color, #ff4444);
           }
+        }
+      }
+    }
+
+    .tabNavigation {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 10px;
+      background: var(--bg-tertiary, #1a1a1a);
+      border-bottom: 1px solid var(--border-color, #333);
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: thin;
+
+      .tabButton {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        min-height: 32px;
+        padding: 6px 10px;
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        color: var(--text-secondary, #cccccc);
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+        white-space: nowrap;
+
+        &:hover {
+          background: var(--bg-hover, #333);
+          color: var(--text-primary, #ffffff);
+        }
+
+        &.active {
+          background: color-mix(in srgb, var(--accent-color, #007acc) 18%, transparent);
+          color: var(--text-primary, #ffffff);
+          border-color: color-mix(in srgb, var(--accent-color, #007acc) 55%, transparent);
+        }
+
+        i {
+          width: 14px;
+          text-align: center;
+          font-size: 12px;
         }
       }
     }
@@ -146,8 +227,8 @@
         flex: 1;
         overflow-y: auto;
         overflow-x: hidden;
-        padding: 20px;
-        padding-bottom: 40px; // Extra padding at bottom to prevent cutoff
+        padding: 12px;
+        padding-bottom: 24px;
 
         .settingsOverview {
           display: grid;
@@ -939,36 +1020,18 @@
 
 /* Responsive Design */
 @media (max-width: 1024px) {
-  .unifiedSettings .panel .panelContent {
-    flex-direction: column;
-
+  .unifiedSettings .panel {
     .tabNavigation {
-      width: 100%;
-      flex-direction: row;
-      overflow-x: auto;
       padding: 8px;
-      border-right: none;
-      border-bottom: 1px solid var(--border-color, #333);
 
       .tabButton {
-        min-width: 120px;
-        padding: 8px 12px;
-        border-radius: 6px;
-        margin-right: 4px;
-
-        &.active {
-          border-right: none;
-          border-bottom: 3px solid var(--accent-color, #007acc);
-        }
+        min-width: max-content;
+        padding: 6px 9px;
       }
     }
 
-    .settingsContent {
-      padding: 16px;
-
-      .settingsOverview {
-        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-      }
+    .panelContent .settingsContent {
+      padding: 12px;
 
       .settingsSection .settingGroup .themeOptions {
         grid-template-columns: 1fr;
@@ -989,30 +1052,26 @@
   .unifiedSettings .panel {
     .panelHeader {
       flex-direction: column;
-      gap: 12px;
+      gap: 8px;
       align-items: stretch;
 
       .panelActions {
-        justify-content: center;
+        justify-content: flex-start;
 
         .actionButton,
         .dangerButton {
-          flex: 1;
+          flex: 0 1 auto;
           justify-content: center;
         }
       }
     }
 
+    .tabNavigation {
+      padding: 6px;
+    }
+
     .panelContent .settingsContent {
       padding: 12px;
-
-      .settingsOverview {
-        grid-template-columns: 1fr;
-      }
-
-      .settingsOverviewCard {
-        min-height: 78px;
-      }
 
       .settingsSection .settingGroup {
         .settingInput,

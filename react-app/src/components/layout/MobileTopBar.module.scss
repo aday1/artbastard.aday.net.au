@@ -52,12 +52,12 @@
   -webkit-tap-highlight-color: transparent;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--bg-hover, rgba(255, 255, 255, 0.06));
   }
 
   &:active {
     transform: scale(0.96);
-    background: rgba(255, 255, 255, 0.1);
+    background: color-mix(in srgb, var(--color-primary, #fb923c) 12%, var(--bg-hover, transparent));
   }
 
   &:focus-visible {
@@ -87,11 +87,11 @@
   -webkit-tap-highlight-color: transparent;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--bg-hover, rgba(255, 255, 255, 0.06));
   }
 
   &:active {
-    background: rgba(255, 255, 255, 0.1);
+    background: color-mix(in srgb, var(--color-primary, #fb923c) 12%, var(--bg-hover, transparent));
   }
 
   &:focus-visible {
@@ -193,11 +193,11 @@
   -webkit-tap-highlight-color: transparent;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--bg-hover, rgba(255, 255, 255, 0.05));
   }
 
   &:active {
-    background: rgba(255, 255, 255, 0.08);
+    background: color-mix(in srgb, var(--color-primary, #fb923c) 12%, var(--bg-hover, transparent));
   }
 }
 
@@ -213,7 +213,7 @@
   width: 36px;
   height: 36px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--color-primary, #fb923c) 8%, var(--color-surface, transparent));
   color: inherit;
   flex-shrink: 0;
 }

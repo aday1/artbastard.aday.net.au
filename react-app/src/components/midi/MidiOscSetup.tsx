@@ -111,6 +111,31 @@ export const MidiOscSetup: React.FC = () => {
   const activeInterfaces = useStore(state => state.activeInterfaces)
   const setMidiInterfaces = useStore(state => state.setMidiInterfaces)
   const setActiveInterfaces = useStore(state => state.setActiveInterfaces)
+  const {
+    midiClockInputs,
+    selectedMidiClockInputName,
+    lastMidiClockInputName,
+    lastMidiClockInputAt,
+    midiClockInputStatus,
+    selectedMidiClockHostId,
+    midiClockBpm,
+    midiClockIsPlaying,
+    requestMidiClockInputList,
+    requestSetMidiClockInput,
+    requestMasterClockSourceChange,
+  } = useStore(state => ({
+    midiClockInputs: state.midiClockInputs,
+    selectedMidiClockInputName: state.selectedMidiClockInputName,
+    lastMidiClockInputName: state.lastMidiClockInputName,
+    lastMidiClockInputAt: state.lastMidiClockInputAt,
+    midiClockInputStatus: state.midiClockInputStatus,
+    selectedMidiClockHostId: state.selectedMidiClockHostId,
+    midiClockBpm: state.midiClockBpm,
+    midiClockIsPlaying: state.midiClockIsPlaying,
+    requestMidiClockInputList: state.requestMidiClockInputList,
+    requestSetMidiClockInput: state.requestSetMidiClockInput,
+    requestMasterClockSourceChange: state.requestMasterClockSourceChange,
+  }))
   const { connectMidiInterface, disconnectMidiInterface, refreshMidiInterfaces } = useStore(state => ({
     connectMidiInterface: (name: string) => {
       if (socket && connected) {
@@ -190,6 +215,11 @@ export const MidiOscSetup: React.FC = () => {
       }
     }
   }, [socket, connected, setMidiInterfaces, setActiveInterfaces])
+
+  useEffect(() => {
+    if (!connected) return;
+    requestMidiClockInputList();
+  }, [connected, requestMidiClockInputList])
 
   // Listen for OSC status updates
   useEffect(() => {
@@ -370,6 +400,23 @@ export const MidiOscSetup: React.FC = () => {
     [midiInterfaces, activeInterfaces, browserInputs, activeBrowserInputs],
   )
   const totalConnected = activeInterfaces.length + activeBrowserInputs.length
+  const isExternalMidiClockSelected = selectedMidiClockHostId === 'midi-input'
+  const activeClockInputName = lastMidiClockInputName || selectedMidiClockInputName
+  const lastClockSeenLabel = lastMidiClockInputAt
+    ? new Date(lastMidiClockInputAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    : 'No clock seen'
+  const midiClockStatusLabel =
+    midiClockInputStatus === 'receiving'
+      ? 'Receiving clock'
+      : midiClockInputStatus === 'listening'
+        ? 'Listening'
+        : midiClockInputStatus === 'selected'
+          ? 'Selected'
+          : 'No input selected'
+  const selectMidiClockInput = (inputName: string) => {
+    if (!inputName) return
+    requestSetMidiClockInput(inputName)
+  }
 
   return (
     <div className={styles.midiOscSetup}>
@@ -570,6 +617,88 @@ export const MidiOscSetup: React.FC = () => {
       )}
 
       <div className={styles.setupGrid}>
+        <div className={`${styles.card} ${styles.fullWidth}`}>
+          <div className={styles.cardHeader}>
+            <h3 title="External MIDI clock input used by the master tempo clock">
+              MIDI Clock Input
+            </h3>
+            <span className={styles.cardHeaderMeta}>
+              {midiClockStatusLabel}
+              {activeClockInputName ? ` · ${activeClockInputName}` : ''}
+            </span>
+          </div>
+          <div className={styles.cardBody}>
+            <div className={styles.clockSourcePanel}>
+              <div className={styles.clockSourceReadout}>
+                <span className={`${styles.clockStatusPill} ${styles[midiClockInputStatus]}`}>
+                  {midiClockStatusLabel}
+                </span>
+                <span>
+                  Source: <b>{activeClockInputName || 'None'}</b>
+                </span>
+                <span>
+                  Master: <b>{isExternalMidiClockSelected ? 'External MIDI' : 'Not using external MIDI'}</b>
+                </span>
+                <span>
+                  BPM: <b>{Number.isFinite(midiClockBpm) ? midiClockBpm.toFixed(1) : '—'}</b>
+                  {midiClockIsPlaying ? ' · running' : ' · stopped'}
+                </span>
+                <span>Last seen: <b>{lastClockSeenLabel}</b></span>
+              </div>
+
+              <div className={styles.clockSourceControls}>
+                <label htmlFor="midi-clock-input-select">Read clock from</label>
+                <select
+                  id="midi-clock-input-select"
+                  value={selectedMidiClockInputName || ''}
+                  onChange={(event) => selectMidiClockInput(event.target.value)}
+                  disabled={!connected || midiClockInputs.length === 0}
+                  title="Choose the server MIDI input that should provide external MIDI clock"
+                >
+                  <option value="">
+                    {midiClockInputs.length === 0 ? 'No server MIDI inputs found' : 'Select MIDI clock input'}
+                  </option>
+                  {midiClockInputs.map((inputName) => (
+                    <option key={inputName} value={inputName}>
+                      {inputName}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  className={styles.refreshButton}
+                  onClick={() => {
+                    handleRefreshMidi()
+                    requestMidiClockInputList()
+                  }}
+                  disabled={isRefreshing}
+                  title="Refresh server MIDI devices and clock-capable inputs"
+                >
+                  {isRefreshing ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-sync-alt"></i>}
+                  Refresh
+                </button>
+                <button
+                  className={`${styles.actionButton} ${styles.connectButton}`}
+                  onClick={() => {
+                    if (selectedMidiClockInputName) {
+                      requestMasterClockSourceChange('midi-input')
+                    }
+                  }}
+                  disabled={!connected || !selectedMidiClockInputName}
+                  title="Switch the master clock to the selected external MIDI input"
+                >
+                  <i className="fas fa-clock"></i>
+                  Use for Clock
+                </button>
+              </div>
+
+              <p className={styles.cardDescription}>
+                This is the dedicated MIDI clock reader. Pick the input that sends timing messages; it does not need to be connected as a controller above.
+                Browser-only Web MIDI devices cannot drive the server clock until they also appear under Server MIDI.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Server MIDI Interface Card */}
         <div className={styles.card}>
           <button

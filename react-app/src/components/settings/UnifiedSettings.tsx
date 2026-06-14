@@ -689,50 +689,7 @@ export const UnifiedSettings: React.FC = () => {
     { id: 'projectIo', label: 'Project YAML', icon: 'fas fa-file-code' }
   ];
 
-  const settingsOverviewCards = [
-    {
-      id: 'general',
-      title: 'Operate',
-      summary: `${theme} theme, ${darkMode ? 'dark' : 'light'} mode`,
-      detail: `${dmxFaderOrientation} faders`,
-      icon: 'fas fa-sliders-h',
-    },
-    {
-      id: 'network',
-      title: 'Output',
-      summary: connected ? 'Socket connected' : 'Socket disconnected',
-      detail: networkSettings.artnetEnabled ? `Art-Net ${networkSettings.port}` : 'Art-Net disabled',
-      icon: 'fas fa-network-wired',
-    },
-    {
-      id: 'midiOsc',
-      title: 'Control I/O',
-      summary: `${Object.keys(midiMappings).length} MIDI mappings`,
-      detail: 'MIDI, OSC, browser MIDI',
-      icon: 'fas fa-plug',
-    },
-    {
-      id: 'theme',
-      title: 'Look',
-      summary: serverSyncPending ? 'Appearance syncing' : 'Appearance synced',
-      detail: `${savedThemes.length} saved custom themes`,
-      icon: 'fas fa-palette',
-    },
-    {
-      id: 'projectIo',
-      title: 'Rig Data',
-      summary: `${fixtures.length} fixtures`,
-      detail: `${masterSliders.length} master sliders`,
-      icon: 'fas fa-database',
-    },
-    {
-      id: 'debug',
-      title: 'Diagnostics',
-      summary: consoleDebugEnabled ? 'Console debug enabled' : 'Console debug off',
-      detail: getVersionDisplay(),
-      icon: 'fas fa-stethoscope',
-    },
-  ];
+  const activeSectionLabel = settingsSections.find((section) => section.id === activeSection)?.label ?? 'Settings';
 
   const colorTabOptions: Array<{
     id: ColorTabId;
@@ -797,11 +754,15 @@ export const UnifiedSettings: React.FC = () => {
       <div className={styles.panel}>
         {/* Panel Header */}
         <div className={styles.panelHeader}>
-          <h2 className={styles.panelTitle}>
-            <i className="fas fa-cog"></i>
-            {theme === 'artsnob' && 'Configuration Sanctuary'}
-            {theme === 'standard' && 'Configuration & Settings'}
-          </h2>
+          <div className={styles.panelTitleBlock}>
+            <h2 className={styles.panelTitle}>
+              <i className="fas fa-cog"></i>
+              Settings
+            </h2>
+            <span className={styles.panelMeta}>
+              {activeSectionLabel} · {connected ? 'socket connected' : 'socket offline'} · {getVersionDisplay()}
+            </span>
+          </div>
           <div className={styles.panelActions}>
             <button 
               className={styles.actionButton}
@@ -834,42 +795,26 @@ export const UnifiedSettings: React.FC = () => {
           </div>
         </div>
 
+        {/* Navigation Tabs */}
+        <div className={styles.tabNavigation} role="tablist" aria-label="Settings sections">
+          {settingsSections.map(section => (
+            <button
+              key={section.id}
+              role="tab"
+              aria-selected={activeSection === section.id}
+              className={`${styles.tabButton} ${activeSection === section.id ? styles.active : ''}`}
+              onClick={() => setActiveSection(section.id)}
+            >
+              <i className={section.icon}></i>
+              <span>{section.label}</span>
+            </button>
+          ))}
+        </div>
+
         {/* Panel Content */}
         <div className={styles.panelContent}>
-          {/* Navigation Tabs */}
-          <div className={styles.tabNavigation}>
-            {settingsSections.map(section => (
-              <button
-                key={section.id}
-                className={`${styles.tabButton} ${activeSection === section.id ? styles.active : ''}`}
-                onClick={() => setActiveSection(section.id)}
-              >
-                <i className={section.icon}></i>
-                <span>{section.label}</span>
-              </button>
-            ))}
-          </div>
-
           {/* Settings Sections */}
           <div className={styles.settingsContent}>
-            <div className={styles.settingsOverview} aria-label="Settings overview">
-              {settingsOverviewCards.map((card) => (
-                <button
-                  key={card.id}
-                  type="button"
-                  className={`${styles.settingsOverviewCard} ${activeSection === card.id ? styles.activeOverviewCard : ''}`}
-                  onClick={() => setActiveSection(card.id)}
-                >
-                  <i className={card.icon}></i>
-                  <span>
-                    <strong>{card.title}</strong>
-                    <small>{card.summary}</small>
-                    <em>{card.detail}</em>
-                  </span>
-                </button>
-              ))}
-            </div>
-
             {/* General Settings */}
             {activeSection === 'general' && (
               <div className={styles.settingsSection}>

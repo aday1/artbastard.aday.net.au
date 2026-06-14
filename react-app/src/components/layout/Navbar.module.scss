@@ -25,7 +25,7 @@
   -webkit-backdrop-filter: blur(15px);
   border: 1px solid var(--color-border);
   border-radius: 8px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--shadow-strong, 0 10px 40px rgba(0, 0, 0, 0.35));
 
   :root[style*='--ab-rack-ui'] &,
   [data-theme='dark'] & {
@@ -299,8 +299,8 @@
 // Enhanced styling for collapsed navbar menu items  
 .navBarCollapsedState {
   .navButton {
-    background: rgba(255, 255, 255, 0.08) !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    background: color-mix(in srgb, var(--color-primary, #4ecdc4) 8%, var(--color-surface, transparent)) !important;
+    border: 1px solid color-mix(in srgb, var(--color-primary, #4ecdc4) 18%, var(--color-border, transparent)) !important;
     margin-bottom: 0 !important;
     border-radius: 8px !important;
     
@@ -312,8 +312,8 @@
     }
     
     &:hover {
-      background: rgba(255, 255, 255, 0.2) !important;
-      border-color: rgba(255, 255, 255, 0.3) !important;
+      background: var(--bg-hover, color-mix(in srgb, var(--color-primary, #4ecdc4) 18%, var(--color-surface, transparent))) !important;
+      border-color: color-mix(in srgb, var(--color-primary, #4ecdc4) 35%, var(--color-border, transparent)) !important;
       transform: scale(1.05) !important;
       
       svg {
@@ -395,13 +395,13 @@
   
   // Language-specific styles
   &.artsnob {
-    background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
-    border-color: #D2691E;
-    color: #FFF8DC;
+    background: linear-gradient(135deg, var(--rk-surface, #8B4513) 0%, var(--rk-panel, #A0522D) 100%);
+    border-color: var(--rk-accent, #D2691E);
+    color: var(--rk-label, #FFF8DC);
     
     &:hover {
-      background: linear-gradient(135deg, #A0522D 0%, #CD853F 100%);
-      border-color: #F4A460;
+      background: linear-gradient(135deg, var(--rk-panel, #A0522D) 0%, color-mix(in srgb, var(--rk-accent, #CD853F) 28%, var(--rk-panel, #A0522D)) 100%);
+      border-color: color-mix(in srgb, var(--rk-accent, #F4A460) 76%, white);
     }
   }
   

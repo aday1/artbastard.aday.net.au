@@ -313,6 +313,15 @@ try {
     // Send initial clock state and available sources
     socket.emit('masterClockUpdate', clockManager.getState());
     socket.emit('availableClockSources', clockManager.getAvailableSources());
+    void clockManager.refreshMidiInputs().then((inputs) => {
+      socket.emit('midiClockInputs', {
+        inputs,
+        currentInput: clockManager.getCurrentMidiInput(),
+      });
+    }).catch((error) => {
+      log('Failed to send initial MIDI clock inputs', 'WARN', { error: error instanceof Error ? error.message : String(error) });
+      socket.emit('midiClockInputs', { inputs: [], currentInput: clockManager.getCurrentMidiInput() });
+    });
 
     // Send currently active MIDI interfaces (if any)
     // Note: This requires access to activeMidiInputs from the MIDI module
@@ -439,14 +448,20 @@ try {
       }
       const success = await clockManager.setMidiInput(inputName);
       if (success) {
-        io.emit('midiClockInputChanged', { inputName });
+        const inputs = await clockManager.refreshMidiInputs();
+        const currentInput = clockManager.getCurrentMidiInput();
+        io.emit('midiClockInputs', { inputs, currentInput });
+        io.emit('midiClockInputChanged', {
+          inputName,
+          status: clockManager.getState().midiClockInputStatus,
+        });
         socket.emit('notification', {
           message: `MIDI Clock input set to ${inputName}`,
           type: 'success'
         });
         // If user selects an input, automatically switch clock source to midi-input
         clockManager.setSource('midi-input');
-        socket.emit('masterClockUpdate', clockManager.getState());
+        io.emit('masterClockUpdate', clockManager.getState());
       } else {
         socket.emit('notification', {
           message: `Failed to set MIDI Clock input to ${inputName}`,

@@ -1,8 +1,15 @@
 .networkStatus {
-  background: rgba(2, 6, 23, 0.82);
+  --network-text: var(--window-text, var(--text-primary, #e5edf6));
+  --network-text-muted: var(--window-text-secondary, var(--text-secondary, #94a3b8));
+  --network-text-dim: var(--window-text-tertiary, var(--text-tertiary, #64748b));
+  --text-primary: var(--network-text);
+  --text-secondary: var(--network-text-muted);
+  --text-tertiary: var(--network-text-dim);
+  background: var(--window-bg, var(--color-card-bg, rgba(2, 6, 23, 0.82)));
+  border: 1px solid var(--window-border, var(--border-color, transparent));
   border-radius: 8px;
   padding: 1rem;
-  color: #e5edf6;
+  color: var(--network-text, #e5edf6);
 
   .header {
     display: flex;
@@ -33,7 +40,7 @@
       gap: 0.75rem;
       padding: 1rem;
       border-radius: 6px;
-      background: rgba(0, 0, 0, 0.1);
+      background: var(--window-surface, color-mix(in srgb, var(--window-bg, #020617) 86%, var(--color-primary, #00d4ff) 14%));
       transition: all 0.2s ease;
 
       i {
@@ -84,7 +91,7 @@
     flex-wrap: wrap;
     gap: 1rem;
     padding: 1rem;
-    background: rgba(0, 0, 0, 0.1);
+    background: var(--window-surface, color-mix(in srgb, var(--window-bg, #020617) 86%, var(--color-primary, #00d4ff) 14%));
     border-radius: 6px;
 
     .stat {
@@ -109,7 +116,7 @@
   .dmxLogSection {
     grid-column: 1 / -1;
     margin-top: 1rem;
-    background: rgba(0, 0, 0, 0.1);
+    background: var(--window-surface, color-mix(in srgb, var(--window-bg, #020617) 88%, var(--color-primary, #00d4ff) 12%));
     border-radius: 6px;
     overflow: hidden;
 
@@ -118,7 +125,7 @@
       justify-content: space-between;
       align-items: center;
       padding: 0.75rem 1rem;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      border-bottom: 1px solid var(--border-color-subtle, color-mix(in srgb, var(--window-border, #94a3b8) 36%, transparent));
 
       h4 {
         margin: 0;
@@ -143,7 +150,7 @@
         transition: all 0.2s ease;
 
         &:hover {
-          background: rgba(255, 255, 255, 0.1);
+          background: var(--bg-hover, rgba(255, 255, 255, 0.1));
           color: var(--text-primary);
         }
       }
@@ -179,7 +186,7 @@
           align-items: center;
           gap: 0.75rem;
           padding: 0.5rem;
-          background: rgba(0, 0, 0, 0.1);
+          background: var(--input-bg, rgba(0, 0, 0, 0.1));
           border-radius: 4px;
           font-size: 0.8rem;
           font-family: 'Courier New', monospace;
@@ -527,11 +534,11 @@
 // Dark theme variations
 :global([data-theme="dark"]) {
   .networkStatus {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--window-bg, var(--color-card-bg, rgba(2, 6, 23, 0.82)));
 
     .statusGrid {
       .statusItem {
-        background: rgba(255, 255, 255, 0.05);
+        background: var(--window-surface, color-mix(in srgb, var(--window-bg, #020617) 86%, var(--color-primary, #00d4ff) 14%));
 
         &.ok {
           background: rgba(46, 213, 115, 0.1);
@@ -548,7 +555,7 @@
     }
 
     .statsSection {
-      background: rgba(255, 255, 255, 0.05);
+      background: var(--window-surface, color-mix(in srgb, var(--window-bg, #020617) 86%, var(--color-primary, #00d4ff) 14%));
     }
   }
 }
@@ -574,7 +581,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: color-mix(in srgb, var(--color-background, #020617) 70%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -592,13 +599,18 @@
     animation: slideUp 0.3s ease;
 
     // Apply glass effect for modern browsers
-    background: rgba(2, 6, 23, 0.96);
+    background: var(--modal-bg, rgba(2, 6, 23, 0.96));
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(148, 163, 184, 0.28);
-    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+    border: 1px solid var(--modal-border, rgba(148, 163, 184, 0.28));
+    box-shadow: var(--shadow-strong, 0 24px 70px rgba(0, 0, 0, 0.55));
+    color: var(--modal-text, var(--window-text, var(--text-primary, #e5edf6)));
 
     .networkStatus {
+      --network-text: var(--modal-text, var(--window-text, var(--text-primary, #e5edf6)));
+      --network-text-muted: var(--modal-text-secondary, var(--window-text-secondary, var(--text-secondary, #94a3b8)));
+      --network-text-dim: var(--modal-text-tertiary, var(--window-text-tertiary, var(--text-tertiary, #64748b)));
       background: transparent;
+      color: var(--network-text, #e5edf6);
     }
   }
 }

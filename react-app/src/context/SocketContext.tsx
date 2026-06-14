@@ -131,11 +131,16 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       // Listen for masterClockUpdate from backend
       socketInstance.on('masterClockUpdate', (data: any) => {
         debugLog.log('[SocketContext] Received masterClockUpdate:', data);
+        const normalizeMidiClockInputStatus = (status: unknown) =>
+          status === 'none' || status === 'selected' || status === 'listening' || status === 'receiving'
+            ? status
+            : undefined;
         const {
           setMidiClockBpm,
           setMidiClockIsPlaying,
           setSelectedMidiClockHostId,
           setMidiClockBeatBar,
+          setMidiClockInputTelemetry,
         } = useStore.getState();
 
         if (data && typeof data.bpm === 'number') {
@@ -149,6 +154,22 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
         if (data && typeof data.beat === 'number' && typeof data.bar === 'number') {
           setMidiClockBeatBar(data.beat, data.bar);
+        }
+        if (data && (
+          'midiClockInputName' in data ||
+          'externalMidiClockSourceName' in data ||
+          'externalMidiClockLastSeenAt' in data ||
+          'midiClockInputStatus' in data
+        )) {
+          setMidiClockInputTelemetry({
+            selectedInputName:
+              data.midiClockInputName === undefined ? undefined : data.midiClockInputName,
+            lastInputName:
+              data.externalMidiClockSourceName === undefined ? undefined : data.externalMidiClockSourceName,
+            lastInputAt:
+              data.externalMidiClockLastSeenAt === undefined ? undefined : data.externalMidiClockLastSeenAt,
+            status: normalizeMidiClockInputStatus(data.midiClockInputStatus),
+          });
         }
         if (data && (typeof data.linkPeers === 'number' || typeof data.linkAvailable === 'boolean')) {
           useStore.setState({
@@ -225,13 +246,20 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       // Listen for MIDI clock input list
       socketInstance.on('midiClockInputs', (payload: { inputs: string[]; currentInput: string | null }) => {
         debugLog.log('[SocketContext] Received midiClockInputs:', payload);
-        // For now, store them inside availableMidiClockHosts with special prefix or just log.
-        // Could extend store with dedicated state later.
+        useStore.getState().setMidiClockInputs(payload.inputs || [], payload.currentInput ?? null);
       });
 
       // Listen for MIDI clock input changed broadcast
-      socketInstance.on('midiClockInputChanged', ({ inputName }: { inputName: string }) => {
+      socketInstance.on('midiClockInputChanged', ({ inputName, status }: { inputName: string; status?: any }) => {
         debugLog.log('[SocketContext] MIDI clock input changed to:', inputName);
+        const normalizedStatus =
+          status === 'none' || status === 'selected' || status === 'listening' || status === 'receiving'
+            ? status
+            : 'selected';
+        useStore.getState().setMidiClockInputTelemetry({
+          selectedInputName: inputName || null,
+          status: normalizedStatus,
+        });
       });
 
       // Listen for DMX channel updates from backend

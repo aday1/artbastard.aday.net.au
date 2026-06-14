@@ -31,7 +31,7 @@
     height: 52px;
     font-size: 22px;
   }
-  background: linear-gradient(135deg, #007acc, #005a9e);
+  background: linear-gradient(135deg, var(--color-primary, #007acc), color-mix(in srgb, var(--color-primary, #007acc) 72%, #000));
   border: none;
   color: white;
   font-size: 24px;
@@ -47,7 +47,7 @@
     box-shadow: 
       0 8px 20px rgba(0, 122, 204, 0.4),
       0 4px 8px rgba(0, 0, 0, 0.15);
-    background: linear-gradient(135deg, #0099ff, #007acc);
+    background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary, #007acc) 76%, #fff), var(--color-primary, #007acc));
   }
 
   &:active {
@@ -78,7 +78,7 @@
   width: 100vw;
   height: 100vh;
   height: 100dvh;
-  background: rgba(0, 0, 0, 0.85);
+  background: color-mix(in srgb, var(--color-background, #000) 82%, transparent);
   backdrop-filter: blur(8px);
   z-index: 20000;
   display: flex;
@@ -92,9 +92,18 @@
 }
 
 .helpContent {
-  background: var(--color-background, #1a1a1a);
+  --color-text: var(--modal-text, var(--window-text, #e0e0e0));
+  --color-text-muted: var(--modal-text-secondary, var(--window-text-secondary, #bbb));
+  --color-border: var(--modal-border, var(--window-border, #333));
+  --color-border-light: color-mix(in srgb, var(--color-border, #333) 64%, var(--color-text, #e0e0e0));
+  --color-card-bg: var(--window-surface, var(--color-surface-elevated, #252525));
+  --text-primary: var(--color-text);
+  --text-secondary: var(--color-text-muted);
+  --text-tertiary: var(--modal-text-tertiary, var(--window-text-tertiary, #888));
+  background: var(--modal-bg, var(--color-background, #1a1a1a));
   border: 1px solid var(--color-border, #333);
   border-radius: 16px;
+  color: var(--color-text, #e0e0e0);
   width: 100%;
   max-width: 1000px;
   max-height: 90vh;
@@ -118,7 +127,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 24px 28px;
-  background: linear-gradient(135deg, #007acc, #005a9e);
+  background: linear-gradient(135deg, var(--color-primary, #007acc), color-mix(in srgb, var(--color-primary, #007acc) 70%, #000));
   color: white;
   border-radius: 16px 16px 0 0;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -210,7 +219,7 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: rgba(0, 122, 204, 0.3);
+    background: color-mix(in srgb, var(--color-primary, #007acc) 32%, transparent);
     border-radius: 2px;
   }
 }
@@ -231,14 +240,14 @@
   font-weight: 500;
 
   &:hover {
-    background: rgba(0, 122, 204, 0.1);
+    background: color-mix(in srgb, var(--color-primary, #007acc) 12%, transparent);
     color: var(--color-text, #e0e0e0);
   }
 
   &.active {
-    background: rgba(0, 122, 204, 0.15);
-    color: #007acc;
-    border-bottom-color: #007acc;
+    background: color-mix(in srgb, var(--color-primary, #007acc) 16%, transparent);
+    color: var(--color-primary, #007acc);
+    border-bottom-color: var(--color-primary, #007acc);
     font-weight: 600;
   }
 }
@@ -268,11 +277,11 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: rgba(0, 122, 204, 0.3);
+    background: color-mix(in srgb, var(--color-primary, #007acc) 32%, transparent);
     border-radius: 4px;
 
     &:hover {
-      background: rgba(0, 122, 204, 0.5);
+      background: color-mix(in srgb, var(--color-primary, #007acc) 52%, transparent);
     }
   }
 }
@@ -299,7 +308,7 @@
     margin: 16px 0 8px 0;
     font-size: 14px;
     font-weight: 600;
-    color: #007acc;
+    color: var(--color-primary, #007acc);
   }
 
   p {

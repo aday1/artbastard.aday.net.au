@@ -13,6 +13,7 @@ import { hasActiveBridge, requestBridgeClock, type BridgeClockPayload } from './
 import { DEFAULT_SESSION_ID } from './sessionManager';
 
 export type MasterClockSourceId = 'internal' | 'midi-input' | 'ableton-link';
+export type MidiClockInputStatus = 'none' | 'selected' | 'listening' | 'receiving';
 
 export interface ClockState {
   bpm: number;
@@ -22,6 +23,10 @@ export interface ClockState {
   bar: number;  // Current bar number
   linkPeers?: number;
   linkAvailable?: boolean;
+  midiClockInputName?: string | null;
+  externalMidiClockSourceName?: string | null;
+  externalMidiClockLastSeenAt?: number | null;
+  midiClockInputStatus?: MidiClockInputStatus;
 }
 
 export class ClockManager {
@@ -42,14 +47,18 @@ export class ClockManager {
   private midiOutput: any = null; // easymidi.Output instance
   private selectedMidiOutputName: string | null = null; // Currently selected MIDI output
   private availableMidiOutputs: string[] = []; // List of available MIDI output ports
-    // MIDI Input
+  // MIDI Input
   private midiInput: any = null; // easymidi.Input instance
-  private selectedMidiInputName: string | null = null;  private availableMidiInputs: string[] = [];
+  private selectedMidiInputName: string | null = null;
+  private availableMidiInputs: string[] = [];
   private isReceivingMidiClock: boolean = false;
   private lastMidiClockTickTimestamp: number | null = null;
   private midiClockTickIntervals: number[] = []; // For averaging BPM
   private derivedExternalMidiBPM: number = 120.0;
   private externalMidiClockTickCount: number = 0; // Beat tracking for external MIDI
+  private externalMidiClockSourceName: string | null = null;
+  private externalMidiClockLastSeenAt: number | null = null;
+  private externalMidiClockStaleTimeoutId: ReturnType<typeof setTimeout> | null = null;
   private linkBpm: number = 120;
   private linkPeers: number = 0;
   private linkAvailable: boolean = false;
@@ -115,7 +124,25 @@ export class ClockManager {
   private notifySubscribers(): void {
     const state = this.getCurrentClockState();
     this.subscribers.forEach(callback => callback(state));
-  }  private getCurrentClockState(): ClockState {
+  }
+
+  private getMidiClockInputStatus(): MidiClockInputStatus {
+    if (!this.selectedMidiInputName) return 'none';
+    if (this.currentSource !== 'midi-input') return 'selected';
+    return this.isReceivingMidiClock ? 'receiving' : 'listening';
+  }
+
+  private getMidiClockInputTelemetry(): Pick<ClockState, 'midiClockInputName' | 'externalMidiClockSourceName' | 'externalMidiClockLastSeenAt' | 'midiClockInputStatus'> {
+    return {
+      midiClockInputName: this.selectedMidiInputName,
+      externalMidiClockSourceName: this.externalMidiClockSourceName,
+      externalMidiClockLastSeenAt: this.externalMidiClockLastSeenAt,
+      midiClockInputStatus: this.getMidiClockInputStatus(),
+    };
+  }
+
+  private getCurrentClockState(): ClockState {
+    const midiInputTelemetry = this.getMidiClockInputTelemetry();
     if (this.currentSource === 'internal') {
       return {
         bpm: this.internalBPM,
@@ -123,6 +150,7 @@ export class ClockManager {
         source: this.currentSource,
         beat: this.beat,
         bar: this.bar,
+        ...midiInputTelemetry,
       };
     } else if (this.currentSource === 'midi-input') {
       return {
@@ -131,6 +159,7 @@ export class ClockManager {
         source: this.currentSource,
         beat: this.beat,
         bar: this.bar,
+        ...midiInputTelemetry,
       };
     } else if (this.currentSource === 'ableton-link') {
       return {
@@ -141,6 +170,7 @@ export class ClockManager {
         bar: this.bar,
         linkPeers: this.linkPeers,
         linkAvailable: this.linkAvailable,
+        ...midiInputTelemetry,
       };
     } else {
       return {
@@ -149,6 +179,7 @@ export class ClockManager {
         source: this.currentSource,
         beat: this.beat,
         bar: this.bar,
+        ...midiInputTelemetry,
       };
     }
   }
@@ -439,6 +470,9 @@ export class ClockManager {
   private _attachMidiInputListeners(): void {
     if (!this.midiInput) return;
     console.log(`Attaching MIDI listeners to ${this.selectedMidiInputName}`);
+    this.midiInput.removeListener('start', this.handleMidiInputStart);
+    this.midiInput.removeListener('stop', this.handleMidiInputStop);
+    this.midiInput.removeListener('clock', this.handleMidiInputClockTick);
     this.midiInput.on('start', this.handleMidiInputStart);
     this.midiInput.on('stop', this.handleMidiInputStop);
     this.midiInput.on('clock', this.handleMidiInputClockTick);
@@ -461,6 +495,26 @@ export class ClockManager {
     this.isReceivingMidiClock = false;
     this.lastMidiClockTickTimestamp = null;
     this.midiClockTickIntervals = [];
+    if (this.externalMidiClockStaleTimeoutId) {
+      clearTimeout(this.externalMidiClockStaleTimeoutId);
+      this.externalMidiClockStaleTimeoutId = null;
+    }
+  }
+
+  private markExternalMidiClockSeen(): void {
+    this.externalMidiClockSourceName = this.selectedMidiInputName;
+    this.externalMidiClockLastSeenAt = Date.now();
+    this.isReceivingMidiClock = true;
+
+    if (this.externalMidiClockStaleTimeoutId) {
+      clearTimeout(this.externalMidiClockStaleTimeoutId);
+    }
+    this.externalMidiClockStaleTimeoutId = setTimeout(() => {
+      this.isReceivingMidiClock = false;
+      this.lastMidiClockTickTimestamp = null;
+      this.midiClockTickIntervals = [];
+      this.notifySubscribers();
+    }, 1600);
   }
 
   // Bound arrow functions for MIDI event handlers to preserve 'this' context
@@ -473,6 +527,8 @@ export class ClockManager {
     this.externalMidiClockTickCount = 0;
     this.lastMidiClockTickTimestamp = performance.now(); // Initialize for BPM calc
     this.midiClockTickIntervals = [];
+    this.externalMidiClockSourceName = this.selectedMidiInputName;
+    this.externalMidiClockLastSeenAt = Date.now();
     this.notifySubscribers();
   };
 
@@ -482,14 +538,26 @@ export class ClockManager {
     this.isReceivingMidiClock = false;
     this.lastMidiClockTickTimestamp = null;
     this.midiClockTickIntervals = [];
+    if (this.externalMidiClockStaleTimeoutId) {
+      clearTimeout(this.externalMidiClockStaleTimeoutId);
+      this.externalMidiClockStaleTimeoutId = null;
+    }
     // Beat and bar can retain their last value or be reset, depends on desired behavior
     this.notifySubscribers();
   };
 
   private handleMidiInputClockTick = (): void => {
-    if (this.currentSource !== 'midi-input' || !this.isReceivingMidiClock) return;
+    if (this.currentSource !== 'midi-input') return;
 
     const now = performance.now();
+    const wasReceiving = this.isReceivingMidiClock;
+    this.markExternalMidiClockSeen();
+    if (!wasReceiving) {
+      this.externalMidiClockTickCount = 0;
+      this.midiClockTickIntervals = [];
+      this.lastMidiClockTickTimestamp = null;
+    }
+
     if (this.lastMidiClockTickTimestamp !== null) {
       const interval = now - this.lastMidiClockTickTimestamp;
       this.midiClockTickIntervals.push(interval);

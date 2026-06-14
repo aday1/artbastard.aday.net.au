@@ -200,6 +200,8 @@
 
 .midiSourceControls {
   display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .midiSourceSelect {
@@ -223,6 +225,18 @@
     background: #1e293b;
     color: #f8fafc;
   }
+}
+
+.midiClockInputStatus {
+  align-self: flex-start;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: #94a3b8;
+  background: rgba(15, 23, 42, 0.46);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
 }
 
 // Responsive design

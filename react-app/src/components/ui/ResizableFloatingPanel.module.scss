@@ -1,4 +1,7 @@
 .shell {
+  --text-primary: var(--window-text, #e5edf6);
+  --text-secondary: var(--window-text-secondary, #94a3b8);
+  --text-tertiary: var(--window-text-tertiary, #64748b);
   position: fixed;
   z-index: 10003;
   display: flex;
@@ -6,7 +9,10 @@
   min-height: 0;
   overflow: hidden;
   border-radius: 8px;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  background: var(--window-bg, var(--color-card-bg, transparent));
+  border: 1px solid var(--window-border, var(--border-color, transparent));
+  box-shadow: var(--shadow-strong, 0 8px 28px rgba(0, 0, 0, 0.45));
+  color: var(--window-text, #e5edf6);
 
   @media (max-width: 1279px) {
     display: none !important;

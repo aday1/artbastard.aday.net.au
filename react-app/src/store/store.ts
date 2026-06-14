@@ -21,7 +21,9 @@ import {
   DEFAULT_THEME_COLORS,
   getModeAwarePreset,
   applyModeAwarePreset,
+  applyThemePreset,
 } from '../utils/themeUtils'
+import type { ThemeColorsHsl } from '../utils/themeUtils'
 import type { ChannelEnvelope } from './types'
 import { ensureGroupsSync } from './groupIds'
 import type { FixtureDipSwitchAddressing } from '../fixtures/library'
@@ -68,6 +70,8 @@ export interface MidiMapping {
   controller?: number
   pitch?: boolean
 }
+
+export type MidiClockInputStatus = 'none' | 'selected' | 'listening' | 'receiving';
 
 export interface Fixture {
   id: string
@@ -889,6 +893,11 @@ interface State extends AutomationState, TransitionTrackerSlice {
   // MIDI Clock Sync State
   availableMidiClockHosts: Array<{ id: string; name: string }>;
   selectedMidiClockHostId: string | null;
+  midiClockInputs: string[];
+  selectedMidiClockInputName: string | null;
+  lastMidiClockInputName: string | null;
+  lastMidiClockInputAt: number | null;
+  midiClockInputStatus: MidiClockInputStatus;
   midiClockBpm: number;
   abletonLinkPeers: number;
   abletonLinkAvailable: boolean;
@@ -1167,6 +1176,7 @@ interface State extends AutomationState, TransitionTrackerSlice {
     cardBrightness: number; cardSaturation: number;
     statusConnectedHue: number; statusDisconnectedHue: number; statusActiveHue: number; statusInactiveBrightness: number;
   }>) => void;
+  applyThemePresetId: (presetId: string, preferDark?: boolean) => void;
   saveAppearanceToServer: (appearance: {
     theme?: 'artsnob' | 'standard' | 'minimal';
     darkMode?: boolean;
@@ -1209,6 +1219,13 @@ interface State extends AutomationState, TransitionTrackerSlice {
   setMasterSliders: (sliders: MasterSlider[]) => void;
   setSelectedMidiClockHostId: (hostId: string | null) => void; // Will be called by WS handler too
   setAvailableMidiClockHosts: (hosts: Array<{ id: string; name: string }>) => void; // Called by WS handler
+  setMidiClockInputs: (inputs: string[], currentInput?: string | null) => void;
+  setMidiClockInputTelemetry: (telemetry: {
+    selectedInputName?: string | null;
+    lastInputName?: string | null;
+    lastInputAt?: number | null;
+    status?: MidiClockInputStatus;
+  }) => void;
   setBridgeRegistry: (payload: {
     connected: boolean;
     bridge: {
@@ -1946,6 +1963,24 @@ export const useStore = create<State>()(
           return { themeColors: newColors };
         });
       },
+      applyThemePresetId: (presetId, preferDark) => {
+        const preset = getPresetById(presetId);
+        if (!preset) return;
+
+        const nextDarkMode = preferDark ?? preset.preferDark ?? get().darkMode;
+        document.documentElement.setAttribute('data-theme', nextDarkMode ? 'dark' : 'light');
+        const colors: ThemeColorsHsl = applyThemePreset(preset);
+
+        try {
+          localStorage.setItem('darkMode', String(nextDarkMode));
+          localStorage.setItem('themePresetId', preset.id);
+          localStorage.setItem('themeColors', JSON.stringify(colors));
+        } catch (error) {
+          console.warn('Failed to save theme preset to localStorage:', error);
+        }
+
+        set({ darkMode: nextDarkMode, themeColors: colors });
+      },
 
       saveAppearanceToServer: async (appearance: import('../utils/themeUtils').AppearanceSettings) => {
         try {
@@ -2048,6 +2083,11 @@ export const useStore = create<State>()(
         // Other hosts would be populated dynamically
       ],
       selectedMidiClockHostId: 'internal',
+      midiClockInputs: [],
+      selectedMidiClockInputName: null,
+      lastMidiClockInputName: null,
+      lastMidiClockInputAt: null,
+      midiClockInputStatus: 'none',
       midiClockBpm: 120.0,
       abletonLinkPeers: 0,
       abletonLinkAvailable: false,
@@ -6116,6 +6156,38 @@ export const useStore = create<State>()(
       },
 
       setAvailableMidiClockHosts: (hosts) => set({ availableMidiClockHosts: hosts }),
+      setMidiClockInputs: (inputs, currentInput) => set({
+        midiClockInputs: Array.isArray(inputs) ? inputs : [],
+        selectedMidiClockInputName:
+          currentInput !== undefined ? currentInput : get().selectedMidiClockInputName,
+        midiClockInputStatus:
+          (currentInput !== undefined ? currentInput : get().selectedMidiClockInputName)
+            ? get().midiClockInputStatus === 'none' ? 'selected' : get().midiClockInputStatus
+            : 'none',
+      }),
+      setMidiClockInputTelemetry: (telemetry) => set((state) => {
+        const selectedInputName =
+          telemetry.selectedInputName !== undefined
+            ? telemetry.selectedInputName
+            : state.selectedMidiClockInputName;
+        const lastInputName =
+          telemetry.lastInputName !== undefined
+            ? telemetry.lastInputName
+            : state.lastMidiClockInputName;
+        const lastInputAt =
+          telemetry.lastInputAt !== undefined
+            ? telemetry.lastInputAt
+            : state.lastMidiClockInputAt;
+        const status =
+          telemetry.status ??
+          (selectedInputName ? state.midiClockInputStatus : 'none');
+        return {
+          selectedMidiClockInputName: selectedInputName,
+          lastMidiClockInputName: lastInputName,
+          lastMidiClockInputAt: lastInputAt,
+          midiClockInputStatus: status,
+        };
+      }),
       setDmxFaderOrientation: (orientation) => {
         const next = orientation === 'vertical' ? 'vertical' : 'horizontal';
         try {

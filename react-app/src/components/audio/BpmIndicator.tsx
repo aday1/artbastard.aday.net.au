@@ -11,8 +11,12 @@ const BpmIndicator: React.FC = () => {
     midiClockCurrentBar,
     availableMidiClockHosts,
     selectedMidiClockHostId,
+    midiClockInputs,
+    selectedMidiClockInputName,
+    midiClockInputStatus,
     setMidiClockBpm,
     requestToggleMasterClockPlayPause,
+    requestMasterClockSourceChange,
     requestMidiClockInputList,
     requestSetMidiClockInput,
     recordTapTempo,
@@ -72,7 +76,12 @@ const BpmIndicator: React.FC = () => {
 
   // Handle MIDI clock source change
   const handleMidiSourceChange = (sourceId: string) => {
-    requestSetMidiClockInput(sourceId);
+    requestMasterClockSourceChange(sourceId);
+  };
+
+  const handleMidiInputChange = (inputName: string) => {
+    if (!inputName) return;
+    requestSetMidiClockInput(inputName);
   };
 
   // Request MIDI inputs on mount
@@ -129,15 +138,33 @@ const BpmIndicator: React.FC = () => {
             value={selectedMidiClockHostId || 'internal'}
             onChange={(e) => handleMidiSourceChange(e.target.value)}
             className={styles.midiSourceSelect}
-            title="MIDI Clock Source"
+            title="Master clock source"
           >
-            <option value="internal">Internal Clock</option>
             {availableMidiClockHosts.map((host) => (
               <option key={host.id} value={host.id}>
                 {host.name}
               </option>
             ))}
           </select>
+          <select
+            value={selectedMidiClockInputName || ''}
+            onChange={(e) => handleMidiInputChange(e.target.value)}
+            className={styles.midiSourceSelect}
+            title="External MIDI clock input"
+            disabled={midiClockInputs.length === 0}
+          >
+            <option value="">
+              {midiClockInputs.length === 0 ? 'No MIDI inputs' : 'Select clock input'}
+            </option>
+            {midiClockInputs.map((inputName) => (
+              <option key={inputName} value={inputName}>
+                {inputName}
+              </option>
+            ))}
+          </select>
+          <span className={styles.midiClockInputStatus}>
+            {midiClockInputStatus}
+          </span>
         </div>
       </div>
     </div>

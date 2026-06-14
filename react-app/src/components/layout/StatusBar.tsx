@@ -7,6 +7,8 @@ import { ResetButton } from './ResetButton'
 import { ThemeToggleButton } from './ThemeToggleButton'
 import { LucideIcon } from '../ui/LucideIcon'
 import { OPEN_MONITOR_EVENT } from '../../hooks/useMonitorAutoPop'
+import { useDebouncedAppearanceSave } from '../../hooks/useDebouncedAppearanceSave'
+import { getRandomThemePreset } from '../../utils/themeUtils'
 import styles from './StatusBar.module.scss'
 
 export const StatusBar: React.FC = () => {
@@ -17,9 +19,13 @@ export const StatusBar: React.FC = () => {
   const midiMessages = useStore((state) => state.midiMessages)
   const oscMessages = useStore((state) => state.oscMessages)
   const dmxChannels = useStore((state) => state.dmxChannels)
+  const applyThemePresetId = useStore((state) => state.applyThemePresetId)
+  const addNotification = useStore((state) => state.addNotification)
+  const { scheduleSave } = useDebouncedAppearanceSave()
   const [midiInActive, setMidiInActive] = useState(false)
   const [oscInActive, setOscInActive] = useState(false)
   const [dmxActive, setDmxActive] = useState(false)
+  const [lastRandomTheme, setLastRandomTheme] = useState<string | null>(null)
   
   useEffect(() => {
     if (midiMessages.length > 0) {
@@ -48,6 +54,23 @@ export const StatusBar: React.FC = () => {
 
   const openHelp = () => {
     window.dispatchEvent(new CustomEvent('openHelpOverlay'))
+  }
+
+  const randomizeTheme = () => {
+    const preset = getRandomThemePreset(localStorage.getItem('themePresetId'))
+    const nextDarkMode = preset.preferDark ?? useStore.getState().darkMode
+    applyThemePresetId(preset.id, nextDarkMode)
+    setLastRandomTheme(preset.name)
+    scheduleSave({
+      darkMode: nextDarkMode,
+      themePresetId: preset.id,
+      themeColors: preset.colors,
+    })
+    addNotification({
+      message: `Theme randomized: ${preset.name}`,
+      type: 'info',
+      priority: 'normal',
+    })
   }
 
   return (
@@ -123,6 +146,15 @@ export const StatusBar: React.FC = () => {
           >
             <LucideIcon name={theme === 'artsnob' ? 'Languages' : 'Globe'} />
             <span>{theme === 'artsnob' ? 'ArtSnob' : 'Standard'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={randomizeTheme}
+            className={`${styles.statusButton} ${styles.randomThemeButton}`}
+            title={`Randomize theme${lastRandomTheme ? ` (last: ${lastRandomTheme})` : ''}`}
+          >
+            <LucideIcon name="Shuffle" />
+            <span>{lastRandomTheme ?? 'Random Theme'}</span>
           </button>
           <ThemeToggleButton showLabels />
         </div>

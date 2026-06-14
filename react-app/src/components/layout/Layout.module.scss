@@ -66,15 +66,15 @@
       -webkit-overflow-scrolling: touch;
       scrollbar-gutter: stable;
       scrollbar-width: auto;
-      scrollbar-color: color-mix(in srgb, var(--color-primary, #d68706) 70%, #1a1028)
-        color-mix(in srgb, var(--color-primary, #d68706) 18%, #0d0814);
+      scrollbar-color: color-mix(in srgb, var(--color-primary, #d68706) 70%, var(--window-bg, #1a1028))
+        color-mix(in srgb, var(--color-primary, #d68706) 16%, var(--bg-tertiary, #0d0814));
 
       &::-webkit-scrollbar {
         width: 14px;
       }
 
       &::-webkit-scrollbar-track {
-        background: color-mix(in srgb, var(--color-primary, #d68706) 12%, #0d0814);
+        background: color-mix(in srgb, var(--color-primary, #d68706) 12%, var(--bg-tertiary, #0d0814));
         border-left: 1px solid color-mix(in srgb, var(--color-primary, #d68706) 25%, transparent);
       }
 
@@ -83,9 +83,9 @@
         background: linear-gradient(
           180deg,
           color-mix(in srgb, var(--color-primary, #d68706) 85%, #fff) 0%,
-          color-mix(in srgb, var(--color-primary, #d68706) 55%, #1a1028) 100%
+          color-mix(in srgb, var(--color-primary, #d68706) 55%, var(--window-bg, #1a1028)) 100%
         );
-        border: 2px solid color-mix(in srgb, var(--color-primary, #d68706) 35%, #0d0814);
+        border: 2px solid color-mix(in srgb, var(--color-primary, #d68706) 35%, var(--bg-tertiary, #0d0814));
         border-radius: 8px;
         background-clip: padding-box;
       }
