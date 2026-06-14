@@ -22,7 +22,8 @@ Only the backend is required. The Vite dev server is optional (for frontend HMR 
 ### Running tests
 
 - API contract smoke: `npm run test:api-contract` (starts its own server internally)
-- TouchOSC workflow smoke: `npm run test:touchosc-workflow` (starts its own server internally)
+- API contract smoke: `npm run test:api-contract` (starts its own server internally)
+- Bridge smoke: `npm run test:bridge-smoke`
 - LAN bridge smoke: `npm run test:bridge-smoke` (token, bridge socket, DMX fan-out)
 - Frontend unit tests: `cd react-app && npx vitest run`
 

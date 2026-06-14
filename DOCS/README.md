@@ -1,9 +1,10 @@
 # ArtBastard Documentation Index
 
-Reference set for v5.2.12.0 - Hard Version Bump. Reflects the
-state of the system after the SuperControl layout rebuild, cream/synthwave
-light theme, footer monitor consolidation, DMX Tracker feature flagging, and
-APC40 ON/OFF button semantics on 2026-06-14.
+Reference set for v5.2.13.0 - Joined ROLI Server Topology. Reflects the
+state of the system after the server-owned two-pad ROLI Lightpad fix,
+SuperControl layout rebuild, cream/synthwave light theme, footer monitor
+consolidation, DMX Tracker feature flagging, and APC40 ON/OFF button semantics
+on 2026-06-14.
 
 ## Start here
 
@@ -60,7 +61,6 @@ Run from the repository root:
 - npm run build
 - npm run test:api-contract
 - npm run test:bridge-smoke
-- npm run test:touchosc-workflow
 - npm run demo:capture-screenshots
 - npm run demo:capture-videos
 - npm run demo:evidence

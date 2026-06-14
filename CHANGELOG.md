@@ -4,6 +4,40 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [5.2.13.0] - 2026-06-14 - Joined ROLI server topology and console release
+
+### Added
+
+- Server-owned joined ROLI Lightpad BLOCK topology: one USB-connected pair is
+	split into deterministic logical pads, with topology index 30 assigned to the
+	primary pan/tilt XY surface and topology index 60 assigned to the colour-wheel
+	pad.
+- Role-specific ROLI LED feedback: clean XY crosshair/reticle frames for the
+	primary pad, RGB strip/cursor frames for the colour pad, and matching idle
+	animations when no browser is attached.
+- Server ROLI status now exposes per-pad topology index, serial, role,
+	handshake state, touch count, LED retry state, and last error.
+
+### Changed
+
+- ROLI LED output is ACK-paced per logical pad with independent packet counters
+	and latest-frame coalescing so stale frames are dropped instead of smearing
+	touch feedback.
+- ROLI startup probes BLOCKS topology first, handshakes chained pads
+	sequentially over the shared USB MIDI pipe, and falls back to a single pad
+	only when no topology reply appears.
+- ROLI auto-connect now matches only ROLI/Lightpad/BLOCK/Seaboard names and no
+	longer claims Holybell10 when the Lightpad port is unplugged.
+
+### Fixed
+
+- Second chained ROLI pad can drive colour again through server-emitted
+	`role: colour-wheel` touch events while the first pad remains pan/tilt.
+- Frontend server-touch consumers now honor the emitted ROLI role so colour pad
+	touches do not leak into XY and XY touches do not leak into colour.
+- Reconciled the TypeScript source with the built runtime so future backend
+	builds preserve the joined-pad fix.
+
 ### Added
 
 - Public showcase and docs index now advertise the v5.2.12.0 hard line, including the SuperControl remaster, BPM header, and stateful APC40 surface.

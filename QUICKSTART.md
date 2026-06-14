@@ -122,8 +122,8 @@ npx vite build
 # API contract tests
 npm run test:api-contract
 
-# TouchOSC integration test
-npm run test:touchosc-workflow
+# Bridge smoke test
+npm run test:bridge-smoke
 ```
 
 All pass? Push to main:

@@ -125,19 +125,24 @@ Full mapping tables: DOCS/MIDI_TEMPLATES.md.
 
 ## Roli Lightpad / Roliblock LED feedback
 
-Super Control can auto-map a Roli Lightpad Block through browser Web MIDI with
-SysEx enabled. Touch input drives the pan/tilt XY pad and the pad LEDs mirror
-the active path:
+The preferred live path is server-owned ROLI MIDI. When a physically joined
+Lightpad BLOCK pair is connected through one USB block, the backend probes
+BLOCKS topology and exposes two logical pads:
 
-- The 15x15 LED grid uses top-left origin coordinates, matching the XY pad.
-- Fast drawn strokes are rasterized into continuous grid lines, so loops do
-  not disappear into sparse one-pixel hops.
-- The live cursor has a four-neighbour halo; edge touches stay full brightness
-  instead of being dimmed by clamped halo pixels.
-- The LED encoder uses the BLOCKS BitmapLED BGR565 byte order shared with the
-  Macroverse Roliblock implementation.
-- Larger RGBA/canvas sources can be downsampled to 15x15 before sending, which
-  is the path to shader-style visual LED feeds when needed.
+- Topology index 30 is the primary pan/tilt XY pad.
+- Topology index 60 is the colour-wheel pad.
+- Touch events are emitted with `role: primary` or `role: colour-wheel`, so the
+  SuperControl XY pad and RGB strip stay isolated.
+- LED feedback is ACK-paced per logical pad with independent packet counters:
+  the primary pad draws a clean crosshair/reticle, the colour pad draws an RGB
+  strip/cursor, and idle animations stay close to those roles.
+- The server only auto-claims ROLI/Lightpad/BLOCK/Seaboard MIDI ports. If the
+  blocks are unplugged, unrelated MIDI ports such as Holybell10 are left alone.
+
+Browser Web MIDI remains as a fallback when the server has not claimed ROLI.
+It still supports the 15x15 BGR565 LED encoder, canvas/RGBA downsampling, and
+role-based primary/colour-wheel devices, but server ownership is preferred for
+Windows single-owner MIDI stability.
 
 ## OSC tablet workflow
 
@@ -147,9 +152,9 @@ the active path:
 3. Send test messages and watch the in-app OSC Monitor.
 4. Keep the tablet and ArtBastard host on the same reachable network.
 
-The legacy TouchOSC generator remains test-covered by
-`npm run test:touchosc-workflow`, but it is not a primary routed showcase
-surface in v5.2.4.0.
+The legacy TouchOSC generator is no longer a primary routed showcase surface;
+use the API contract smoke and in-app OSC monitor while maintaining tablet
+workflows.
 
 ## Scene workflow
 

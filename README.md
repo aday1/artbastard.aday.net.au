@@ -3,7 +3,7 @@
 ArtBastard is a TypeScript-based DMX lighting controller with a React
 frontend and Node / Socket.IO backend.
 
-Current package version: 5.2.12.0
+Current package version: 5.2.13.0
 
 ## Showcase
 
@@ -21,6 +21,18 @@ settings/help). They are recorded straight off the running app via
 `npm run demo:capture-videos`. See DOCS/SHOWCASE.md for details.
 
 ## Current status (2026-06)
+
+### Confirmed live/dev line (v5.2.13.0)
+
+- Server-owned joined ROLI Lightpad BLOCK support now treats a one-USB,
+  physically chained pair as two logical pads: topology index 30 is the
+  primary pan/tilt XY surface and topology index 60 is the colour-wheel pad.
+- ROLI LED output is ACK-paced per logical pad with independent packet counters,
+  clean crosshair frames, colour strip frames, role-specific idle animations,
+  and latest-frame coalescing to reduce stale/ghost LEDs during live touch.
+- ROLI auto-connect only claims real ROLI/Lightpad/BLOCK/Seaboard ports and
+  leaves unrelated MIDI devices such as Holybell10 alone when the blocks are
+  unplugged.
 
 ### Confirmed live/dev line (v5.2.12.0)
 
@@ -183,7 +195,7 @@ PDF address sheet. Offline mirror lives at DOCS/HELP.md.
 - `npm run build`
 - `npm run build-backend-fast`
 - `npm run test:api-contract`
-- `npm run test:touchosc-workflow`
+- `npm run test:bridge-smoke`
 - `npm run demo:capture-screenshots`
 - `npm run demo:capture-videos`
 - `npm run demo:evidence`

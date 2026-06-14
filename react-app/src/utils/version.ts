@@ -12,10 +12,13 @@ export interface VersionInfo {
 }
 
 export const CURRENT_VERSION: VersionInfo = {
-  version: '5.2.12.0',
+  version: '5.2.13.0',
   buildDate: '2026-06-14',
   releaseType: 'stable',
   features: [
+    'Server-owned joined ROLI Lightpad BLOCK topology: deterministic primary XY pad plus colour-wheel pad over one USB port',
+    'ROLI server LED feedback uses per-pad packet counters, ACK-paced queues, clean XY crosshair frames, colour strip frames, and role-specific idle animations',
+    'ROLI auto-connect now ignores non-ROLI fallback ports such as Holybell10 when the Lightpad is unplugged',
     'Hard version bump: light-theme remaster, SuperControl layout rebuild, footer monitor consolidation, and APC40 ON/OFF state semantics',
     'APC40 Record Arm, Solo/Cue, and Activator rows now treat ON as add/solo and OFF as remove/release, with LED feedback aligned to app state',
     'DMX Tracker is feature-flagged off by default while envelope automation and channel strip controls remain production-facing',
@@ -30,6 +33,9 @@ export const CURRENT_VERSION: VersionInfo = {
     'Lightweight DMX activity glow replaces particle Sparkles for smoother browsers'
   ],
   changelog: [
+    'v5.2.13.0: Server-owned joined ROLI Lightpad topology splits one USB-connected pair into primary XY and colour-wheel pads with deterministic roles',
+    'v5.2.13.0: ROLI LED drawing now uses per-pad ACK queues, clean crosshair frames, colour strip frames, and role-specific idle animation',
+    'v5.2.13.0: ROLI auto-connect no longer claims Holybell10 when the Lightpad BLOCK port is absent',
     'v5.2.12.0: Hard release line for SuperControl card layout, cream/synthwave light theme, footer monitor controls, and APC40 ON/OFF button semantics',
     'v5.2.12.0: Record Arm/Solo Group, Solo/Cue fixture select, and Activator group select now follow explicit APC40 ON/OFF state instead of blind toggles',
     'v5.2.12.0: DMX Tracker hidden behind feature flag; SuperControl hides featureless cards and folds scenes/color autopilot into parent cards',
@@ -51,6 +57,13 @@ export const CURRENT_VERSION: VersionInfo = {
 };
 
 export const VERSION_HISTORY: VersionInfo[] = [
+  {
+    version: '5.2.13.0',
+    buildDate: '2026-06-14',
+    releaseType: 'stable',
+    features: CURRENT_VERSION.features,
+    changelog: CURRENT_VERSION.changelog
+  },
   {
     version: '5.2.12.0',
     buildDate: '2026-06-14',

@@ -13,8 +13,48 @@ const HOST_DEVICE_INDEX = 0x00;
 const SCREENSAVER_IDLE_MS = Math.max(1000, Math.min(600000, Number(process.env.ROLI_SERVER_SCREENSAVER_IDLE_MS) || 8000));
 const SCREENSAVER_FRAME_MS = Math.max(40, Math.min(1000, Number(process.env.ROLI_SERVER_SCREENSAVER_FRAME_MS) || 140));
 const TOUCH_TRAIL_POINTS = Math.max(8, Math.min(120, Number(process.env.ROLI_SERVER_TOUCH_TRAIL_POINTS) || 56));
-const SERVER_ROLI_ROLE = /^colou?r|wheel|strip$/i.test(process.env.ROLI_SERVER_ROLE || '') ? 'colour-wheel' : 'primary';
+const DEFAULT_SINGLE_ROLI_ROLE = /^colou?r|wheel|strip$/i.test(process.env.ROLI_SERVER_ROLE || '') ? 'colour-wheel' : 'primary';
 const LED_SEND_RETRY_MS = Math.max(1000, Math.min(60000, Number(process.env.ROLI_SERVER_LED_RETRY_MS) || 8000));
+const LOG_TOUCH_MOVES = process.env.ROLI_SERVER_LOG_TOUCH_MOVES === '1';
+type ServerRoliRole = 'primary' | 'colour-wheel';
+
+interface ServerRoliDeviceStatus {
+  deviceId: string;
+  topologyIndex: number;
+  topologySerial: string | null;
+  role: ServerRoliRole;
+  handshakeDone: boolean;
+  touchCount: number;
+  lastTouch: { x: number; y: number; z: number; phase: string; role: ServerRoliRole; topologyIndex: number } | null;
+  lastEventAt: number | null;
+  ledSendFailureCount: number;
+  nextLedSendAttemptAt: number | null;
+  lastLedSendErrorAt: number | null;
+  lastError: string | null;
+}
+
+interface TopologyDeviceInfo {
+  blockSerialNumber: string;
+  topologyIndex: number;
+  batteryLevel: number;
+  batteryCharging: number;
+}
+
+interface TopologyConnectionInfo {
+  deviceIndex1: number;
+  portIndex1: number;
+  deviceIndex2: number;
+  portIndex2: number;
+}
+
+interface DeviceTopologyInfo {
+  messageType: number;
+  protocolVersion: number;
+  deviceCount: number;
+  connectionCount: number;
+  devices: TopologyDeviceInfo[];
+  connections: TopologyConnectionInfo[];
+}
 
 const BITMAP_LED_DUMP_1 =
   '02 01 00 30 5A 3E 47 0B 20 01 3A 00 10 71 01 12 4B 31 09 08 60 46 5F 25 11 40 05 02 28 61 01 17 54 11 40 10 36 78 21 12 6D 1C 30 5B 00 2E 28 63 00 23 6C 70 43 24 5A 39 60 32 01 28 09 41 0D 3E 28 24 10 1B 04 51 48 1A 0A 08 22 09 1B 2C 30 45 0D 2E 08 24 20 1B 1C 00 5B 6C 50 41 16 36 58 20 10 01 6D 50 40 2D 36 58 60 0B 01 6D 70 40 2D 3A 78 3F 00 0F 1C 78 4F 07 2E 28 78 08 19 04 52 06 15 01 48 24 00 21 64 10 48 1A 02 18 60 0C 01 4C 70 40 05 7C 3F 00 7F 0F 60 7F 03 78 7F 00 7E 1F 40 7F 07 70 7F 01 7C 3F 00 7F 0F 60 7F 03 78 7F 00 7E 1F 40 7F 07 70 7F 01 7C 3F 00 7F 0F 00';
@@ -31,13 +71,42 @@ export interface ServerRoliStatus {
   sysexTx: number;
   ackCount: number;
   touchCount: number;
-  lastTouch: { x: number; y: number; z: number; phase: string } | null;
+  lastTouch: { x: number; y: number; z: number; phase: string; role?: ServerRoliRole; topologyIndex?: number } | null;
   lastError: string | null;
   lastEventAt: number | null;
   screensaverEnabled: boolean;
   screensaverActive: boolean;
   browserClientCount: number;
   lastBrowserSeenAt: number | null;
+  ledSendFailureCount: number;
+  nextLedSendAttemptAt: number | null;
+  lastLedSendErrorAt: number | null;
+  devices: ServerRoliDeviceStatus[];
+}
+
+interface ServerRoliPadState {
+  deviceId: string;
+  topologyIndex: number;
+  topologySerial: string | null;
+  role: ServerRoliRole;
+  handshakeDone: boolean;
+  packetCounter: number;
+  prevLedData: Uint8Array;
+  ledQueue: number[][];
+  ledQueueActive: boolean;
+  pendingLedData: Uint8Array | null;
+  nextLedData: Uint8Array | null;
+  nextLedForceFull: boolean;
+  ackResolver: (() => void) | null;
+  ackRejecter: ((error: Error) => void) | null;
+  ackTimer: NodeJS.Timeout | null;
+  pingTimer: NodeJS.Timeout | null;
+  touchCount: number;
+  lastTouch: { x: number; y: number; z: number; phase: string; role: ServerRoliRole; topologyIndex: number } | null;
+  lastError: string | null;
+  lastEventAt: number | null;
+  touchTrail: Array<{ x: number; y: number }>;
+  isTouching: boolean;
   ledSendFailureCount: number;
   nextLedSendAttemptAt: number | null;
   lastLedSendErrorAt: number | null;
@@ -55,6 +124,10 @@ interface ServerRoliState {
   prevLedData: Uint8Array;
   ledQueue: number[][];
   pendingLedData: Uint8Array | null;
+  pads: Map<number, ServerRoliPadState>;
+  activeLedTopologyIndex: number | null;
+  topologyTimer: NodeJS.Timeout | null;
+  topologyHandshakeActive: boolean;
   ackResolver: (() => void) | null;
   ackRejecter: ((error: Error) => void) | null;
   ackTimer: NodeJS.Timeout | null;
@@ -91,6 +164,10 @@ const state: ServerRoliState = {
   prevLedData: new Uint8Array(LED_BYTE_COUNT),
   ledQueue: [],
   pendingLedData: null,
+  pads: new Map<number, ServerRoliPadState>(),
+  activeLedTopologyIndex: null,
+  topologyTimer: null,
+  topologyHandshakeActive: false,
   ackResolver: null,
   ackRejecter: null,
   ackTimer: null,
@@ -117,7 +194,7 @@ const state: ServerRoliState = {
 
 function isRoliLikeName(name: string): boolean {
   const n = (name || '').toLowerCase();
-  return n.includes('roli') || n.includes('lightpad') || n.includes('block') || n.includes('seaboard') || n.includes('holybell');
+  return n.includes('roli') || n.includes('lightpad') || n.includes('block') || n.includes('seaboard');
 }
 
 export function isServerRoliPort(name: string): boolean {
@@ -126,6 +203,88 @@ export function isServerRoliPort(name: string): boolean {
 
 function parseDump(hex: string): number[] {
   return hex.trim().split(/\s+/).map((value) => parseInt(value, 16));
+}
+
+function createPadDeviceId(topologyIndex: number, serial?: string | null): string {
+  const suffix = serial?.trim() || topologyIndex.toString(16).padStart(2, '0');
+  return `${state.inputName || 'roli'}#${suffix}`;
+}
+
+function roleForTopologyPosition(position: number): ServerRoliRole {
+  if (position === 0) return 'primary';
+  if (position === 1) return 'colour-wheel';
+  return position % 2 === 0 ? 'primary' : 'colour-wheel';
+}
+
+function createPad(topologyIndex: number, role: ServerRoliRole, serial: string | null = null): ServerRoliPadState {
+  return {
+    deviceId: createPadDeviceId(topologyIndex, serial),
+    topologyIndex,
+    topologySerial: serial,
+    role,
+    handshakeDone: false,
+    packetCounter: 0,
+    prevLedData: new Uint8Array(LED_BYTE_COUNT),
+    ledQueue: [],
+    ledQueueActive: false,
+    pendingLedData: null,
+    nextLedData: null,
+    nextLedForceFull: false,
+    ackResolver: null,
+    ackRejecter: null,
+    ackTimer: null,
+    pingTimer: null,
+    touchCount: 0,
+    lastTouch: null,
+    lastError: null,
+    lastEventAt: null,
+    touchTrail: [],
+    isTouching: false,
+    ledSendFailureCount: 0,
+    nextLedSendAttemptAt: null,
+    lastLedSendErrorAt: null,
+  };
+}
+
+function ensurePad(topologyIndex: number, role: ServerRoliRole, serial: string | null = null): ServerRoliPadState {
+  let pad = state.pads.get(topologyIndex);
+  if (!pad) {
+    pad = createPad(topologyIndex, role, serial);
+    state.pads.set(topologyIndex, pad);
+    return pad;
+  }
+  pad.role = role;
+  pad.topologySerial = serial;
+  pad.deviceId = createPadDeviceId(topologyIndex, serial);
+  return pad;
+}
+
+function ensureFallbackPad(): ServerRoliPadState {
+  return ensurePad(HOST_DEVICE_INDEX, DEFAULT_SINGLE_ROLI_ROLE, null);
+}
+
+function getPads(): ServerRoliPadState[] {
+  return Array.from(state.pads.values()).sort((a, b) => a.topologyIndex - b.topologyIndex);
+}
+
+function findPadForPacket(topologyIndex: number): ServerRoliPadState {
+  return state.pads.get(topologyIndex) || state.pads.get(HOST_DEVICE_INDEX) || ensureFallbackPad();
+}
+
+function clearPadTimers(pad: ServerRoliPadState): void {
+  if (pad.ackTimer) clearTimeout(pad.ackTimer);
+  if (pad.pingTimer) clearInterval(pad.pingTimer);
+  pad.ackTimer = null;
+  pad.pingTimer = null;
+}
+
+function clearPadLedQueue(pad: ServerRoliPadState): void {
+  pad.ledQueue = [];
+  pad.ledQueueActive = false;
+  pad.pendingLedData = null;
+  pad.nextLedData = null;
+  pad.nextLedForceFull = false;
+  if (state.activeLedTopologyIndex === pad.topologyIndex) state.activeLedTopologyIndex = null;
 }
 
 class Packed7BitBuilder {
@@ -195,28 +354,39 @@ function buildBlockSysEx(deviceIndex: number, payload: number[]): number[] {
   return data;
 }
 
-function sendSysEx(payload: number[], note: string): void {
+function sendSysExToDeviceIndex(deviceIndex: number, payload: number[], note: string, pad?: ServerRoliPadState): void {
   if (!state.output) throw new Error('No ROLI output port');
-  const bytes = buildBlockSysEx(HOST_DEVICE_INDEX, payload);
+  const bytes = buildBlockSysEx(deviceIndex, payload);
   state.output.send('sysex', bytes);
   state.sysexTx += 1;
   state.lastEventAt = Date.now();
+  if (pad) pad.lastEventAt = state.lastEventAt;
   log(`ROLI server tx ${note}`, 'MIDI', {
     bytes: payload.length,
     output: state.outputName,
+    topologyIndex: deviceIndex,
+    role: pad?.role,
     verboseOnly: note === 'ping'
   });
 }
 
-function waitForAck(timeoutMs = 900): Promise<void> {
+function sendSysExToPad(pad: ServerRoliPadState, payload: number[], note: string): void {
+  sendSysExToDeviceIndex(pad.topologyIndex, payload, note, pad);
+}
+
+function sendSysExToHost(payload: number[], note: string): void {
+  sendSysExToDeviceIndex(HOST_DEVICE_INDEX, payload, note);
+}
+
+function waitForAck(pad: ServerRoliPadState, timeoutMs = 900): Promise<void> {
   return new Promise((resolve, reject) => {
-    if (state.ackTimer) clearTimeout(state.ackTimer);
-    state.ackResolver = resolve;
-    state.ackRejecter = reject;
-    state.ackTimer = setTimeout(() => {
-      state.ackResolver = null;
-      state.ackRejecter = null;
-      state.ackTimer = null;
+    if (pad.ackTimer) clearTimeout(pad.ackTimer);
+    pad.ackResolver = resolve;
+    pad.ackRejecter = reject;
+    pad.ackTimer = setTimeout(() => {
+      pad.ackResolver = null;
+      pad.ackRejecter = null;
+      pad.ackTimer = null;
       reject(new Error('ROLI ack timeout'));
     }, timeoutMs);
   });
@@ -234,6 +404,144 @@ function read7BitBits(data: Uint8Array, bitPos: number, numBits: number): number
     read += toRead;
   }
   return value;
+}
+
+function readAscii7(data: Uint8Array, bitPos: number, length: number): { value: string; next: number } {
+  let value = '';
+  let pos = bitPos;
+  for (let index = 0; index < length; index++) {
+    value += String.fromCharCode(read7BitBits(data, pos, 7));
+    pos += 7;
+  }
+  return { value, next: pos };
+}
+
+function parseTopologyMessage(msgData: Uint8Array): DeviceTopologyInfo | null {
+  let pos = 39;
+  const messageType = read7BitBits(msgData, pos, 7);
+  pos += 7;
+  if (messageType !== 0x01) return null;
+
+  const protocolVersion = read7BitBits(msgData, pos, 8);
+  pos += 8;
+  const deviceCount = read7BitBits(msgData, pos, 7);
+  pos += 7;
+  const connectionCount = read7BitBits(msgData, pos, 8);
+  pos += 8;
+
+  const devices: TopologyDeviceInfo[] = [];
+  for (let index = 0; index < deviceCount; index++) {
+    const serial = readAscii7(msgData, pos, 16);
+    pos = serial.next;
+    const topologyIndex = read7BitBits(msgData, pos, 7);
+    pos += 7;
+    const batteryLevel = read7BitBits(msgData, pos, 5);
+    pos += 5;
+    const batteryCharging = read7BitBits(msgData, pos, 1);
+    pos += 1;
+    devices.push({ blockSerialNumber: serial.value, topologyIndex, batteryLevel, batteryCharging });
+  }
+
+  const connections: TopologyConnectionInfo[] = [];
+  for (let index = 0; index < connectionCount; index++) {
+    const deviceIndex1 = read7BitBits(msgData, pos, 7);
+    pos += 7;
+    const portIndex1 = read7BitBits(msgData, pos, 5);
+    pos += 5;
+    const deviceIndex2 = read7BitBits(msgData, pos, 7);
+    pos += 7;
+    const portIndex2 = read7BitBits(msgData, pos, 5);
+    pos += 5;
+    connections.push({ deviceIndex1, portIndex1, deviceIndex2, portIndex2 });
+  }
+
+  return { messageType, protocolVersion, deviceCount, connectionCount, devices, connections };
+}
+
+function requestTopology(): void {
+  if (!state.output) return;
+  sendSysExToHost([0x01, 0x01, 0x00], 'request topology');
+}
+
+function ensureTopologyPads(topology: DeviceTopologyInfo): void {
+  if (!topology.devices.length) return;
+  if (state.topologyTimer) {
+    clearTimeout(state.topologyTimer);
+    state.topologyTimer = null;
+  }
+
+  const activeIndexes = new Set<number>();
+  const sortedDevices = [...topology.devices].sort((a, b) => a.topologyIndex - b.topologyIndex);
+  sortedDevices.forEach((topologyDevice, position) => {
+    const role = sortedDevices.length === 1 ? DEFAULT_SINGLE_ROLI_ROLE : roleForTopologyPosition(position);
+    const pad = ensurePad(topologyDevice.topologyIndex, role, topologyDevice.blockSerialNumber);
+    activeIndexes.add(pad.topologyIndex);
+  });
+
+  for (const pad of getPads()) {
+    if (activeIndexes.has(pad.topologyIndex)) continue;
+    clearPadTimers(pad);
+    clearPadLedQueue(pad);
+    state.pads.delete(pad.topologyIndex);
+  }
+
+  log('ROLI server topology detected', 'MIDI', {
+    deviceCount: topology.deviceCount,
+    connectionCount: topology.connectionCount,
+    pads: getPads().map((pad) => ({ topologyIndex: pad.topologyIndex, role: pad.role, serial: pad.topologySerial })),
+  });
+  startTopologyHandshakes();
+  emitStatus();
+}
+
+function startTopologyHandshakes(): void {
+  if (state.topologyHandshakeActive) return;
+  state.topologyHandshakeActive = true;
+  void (async () => {
+    try {
+      for (const pad of getPads()) {
+        if (pad.handshakeDone || pad.ackResolver) continue;
+        try {
+          await handshakePad(pad);
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          pad.handshakeDone = false;
+          pad.lastError = errorMessage;
+          state.handshakeDone = getPads().some((candidate) => candidate.handshakeDone);
+          state.lastError = errorMessage;
+          log('ROLI server pad handshake failed', 'ERROR', {
+            error: errorMessage,
+            input: state.inputName,
+            output: state.outputName,
+            topologyIndex: pad.topologyIndex,
+            role: pad.role,
+          });
+          emitStatus();
+        }
+      }
+    } finally {
+      state.topologyHandshakeActive = false;
+      emitStatus();
+    }
+  })();
+}
+
+function startPadHandshake(pad: ServerRoliPadState): void {
+  void handshakePad(pad).catch((error) => {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    pad.handshakeDone = false;
+    pad.lastError = errorMessage;
+    state.handshakeDone = getPads().some((candidate) => candidate.handshakeDone);
+    state.lastError = errorMessage;
+    log('ROLI server pad handshake failed', 'ERROR', {
+      error: errorMessage,
+      input: state.inputName,
+      output: state.outputName,
+      topologyIndex: pad.topologyIndex,
+      role: pad.role,
+    });
+    emitStatus();
+  });
 }
 
 function emitStatus(): void {
@@ -261,23 +569,22 @@ function hsvToRgb(h: number, s: number, v: number): [number, number, number] {
   ];
 }
 
-function createScreensaverFrame(frame: number): Uint8ClampedArray {
+function createPrimaryIdleFrame(frame: number, cursor?: { x: number; y: number } | null): Uint8ClampedArray {
   const pixels = new Uint8ClampedArray(LED_PIXEL_COUNT * 4);
-  const t = frame / 9;
-  const cx = (Math.sin(t / 7) + 1) * 0.5 * (ROLI_GRID_COLS - 1);
-  const cy = (Math.cos(t / 9) + 1) * 0.5 * (ROLI_GRID_ROWS - 1);
+  const t = frame / 10;
+  const cx = cursor ? Math.max(0, Math.min(1, cursor.x)) * (ROLI_GRID_COLS - 1) : (Math.sin(t / 5) + 1) * 0.5 * (ROLI_GRID_COLS - 1);
+  const cy = cursor ? Math.max(0, Math.min(1, cursor.y)) * (ROLI_GRID_ROWS - 1) : (Math.cos(t / 7) + 1) * 0.5 * (ROLI_GRID_ROWS - 1);
   for (let y = 0; y < ROLI_GRID_ROWS; y++) {
     for (let x = 0; x < ROLI_GRID_COLS; x++) {
       const index = (y * ROLI_GRID_COLS + x) * 4;
-      const wave = (Math.sin((x * 0.68) + t) + Math.cos((y * 0.58) - t * 0.82) + 2) / 4;
       const distance = Math.hypot(x - cx, y - cy);
-      const pulse = Math.max(0, 1 - distance / 8);
-      const hue = (t * 21 + x * 11 + y * 7) % 360;
-      const brightness = Math.max(0.12, Math.min(0.95, wave * 0.52 + pulse * 0.42));
-      const [red, green, blue] = hsvToRgb(hue, 0.9, brightness);
+      const lineGlow = x === Math.round(cx) || y === Math.round(cy) ? 0.26 : 0;
+      const pulse = Math.max(0, 1 - distance / 7) * 0.34;
+      const wave = (Math.sin((x * 0.45) + t) + Math.cos((y * 0.42) - t) + 2) / 4;
+      const red = Math.round(12 + wave * 12 + pulse * 90 + lineGlow * 120);
       pixels[index] = red;
-      pixels[index + 1] = green;
-      pixels[index + 2] = blue;
+      pixels[index + 1] = Math.round(pulse * 24);
+      pixels[index + 2] = 0;
       pixels[index + 3] = 255;
     }
   }
@@ -290,18 +597,57 @@ function makeColorStripPixel(x: number, y: number): [number, number, number] {
   return hsvToRgb(hue, 0.95, value);
 }
 
-function createServerTouchFrame(cursor: { x: number; y: number; z: number; phase: string }): Uint8ClampedArray {
+function drawCursorOnFrame(pixels: Uint8ClampedArray, cursor: { x: number; y: number }, color: [number, number, number, number]): void {
+  const cell = {
+    x: Math.round(Math.max(0, Math.min(1, cursor.x)) * (ROLI_GRID_COLS - 1)),
+    y: Math.round(Math.max(0, Math.min(1, cursor.y)) * (ROLI_GRID_ROWS - 1)),
+  };
+  const put = (x: number, y: number, rgba: [number, number, number, number]) => {
+    if (x < 0 || y < 0 || x >= ROLI_GRID_COLS || y >= ROLI_GRID_ROWS) return;
+    const index = (y * ROLI_GRID_COLS + x) * 4;
+    pixels[index] = Math.max(pixels[index], rgba[0]);
+    pixels[index + 1] = Math.max(pixels[index + 1], rgba[1]);
+    pixels[index + 2] = Math.max(pixels[index + 2], rgba[2]);
+    pixels[index + 3] = Math.max(pixels[index + 3], rgba[3]);
+  };
+  for (let offset = -1; offset <= 1; offset++) {
+    put(cell.x + offset, cell.y, color);
+    put(cell.x, cell.y + offset, color);
+  }
+  for (let radius = 2; radius <= 3; radius++) {
+    for (let y = -radius; y <= radius; y++) {
+      for (let x = -radius; x <= radius; x++) {
+        if (Math.abs(Math.hypot(x, y) - radius) <= 0.45) {
+          put(cell.x + x, cell.y + y, [Math.round(color[0] * 0.65), Math.round(color[1] * 0.65), Math.round(color[2] * 0.65), 255]);
+        }
+      }
+    }
+  }
+  put(cell.x, cell.y, [255, 255, 255, 255]);
+}
+
+function createColourWheelFrame(frame: number, cursor?: { x: number; y: number; phase?: string } | null): Uint8ClampedArray {
   const pixels = new Uint8ClampedArray(LED_PIXEL_COUNT * 4);
+  const shimmerColumn = Math.floor((frame / 3) % ROLI_GRID_COLS);
   for (let y = 0; y < ROLI_GRID_ROWS; y++) {
     for (let x = 0; x < ROLI_GRID_COLS; x++) {
       const index = (y * ROLI_GRID_COLS + x) * 4;
       const [red, green, blue] = makeColorStripPixel(x, y);
-      pixels[index] = Math.round(red * 0.36);
-      pixels[index + 1] = Math.round(green * 0.36);
-      pixels[index + 2] = Math.round(blue * 0.36);
+      const shimmer = x === shimmerColumn ? 1.08 : 0.82;
+      pixels[index] = Math.min(255, Math.round(red * shimmer));
+      pixels[index + 1] = Math.min(255, Math.round(green * shimmer));
+      pixels[index + 2] = Math.min(255, Math.round(blue * shimmer));
       pixels[index + 3] = 255;
     }
   }
+  if (cursor) drawCursorOnFrame(pixels, cursor, cursor.phase === 'end' ? [255, 210, 180, 255] : [255, 255, 255, 255]);
+  return pixels;
+}
+
+function createServerTouchFrame(pad: ServerRoliPadState, cursor: { x: number; y: number; z: number; phase: string }): Uint8ClampedArray {
+  if (pad.role === 'colour-wheel') return createColourWheelFrame(pad.touchCount, cursor);
+
+  const pixels = createPrimaryIdleFrame(pad.touchCount, cursor);
 
   const put = (x: number, y: number, color: [number, number, number, number]) => {
     if (x < 0 || y < 0 || x >= ROLI_GRID_COLS || y >= ROLI_GRID_ROWS) return;
@@ -317,68 +663,53 @@ function createServerTouchFrame(cursor: { x: number; y: number; z: number; phase
     y: Math.round(Math.max(0, Math.min(1, point.y)) * (ROLI_GRID_ROWS - 1)),
   });
 
-  const drawLine = (from: { x: number; y: number }, to: { x: number; y: number }, color: [number, number, number, number]) => {
-    let { x: x0, y: y0 } = toCell(from);
-    const { x: x1, y: y1 } = toCell(to);
-    const dx = Math.abs(x1 - x0);
-    const sx = x0 < x1 ? 1 : -1;
-    const dy = -Math.abs(y1 - y0);
-    const sy = y0 < y1 ? 1 : -1;
-    let err = dx + dy;
-    while (true) {
-      put(x0, y0, color);
-      if (x0 === x1 && y0 === y1) break;
-      const e2 = 2 * err;
-      if (e2 >= dy) { err += dy; x0 += sx; }
-      if (e2 <= dx) { err += dx; y0 += sy; }
-    }
-  };
-
-  const recentTrail = state.touchTrail.slice(-TOUCH_TRAIL_POINTS);
-  for (let index = 1; index < recentTrail.length; index++) {
-    const fade = index / Math.max(1, recentTrail.length - 1);
-    drawLine(recentTrail[index - 1], recentTrail[index], [Math.round(130 + fade * 125), Math.round(15 + fade * 40), 0, 255]);
-  }
-
   const cell = toCell(cursor);
-  const dimCross: [number, number, number, number] = cursor.phase === 'end' ? [150, 30, 0, 255] : [255, 42, 0, 255];
+  const dimCross: [number, number, number, number] = cursor.phase === 'end' ? [170, 22, 0, 255] : [240, 20, 0, 255];
   const hot: [number, number, number, number] = cursor.phase === 'end' ? [255, 90, 30, 255] : [255, 255, 255, 255];
   for (let x = 0; x < ROLI_GRID_COLS; x++) put(x, cell.y, dimCross);
   for (let y = 0; y < ROLI_GRID_ROWS; y++) put(cell.x, y, dimCross);
-  for (let radius = 1; radius <= 3; radius++) {
+  for (let radius = 2; radius <= 4; radius += 2) {
     for (let y = -radius; y <= radius; y++) {
       for (let x = -radius; x <= radius; x++) {
         const dist = Math.hypot(x, y);
-        if (Math.abs(dist - radius) <= 0.45) put(cell.x + x, cell.y + y, radius === 1 ? hot : dimCross);
+        if (Math.abs(dist - radius) <= 0.45) put(cell.x + x, cell.y + y, dimCross);
       }
     }
+  }
+  for (let offset = -1; offset <= 1; offset++) {
+    put(cell.x + offset, cell.y, hot);
+    put(cell.x, cell.y + offset, hot);
   }
   put(cell.x, cell.y, [255, 255, 255, 255]);
   return pixels;
 }
 
 function shouldRunServerScreensaver(): boolean {
-  return Boolean(
-    state.screensaverEnabled &&
-    state.input &&
-    state.output &&
-    state.handshakeDone &&
-    state.browserClientCount === 0
-  );
+  const readyPads = getPads().filter((pad) => pad.handshakeDone);
+  if (!state.screensaverEnabled || !state.input || !state.output || readyPads.length === 0 || state.browserClientCount !== 0) return false;
+  const latestPadActivityAt = readyPads.reduce((latest, pad) => Math.max(latest, pad.lastEventAt || 0), 0);
+  const latestActivityAt = Math.max(state.lastBrowserSeenAt || 0, state.lastEventAt || 0, latestPadActivityAt);
+  return Date.now() - latestActivityAt >= SCREENSAVER_IDLE_MS;
 }
 
 function startServerRoliScreensaver(reason = 'no-browser'): void {
   if (state.screensaverActive || !shouldRunServerScreensaver()) return;
   state.screensaverActive = true;
   state.screensaverFrame = 0;
-  log('ROLI server screensaver started', 'MIDI', { reason, idleMs: SCREENSAVER_IDLE_MS, frameMs: SCREENSAVER_FRAME_MS });
+  log('ROLI server screensaver started', 'MIDI', { reason, idleMs: SCREENSAVER_IDLE_MS, frameMs: SCREENSAVER_FRAME_MS, verboseOnly: reason === 'no-browser-clients' });
   state.screensaverTimer = setInterval(() => {
     if (!shouldRunServerScreensaver()) {
       stopServerRoliScreensaver('browser-or-device-state-changed');
       return;
     }
-    if (state.ledQueue.length > 0) return;
-    sendLedData(rgbaFrameToLedData(createScreensaverFrame(state.screensaverFrame++)), false);
+    const frame = state.screensaverFrame++;
+    for (const pad of getPads()) {
+      if (!pad.handshakeDone || pad.ledQueueActive || pad.ledQueue.length > 0) continue;
+      const pixels = pad.role === 'colour-wheel'
+        ? createColourWheelFrame(frame, pad.lastTouch)
+        : createPrimaryIdleFrame(frame, pad.lastTouch);
+      sendLedDataForPad(pad, rgbaFrameToLedData(pixels), false);
+    }
   }, SCREENSAVER_FRAME_MS);
   emitStatus();
 }
@@ -390,7 +721,7 @@ function stopServerRoliScreensaver(reason = 'manual'): void {
   }
   if (!state.screensaverActive) return;
   state.screensaverActive = false;
-  log('ROLI server screensaver stopped', 'MIDI', { reason });
+  log('ROLI server screensaver stopped', 'MIDI', { reason, verboseOnly: reason === 'touch' });
   emitStatus();
 }
 
@@ -403,7 +734,8 @@ function evaluateServerRoliScreensaver(): void {
     stopServerRoliScreensaver('not-idle');
     return;
   }
-  const lastSeen = state.lastBrowserSeenAt || Date.now();
+  const latestPadActivityAt = getPads().reduce((latest, pad) => Math.max(latest, pad.lastEventAt || 0), 0);
+  const lastSeen = Math.max(state.lastBrowserSeenAt || 0, state.lastEventAt || 0, latestPadActivityAt) || Date.now();
   if (Date.now() - lastSeen >= SCREENSAVER_IDLE_MS) {
     startServerRoliScreensaver('no-browser-clients');
   }
@@ -414,29 +746,48 @@ function ensureScreensaverMonitor(): void {
   state.screensaverMonitor = setInterval(evaluateServerRoliScreensaver, 1000);
 }
 
-function emitTouch(x: number, y: number, z: number, phase: string): void {
+function emitTouch(pad: ServerRoliPadState, x: number, y: number, z: number, phase: string): void {
   state.touchCount += 1;
-  state.lastTouch = { x, y, z, phase };
-  state.lastEventAt = Date.now();
-  if (phase === 'start') state.touchTrail = [{ x, y }];
+  pad.touchCount += 1;
+  pad.lastTouch = { x, y, z, phase, role: pad.role, topologyIndex: pad.topologyIndex };
+  state.lastTouch = pad.lastTouch;
+  const now = Date.now();
+  state.lastEventAt = now;
+  pad.lastEventAt = now;
+  if (phase === 'start') {
+    pad.isTouching = true;
+    pad.touchTrail = [{ x, y }];
+  }
   else if (phase === 'move') {
-    state.touchTrail.push({ x, y });
-    if (state.touchTrail.length > TOUCH_TRAIL_POINTS) state.touchTrail.splice(0, state.touchTrail.length - TOUCH_TRAIL_POINTS);
-  } else if (phase === 'end' && state.touchTrail.length === 0) {
-    state.touchTrail = [{ x, y }];
+    pad.touchTrail.push({ x, y });
+    if (pad.touchTrail.length > TOUCH_TRAIL_POINTS) pad.touchTrail.splice(0, pad.touchTrail.length - TOUCH_TRAIL_POINTS);
+  } else if (phase === 'end') {
+    pad.isTouching = false;
+    if (pad.touchTrail.length === 0) pad.touchTrail = [{ x, y }];
   }
 
   stopServerRoliScreensaver('touch');
-  sendLedData(rgbaFrameToLedData(createServerTouchFrame(state.lastTouch)), false);
+  sendLedDataForPad(pad, rgbaFrameToLedData(createServerTouchFrame(pad, pad.lastTouch)), true);
 
-  state.io?.emit('serverRoliTouch', { ...state.lastTouch, role: SERVER_ROLI_ROLE, sourceTransport: 'server', inputName: state.inputName, outputName: state.outputName });
-  log(`ROLI server touch ${phase}`, 'MIDI', {
-    source: state.inputName,
-    x: Number(x.toFixed(3)),
-    y: Number(y.toFixed(3)),
-    z: Number(z.toFixed(3)),
-    verboseOnly: phase === 'move'
+  state.io?.emit('serverRoliTouch', {
+    ...pad.lastTouch,
+    deviceId: pad.deviceId,
+    role: pad.role,
+    sourceTransport: 'server',
+    inputName: state.inputName,
+    outputName: state.outputName,
   });
+  if (phase !== 'move' || LOG_TOUCH_MOVES) {
+    log(`ROLI server touch ${phase}`, 'MIDI', {
+      source: state.inputName,
+      topologyIndex: pad.topologyIndex,
+      role: pad.role,
+      x: Number(x.toFixed(3)),
+      y: Number(y.toFixed(3)),
+      z: Number(z.toFixed(3)),
+      verboseOnly: phase === 'move'
+    });
+  }
 }
 
 export function setServerRoliBrowserClientCount(count: number): void {
@@ -456,23 +807,33 @@ function parseRoliSysEx(bytes: number[]): void {
   state.lastEventAt = Date.now();
   const data = new Uint8Array(bytes);
   const msgData = data.subarray(5, data.length - 2);
+  const packetDeviceIndex = msgData[0] & 0x3f;
   let bitPos = 39;
   const firstType = read7BitBits(msgData, bitPos, 7);
+
+  if (firstType === 0x01) {
+    const topology = parseTopologyMessage(msgData);
+    if (topology) ensureTopologyPads(topology);
+    return;
+  }
+
+  const pad = findPadForPacket(packetDeviceIndex);
 
   if (firstType === 0x02) {
     bitPos += 7;
     const counter = read7BitBits(msgData, bitPos, 10);
     state.ackCount += 1;
-    log('ROLI server ack', 'MIDI', { counter, input: state.inputName, verboseOnly: true });
-    if (state.ackResolver) {
-      if (state.ackTimer) clearTimeout(state.ackTimer);
-      const resolver = state.ackResolver;
-      state.ackResolver = null;
-      state.ackRejecter = null;
-      state.ackTimer = null;
+    log('ROLI server ack', 'MIDI', { counter, input: state.inputName, topologyIndex: pad.topologyIndex, role: pad.role, verboseOnly: true });
+    if (pad.ackResolver) {
+      if (pad.ackTimer) clearTimeout(pad.ackTimer);
+      const resolver = pad.ackResolver;
+      pad.ackResolver = null;
+      pad.ackRejecter = null;
+      pad.ackTimer = null;
       resolver();
-    } else if (state.ledQueue.length > 0) {
-      sendNextLedPacket();
+    } else if (pad.ledQueueActive || pad.ledQueue.length > 0) {
+      pad.ledQueueActive = false;
+      sendNextLedPacket(pad);
     }
     emitStatus();
     return;
@@ -486,7 +847,9 @@ function parseRoliSysEx(bytes: number[]): void {
       const x = read7BitBits(msgData, bitPos, 12);
       bitPos += 12;
       const y = read7BitBits(msgData, bitPos, 12);
-      emitTouch(x / 4095, y / 4095, state.lastTouch?.z ?? 0.5, 'move');
+      bitPos += 12 + 8;
+      if (!pad.isTouching) return;
+      emitTouch(pad, x / 4095, y / 4095, pad.lastTouch?.z ?? 0.5, 'move');
       return;
     }
     if (msgType === 0x13 || msgType === 0x15) {
@@ -494,7 +857,9 @@ function parseRoliSysEx(bytes: number[]): void {
       const x = read7BitBits(msgData, bitPos, 12);
       bitPos += 12;
       const y = read7BitBits(msgData, bitPos, 12);
-      emitTouch(x / 4095, y / 4095, msgType === 0x13 ? 0.7 : 0, msgType === 0x13 ? 'start' : 'end');
+      bitPos += 8;
+      if (msgType === 0x13) bitPos += 24;
+      emitTouch(pad, x / 4095, y / 4095, msgType === 0x13 ? 0.7 : 0, msgType === 0x13 ? 'start' : 'end');
       return;
     }
     break;
@@ -519,9 +884,9 @@ function rgbaFrameToLedData(pixels: Uint8Array | Uint8ClampedArray): Uint8Array 
   return data;
 }
 
-function buildDataChangeMessages(newData: Uint8Array, oldData: Uint8Array): number[][] {
+function buildDataChangeMessages(pad: ServerRoliPadState, newData: Uint8Array, oldData: Uint8Array): number[][] {
   const queued: number[][] = [];
-  const startPacketIndex = state.packetCounter;
+  const startPacketIndex = pad.packetCounter;
   let packetIndex = startPacketIndex;
   let builder = new Packed7BitBuilder();
 
@@ -615,59 +980,106 @@ function buildDataChangeMessages(newData: Uint8Array, oldData: Uint8Array): numb
   const finalized = builder.clone();
   finalized.writeBits(1, 3);
   queued.push(finalized.getData());
-  state.packetCounter = (startPacketIndex + queued.length) & PACKET_COUNTER_MAX;
+  pad.packetCounter = (startPacketIndex + queued.length) & PACKET_COUNTER_MAX;
   return queued;
 }
 
-function sendNextLedPacket(): void {
-  if (!state.output || state.ledQueue.length === 0) {
-    if (state.pendingLedData) {
-      state.prevLedData = state.pendingLedData;
-      state.pendingLedData = null;
-    }
+function flushNextPendingPadFrame(exceptTopologyIndex?: number): boolean {
+  for (const pad of getPads()) {
+    if (pad.topologyIndex === exceptTopologyIndex) continue;
+    if (!pad.nextLedData || !pad.handshakeDone) continue;
+    const nextLedData = pad.nextLedData;
+    const forceFullFrame = pad.nextLedForceFull;
+    pad.nextLedData = null;
+    pad.nextLedForceFull = false;
+    return sendLedDataForPad(pad, nextLedData, forceFullFrame);
+  }
+  return false;
+}
+
+function sendNextLedPacket(pad: ServerRoliPadState): void {
+  if (!state.output || !pad.handshakeDone) {
+    clearPadLedQueue(pad);
     return;
   }
-  if (state.nextLedSendAttemptAt && Date.now() < state.nextLedSendAttemptAt) return;
-  const next = state.ledQueue.shift()!;
+
+  if (pad.ledQueue.length === 0) {
+    pad.ledQueueActive = false;
+    if (pad.pendingLedData) {
+      pad.prevLedData = pad.pendingLedData;
+      pad.pendingLedData = null;
+    }
+    if (state.activeLedTopologyIndex === pad.topologyIndex) state.activeLedTopologyIndex = null;
+    if (pad.nextLedData) {
+      const nextLedData = pad.nextLedData;
+      const forceFullFrame = pad.nextLedForceFull;
+      pad.nextLedData = null;
+      pad.nextLedForceFull = false;
+      sendLedDataForPad(pad, nextLedData, forceFullFrame);
+      return;
+    }
+    flushNextPendingPadFrame(pad.topologyIndex);
+    return;
+  }
+
+  if (pad.nextLedSendAttemptAt && Date.now() < pad.nextLedSendAttemptAt) return;
+  if (state.activeLedTopologyIndex !== null && state.activeLedTopologyIndex !== pad.topologyIndex) return;
+
+  const next = pad.ledQueue.shift()!;
   try {
-    state.output.send('sysex', buildBlockSysEx(HOST_DEVICE_INDEX, next));
+    state.output.send('sysex', buildBlockSysEx(pad.topologyIndex, next));
+    pad.ledQueueActive = true;
+    state.activeLedTopologyIndex = pad.topologyIndex;
     state.sysexTx += 1;
     state.lastEventAt = Date.now();
-    state.ledSendFailureCount = 0;
-    state.nextLedSendAttemptAt = null;
-    log('ROLI server LED packet', 'MIDI', { remaining: state.ledQueue.length, bytes: next.length, output: state.outputName, verboseOnly: true });
+    pad.lastEventAt = state.lastEventAt;
+    pad.ledSendFailureCount = 0;
+    pad.nextLedSendAttemptAt = null;
+    log('ROLI server LED packet', 'MIDI', { remaining: pad.ledQueue.length, bytes: next.length, output: state.outputName, topologyIndex: pad.topologyIndex, role: pad.role, verboseOnly: true });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    state.lastError = `ROLI LED send failed: ${errorMessage}`;
-    state.ledSendFailureCount += 1;
-    state.nextLedSendAttemptAt = Date.now() + LED_SEND_RETRY_MS;
-    state.lastLedSendErrorAt = Date.now();
-    state.ledQueue = [];
-    state.pendingLedData = null;
+    pad.lastError = `ROLI LED send failed: ${errorMessage}`;
+    state.lastError = pad.lastError;
+    pad.ledSendFailureCount += 1;
+    pad.nextLedSendAttemptAt = Date.now() + LED_SEND_RETRY_MS;
+    pad.lastLedSendErrorAt = Date.now();
+    clearPadLedQueue(pad);
     stopServerRoliScreensaver('led-send-error');
     log('ROLI server LED send failed; pausing LED output', 'WARN', {
       error: errorMessage,
       output: state.outputName,
+      topologyIndex: pad.topologyIndex,
+      role: pad.role,
       retryMs: LED_SEND_RETRY_MS,
-      failureCount: state.ledSendFailureCount,
+      failureCount: pad.ledSendFailureCount,
     });
     emitStatus();
   }
 }
 
-function sendLedData(newLed: Uint8Array, forceFullFrame = false): boolean {
-  if (!state.output || !state.handshakeDone) return false;
-  if (state.nextLedSendAttemptAt && Date.now() < state.nextLedSendAttemptAt) return false;
-  if (state.ledQueue.length > 0) return false;
-  let prev = state.prevLedData;
+function sendLedDataForPad(pad: ServerRoliPadState, newLed: Uint8Array, forceFullFrame = false): boolean {
+  if (!state.output || !pad.handshakeDone) return false;
+  if (pad.nextLedSendAttemptAt && Date.now() < pad.nextLedSendAttemptAt) return false;
+  if (pad.ledQueueActive || pad.ledQueue.length > 0 || (state.activeLedTopologyIndex !== null && state.activeLedTopologyIndex !== pad.topologyIndex)) {
+    pad.nextLedData = newLed;
+    pad.nextLedForceFull = pad.nextLedForceFull || forceFullFrame;
+    return true;
+  }
+
+  let prev = pad.prevLedData;
   if (forceFullFrame) {
     prev = new Uint8Array(LED_BYTE_COUNT);
     for (let index = 0; index < LED_BYTE_COUNT; index++) prev[index] = newLed[index] ^ 0xff;
   }
-  state.ledQueue = buildDataChangeMessages(newLed, prev);
-  state.pendingLedData = newLed;
-  sendNextLedPacket();
-  return state.ledQueue.length > 0 || state.pendingLedData !== newLed || !state.lastError?.startsWith('ROLI LED send failed:');
+  pad.ledQueue = buildDataChangeMessages(pad, newLed, prev);
+  pad.pendingLedData = newLed;
+  sendNextLedPacket(pad);
+  return pad.ledQueue.length > 0 || pad.pendingLedData !== newLed || !pad.lastError?.startsWith('ROLI LED send failed:');
+}
+
+function sendLedData(newLed: Uint8Array, forceFullFrame = false, role: ServerRoliRole = 'primary'): boolean {
+  const pad = getPads().find((candidate) => candidate.role === role) || getPads()[0] || ensureFallbackPad();
+  return sendLedDataForPad(pad, newLed, forceFullFrame);
 }
 
 function createTestFrame(): Uint8ClampedArray {
@@ -684,35 +1096,44 @@ function createTestFrame(): Uint8ClampedArray {
   return pixels;
 }
 
-async function handshake(): Promise<void> {
-  sendSysEx([0x01, 0x02, 0x00], 'endAPIMode');
-  sendSysEx([0x01, 0x00, 0x00], 'beginAPIMode');
-  await waitForAck();
-  sendSysEx([0x01, 0x00, 0x00], 'beginAPIMode resend');
-  await waitForAck();
-  sendSysEx([0x01, 0x03, 0x00], 'ping');
-  await waitForAck();
-  sendSysEx([0x10, 0x02], 'config midiUseMPE');
-  await waitForAck();
-  sendSysEx([0x01, 0x03, 0x00], 'ping');
-  await waitForAck();
-  sendSysEx(parseDump(BITMAP_LED_DUMP_1), 'bitmap dump 1');
-  sendSysEx(parseDump(BITMAP_LED_DUMP_2), 'bitmap dump 2');
-  state.packetCounter = 3;
-  await waitForAck(1200);
-  sendSysEx([0x01, 0x05, 0x00], 'saveProgramAsDefault');
-  await waitForAck();
-  state.handshakeDone = true;
+async function handshakePad(pad: ServerRoliPadState): Promise<void> {
+  clearPadLedQueue(pad);
+  if (pad.pingTimer) clearInterval(pad.pingTimer);
+  pad.pingTimer = null;
+  pad.handshakeDone = false;
+  pad.lastError = null;
+  sendSysExToPad(pad, [0x01, 0x02, 0x00], 'endAPIMode');
+  sendSysExToPad(pad, [0x01, 0x00, 0x00], 'beginAPIMode');
+  await waitForAck(pad);
+  sendSysExToPad(pad, [0x01, 0x00, 0x00], 'beginAPIMode resend');
+  await waitForAck(pad);
+  sendSysExToPad(pad, [0x01, 0x03, 0x00], 'ping');
+  await waitForAck(pad);
+  sendSysExToPad(pad, [0x10, 0x02], 'config midiUseMPE');
+  await waitForAck(pad);
+  sendSysExToPad(pad, [0x01, 0x03, 0x00], 'ping');
+  await waitForAck(pad);
+  sendSysExToPad(pad, parseDump(BITMAP_LED_DUMP_1), 'bitmap dump 1');
+  sendSysExToPad(pad, parseDump(BITMAP_LED_DUMP_2), 'bitmap dump 2');
+  pad.packetCounter = 3;
+  await waitForAck(pad, 1200);
+  sendSysExToPad(pad, [0x01, 0x05, 0x00], 'saveProgramAsDefault');
+  await waitForAck(pad);
+  pad.handshakeDone = true;
   state.lastError = null;
-  state.prevLedData = new Uint8Array(LED_BYTE_COUNT);
-  if (state.pingTimer) clearInterval(state.pingTimer);
-  state.pingTimer = setInterval(() => {
-    if (state.output && state.handshakeDone && state.ledQueue.length === 0) {
-      try { sendSysEx([0x01, 0x03, 0x00], 'ping'); } catch {}
+  state.handshakeDone = getPads().some((candidate) => candidate.handshakeDone);
+  pad.prevLedData = new Uint8Array(LED_BYTE_COUNT);
+  if (pad.pingTimer) clearInterval(pad.pingTimer);
+  pad.pingTimer = setInterval(() => {
+    if (state.output && pad.handshakeDone && !pad.ledQueueActive && pad.ledQueue.length === 0) {
+      try { sendSysExToPad(pad, [0x01, 0x03, 0x00], 'ping'); } catch {}
     }
   }, 500);
-  log('ROLI server handshake complete', 'MIDI', { input: state.inputName, output: state.outputName });
-  sendLedData(rgbaFrameToLedData(createTestFrame()), true);
+  log('ROLI server handshake complete', 'MIDI', { input: state.inputName, output: state.outputName, topologyIndex: pad.topologyIndex, role: pad.role });
+  const initialFrame = pad.role === 'colour-wheel'
+    ? createColourWheelFrame(0, null)
+    : createServerTouchFrame(pad, pad.lastTouch || { x: 0.5, y: 0.5, z: 0, phase: 'end', role: pad.role, topologyIndex: pad.topologyIndex });
+  sendLedDataForPad(pad, rgbaFrameToLedData(initialFrame), true);
   evaluateServerRoliScreensaver();
   emitStatus();
 }
@@ -750,25 +1171,16 @@ export async function connectServerRoli(io: Server, inputName?: string, outputNa
     });
     log('ROLI server claimed MIDI ports', 'MIDI', pair);
     emitStatus();
-    const claimedInputName = pair.inputName;
-    const claimedOutputName = pair.outputName;
-    void handshake().catch((error) => {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      const failedInputName = state.inputName;
-      const failedOutputName = state.outputName;
-      state.handshakeDone = false;
-      state.lastError = errorMessage;
-      log('ROLI server handshake failed', 'ERROR', { error: state.lastError, input: failedInputName, output: failedOutputName });
-      if (state.inputName === claimedInputName && state.outputName === claimedOutputName) {
-        disconnectServerRoli();
-        state.lastError = errorMessage;
-        log('ROLI server released MIDI ports after failed handshake', 'MIDI', {
-          input: failedInputName,
-          output: failedOutputName,
-        });
-      }
+    try { requestTopology(); } catch (error) { log('ROLI server topology request failed', 'WARN', { error: error instanceof Error ? error.message : String(error) }); }
+    if (state.topologyTimer) clearTimeout(state.topologyTimer);
+    state.topologyTimer = setTimeout(() => {
+      state.topologyTimer = null;
+      if (getPads().length > 0) return;
+      const pad = ensureFallbackPad();
+      log('ROLI server topology probe timed out; using single-pad fallback', 'MIDI', { topologyIndex: pad.topologyIndex, role: pad.role });
+      startPadHandshake(pad);
       emitStatus();
-    });
+    }, 900);
   } catch (error) {
     state.lastError = error instanceof Error ? error.message : String(error);
     log('ROLI server connect failed', 'ERROR', { error: state.lastError, input: pair.inputName, output: pair.outputName });
@@ -787,6 +1199,11 @@ export function disconnectServerRoli(): void {
   stopServerRoliScreensaver('disconnect');
   if (state.pingTimer) clearInterval(state.pingTimer);
   if (state.ackTimer) clearTimeout(state.ackTimer);
+  if (state.topologyTimer) clearTimeout(state.topologyTimer);
+  for (const pad of getPads()) {
+    clearPadTimers(pad);
+    clearPadLedQueue(pad);
+  }
   try { state.input?.close(); } catch {}
   try { state.output?.close(); } catch {}
   state.input = null;
@@ -798,15 +1215,26 @@ export function disconnectServerRoli(): void {
   state.ackRejecter = null;
   state.ackTimer = null;
   state.pingTimer = null;
+  state.topologyTimer = null;
+  state.topologyHandshakeActive = false;
   state.ledQueue = [];
   state.pendingLedData = null;
   state.nextLedSendAttemptAt = null;
+  state.activeLedTopologyIndex = null;
+  state.pads.clear();
   emitStatus();
 }
 
 export function sendServerRoliTestFrame(): boolean {
   stopServerRoliScreensaver('test-frame');
-  return sendLedData(rgbaFrameToLedData(createTestFrame()), true);
+  const pads = getPads().filter((pad) => pad.handshakeDone);
+  if (pads.length === 0) return sendLedData(rgbaFrameToLedData(createTestFrame()), true);
+  let sent = false;
+  for (const pad of pads) {
+    const frame = pad.role === 'colour-wheel' ? createColourWheelFrame(0, null) : createTestFrame();
+    sent = sendLedDataForPad(pad, rgbaFrameToLedData(frame), true) || sent;
+  }
+  return sent;
 }
 
 export function serverRoliOwnsPort(portName: string): boolean {
@@ -814,12 +1242,22 @@ export function serverRoliOwnsPort(portName: string): boolean {
 }
 
 export function getServerRoliStatus(): ServerRoliStatus {
+  const pads = getPads();
+  const readyPads = pads.filter((pad) => pad.handshakeDone);
+  const nextLedSendAttemptAt = pads
+    .map((pad) => pad.nextLedSendAttemptAt)
+    .filter((value): value is number => typeof value === 'number')
+    .sort((a, b) => a - b)[0] ?? null;
+  const lastLedSendErrorAt = pads.reduce<number | null>((latest, pad) => {
+    if (!pad.lastLedSendErrorAt) return latest;
+    return Math.max(latest || 0, pad.lastLedSendErrorAt);
+  }, null);
   return {
     enabled: state.enabled,
     connected: Boolean(state.input && state.output),
     inputName: state.inputName,
     outputName: state.outputName,
-    handshakeDone: state.handshakeDone,
+    handshakeDone: readyPads.length > 0,
     sysexRx: state.sysexRx,
     sysexTx: state.sysexTx,
     ackCount: state.ackCount,
@@ -831,8 +1269,22 @@ export function getServerRoliStatus(): ServerRoliStatus {
     screensaverActive: state.screensaverActive,
     browserClientCount: state.browserClientCount,
     lastBrowserSeenAt: state.lastBrowserSeenAt,
-    ledSendFailureCount: state.ledSendFailureCount,
-    nextLedSendAttemptAt: state.nextLedSendAttemptAt,
-    lastLedSendErrorAt: state.lastLedSendErrorAt,
+    ledSendFailureCount: pads.reduce((count, pad) => count + pad.ledSendFailureCount, 0),
+    nextLedSendAttemptAt,
+    lastLedSendErrorAt,
+    devices: pads.map((pad) => ({
+      deviceId: pad.deviceId,
+      topologyIndex: pad.topologyIndex,
+      topologySerial: pad.topologySerial,
+      role: pad.role,
+      handshakeDone: pad.handshakeDone,
+      touchCount: pad.touchCount,
+      lastTouch: pad.lastTouch,
+      lastEventAt: pad.lastEventAt,
+      ledSendFailureCount: pad.ledSendFailureCount,
+      nextLedSendAttemptAt: pad.nextLedSendAttemptAt,
+      lastLedSendErrorAt: pad.lastLedSendErrorAt,
+      lastError: pad.lastError,
+    })),
   };
 }

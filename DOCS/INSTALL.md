@@ -66,7 +66,6 @@ configuration JSON via Settings > Import.
 ```
 npm run build
 npm run test:api-contract
-npm run test:touchosc-workflow
 npm run test:bridge-smoke
 ```
 

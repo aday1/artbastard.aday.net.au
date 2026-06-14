@@ -4,7 +4,8 @@
 
 Date logged: 2026-06-13
 
-Status: open, deferred
+Status: mostly resolved in v5.2.13.0 for the server-owned ROLI path; keep this
+note as historical context for browser-only fallback debugging.
 
 ### Summary
 
@@ -14,7 +15,10 @@ ArtBastard can use physically joined ROLI Lightpad Blocks as controllers, with o
 - Colour control works as an input surface, though it has had visual glitches during development.
 - The ROLI Debug Panel paint test can fill an entire block red.
 
-The remaining problem is LED feedback on the PAN/TILT block. It is not reliable enough to keep tuning visually right now.
+The v5.2.13.0 server path now handles the joined pair as two topology-indexed
+logical pads with per-pad ACK queues: index 30 is primary XY and index 60 is the
+colour-wheel pad. Browser-only ROLI fallback may still need the older debugging
+notes below.
 
 ### Symptoms
 
@@ -27,7 +31,8 @@ The remaining problem is LED feedback on the PAN/TILT block. It is not reliable 
 
 ### Current workaround
 
-Treat the ROLI blocks as touch controllers for now and do not rely on their LED feedback during a show. The controls are usable even when the visual feedback is wrong.
+Prefer server-owned ROLI on Windows. If the browser fallback owns the pads,
+these older caveats can still apply.
 
 ### Implementation state at time of logging
 

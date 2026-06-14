@@ -1,7 +1,16 @@
-# ArtBastard Features (v5.2.12.0)
+# ArtBastard Features (v5.2.13.0)
 
 Feature inventory after the rebuild consolidation. Subsystem first, then
 notable shipped features.
+
+## Release highlight: v5.2.13.0 joined ROLI server topology
+
+- Server-owned joined ROLI Lightpad BLOCK topology splits a physically chained
+  one-USB pair into two logical pads: primary XY and colour-wheel.
+- ROLI LED drawing is ACK-paced per pad with independent packet counters,
+  clean crosshair frames, colour strip frames, and role-specific idle motion.
+- ROLI auto-connect ignores non-ROLI ports such as Holybell10 when the blocks
+  are unplugged.
 
 ## Release highlight: v5.2.12.0 hard version bump
 
@@ -163,9 +172,9 @@ ranges where low traffic warrants it.
 
 - OSC clients can drive SuperControl, scenes, ACT triggers, master controls,
   fixtures, and direct DMX channels; see DOCS/OSC_REFERENCE.md.
-- Legacy TouchOSC XML generator code remains test-covered by
-  `test:touchosc-workflow`, but it is not a primary routed surface in
-  v5.2.12.0.
+- Legacy TouchOSC XML generator code is no longer a primary routed surface;
+  use the API contract smoke and in-app OSC monitor while maintaining tablet
+  workflows.
 
 ## MIDI and OSC
 
@@ -210,7 +219,7 @@ ranges where low traffic warrants it.
   - DMX filtering behaviour
 - Smoke scripts:
   - API contract smoke (`test:api-contract`)
-  - TouchOSC workflow smoke (`test:touchosc-workflow`)
+  - Bridge smoke (`test:bridge-smoke`)
 - Demo evidence pipeline:
   - Automated screenshot capture (`demo:capture-screenshots`)
   - Automated video capture (`demo:capture-videos`)

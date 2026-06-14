@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ArtBastard DMX512 v5.2.12.0 - APC40 State + SuperControl Edition</title>
-    <meta name="description" content="ArtBastard DMX512 v5.2.12.0 - stateful APC40 ON/OFF controls, Deck A/B scenes, BPM header dashboard, cream/synthwave SuperControl remaster, footer MIDI/OSC/DMX monitors, fixture-aware scene and ACT seed templates, Roli Lightpad XY-pad path memory, Art-Net, OSC, LAN bridge, mobile surface. Open source.">
+    <title>ArtBastard DMX512 v5.2.13.0 - Joined ROLI + APC40 State Edition</title>
+    <meta name="description" content="ArtBastard DMX512 v5.2.13.0 - server-owned joined ROLI Lightpad topology, deterministic XY and colour pads, stateful APC40 ON/OFF controls, Deck A/B scenes, BPM header dashboard, cream/synthwave SuperControl remaster, footer MIDI/OSC/DMX monitors, fixture-aware scene and ACT seed templates, Art-Net, OSC, LAN bridge, mobile surface. Open source.">
     <link rel="stylesheet" href="theatrical.css?v=20260609-mobile">
     <link rel="stylesheet" href="styles.css?v=20260609-mobile">
     <link rel="stylesheet" href="showcase-shell.css?v=20260609-mobile">
@@ -80,7 +80,7 @@
                     <span class="showcase-banner-sub">Academie des Illuminations Pretentieuses</span>
                     <h1 class="hero-title marquee-title">
                         <span class="gradient-text">ArtBastard</span>
-                        <span class="hero-subtitle">DMX512 v5.2.12.0 - APC40 State + SuperControl Edition</span>
+                        <span class="hero-subtitle">DMX512 v5.2.13.0 - Joined ROLI + APC40 State Edition</span>
                     </h1>
                     <p class="tagline">Breath of Light Manuscripts // Photonic Supremacy</p>
                     <span class="tagline-secondary">Theatre des Photons // ruelle parisienne</span>
@@ -102,9 +102,9 @@
                         512 channels per universe, Art-Net output, MIDI Learn with controller templates,
                         two-way OSC, scene timelines, Deck A/B APC40 launching, stateful APC40 ON/OFF
                         LEDs, a top-header BPM dashboard, optional fixture-aware scene and ACT seed
-                        templates, and one Super Control engine across desktop and mobile. Cloud hosting
-                        with an optional Raspberry Pi LAN bridge for home Art-Net and Ableton Link. Open
-                        source, MIT.
+                        templates, server-owned joined ROLI Lightpad XY/colour pads, and one Super
+                        Control engine across desktop and mobile. Cloud hosting with an optional
+                        Raspberry Pi LAN bridge for home Art-Net and Ableton Link. Open source, MIT.
                     </p>
                     <div class="hero-actions">
                         <a href="https://artbastard.aday.net.au/" class="btn btn-live">Try it live</a>
@@ -141,8 +141,8 @@
                             <span class="stat-label">Demo Clips</span>
                         </div>
                         <div class="stat">
-                            <span class="stat-number">5.2.12</span>
-                            <span class="stat-label">Stateful APC40</span>
+                            <span class="stat-number">5.2.13</span>
+                            <span class="stat-label">Joined ROLI</span>
                         </div>
                         <div class="stat">
                             <span class="stat-number">100%</span>
@@ -192,7 +192,7 @@
                         <div class="rack-module-header">
                             <span class="rack-screw rack-screw-tl" aria-hidden="true"></span>
                             <span class="rack-screw rack-screw-tr" aria-hidden="true"></span>
-                            <span class="rack-module-title">RACK DOCTRINE v5.2.12</span>
+                            <span class="rack-module-title">RACK DOCTRINE v5.2.13</span>
                         </div>
                         <div class="rack-module-body">
                             <p>
@@ -440,21 +440,20 @@
                     </div>
                     <div class="feature-card">
                         <div class="feature-icon">ROLI</div>
-                        <h3>Roli Lightpad XY-Pad Mirror</h3>
-                        <p>Plug in a Roli Lightpad BLOCK and it becomes an MPE-aware XY pad
-                            for Super Control. Touch-draw a path on the surface and it renders
-                            live on the React canvas; pencil-draw on the canvas and the LED
-                            mirrors it as you go. Save up to <strong>8 path slots (A–H)</strong>
-                            per fixture, recall by tapping the strip, right-click to rename
-                            or clear. Bidirectional path memory between hardware and software.</p>
+                        <h3>Server ROLI XY + Colour Pads</h3>
+                        <p>Plug in a joined Roli Lightpad BLOCK pair over one USB cable and the
+                            server splits it into two deterministic logical pads: topology index 30
+                            is the primary pan/tilt XY surface, topology index 60 is the colour-wheel
+                            pad. LEDs are ACK-paced per pad, with clean crosshair and RGB strip
+                            drawing plus role-specific idle motion.</p>
                     </div>
                     <div class="feature-card">
                         <div class="feature-icon">BLKS</div>
                         <h3>Roli Blocks Family Support</h3>
                         <p>Beyond the Lightpad: Seaboard BLOCKs send MPE pitch-bend per finger
                             for continuous pan/tilt rides, and Control BLOCKs become a transport
-                            row for ACT triggers. All BLOCKs discovered over the same MIDI bus
-                            ArtBastard already uses — no DAW required.</p>
+                            row for ACT triggers. Server ROLI ownership is preferred on Windows;
+                            browser Web MIDI remains a fallback when the server has not claimed a pad.</p>
                     </div>
                     <div class="feature-card">
                         <div class="feature-icon">APC4</div>
@@ -562,14 +561,14 @@
                             <code>http://localhost:3030</code>.</p>
                         <div class="download-buttons">
                             <a href="https://github.com/aday1/artbastard.aday.net.au/releases/latest" class="btn btn-primary btn-large">
-                                Download v5.2.12.0
+                                Download v5.2.13.0
                             </a>
                             <a href="https://github.com/aday1/artbastard.aday.net.au" target="_blank" rel="noopener" class="btn btn-secondary btn-large">
                                 View Source
                             </a>
                         </div>
                         <div class="version-info">
-                            <p>Latest Version: <span id="latest-version">v5.2.12.0</span> - APC40 State + SuperControl Edition</p>
+                            <p>Latest Version: <span id="latest-version">v5.2.13.0</span> - Joined ROLI + APC40 State Edition</p>
                         </div>
                     </div>
                     <div class="install-steps">
@@ -616,7 +615,7 @@
                     </a>
                     <a href="DOCS/FEATURES.md" class="doc-card">
                         <h3>Features Guide</h3>
-                        <p>Full feature inventory by subsystem after the v5.2.12.0 hard version bump.</p>
+                        <p>Full feature inventory by subsystem after the v5.2.13.0 joined ROLI server topology release.</p>
                     </a>
                     <a href="DOCS/FIXTURES.md" class="doc-card">
                         <h3>Fixture Setup</h3>
@@ -690,7 +689,7 @@
                     "Light is not merely illumination &mdash; it is emotion made visible, dreams given form."
                 </p>
                 <p>
-                    &copy; 2026 ArtBastard DMX512 v5.2.12.0 - APC40 State + SuperControl Edition. MIT licensed.
+                    &copy; 2026 ArtBastard DMX512 v5.2.13.0 - Joined ROLI + APC40 State Edition. MIT licensed.
                     <a href="DOCS/HISTORY.md">Chronicles</a>
                 </p>
             </div>
