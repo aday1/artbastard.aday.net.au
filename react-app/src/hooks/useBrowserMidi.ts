@@ -131,11 +131,14 @@ export const useBrowserMidi = () => {
           debugLog.log(`[useBrowserMidi] Device ${portName} disconnected, removed from active inputs.`)
           return newSet
         })
+        if (socket && socketConnected) {
+          socket.emit('browserMidiStatus', { action: 'disconnected', inputName: portName, inputId: event.port.id, reason: 'device-disconnected' })
+        }
       } else if (event.port.state === 'connected') {
         void maybeAutoApplyTemplate(inputList)
       }
     }
-  }, [midiAccess, maybeAutoApplyTemplate, safeAddNotification])
+  }, [midiAccess, maybeAutoApplyTemplate, safeAddNotification, socket, socketConnected])
 
   useEffect(() => {
     if (midiAccess) {
@@ -234,6 +237,15 @@ export const useBrowserMidi = () => {
         recordBrowserMidiMessage(messageToStore)
         if (socket && socketConnected) {
           socket.emit('browserMidiMessage', messageToStore)
+          socket.emit('browserMidiStatus', {
+            action: 'receiving',
+            inputName: source,
+            inputId: sourceInput?.id,
+            messageType: messageToStore._type,
+            channel: messageToStore.channel,
+            controller: messageToStore.controller,
+            note: messageToStore.note,
+          })
         } else {
           // console.warn('[useBrowserMidi] Socket not connected. MIDI message not sent to server.')
         }
@@ -287,6 +299,9 @@ export const useBrowserMidi = () => {
     const input = midiAccess.inputs.get(inputId)
     if (input) {
       setActiveBrowserInputs(prev => new Set(prev).add(inputId))
+      if (socket && socketConnected) {
+        socket.emit('browserMidiStatus', { action: 'connected', inputName: input.name || 'Browser MIDI', inputId })
+      }
       safeAddNotification({
         message: `Connecting to MIDI device: ${input.name}`,
         type: 'info',
@@ -300,7 +315,7 @@ export const useBrowserMidi = () => {
         priority: 'normal'
       })
     }
-  }, [midiAccess, safeAddNotification])
+  }, [midiAccess, safeAddNotification, socket, socketConnected])
 
   // Disconnect from a MIDI input
   const disconnectBrowserInput = useCallback((inputId: string) => {
@@ -313,6 +328,9 @@ export const useBrowserMidi = () => {
         newSet.delete(inputId)
         return newSet
       })
+      if (socket && socketConnected) {
+        socket.emit('browserMidiStatus', { action: 'disconnected', inputName: input.name || 'Browser MIDI', inputId })
+      }
       safeAddNotification({
         message: `Disconnected from MIDI device: ${input.name}`,
         type: 'info',
@@ -326,7 +344,7 @@ export const useBrowserMidi = () => {
         priority: 'normal'
       })
     }
-  }, [midiAccess, safeAddNotification])
+  }, [midiAccess, safeAddNotification, socket, socketConnected])
 
   // Refresh MIDI devices list
   const refreshDevices = useCallback(() => {

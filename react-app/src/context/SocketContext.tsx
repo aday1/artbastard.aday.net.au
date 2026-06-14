@@ -150,6 +150,15 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         useStore.getState().reportOscActivity(data.channelIndex, data.value);
       });
 
+      const forwardBrowserMidiStatus = (event: Event) => {
+        socketInstance.emit('browserMidiStatus', (event as CustomEvent).detail || {});
+      };
+      const forwardBrowserMidiMonitor = (event: Event) => {
+        socketInstance.emit('browserMidiMonitor', (event as CustomEvent).detail || {});
+      };
+      window.addEventListener('artbastard:browser-midi-status', forwardBrowserMidiStatus);
+      window.addEventListener('artbastard:browser-midi-monitor', forwardBrowserMidiMonitor);
+
       // Listen for masterClockUpdate from backend
       socketInstance.on('masterClockUpdate', (data: any) => {
         debugLog.log('[SocketContext] Received masterClockUpdate:', data);
@@ -606,6 +615,8 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           socketInstance.off('localStorageBulkUpdate');
           socketInstance.disconnect();
         }
+        window.removeEventListener('artbastard:browser-midi-status', forwardBrowserMidiStatus);
+        window.removeEventListener('artbastard:browser-midi-monitor', forwardBrowserMidiMonitor);
         window.removeEventListener('saveActsToBackend', handleSaveActs as EventListener);
         setSocket(null);
         setConnected(false);

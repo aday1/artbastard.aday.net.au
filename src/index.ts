@@ -43,7 +43,10 @@ export interface MidiMessage {
     velocity?: number;
     number?: number;  // For program change messages
     source?: string;
+    sourceTransport?: string;
 }
+
+const browserMidiReceiveLogAt = new Map<string, number>();
 
 function getOscArgValue(arg: any): any {
     if (arg && typeof arg === 'object' && 'value' in arg) {
@@ -53,8 +56,11 @@ function getOscArgValue(arg: any): any {
 }
 
 function logMidiEvent(source: string, type: string, msg: MidiMessage, extra: Record<string, any> = {}) {
-    log(`MIDI ${source} ${type}`, 'MIDI', {
+    const sourceTransport = msg.sourceTransport || extra.sourceTransport || 'server';
+    const transportLabel = sourceTransport === 'browser' ? 'Browser MIDI RX' : 'Server MIDI RX';
+    log(`${transportLabel}: ${source} ${type}`, 'MIDI', {
         source,
+        sourceTransport,
         type,
         channel: msg.channel !== undefined ? msg.channel + 1 : undefined,
         note: msg.note,
@@ -2282,6 +2288,52 @@ async function startLaserTime(io: Server) {
             if (msg._type === 'noteon' || msg._type === 'cc' || msg._type === 'pitch') {
                 handleMidiMessage(io, msg._type as 'noteon' | 'cc' | 'pitch', msg);
             }
+        });
+
+        socket.on('browserMidiMonitor', (msg: MidiMessage) => {
+            const source = (msg as any).source || 'browser';
+            const key = `${socket.id}:${source}:${msg._type || 'unknown'}`;
+            const now = Date.now();
+            const last = browserMidiReceiveLogAt.get(key) || 0;
+            if (now - last < 1000) return;
+            browserMidiReceiveLogAt.set(key, now);
+            logMidiEvent(source, msg._type || 'unknown', { ...msg, sourceTransport: 'browser' }, {
+                socket: socket.id,
+                monitorOnly: true,
+            });
+        });
+
+        socket.on('browserMidiStatus', (payload: any = {}) => {
+            const action = typeof payload.action === 'string' ? payload.action : 'status';
+            const inputName = typeof payload.inputName === 'string' ? payload.inputName : payload.name || 'browser MIDI';
+            const inputId = typeof payload.inputId === 'string' ? payload.inputId : undefined;
+            const statusType = action === 'connected'
+                ? 'Browser MIDI connected'
+                : action === 'disconnected'
+                ? 'Browser MIDI disconnected'
+                : action === 'released'
+                ? 'Browser MIDI released'
+                : action === 'deferred'
+                ? 'Browser MIDI deferred to server'
+                : action === 'receiving'
+                ? 'Browser MIDI receiving'
+                : 'Browser MIDI status';
+
+            const key = `${socket.id}:${inputName}:${action}`;
+            const now = Date.now();
+            const last = browserMidiReceiveLogAt.get(key) || 0;
+            if (action === 'receiving' && now - last < 2500) return;
+            browserMidiReceiveLogAt.set(key, now);
+
+            log(statusType, 'MIDI', {
+                inputName,
+                inputId,
+                messageType: payload.messageType,
+                channel: typeof payload.channel === 'number' ? payload.channel + 1 : undefined,
+                controller: payload.controller,
+                note: payload.note,
+                socketId: socket.id,
+            });
         });
 
         // Handle network info request

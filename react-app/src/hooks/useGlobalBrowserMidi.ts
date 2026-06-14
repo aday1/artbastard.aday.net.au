@@ -50,6 +50,7 @@ export const useGlobalBrowserMidi = () => {
   // Store handler references so we can remove them properly
   const handlerRefs = useRef<Map<string, (event: WebMidi.MIDIMessageEvent) => void>>(new Map());
   const templateApplyInFlightRef = useRef<Set<string>>(new Set());
+  const browserMidiReceiveReportAtRef = useRef<Map<string, number>>(new Map());
   // Input ids we have already auto-connected (or attempted to) in this session.
   // Once an id is in here, the auto-effect must not touch it again — manual
   // Connect/Disconnect owns it. Prevents the effect re-firing on activeInputs
@@ -68,6 +69,16 @@ export const useGlobalBrowserMidi = () => {
     addNotification: state.addNotification,
     applyMidiControllerTemplate: state.applyMidiControllerTemplate,
   }));
+
+  const dispatchBrowserMidiStatus = useCallback((detail: Record<string, unknown>) => {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(new CustomEvent('artbastard:browser-midi-status', { detail }));
+  }, []);
+
+  const dispatchBrowserMidiMonitor = useCallback((message: any) => {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(new CustomEvent('artbastard:browser-midi-monitor', { detail: message }));
+  }, []);
 
   const closeRoliInputsForServer = useCallback((access: WebMidi.MIDIAccess | null) => {
     if (!access) return;
@@ -103,8 +114,9 @@ export const useGlobalBrowserMidi = () => {
       return newSet;
     });
     void input.close().catch(() => undefined);
+    dispatchBrowserMidiStatus({ action: 'deferred', inputName: input.name || 'Browser MIDI', inputId: input.id, reason: 'server-owned' });
     debugLog.log('[GlobalBrowserMidi] Released browser MIDI input because server owns it:', input.name);
-  }, []);
+  }, [dispatchBrowserMidiStatus]);
 
   useEffect(() => {
     const applyServerRoliStatus = (status: any) => {
@@ -290,6 +302,7 @@ export const useGlobalBrowserMidi = () => {
 
     if (isServerOwnedInput(input)) {
       debugLog.log('[GlobalBrowserMidi] Browser MIDI input deferred to active server MIDI:', input.name);
+      dispatchBrowserMidiStatus({ action: 'deferred', inputName: input.name || 'Browser MIDI', inputId, reason: 'server-owned' });
       return;
     }
 
@@ -391,6 +404,23 @@ export const useGlobalBrowserMidi = () => {
 
       recordBrowserMidiMessage(messageToStore);
 
+      const receiveReportKey = `${input.id}:${messageToStore._type || messageToStore.type || 'unknown'}`;
+      const lastReceiveReport = browserMidiReceiveReportAtRef.current.get(receiveReportKey) || 0;
+      const reportNow = Date.now();
+      if (reportNow - lastReceiveReport > 2500) {
+        browserMidiReceiveReportAtRef.current.set(receiveReportKey, reportNow);
+        dispatchBrowserMidiMonitor(messageToStore);
+        dispatchBrowserMidiStatus({
+          action: 'receiving',
+          inputName: source,
+          inputId,
+          messageType: messageToStore._type || messageToStore.type,
+          channel: messageToStore.channel,
+          controller: messageToStore.controller,
+          note: messageToStore.note,
+        });
+      }
+
       // Create a unique key for this MIDI control (channel + controller/note)
       const controlKey = messageType === 0xB0 
         ? `cc_${channel}_${data1}` 
@@ -472,13 +502,14 @@ export const useGlobalBrowserMidi = () => {
     });
 
     debugLog.log('[GlobalBrowserMidi] Connected to input:', input.name);
+    dispatchBrowserMidiStatus({ action: 'connected', inputName: input.name || 'Browser MIDI', inputId });
     
     addNotification({
       message: `Connected to browser MIDI: ${input.name}`,
       type: 'success',
       priority: 'normal'
     });
-  }, [midiAccess, addNotification, isServerOwnedInput]);
+  }, [midiAccess, addNotification, isServerOwnedInput, dispatchBrowserMidiStatus, dispatchBrowserMidiMonitor]);
 
   useEffect(() => {
     if (!midiAccess) return;
@@ -576,13 +607,14 @@ export const useGlobalBrowserMidi = () => {
     });
 
     debugLog.log('[GlobalBrowserMidi] Disconnected from input:', input.name);
+    dispatchBrowserMidiStatus({ action: 'disconnected', inputName: input.name || 'Browser MIDI', inputId });
     
     addNotification({
       message: `Disconnected from browser MIDI: ${input.name}`,
       type: 'info',
       priority: 'normal'
     });
-  }, [midiAccess, addNotification]);
+  }, [midiAccess, addNotification, dispatchBrowserMidiStatus]);
 
   // Refresh MIDI devices
   const refreshDevices = useCallback(() => {
@@ -626,6 +658,7 @@ export const useGlobalBrowserMidi = () => {
     try {
       await input.close();
       debugLog.log('[GlobalBrowserMidi] Released input:', input.name);
+      dispatchBrowserMidiStatus({ action: 'released', inputName: input.name || 'Browser MIDI', inputId });
       addNotification({
         message: `Released ${input.name} from browser — backend can now use it via Server MIDI`,
         type: 'info',
@@ -639,7 +672,7 @@ export const useGlobalBrowserMidi = () => {
         priority: 'high',
       });
     }
-  }, [midiAccess, addNotification]);
+  }, [midiAccess, addNotification, dispatchBrowserMidiStatus]);
 
   // Periodic cleanup of stale pending messages (every 100ms)
   useEffect(() => {
