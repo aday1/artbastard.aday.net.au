@@ -773,6 +773,44 @@ function Clear-SavedServerMidi {
     }
 }
 
+function Invoke-FactoryResetFromConsole {
+    Write-Host ''
+    Write-Host 'FACTORY RESET will clear saved config, scenes, acts, fixtures, stage layout, DMX state, and appearance.' -ForegroundColor Red
+    Write-Host 'Logs and bridge token history are preserved by the backend reset endpoint.' -ForegroundColor Yellow
+    Write-Host ''
+    $confirm = Read-Host 'Type FACTORY RESET to continue'
+    if ($confirm -cne 'FACTORY RESET') {
+        Write-Host 'Factory reset cancelled.' -ForegroundColor Yellow
+        return
+    }
+
+    $secondConfirm = Read-Host 'Last check: reset this ArtBastard rig now? [y/N]'
+    if ($secondConfirm -notmatch '^(y|yes)$') {
+        Write-Host 'Factory reset cancelled.' -ForegroundColor Yellow
+        return
+    }
+
+    try {
+        $result = Invoke-AbApi -Method POST -Path '/factory-reset'
+        Write-Host "Factory reset complete. Deleted: $(@($result.deleted).Count), failed: $(@($result.failed).Count)" -ForegroundColor Green
+        if (@($result.failed).Count -gt 0) {
+            Write-Host 'Some files could not be deleted:' -ForegroundColor Yellow
+            @($result.failed) | Select-Object -First 8 | ForEach-Object {
+                Write-Host "  - $($_.file): $($_.error)" -ForegroundColor Yellow
+            }
+        }
+
+        $relaunch = Read-Host 'Relaunch clean server now? [Y/n]'
+        if ($relaunch -notmatch '^(n|no)$') {
+            Start-CurrentRelaunch
+        } else {
+            Write-Host 'Current server was reset in place. Refresh browser clients if needed.' -ForegroundColor Cyan
+        }
+    } catch {
+        Write-Host "Factory reset failed: $($_.Exception.Message)" -ForegroundColor Red
+    }
+}
+
 function Get-SceneNames {
     try {
         $scenes = @(Invoke-AbApi -Method GET -Path '/scenes')
@@ -938,8 +976,8 @@ function Start-CurrentRelaunch {
 function Open-CustomLogLayout {
     $validModes = @('all', 'midi', 'rig', 'server', 'dmx', 'osc')
     Write-Host "Modes: $($validModes -join ', ')" -ForegroundColor Cyan
-    $first = Read-Host 'Left/top panel mode [midi]'
-    $second = Read-Host 'Right/top panel mode [rig]'
+    $first = Read-Host 'Right/top panel mode [midi]'
+    $second = Read-Host 'Right/middle panel mode [rig]'
     $third = Read-Host 'Right/bottom panel mode [server]'
     if ([string]::IsNullOrWhiteSpace($first)) { $first = 'midi' }
     if ([string]::IsNullOrWhiteSpace($second)) { $second = 'rig' }
@@ -957,14 +995,16 @@ function Open-CustomLogLayout {
 
     $args = @(
         '-F', '-w', 'artbastard-local',
-        'new-tab', '--title', "AB-$first", 'powershell.exe', '-NoExit', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $LogPanelScriptPath, '-LogPath', $LogPath, '-Mode', $first,
+        'new-tab', '--title', 'Rig-Control', 'powershell.exe', '-NoExit', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $PSCommandPath, '-RepoPath', $RepoPath, '-LogPath', $LogPath, '-LogPanelScriptPath', $LogPanelScriptPath, '-Port', "$Port",
         ';',
-        'split-pane', '-H', '--title', "AB-$second", 'powershell.exe', '-NoExit', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $LogPanelScriptPath, '-LogPath', $LogPath, '-Mode', $second,
+        'split-pane', '-H', '--title', "AB-$first", 'powershell.exe', '-NoExit', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $LogPanelScriptPath, '-LogPath', $LogPath, '-Mode', $first,
+        ';',
+        'split-pane', '-V', '--title', "AB-$second", 'powershell.exe', '-NoExit', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $LogPanelScriptPath, '-LogPath', $LogPath, '-Mode', $second,
         ';',
         'split-pane', '-V', '--title', "AB-$third", 'powershell.exe', '-NoExit', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $LogPanelScriptPath, '-LogPath', $LogPath, '-Mode', $third
     )
     Start-Process -FilePath $wt.Source -ArgumentList $args
-    Write-Host "Opened custom log layout. Resize panes by dragging splitters or Alt+Shift+Arrow." -ForegroundColor Green
+    Write-Host "Opened custom four-panel layout. Resize panes by dragging splitters or Alt+Shift+Arrow." -ForegroundColor Green
 }
 
 try { $Host.UI.RawUI.WindowTitle = 'ArtBastard - Rig Control' } catch { }
@@ -987,6 +1027,7 @@ while ($true) {
     Write-ActionLine 'M' 'Map server MIDI' 'claim one input for backend/server console' DarkYellow
     Write-ActionLine 'D' 'Unmap server MIDI' 'release active backend MIDI input(s)' DarkYellow
     Write-ActionLine 'C' 'Clear boot MIDI' 'remove saved server auto-connect list' Yellow
+    Write-ActionLine 'F' 'Factory reset' 'clear rig state; requires typed confirmation' Red
     Write-ActionLine 'V' 'Show current layout' 'MIDI, ROLI, Art-Net, fixtures, groups, scene count' White
     Write-ActionLine 'L' 'Load scene' 'choose and fire a saved scene from the console' Green
     Write-ActionLine 'G' 'Stage canvas' 'open fixture/stage map; stage layout comes from project data' Cyan
@@ -1001,6 +1042,7 @@ while ($true) {
         '^(m|M)$' { Connect-ServerMidi; Pause }
         '^(d|D)$' { Disconnect-ServerMidi; Pause }
         '^(c|C)$' { Clear-SavedServerMidi; Pause }
+        '^(f|F)$' { Invoke-FactoryResetFromConsole; Pause }
         '^(v|V)$' { Show-CurrentLayout; Pause }
         '^(l|L)$' { Load-SceneFromConsole; Pause }
         '^(g|G)$' { Open-StageCanvas; Pause }
@@ -1042,7 +1084,9 @@ function Start-LogPanels {
         ";",
         "split-pane", "-H", "--title", "MIDI-OSC-DMX", "powershell.exe", "-NoExit", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $panelScriptPath, "-LogPath", $logPath, "-Mode", "midi",
         ";",
-        "split-pane", "-V", "--title", "ROLI-APC-warnings", "powershell.exe", "-NoExit", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $panelScriptPath, "-LogPath", $logPath, "-Mode", "rig"
+        "split-pane", "-V", "--title", "ROLI-APC-warnings", "powershell.exe", "-NoExit", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $panelScriptPath, "-LogPath", $logPath, "-Mode", "rig",
+        ";",
+        "split-pane", "-V", "--title", "SERVER-system", "powershell.exe", "-NoExit", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $panelScriptPath, "-LogPath", $logPath, "-Mode", "server"
     )
 
     try {
