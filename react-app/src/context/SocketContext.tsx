@@ -133,6 +133,10 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         window.dispatchEvent(new CustomEvent('serverRoliStatus', { detail: status }));
       });
 
+      socketInstance.on('serverRoliTouch', (touch: any) => {
+        window.dispatchEvent(new CustomEvent('serverRoliTouch', { detail: touch }));
+      });
+
       const dispatchServerMidiInputsActive = (inputs: string[]) => {
         const activeInputs = Array.isArray(inputs) ? inputs : [];
         (window as any).__artbastardServerMidiInputsActive = activeInputs;
@@ -582,6 +586,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           socketInstance.off('availableClockSources');
           socketInstance.off('midiInputsActive');
           socketInstance.off('activeMidiInterfaces');
+          socketInstance.off('serverRoliTouch');
           socketInstance.off('midiClockInputs');
           socketInstance.off('midiClockInputChanged');
           socketInstance.off('dmxUpdate');

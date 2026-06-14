@@ -1629,7 +1629,16 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
   }, [roli.handshakeDone, panTiltXY.x, panTiltXY.y, paintRoliPanTiltFrame]);
 
   useEffect(() => {
-    roli.onTouch((ev) => {
+    const handleRoliTouch = (ev: {
+      x: number;
+      y: number;
+      z: number;
+      phase: 'start' | 'move' | 'end';
+      deviceId?: string;
+      role?: string;
+      sourceTransport?: string;
+    }) => {
+      if (!ev || (ev.role && ev.role !== 'primary')) return;
       // Always reflect the touch on the device + canvas, even without a
       // fixture selected. Pan/tilt writes are gated on selection further down.
       liveTouchRef.current =
@@ -1647,10 +1656,12 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
 
       // LED feedback: paint a readable crosshair + trail. On touch-end, leave
       // the completed stroke visible as a ghost trail instead of blanking.
-      if (ev.phase === 'end') {
-        paintRoliPanTiltFrame({ x: ev.x, y: ev.y }, trailRef.current, 'ghost', ev.deviceId);
-      } else {
-        paintRoliPanTiltFrame({ x: ev.x, y: ev.y }, trailRef.current, 'live', ev.deviceId);
+      if (ev.sourceTransport !== 'server') {
+        if (ev.phase === 'end') {
+          paintRoliPanTiltFrame({ x: ev.x, y: ev.y }, trailRef.current, 'ghost', ev.deviceId);
+        } else {
+          paintRoliPanTiltFrame({ x: ev.x, y: ev.y }, trailRef.current, 'live', ev.deviceId);
+        }
       }
 
       // Route into the XY pad's path state so the canvas draws the touch
@@ -1698,7 +1709,15 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
       const tiltNorm = clamp01(1 - ev.y);
       roliApplyRef.current.applyPanTiltNormalized(panNorm, tiltNorm);
       paintApc40Crosshair({ x: panNorm, y: 1 - tiltNorm, source: 'roli' });
-    });
+    };
+
+    roli.onTouch(handleRoliTouch);
+    const handleServerRoliTouch = (event: Event) => handleRoliTouch((event as CustomEvent).detail);
+    window.addEventListener('serverRoliTouch', handleServerRoliTouch);
+    return () => {
+      roli.onTouch(null);
+      window.removeEventListener('serverRoliTouch', handleServerRoliTouch);
+    };
   }, [roli.onTouch, paintRoliPanTiltFrame]);
 
   // Ensure the pad is blanked on unmount / route-away so it doesn't keep

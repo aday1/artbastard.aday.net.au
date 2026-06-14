@@ -89,6 +89,7 @@ export function useRoliLightpad(options: UseRoliLightpadOptions = {}): UseRoliLi
   const [devices, setDevices] = useState<RoliDeviceInfo[]>(() => getRoliDevices());
   const touchRef = useRef<RoliTouchCallback | null>(null);
   const lastRescanAtRef = useRef(0);
+  const serverRoliClaimedRef = useRef(false);
 
   const matched = useMemo(
     () => devices.find((d) => d.role === role) ?? null,
@@ -97,6 +98,26 @@ export function useRoliLightpad(options: UseRoliLightpadOptions = {}): UseRoliLi
 
   useEffect(() => {
     let cancelled = false;
+
+    const applyServerRoliStatus = (status: any) => {
+      const claimed = Boolean(status?.connected && (status?.inputName || status?.outputName));
+      serverRoliClaimedRef.current = claimed;
+      if (claimed) {
+        disconnectRoliLightpad();
+        setDevices(getRoliDevices());
+      }
+    };
+
+    const cachedStatus = (window as any).__artbastardServerRoliStatus;
+    if (cachedStatus) applyServerRoliStatus(cachedStatus);
+
+    fetch('/api/roli/server/status')
+      .then((response) => response.ok ? response.json() : null)
+      .then((status) => status && applyServerRoliStatus(status))
+      .catch(() => undefined);
+
+    const handleServerRoliStatus = (event: Event) => applyServerRoliStatus((event as CustomEvent).detail);
+    window.addEventListener('serverRoliStatus', handleServerRoliStatus);
 
     const handleDeviceChange = (event?: Event) => {
       if (cancelled) return;
@@ -131,6 +152,7 @@ export function useRoliLightpad(options: UseRoliLightpadOptions = {}): UseRoliLi
     };
 
     const connectApprovedRoli = (forceRescan = false) => {
+      if (serverRoliClaimedRef.current) return;
       if (forceRescan || isRoliStateStale()) {
         const now = Date.now();
         if (now - lastRescanAtRef.current > 1000) {
@@ -164,6 +186,7 @@ export function useRoliLightpad(options: UseRoliLightpadOptions = {}): UseRoliLi
 
     return () => {
       cancelled = true;
+      window.removeEventListener('serverRoliStatus', handleServerRoliStatus);
       window.removeEventListener(ROLI_DEVICE_CHANGE_EVENT, handleDeviceChange);
       window.removeEventListener(ROLI_TOUCH_EVENT, handleTouchEvent);
       window.removeEventListener(MIDI_CONNECT_ROLI_EVENT, handleConnectRoli);

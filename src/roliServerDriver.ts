@@ -12,6 +12,7 @@ const PACKET_COUNTER_MAX = 0x03ff;
 const HOST_DEVICE_INDEX = 0x00;
 const SCREENSAVER_IDLE_MS = Math.max(1000, Math.min(600000, Number(process.env.ROLI_SERVER_SCREENSAVER_IDLE_MS) || 8000));
 const SCREENSAVER_FRAME_MS = Math.max(40, Math.min(1000, Number(process.env.ROLI_SERVER_SCREENSAVER_FRAME_MS) || 140));
+const TOUCH_TRAIL_POINTS = Math.max(8, Math.min(120, Number(process.env.ROLI_SERVER_TOUCH_TRAIL_POINTS) || 56));
 
 const BITMAP_LED_DUMP_1 =
   '02 01 00 30 5A 3E 47 0B 20 01 3A 00 10 71 01 12 4B 31 09 08 60 46 5F 25 11 40 05 02 28 61 01 17 54 11 40 10 36 78 21 12 6D 1C 30 5B 00 2E 28 63 00 23 6C 70 43 24 5A 39 60 32 01 28 09 41 0D 3E 28 24 10 1B 04 51 48 1A 0A 08 22 09 1B 2C 30 45 0D 2E 08 24 20 1B 1C 00 5B 6C 50 41 16 36 58 20 10 01 6D 50 40 2D 36 58 60 0B 01 6D 70 40 2D 3A 78 3F 00 0F 1C 78 4F 07 2E 28 78 08 19 04 52 06 15 01 48 24 00 21 64 10 48 1A 02 18 60 0C 01 4C 70 40 05 7C 3F 00 7F 0F 60 7F 03 78 7F 00 7E 1F 40 7F 07 70 7F 01 7C 3F 00 7F 0F 60 7F 03 78 7F 00 7E 1F 40 7F 07 70 7F 01 7C 3F 00 7F 0F 00';
@@ -35,6 +36,7 @@ export interface ServerRoliStatus {
   screensaverActive: boolean;
   browserClientCount: number;
   lastBrowserSeenAt: number | null;
+  touchTrail: Array<{ x: number; y: number }>;
 }
 
 interface ServerRoliState {
@@ -99,6 +101,7 @@ const state: ServerRoliState = {
   screensaverMonitor: null,
   browserClientCount: 0,
   lastBrowserSeenAt: Date.now(),
+  touchTrail: [],
 };
 
 function isRoliLikeName(name: string): boolean {
@@ -187,7 +190,11 @@ function sendSysEx(payload: number[], note: string): void {
   state.output.send('sysex', bytes);
   state.sysexTx += 1;
   state.lastEventAt = Date.now();
-  log(`ROLI server tx ${note}`, 'MIDI', { bytes: payload.length, output: state.outputName });
+  log(`ROLI server tx ${note}`, 'MIDI', {
+    bytes: payload.length,
+    output: state.outputName,
+    verboseOnly: note === 'ping'
+  });
 }
 
 function waitForAck(timeoutMs = 900): Promise<void> {
@@ -266,6 +273,79 @@ function createScreensaverFrame(frame: number): Uint8ClampedArray {
   return pixels;
 }
 
+function makeColorStripPixel(x: number, y: number): [number, number, number] {
+  const hue = (x / Math.max(1, ROLI_GRID_COLS - 1)) * 330;
+  const value = Math.max(0.1, 1 - y / Math.max(1, ROLI_GRID_ROWS - 1));
+  return hsvToRgb(hue, 0.95, value);
+}
+
+function createServerTouchFrame(cursor: { x: number; y: number; z: number; phase: string }): Uint8ClampedArray {
+  const pixels = new Uint8ClampedArray(LED_PIXEL_COUNT * 4);
+  for (let y = 0; y < ROLI_GRID_ROWS; y++) {
+    for (let x = 0; x < ROLI_GRID_COLS; x++) {
+      const index = (y * ROLI_GRID_COLS + x) * 4;
+      const [red, green, blue] = makeColorStripPixel(x, y);
+      pixels[index] = Math.round(red * 0.36);
+      pixels[index + 1] = Math.round(green * 0.36);
+      pixels[index + 2] = Math.round(blue * 0.36);
+      pixels[index + 3] = 255;
+    }
+  }
+
+  const put = (x: number, y: number, color: [number, number, number, number]) => {
+    if (x < 0 || y < 0 || x >= ROLI_GRID_COLS || y >= ROLI_GRID_ROWS) return;
+    const index = (y * ROLI_GRID_COLS + x) * 4;
+    pixels[index] = Math.max(pixels[index], color[0]);
+    pixels[index + 1] = Math.max(pixels[index + 1], color[1]);
+    pixels[index + 2] = Math.max(pixels[index + 2], color[2]);
+    pixels[index + 3] = Math.max(pixels[index + 3], color[3]);
+  };
+
+  const toCell = (point: { x: number; y: number }) => ({
+    x: Math.round(Math.max(0, Math.min(1, point.x)) * (ROLI_GRID_COLS - 1)),
+    y: Math.round(Math.max(0, Math.min(1, point.y)) * (ROLI_GRID_ROWS - 1)),
+  });
+
+  const drawLine = (from: { x: number; y: number }, to: { x: number; y: number }, color: [number, number, number, number]) => {
+    let { x: x0, y: y0 } = toCell(from);
+    const { x: x1, y: y1 } = toCell(to);
+    const dx = Math.abs(x1 - x0);
+    const sx = x0 < x1 ? 1 : -1;
+    const dy = -Math.abs(y1 - y0);
+    const sy = y0 < y1 ? 1 : -1;
+    let err = dx + dy;
+    while (true) {
+      put(x0, y0, color);
+      if (x0 === x1 && y0 === y1) break;
+      const e2 = 2 * err;
+      if (e2 >= dy) { err += dy; x0 += sx; }
+      if (e2 <= dx) { err += dx; y0 += sy; }
+    }
+  };
+
+  const recentTrail = state.touchTrail.slice(-TOUCH_TRAIL_POINTS);
+  for (let index = 1; index < recentTrail.length; index++) {
+    const fade = index / Math.max(1, recentTrail.length - 1);
+    drawLine(recentTrail[index - 1], recentTrail[index], [Math.round(130 + fade * 125), Math.round(15 + fade * 40), 0, 255]);
+  }
+
+  const cell = toCell(cursor);
+  const dimCross: [number, number, number, number] = cursor.phase === 'end' ? [150, 30, 0, 255] : [255, 42, 0, 255];
+  const hot: [number, number, number, number] = cursor.phase === 'end' ? [255, 90, 30, 255] : [255, 255, 255, 255];
+  for (let x = 0; x < ROLI_GRID_COLS; x++) put(x, cell.y, dimCross);
+  for (let y = 0; y < ROLI_GRID_ROWS; y++) put(cell.x, y, dimCross);
+  for (let radius = 1; radius <= 3; radius++) {
+    for (let y = -radius; y <= radius; y++) {
+      for (let x = -radius; x <= radius; x++) {
+        const dist = Math.hypot(x, y);
+        if (Math.abs(dist - radius) <= 0.45) put(cell.x + x, cell.y + y, radius === 1 ? hot : dimCross);
+      }
+    }
+  }
+  put(cell.x, cell.y, [255, 255, 255, 255]);
+  return pixels;
+}
+
 function shouldRunServerScreensaver(): boolean {
   return Boolean(
     state.screensaverEnabled &&
@@ -327,8 +407,25 @@ function emitTouch(x: number, y: number, z: number, phase: string): void {
   state.touchCount += 1;
   state.lastTouch = { x, y, z, phase };
   state.lastEventAt = Date.now();
-  state.io?.emit('serverRoliTouch', { ...state.lastTouch, inputName: state.inputName, outputName: state.outputName });
-  log(`ROLI server touch ${phase}`, 'MIDI', { source: state.inputName, x: Number(x.toFixed(3)), y: Number(y.toFixed(3)), z: Number(z.toFixed(3)) });
+  if (phase === 'start') state.touchTrail = [{ x, y }];
+  else if (phase === 'move') {
+    state.touchTrail.push({ x, y });
+    if (state.touchTrail.length > TOUCH_TRAIL_POINTS) state.touchTrail.splice(0, state.touchTrail.length - TOUCH_TRAIL_POINTS);
+  } else if (phase === 'end' && state.touchTrail.length === 0) {
+    state.touchTrail = [{ x, y }];
+  }
+
+  stopServerRoliScreensaver('touch');
+  sendLedData(rgbaFrameToLedData(createServerTouchFrame(state.lastTouch)), false);
+
+  state.io?.emit('serverRoliTouch', { ...state.lastTouch, role: 'primary', sourceTransport: 'server', inputName: state.inputName, outputName: state.outputName });
+  log(`ROLI server touch ${phase}`, 'MIDI', {
+    source: state.inputName,
+    x: Number(x.toFixed(3)),
+    y: Number(y.toFixed(3)),
+    z: Number(z.toFixed(3)),
+    verboseOnly: phase === 'move'
+  });
 }
 
 export function setServerRoliBrowserClientCount(count: number): void {
@@ -355,7 +452,7 @@ function parseRoliSysEx(bytes: number[]): void {
     bitPos += 7;
     const counter = read7BitBits(msgData, bitPos, 10);
     state.ackCount += 1;
-    log('ROLI server ack', 'MIDI', { counter, input: state.inputName });
+    log('ROLI server ack', 'MIDI', { counter, input: state.inputName, verboseOnly: true });
     if (state.ackResolver) {
       if (state.ackTimer) clearTimeout(state.ackTimer);
       const resolver = state.ackResolver;
@@ -523,7 +620,7 @@ function sendNextLedPacket(): void {
   state.output.send('sysex', buildBlockSysEx(HOST_DEVICE_INDEX, next));
   state.sysexTx += 1;
   state.lastEventAt = Date.now();
-  log('ROLI server LED packet', 'MIDI', { remaining: state.ledQueue.length, bytes: next.length, output: state.outputName });
+  log('ROLI server LED packet', 'MIDI', { remaining: state.ledQueue.length, bytes: next.length, output: state.outputName, verboseOnly: true });
 }
 
 function sendLedData(newLed: Uint8Array, forceFullFrame = false): boolean {
