@@ -494,11 +494,11 @@ function buildRoliPanTiltFrame(
     }
   };
 
-  const drawRing = (center: { x: number; y: number }, radius: number, color: [number, number, number, number]) => {
+  const drawRing = (center: { x: number; y: number }, radius: number, color: [number, number, number, number], thickness = 0.55) => {
     for (let y = 0; y < ROLI_GRID_ROWS; y++) {
       for (let x = 0; x < ROLI_GRID_COLS; x++) {
         const distance = Math.hypot(x - center.x, y - center.y);
-        if (Math.abs(distance - radius) <= 0.42) put(x, y, color);
+        if (Math.abs(distance - radius) <= thickness) put(x, y, color);
       }
     }
   };
@@ -511,9 +511,9 @@ function buildRoliPanTiltFrame(
     for (let x = 0; x < ROLI_GRID_COLS; x++) put(x, center.y, dimRed);
     for (let y = 0; y < ROLI_GRID_ROWS; y++) put(center.x, y, dimRed);
 
-    drawRing(center, 2, mainRed);
-    drawRing(center, 5, mainRed);
-    drawRing(center, 7, dimRed);
+    drawRing(center, 2, mainRed, 0.7);
+    drawRing(center, 4, mainRed, 0.65);
+    drawRing(center, 6, dimRed, 0.55);
 
     for (let offset = -1; offset <= 1; offset++) {
       put(center.x + offset, center.y, hotRed);
@@ -522,9 +522,14 @@ function buildRoliPanTiltFrame(
     put(center.x, center.y, [255, 80, 50, 255]);
   };
 
-  const trail = path.slice(-(isHealth ? 18 : isGhost ? 36 : 24)).map(mapRoliPanTiltLedPoint);
-  const trailColor: [number, number, number, number] = isGhost ? [120, 0, 0, 255] : [180, 0, 0, 255];
-  for (let i = 1; i < trail.length; i++) drawLine(trail[i - 1], trail[i], trailColor);
+  const trail = path.slice(-(isHealth ? 24 : isGhost ? 56 : 42)).map(mapRoliPanTiltLedPoint);
+  const trailColor: [number, number, number, number] = isGhost ? [150, 10, 0, 255] : [230, 28, 0, 255];
+  for (let i = 1; i < trail.length; i++) {
+    drawLine(trail[i - 1], trail[i], trailColor);
+    const cell = toCell(trail[i]);
+    put(cell.x + 1, cell.y, trailColor);
+    put(cell.x, cell.y + 1, trailColor);
+  }
   if (trail.length === 1) {
     const only = toCell(trail[0]);
     put(only.x, only.y, trailColor);
@@ -1638,7 +1643,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
       role?: string;
       sourceTransport?: string;
     }) => {
-      if (!ev || (ev.role && ev.role !== 'primary')) return;
+      if (!ev || (ev.sourceTransport !== 'server' && ev.role && ev.role !== 'primary')) return;
       // Always reflect the touch on the device + canvas, even without a
       // fixture selected. Pan/tilt writes are gated on selection further down.
       liveTouchRef.current =

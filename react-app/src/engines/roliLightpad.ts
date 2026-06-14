@@ -1896,10 +1896,16 @@ export function drawCursorOnRgba(
     buf[idx + 2] = Math.max(buf[idx + 2], c[2]);
     buf[idx + 3] = Math.max(buf[idx + 3], c[3]);
   };
-  put(cx + 1, cy, halo);
-  put(cx - 1, cy, halo);
-  put(cx, cy + 1, halo);
-  put(cx, cy - 1, halo);
+  for (let offset = -2; offset <= 2; offset++) {
+    put(cx + offset, cy, halo);
+    put(cx, cy + offset, halo);
+  }
+  for (let y = -3; y <= 3; y++) {
+    for (let x = -3; x <= 3; x++) {
+      const distance = Math.hypot(x, y);
+      if (Math.abs(distance - 2.6) <= 0.48) put(cx + x, cy + y, halo);
+    }
+  }
   put(cx, cy, color);
 }
 

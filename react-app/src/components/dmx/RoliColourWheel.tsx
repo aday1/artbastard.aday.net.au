@@ -64,10 +64,18 @@ export const RoliColourWheel: React.FC = () => {
   // Also tracks a live cursor on the strip: bright pixel follows the finger
   // while pressed, and stays painted at the release spot ("locked colour").
   useEffect(() => {
-    roli.onTouch((ev) => {
+    const handleColourTouch = (ev: {
+      x: number;
+      y: number;
+      z: number;
+      phase: 'start' | 'move' | 'end';
+      role?: string;
+      sourceTransport?: string;
+    }) => {
+      if (!ev || (ev.sourceTransport !== 'server' && ev.role && ev.role !== 'colour-wheel')) return;
       if (ev.phase === 'end') {
         liveCursorRef.current = null;
-        paintColourWheel();
+        if (ev.sourceTransport !== 'server') paintColourWheel();
         return;
       }
       if (ev.z < 0.05) return;
@@ -93,9 +101,16 @@ export const RoliColourWheel: React.FC = () => {
           colorWheelLabel: nearestWheelSlot?.label,
         },
       }));
-      paintColourWheel({ cursor: liveCursorRef.current });
-    });
-    return () => roli.onTouch(null);
+      if (ev.sourceTransport !== 'server') paintColourWheel({ cursor: liveCursorRef.current, cursorColor: [255, 255, 255, 255] });
+    };
+
+    roli.onTouch(handleColourTouch);
+    const handleServerRoliTouch = (event: Event) => handleColourTouch((event as CustomEvent).detail);
+    window.addEventListener('serverRoliTouch', handleServerRoliTouch);
+    return () => {
+      roli.onTouch(null);
+      window.removeEventListener('serverRoliTouch', handleServerRoliTouch);
+    };
   }, [applySuperControlMidi, colorWheelSlots, roli]);
 
   const handleRepaint = useCallback(() => {
