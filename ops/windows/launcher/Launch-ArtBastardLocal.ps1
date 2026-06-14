@@ -120,14 +120,11 @@ function Show-Splash {
     Start-SplashWindow
     Write-Host ""
     Write-Host "======================================================================" -ForegroundColor DarkMagenta
-    Write-Host "      ARTBASTARD LOCAL RIG LAUNCHER" -ForegroundColor Magenta
-    Write-Host "      LIVE/main | Server MIDI first | OSC + Art-Net + DMX" -ForegroundColor Cyan
+    Write-Host "  ARTBASTARD LOCAL RIG LAUNCHER" -ForegroundColor Magenta
+    Write-Host "  LIVE/main | Server MIDI first | OSC + Art-Net + DMX" -ForegroundColor Cyan
     Write-Host "======================================================================" -ForegroundColor DarkMagenta
-    Write-Host "   _         _   ____            _                _ " -ForegroundColor Magenta
-    Write-Host "  / \   _ __| |_| __ )  __ _ ___| |_ __ _ _ __ __| |" -ForegroundColor Magenta
-    Write-Host " / _ \ | '__| __|  _ \ / _` / __| __/ _` | '__/ _` |" -ForegroundColor Cyan
-    Write-Host "/ ___ \| |  | |_| |_) | (_| \__ \ || (_| | | | (_| |" -ForegroundColor Cyan
-    Write-Host "\_/   \_\_|   \__|____/ \__,_|___/\__\__,_|_|  \__,_|" -ForegroundColor Yellow
+    Write-Host "  PHOTONIC CONSOLE ONLINE" -ForegroundColor Yellow
+    Write-Host "  Rig control, live logs, MIDI ownership, and local browser launch." -ForegroundColor Cyan
     Write-Host "======================================================================" -ForegroundColor DarkMagenta
     Write-Host "Default launch: LIVE branch, git fetch/pull, MIDI setup, local server." -ForegroundColor Green
     Write-Host "Controller policy: APC40/X-Touch auto-map on server; ROLI server claim first." -ForegroundColor Green
@@ -207,6 +204,24 @@ function Get-BranchChoice {
 function Test-Command {
     param([string]$Name)
     return [bool](Get-Command $Name -ErrorAction SilentlyContinue)
+}
+
+function Get-PreferredBrowser {
+    $candidates = @(
+        @{ Name = "Microsoft Edge"; Path = Join-Path ${env:ProgramFiles} "Microsoft\Edge\Application\msedge.exe" },
+        @{ Name = "Microsoft Edge"; Path = Join-Path ${env:ProgramFiles(x86)} "Microsoft\Edge\Application\msedge.exe" },
+        @{ Name = "Google Chrome"; Path = Join-Path ${env:ProgramFiles} "Google\Chrome\Application\chrome.exe" },
+        @{ Name = "Google Chrome"; Path = Join-Path ${env:ProgramFiles(x86)} "Google\Chrome\Application\chrome.exe" },
+        @{ Name = "Google Chrome"; Path = Join-Path $env:LOCALAPPDATA "Google\Chrome\Application\chrome.exe" }
+    )
+
+    foreach ($candidate in $candidates) {
+        if ($candidate.Path -and (Test-Path -LiteralPath $candidate.Path)) {
+            return [pscustomobject]$candidate
+        }
+    }
+
+    return $null
 }
 
 function Ensure-Repo {
@@ -440,13 +455,17 @@ function Show-MidiStatus {
     $windowsDevices = @()
     if (Test-Command "Get-PnpDevice") {
         $windowsDevices = Get-PnpDevice -PresentOnly -ErrorAction SilentlyContinue |
-            Where-Object { $_.FriendlyName -match "MIDI|APC|Launch|X-Touch|Akai|Novation|Korg|Roland|Behringer|Arturia|DJ|Controller" } |
-            Select-Object -ExpandProperty FriendlyName -Unique
+            Where-Object { $_.FriendlyName -match "MIDI|APC|Launch|X-Touch|Akai|Novation|Korg|Roland|Behringer|Arturia|Bome|LoopBe|TouchOSC|teVirtualMIDI|ipMIDI" } |
+            Select-Object -ExpandProperty FriendlyName -Unique |
+            Sort-Object
     }
 
     if ($windowsDevices.Count -gt 0) {
         Write-Host "Windows MIDI/controller probe OK; matching devices:" -ForegroundColor Green
-        $windowsDevices | ForEach-Object { Write-Host "  - $_" }
+        $windowsDevices | Select-Object -First 24 | ForEach-Object { Write-Host "  - $_" }
+        if ($windowsDevices.Count -gt 24) {
+            Write-Host "  ... $($windowsDevices.Count - 24) more MIDI-ish Windows devices hidden" -ForegroundColor DarkGray
+        }
     } else {
         Write-Host "No obvious MIDI controller names found in Windows PnP." -ForegroundColor Yellow
     }
@@ -468,7 +487,19 @@ try {
 
     $probeResult = $midiProbe | node
     Write-Host "Node MIDI probe result:" -ForegroundColor Green
-    Write-Host $probeResult
+    try {
+        $probe = $probeResult | ConvertFrom-Json
+        if ($probe.error) {
+            Write-Host "  Error: $($probe.error)" -ForegroundColor Yellow
+        } else {
+            Write-Host "  Inputs ($(@($probe.inputs).Count)):" -ForegroundColor Cyan
+            @($probe.inputs) | ForEach-Object { Write-Host "    - $_" }
+            Write-Host "  Outputs ($(@($probe.outputs).Count)):" -ForegroundColor Cyan
+            @($probe.outputs) | ForEach-Object { Write-Host "    - $_" }
+        }
+    } catch {
+        Write-Host $probeResult
+    }
 }
 
 function Write-LogPanelScript {
@@ -861,11 +892,11 @@ function Start-ArtBastard {
     Write-Step "Launching ArtBastard"
     Set-Location $repoPath
 
-    $edge = "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe"
     $url = "http://localhost:$Port"
-    if (Test-Path $edge) {
-        Write-Host "Preferred Web MIDI browser: Microsoft Edge" -ForegroundColor Green
-        Write-Host "Opening $url in Edge; localhost HTTP is sufficient for Web MIDI secure-context rules." -ForegroundColor Cyan
+    $browser = Get-PreferredBrowser
+    if ($browser) {
+        Write-Host "Preferred Web MIDI browser: $($browser.Name)" -ForegroundColor Green
+        Write-Host "Opening $url in $($browser.Name); localhost HTTP is sufficient for Web MIDI secure-context rules." -ForegroundColor Cyan
         Start-Job -ScriptBlock {
             param($BrowserPath, $ReadyUrl)
             for ($attempt = 0; $attempt -lt 60; $attempt++) {
@@ -877,9 +908,9 @@ function Start-ArtBastard {
                     Start-Sleep -Seconds 1
                 }
             }
-        } -ArgumentList $edge, $url | Out-Null
+        } -ArgumentList $browser.Path, $url | Out-Null
     } else {
-        Write-Host "Microsoft Edge path not found; ArtBastard will use the default browser." -ForegroundColor Yellow
+        Write-Host "No Edge/Chrome executable found in common paths; ArtBastard will use the default browser." -ForegroundColor Yellow
     }
 
     $modeNote = if ($script:CodeUpdatedThisRun) {
