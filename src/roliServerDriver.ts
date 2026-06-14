@@ -620,10 +620,23 @@ export async function connectServerRoli(io: Server, inputName?: string, outputNa
     });
     log('ROLI server claimed MIDI ports', 'MIDI', pair);
     emitStatus();
+    const claimedInputName = pair.inputName;
+    const claimedOutputName = pair.outputName;
     void handshake().catch((error) => {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const failedInputName = state.inputName;
+      const failedOutputName = state.outputName;
       state.handshakeDone = false;
-      state.lastError = error instanceof Error ? error.message : String(error);
-      log('ROLI server handshake failed', 'ERROR', { error: state.lastError, input: state.inputName, output: state.outputName });
+      state.lastError = errorMessage;
+      log('ROLI server handshake failed', 'ERROR', { error: state.lastError, input: failedInputName, output: failedOutputName });
+      if (state.inputName === claimedInputName && state.outputName === claimedOutputName) {
+        disconnectServerRoli();
+        state.lastError = errorMessage;
+        log('ROLI server released MIDI ports after failed handshake', 'MIDI', {
+          input: failedInputName,
+          output: failedOutputName,
+        });
+      }
       emitStatus();
     });
   } catch (error) {
