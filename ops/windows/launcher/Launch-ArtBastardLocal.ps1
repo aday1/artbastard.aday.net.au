@@ -41,7 +41,83 @@ function Write-Step {
     Write-Host "== $Message" -ForegroundColor $Color
 }
 
+function Write-SplashWindowScript {
+    $panelDir = Join-Path $env:TEMP "ArtBastardLauncher"
+    if (-not (Test-Path -LiteralPath $panelDir)) {
+        New-Item -ItemType Directory -Force -Path $panelDir | Out-Null
+    }
+
+    $splashScriptPath = Join-Path $panelDir "splash-window.ps1"
+    $splashScript = @'
+param(
+    [Parameter(Mandatory = $true)]
+    [string]$ImagePath,
+    [int]$Seconds = 5
+)
+
+$ErrorActionPreference = "Stop"
+if (-not (Test-Path -LiteralPath $ImagePath)) { exit 0 }
+
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+
+$image = [System.Drawing.Image]::FromFile($ImagePath)
+$form = New-Object System.Windows.Forms.Form
+$form.Text = "ArtBastard"
+$form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::None
+$form.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
+$form.TopMost = $true
+$form.BackColor = [System.Drawing.Color]::Black
+$form.Width = [Math]::Min(960, [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea.Width - 80)
+$form.Height = [Math]::Min(540, [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea.Height - 80)
+
+$picture = New-Object System.Windows.Forms.PictureBox
+$picture.Dock = [System.Windows.Forms.DockStyle]::Fill
+$picture.Image = $image
+$picture.SizeMode = [System.Windows.Forms.PictureBoxSizeMode]::Zoom
+$form.Controls.Add($picture)
+
+$label = New-Object System.Windows.Forms.Label
+$label.Text = "ARTBASTARD LOCAL RIG LAUNCHER"
+$label.Dock = [System.Windows.Forms.DockStyle]::Bottom
+$label.Height = 34
+$label.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+$label.Font = New-Object System.Drawing.Font("Consolas", 12, [System.Drawing.FontStyle]::Bold)
+$label.ForeColor = [System.Drawing.Color]::FromArgb(242, 220, 180)
+$label.BackColor = [System.Drawing.Color]::FromArgb(28, 18, 36)
+$form.Controls.Add($label)
+
+$timer = New-Object System.Windows.Forms.Timer
+$timer.Interval = [Math]::Max(1, $Seconds) * 1000
+$timer.Add_Tick({ $timer.Stop(); $form.Close() })
+$form.Add_Shown({ $timer.Start(); $form.Activate() })
+$form.Add_FormClosed({ $timer.Dispose(); $image.Dispose() })
+[System.Windows.Forms.Application]::Run($form)
+'@
+
+    Set-Content -LiteralPath $splashScriptPath -Value $splashScript -Encoding UTF8
+    return $splashScriptPath
+}
+
+function Start-SplashWindow {
+    if (-not (Test-Path -LiteralPath $splashPath)) { return }
+    try {
+        $splashScriptPath = Write-SplashWindowScript
+        Start-Process -FilePath "powershell.exe" -WindowStyle Hidden -ArgumentList @(
+            "-NoProfile",
+            "-STA",
+            "-ExecutionPolicy", "Bypass",
+            "-File", $splashScriptPath,
+            "-ImagePath", $splashPath,
+            "-Seconds", "5"
+        ) | Out-Null
+    } catch {
+        Write-Host "Splash image could not be displayed: $($_.Exception.Message)" -ForegroundColor Yellow
+    }
+}
+
 function Show-Splash {
+    Start-SplashWindow
     Write-Host ""
     Write-Host "======================================================================" -ForegroundColor DarkMagenta
     Write-Host "      ARTBASTARD LOCAL RIG LAUNCHER" -ForegroundColor Magenta
@@ -431,25 +507,42 @@ $titles = @{
 function Write-ColoredLogLine {
     param([string]$Line)
 
-    $color = [ConsoleColor]::Gray
-    if ($Line -match '\[ERROR\]') { $color = [ConsoleColor]::Red }
-    elseif ($Line -match '\[WARN\]') { $color = [ConsoleColor]::Yellow }
-    elseif ($Line -match '\[MIDI\]') { $color = [ConsoleColor]::Yellow }
-    elseif ($Line -match '\[OSC\]|\[TOUCHOSC\]') { $color = [ConsoleColor]::Green }
-    elseif ($Line -match '\[DMX\]') { $color = [ConsoleColor]::DarkCyan }
-    elseif ($Line -match '\[ARTNET\]') { $color = [ConsoleColor]::Cyan }
-    elseif ($Line -match '\[SERVER\]') { $color = [ConsoleColor]::Magenta }
-    elseif ($Line -match '\[SYSTEM\]') { $color = [ConsoleColor]::White }
-    elseif ($Line -match '\[CLOCK\]') { $color = [ConsoleColor]::DarkMagenta }
-    elseif ($Line -match 'ROLI|APC|screensaver') { $color = [ConsoleColor]::DarkYellow }
+    $displayTime = (Get-Date).ToString('HH:mm:ss.fff')
+    $displayType = 'LOG'
+    $displayMessage = $Line
 
-    Write-Host $Line -ForegroundColor $color
+    $match = [regex]::Match($Line, '^(?<iso>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z) - \[(?<type>[^\]]+)\] (?<message>.*)$')
+    if ($match.Success) {
+        $displayType = $match.Groups['type'].Value
+        $displayMessage = $match.Groups['message'].Value
+        try {
+            $displayTime = ([datetimeoffset]::Parse($match.Groups['iso'].Value)).ToLocalTime().ToString('HH:mm:ss.fff')
+        } catch { }
+    }
+
+    $color = [ConsoleColor]::Gray
+    if ($displayType -eq 'ERROR') { $color = [ConsoleColor]::Red }
+    elseif ($displayType -eq 'WARN') { $color = [ConsoleColor]::Yellow }
+    elseif ($displayType -eq 'MIDI') { $color = [ConsoleColor]::Yellow }
+    elseif ($displayType -eq 'OSC' -or $displayType -eq 'TOUCHOSC') { $color = [ConsoleColor]::Green }
+    elseif ($displayType -eq 'DMX') { $color = [ConsoleColor]::DarkCyan }
+    elseif ($displayType -eq 'ARTNET') { $color = [ConsoleColor]::Cyan }
+    elseif ($displayType -eq 'SERVER') { $color = [ConsoleColor]::Magenta }
+    elseif ($displayType -eq 'SYSTEM') { $color = [ConsoleColor]::White }
+    elseif ($displayType -eq 'CLOCK') { $color = [ConsoleColor]::DarkMagenta }
+    elseif ($displayMessage -match 'ROLI|APC|screensaver') { $color = [ConsoleColor]::DarkYellow }
+
+    Write-Host -NoNewline $displayTime -ForegroundColor DarkGray
+    Write-Host -NoNewline (' [{0,-7}] ' -f $displayType) -ForegroundColor $color
+    Write-Host $displayMessage -ForegroundColor $color
 }
 
 try { $Host.UI.RawUI.WindowTitle = "ArtBastard - $($titles[$Mode])" } catch { }
-Write-Host "ArtBastard $($titles[$Mode])" -ForegroundColor Magenta
-Write-Host "Tailing $LogPath" -ForegroundColor DarkGray
-Write-Host "Ctrl+C pauses this pane; reopen/change panes from the Control pane." -ForegroundColor DarkGray
+Write-Host "================================================================" -ForegroundColor DarkMagenta
+Write-Host "  ArtBastard $($titles[$Mode])" -ForegroundColor Magenta
+Write-Host "================================================================" -ForegroundColor DarkMagenta
+Write-Host "Local timestamps: HH:mm:ss.fff | source: $LogPath" -ForegroundColor DarkGray
+Write-Host "Resize panes with mouse drag or Alt+Shift+Arrow. Use Rig Control for layouts." -ForegroundColor Cyan
 Write-Host ""
 
 if (-not (Test-Path -LiteralPath $LogPath)) {
