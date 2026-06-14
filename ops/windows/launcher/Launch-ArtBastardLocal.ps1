@@ -406,7 +406,7 @@ function Write-LogPanelScript {
 param(
     [Parameter(Mandatory = $true)]
     [string]$LogPath,
-    [ValidateSet("all", "midi", "rig")]
+    [ValidateSet("all", "midi", "rig", "server", "dmx", "osc")]
     [string]$Mode = "all"
 )
 
@@ -415,23 +415,48 @@ $patterns = @{
     all = "."
     midi = "\[(MIDI|OSC|DMX|ARTNET|TOUCHOSC)\]"
     rig = "\[(SERVER|SYSTEM|WARN|ERROR|CLOCK)\]|ROLI|APC|screensaver|Ableton|ArtNet|RtMidi"
+    server = "\[(SERVER|SYSTEM|WARN|ERROR)\]"
+    dmx = "\[(DMX|ARTNET)\]"
+    osc = "\[(OSC|TOUCHOSC)\]"
 }
 $titles = @{
     all = "All server log"
     midi = "MIDI / OSC / DMX"
     rig = "ROLI / APC / warnings"
+    server = "Server / system"
+    dmx = "DMX / Art-Net"
+    osc = "OSC / TouchOSC"
+}
+
+function Write-ColoredLogLine {
+    param([string]$Line)
+
+    $color = [ConsoleColor]::Gray
+    if ($Line -match '\[ERROR\]') { $color = [ConsoleColor]::Red }
+    elseif ($Line -match '\[WARN\]') { $color = [ConsoleColor]::Yellow }
+    elseif ($Line -match '\[MIDI\]') { $color = [ConsoleColor]::Yellow }
+    elseif ($Line -match '\[OSC\]|\[TOUCHOSC\]') { $color = [ConsoleColor]::Green }
+    elseif ($Line -match '\[DMX\]') { $color = [ConsoleColor]::DarkCyan }
+    elseif ($Line -match '\[ARTNET\]') { $color = [ConsoleColor]::Cyan }
+    elseif ($Line -match '\[SERVER\]') { $color = [ConsoleColor]::Magenta }
+    elseif ($Line -match '\[SYSTEM\]') { $color = [ConsoleColor]::White }
+    elseif ($Line -match '\[CLOCK\]') { $color = [ConsoleColor]::DarkMagenta }
+    elseif ($Line -match 'ROLI|APC|screensaver') { $color = [ConsoleColor]::DarkYellow }
+
+    Write-Host $Line -ForegroundColor $color
 }
 
 try { $Host.UI.RawUI.WindowTitle = "ArtBastard - $($titles[$Mode])" } catch { }
 Write-Host "ArtBastard $($titles[$Mode])" -ForegroundColor Magenta
 Write-Host "Tailing $LogPath" -ForegroundColor DarkGray
+Write-Host "Ctrl+C pauses this pane; reopen/change panes from the Control pane." -ForegroundColor DarkGray
 Write-Host ""
 
 if (-not (Test-Path -LiteralPath $LogPath)) {
     New-Item -ItemType File -Force -Path $LogPath | Out-Null
 }
 
-Get-Content -LiteralPath $LogPath -Wait -Tail 120 | Where-Object { $_ -match $patterns[$Mode] }
+Get-Content -LiteralPath $LogPath -Wait -Tail 120 | Where-Object { $_ -match $patterns[$Mode] } | ForEach-Object { Write-ColoredLogLine $_ }
 '@
 
     Set-Content -LiteralPath $panelScriptPath -Value $panelScript -Encoding UTF8

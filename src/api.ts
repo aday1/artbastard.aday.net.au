@@ -36,7 +36,13 @@ import {
   getChannelRanges, // Added import
   setChannelRange, // Added import
   saveFixtures, // Added import to sync server fixtures
-  getActiveMidiInputNames
+  getActiveMidiInputNames,
+  listMidiInterfaces,
+  connectMidiInput,
+  disconnectMidiInput,
+  rememberMidiAutoConnectDevice,
+  forgetMidiAutoConnectDevice,
+  clearMidiAutoConnectDevices
 } from './index';
 import {
   loadFixturesData,

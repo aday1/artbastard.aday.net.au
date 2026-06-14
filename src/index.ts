@@ -1204,7 +1204,7 @@ export function getActiveMidiInputNames(): string[] {
     return Object.keys(activeMidiInputs);
 }
 
-const rememberAutoConnectDevice = (deviceName: string) => {
+export const rememberMidiAutoConnectDevice = (deviceName: string) => {
     try {
         const config = fs.existsSync(CONFIG_FILE)
             ? JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'))
@@ -1215,6 +1215,31 @@ const rememberAutoConnectDevice = (deviceName: string) => {
         fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
     } catch (error) {
         log('Failed to update auto-connect MIDI device list', 'WARN', { deviceName, error });
+    }
+};
+
+export const forgetMidiAutoConnectDevice = (deviceName: string) => {
+    try {
+        const config = fs.existsSync(CONFIG_FILE)
+            ? JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'))
+            : {};
+        const devices = Array.isArray(config.autoConnectMidiDevices) ? config.autoConnectMidiDevices : [];
+        config.autoConnectMidiDevices = devices.filter((name: unknown) => name !== deviceName);
+        fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+    } catch (error) {
+        log('Failed to remove auto-connect MIDI device', 'WARN', { deviceName, error });
+    }
+};
+
+export const clearMidiAutoConnectDevices = () => {
+    try {
+        const config = fs.existsSync(CONFIG_FILE)
+            ? JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'))
+            : {};
+        config.autoConnectMidiDevices = [];
+        fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+    } catch (error) {
+        log('Failed to clear auto-connect MIDI devices', 'WARN', { error });
     }
 };
 
@@ -1264,7 +1289,7 @@ export function applyMidiControllerTemplate(io: Server, templateId: MidiControll
     saveConfig();
 
     if (preferredDeviceName) {
-        rememberAutoConnectDevice(preferredDeviceName);
+        rememberMidiAutoConnectDevice(preferredDeviceName);
     }
 
     let scribbleUpdated = false;
