@@ -458,11 +458,11 @@ function Start-LogPanels {
     $panelScriptPath = Write-LogPanelScript
     $wtArgs = @(
         "-w", "artbastard-local",
-        "new-tab", "--title", "ArtBastard all", "powershell.exe", "-NoExit", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $panelScriptPath, "-LogPath", $logPath, "-Mode", "all",
+        "new-tab", "--title", "ArtBastard-all", "powershell.exe", "-NoExit", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $panelScriptPath, "-LogPath", $logPath, "-Mode", "all",
         ";",
-        "split-pane", "-H", "--title", "MIDI OSC DMX", "powershell.exe", "-NoExit", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $panelScriptPath, "-LogPath", $logPath, "-Mode", "midi",
+        "split-pane", "-H", "--title", "MIDI-OSC-DMX", "powershell.exe", "-NoExit", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $panelScriptPath, "-LogPath", $logPath, "-Mode", "midi",
         ";",
-        "split-pane", "-V", "--title", "ROLI APC warnings", "powershell.exe", "-NoExit", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $panelScriptPath, "-LogPath", $logPath, "-Mode", "rig"
+        "split-pane", "-V", "--title", "ROLI-APC-warnings", "powershell.exe", "-NoExit", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $panelScriptPath, "-LogPath", $logPath, "-Mode", "rig"
     )
 
     try {
