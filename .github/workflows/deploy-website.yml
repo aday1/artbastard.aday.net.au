@@ -9,8 +9,6 @@ on:
       - 'DOCS/**'
       - '.github/workflows/deploy-website.yml'
   workflow_dispatch:
-  release:
-    types: [published]
 
 permissions:
   contents: read
