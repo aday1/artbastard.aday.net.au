@@ -19,9 +19,16 @@ import {
 } from '../midi/generated';
 import {
   APC40_TRACK_CONTROL_ROLES,
+  fixtureDmxAddress,
   readApc40RoleDmxValue,
   resolveApc40DeviceRoleSlots,
 } from '../midi/apc40WorkflowHelpers';
+import {
+  colorWheelSlotForTrackSelect,
+  fixtureHasColorWheel,
+  getFirstFixtureColorWheelSlots,
+  isColorWheelChannel,
+} from '../fixtures/colorWheelSlots';
 
 // APC40 MK1 LED velocity values are sourced from DOCS/midi/led-feedback.md
 // via the generated spec. Keep aliases for hot-path readability.
@@ -170,6 +177,15 @@ export function useApc40LedFeedback() {
     const selectedIds = new Set(selectedFixtures);
     const allFixturesSelected = fixtures.length > 0 && fixtures.every((fixture) => selectedIds.has(fixture.id));
     const deviceRoles = resolveApc40DeviceRoleSlots(fixtures, selectedFixtures, crossfaderState.deviceBankIndex ?? 0);
+    const selectedColorWheelFixtures = fixtures.filter((fixture) => selectedIds.has(fixture.id) && fixtureHasColorWheel(fixture));
+    const colorWheelFixtures = selectedColorWheelFixtures.length > 0
+      ? selectedColorWheelFixtures
+      : fixtures.filter(fixtureHasColorWheel);
+    const colorWheelSlots = getFirstFixtureColorWheelSlots(colorWheelFixtures);
+    const colorWheelChannelIndex = colorWheelFixtures[0]?.channels.findIndex(isColorWheelChannel) ?? -1;
+    const activeColorWheelValue = colorWheelFixtures[0] && colorWheelChannelIndex >= 0
+      ? dmxChannels[fixtureDmxAddress(colorWheelFixtures[0], colorWheelChannelIndex)] ?? 0
+      : null;
     const now = Date.now();
     const bankFlashActive = (crossfaderState.deviceBankFlashUntil ?? 0) > now
       ? crossfaderState.deviceBankFlashDirection
@@ -220,8 +236,13 @@ export function useApc40LedFeedback() {
       sendLed(out, column, SOLO_NOTE, fixtureSelected ? LED_GREEN : LED_OFF);
       // Activator row = toggle GROUP in multi-selection. On = all fixtures in group selected.
       sendLed(out, column, ACTIVATOR_NOTE, groupAllSelected ? LED_GREEN : LED_OFF);
-      // Track Select row is intentionally unmapped on the input side; keep LED off.
-      sendLed(out, column, TRACK_SELECT_NOTE, LED_OFF);
+      const colorSlot = colorWheelSlotForTrackSelect(colorWheelSlots, column);
+      const trackSelectVelocity = colorSlot
+        ? activeColorWheelValue !== null && activeColorWheelValue >= colorSlot.min && activeColorWheelValue <= colorSlot.max
+          ? LED_GREEN
+          : LED_ORANGE
+        : LED_OFF;
+      sendLed(out, column, TRACK_SELECT_NOTE, trackSelectVelocity);
       sendLed(out, column, TRACK_STOP_NOTE, activeDeckName ? LED_RED : LED_OFF);
     }
 

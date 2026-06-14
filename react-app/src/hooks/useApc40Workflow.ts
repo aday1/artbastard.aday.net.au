@@ -14,6 +14,11 @@ import {
   type Apc40Deck,
   type Apc40RoleSlot,
 } from '../midi/apc40WorkflowHelpers';
+import {
+  colorWheelSlotForTrackSelect,
+  fixtureHasColorWheel,
+  getFirstFixtureColorWheelSlots,
+} from '../fixtures/colorWheelSlots';
 import { sceneNameToOscPath } from '../utils/sceneCapture';
 
 const DIMMER_ROLE: Apc40RoleSlot = {
@@ -638,6 +643,57 @@ export function useApc40Workflow() {
           `Launched ACT ${action.sceneIndex + 1}: "${act.name}"`,
           'Scene Launch buttons trigger ACT playback.',
           { actName: act.name }
+        ),
+      });
+      return;
+    }
+
+    if (action.type === 'color-wheel-slot') {
+      const selectedTargets = state.selectedFixtures
+        .map((fixtureId) => state.fixtures.find((fixture) => fixture.id === fixtureId))
+        .filter((fixture): fixture is NonNullable<typeof fixture> => Boolean(fixture && fixtureHasColorWheel(fixture)));
+      const fallbackTargets = state.fixtures.filter(fixtureHasColorWheel);
+      const targets = selectedTargets.length > 0 ? selectedTargets : fallbackTargets;
+      const slots = getFirstFixtureColorWheelSlots(targets);
+      const slot = colorWheelSlotForTrackSelect(slots, action.trackIndex);
+
+      if (!slot || targets.length === 0) {
+        publishSurfaceState({
+          lastChange: makeLastChange(
+            'effect',
+            `Track Select ${action.trackIndex + 1}`,
+            'No selected color-wheel fixture to modify',
+            'Select the MiniBeam or another color-wheel fixture, then press Track Select 1-8.'
+          ),
+        });
+        state.addNotification({
+          message: 'APC40 Track Select needs a color-wheel fixture selected',
+          type: 'warning',
+          priority: 'normal',
+        });
+        return;
+      }
+
+      const fixtureIds = targets.map((fixture) => fixture.id);
+      const updates = buildRoleUpdates(state.fixtures, fixtureIds, {
+        label: 'Color Wheel',
+        controlName: 'color_wheel',
+        aliases: ['color_wheel', 'colour_wheel', 'colorwheel', 'colourwheel'],
+      }, slot.value);
+
+      if (Object.keys(updates).length > 0) state.setMultipleDmxChannels(updates, true);
+      state.addNotification({
+        message: `APC40 color wheel: ${slot.label}`,
+        type: 'info',
+        priority: 'low',
+      });
+      publishSurfaceState({
+        lastChange: makeLastChange(
+          'effect',
+          `Track Select ${action.trackIndex + 1}`,
+          `Set color wheel to ${slot.label} (${slot.value})`,
+          `Applied to ${targets.length} color-wheel fixture${targets.length === 1 ? '' : 's'}.`,
+          { fixtureNames: targets.map((fixture) => fixture.name) }
         ),
       });
       return;

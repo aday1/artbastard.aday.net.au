@@ -6,6 +6,11 @@ import {
   composeColourWheelFrame,
   paintColourWheel,
 } from '../../engines/roliColourWheel';
+import {
+  fixtureHasColorWheel,
+  getFirstFixtureColorWheelSlots,
+  nearestColorWheelSlotFromHue,
+} from '../../fixtures/colorWheelSlots';
 import styles from './RoliColourWheel.module.scss';
 
 type ColourTriplet = { r: number; g: number; b: number; hex: string } | null;
@@ -16,6 +21,7 @@ export const RoliColourWheel: React.FC = () => {
   const roli = useRoliLightpad({ role: 'colour-wheel' });
   const selectedIds = useStore((s) => s.selectedFixtures);
   const fixtures = useStore((s) => s.fixtures);
+  const applySuperControlMidi = useStore((s) => s.applySuperControlMidi);
 
   const [colour, setColour] = useState<ColourTriplet>(null);
   const lastTouchAtRef = useRef<number>(0);
@@ -38,6 +44,14 @@ export const RoliColourWheel: React.FC = () => {
     return targets;
   }, [selectedIds, fixtures]);
 
+  const colorWheelTargets = useMemo(() => {
+    return selectedIds
+      .map((id) => fixtures.find((fixture) => fixture.id === id))
+      .filter((fixture): fixture is NonNullable<typeof fixture> => Boolean(fixture && fixtureHasColorWheel(fixture)));
+  }, [selectedIds, fixtures]);
+
+  const colorWheelSlots = useMemo(() => getFirstFixtureColorWheelSlots(colorWheelTargets), [colorWheelTargets]);
+
   // Repaint the strip once on handshake and again whenever the engine
   // reports a new device list (e.g. the colour-wheel block reconnected).
   useEffect(() => {
@@ -58,16 +72,31 @@ export const RoliColourWheel: React.FC = () => {
       }
       if (ev.z < 0.05) return;
       const c = colourFromTouch(ev.x, ev.y, 1);
+      const nearestWheelSlot = nearestColorWheelSlotFromHue(colorWheelSlots, c.h, c.s, { r: c.r, g: c.g, b: c.b });
       lastTouchAtRef.current = Date.now();
       liveCursorRef.current = { x: ev.x, y: ev.y };
-      setColour({ r: c.r, g: c.g, b: c.b, hex: c.hex });
+      setColour({
+        r: nearestWheelSlot ? parseInt(nearestWheelSlot.hex.slice(1, 3), 16) : c.r,
+        g: nearestWheelSlot ? parseInt(nearestWheelSlot.hex.slice(3, 5), 16) : c.g,
+        b: nearestWheelSlot ? parseInt(nearestWheelSlot.hex.slice(5, 7), 16) : c.b,
+        hex: nearestWheelSlot?.hex ?? c.hex,
+      });
+      if (nearestWheelSlot) {
+        applySuperControlMidi('color_wheel', nearestWheelSlot.value);
+      }
       window.dispatchEvent(new CustomEvent(ROLI_RGB_STRIP_CHANGE_EVENT, {
-        detail: { r: c.r, g: c.g, b: c.b },
+        detail: {
+          r: c.r,
+          g: c.g,
+          b: c.b,
+          colorWheelValue: nearestWheelSlot?.value,
+          colorWheelLabel: nearestWheelSlot?.label,
+        },
       }));
       paintColourWheel({ cursor: liveCursorRef.current });
     });
     return () => roli.onTouch(null);
-  }, [roli]);
+  }, [applySuperControlMidi, colorWheelSlots, roli]);
 
   const handleRepaint = useCallback(() => {
     liveCursorRef.current = null;
@@ -129,16 +158,22 @@ export const RoliColourWheel: React.FC = () => {
         <div className={styles.info}>
           <span className={styles.hex}>{colour?.hex ?? '—'}</span>
           <span className={styles.triplet}>
-            {colour ? `R ${colour.r}  G ${colour.g}  B ${colour.b}` : 'touch the strip to paint'}
+            {colour
+              ? colorWheelSlots.length > 0
+                ? `nearest wheel slot ${colour.hex}`
+                : `R ${colour.r}  G ${colour.g}  B ${colour.b}`
+              : 'touch the strip to paint'}
           </span>
         </div>
       </div>
 
       <div className={styles.targets}>
-        {rgbTargets.length > 0 ? (
+        {colorWheelTargets.length > 0 ? (
+          <>Wheel targets: {colorWheelTargets.map((t) => t.name).join(', ')}</>
+        ) : rgbTargets.length > 0 ? (
           <>Targets: {rgbTargets.map((t) => t.name).join(', ')}</>
         ) : (
-          <span className={styles.none}>Select RGB fixtures to drive their colour.</span>
+          <span className={styles.none}>Select RGB or color-wheel fixtures to drive their colour.</span>
         )}
       </div>
 

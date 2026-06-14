@@ -29,6 +29,7 @@ import { StageMapDashboard } from '../fixtures/StageMapDashboard';
 import { debugLog } from '../../utils/debugLog';
 import { rangesToTickSteps } from '../../utils/fixtureChannelTicks';
 import type { FixtureChannelRange } from '../../store/types';
+import { getFirstFixtureColorWheelSlots } from '../../fixtures/colorWheelSlots';
 import styles from './SuperControl.module.scss';
 // Removed react-grid-layout - using CSS auto-layout instead
 
@@ -67,7 +68,7 @@ interface SuperControlPanelLayoutState {
 
 const SUPER_CONTROL_MAX_COLUMNS = 4;
 
-const SUPER_CONTROL_LAYOUT_KEY = 'artbastard.superControl.panelLayout.v7';
+const SUPER_CONTROL_LAYOUT_KEY = 'artbastard.superControl.panelLayout.v8';
 const SUPER_CONTROL_LOCAL_MIDI_MAPPINGS_KEY = 'artbastard.superControl.localMidiMappings.v1';
 const SUPER_CONTROL_PATH_SLOTS_KEY = 'artbastard.superControl.pathSlots.v1';
 const SCENE_AUTO_SAVE_TOOLTIP = 'Reserved: automatic scene capture is not wired to a live trigger yet. Use Save Scene or MIDI Save to capture the current DMX look manually.';
@@ -221,12 +222,79 @@ const CONTROL_AVAILABILITY = [
   { key: 'dimmer', label: 'Dimmer', types: ['dimmer'] },
   { key: 'panTilt', label: 'Pan/Tilt', types: ['pan', 'tilt'] },
   { key: 'rgb', label: 'RGB', types: ['red', 'green', 'blue'] },
+  { key: 'colorWheel', label: 'Color Wheel', types: ['color_wheel'] },
   { key: 'gobo', label: 'Gobo', types: ['gobo'] },
   { key: 'shutter', label: 'Shutter', types: ['shutter'] },
   { key: 'strobe', label: 'Strobe', types: ['strobe'] },
   { key: 'lamp', label: 'Lamp', types: ['lamp'] },
   { key: 'reset', label: 'Reset', types: ['reset'] },
 ];
+
+const CONTROL_CHANNEL_ALIASES: Record<string, string[]> = {
+  pan: ['pan', 'pan_coarse', 'pan_fine'],
+  tilt: ['tilt', 'tilt_coarse', 'tilt_fine'],
+  dimmer: ['dimmer', 'intensity', 'master'],
+  red: ['red', 'r'],
+  green: ['green', 'g'],
+  blue: ['blue', 'b'],
+  color_wheel: ['color_wheel', 'colour_wheel', 'colorwheel', 'colourwheel', 'color', 'colour'],
+  gobo: ['gobo', 'gobowheel', 'gobo_wheel'],
+  shutter: ['shutter'],
+  strobe: ['strobe'],
+  lamp: ['lamp', 'lamp_on', 'lamp_control'],
+  reset: ['reset', 'reset_control', 'function'],
+};
+
+const normalizeChannelKey = (value?: string) =>
+  (value || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+
+const normalizeControlKey = (value: string) => {
+  const key = normalizeChannelKey(value);
+  if (key === 'colorwheel' || key === 'colourwheel') return 'color_wheel';
+  return key;
+};
+
+const addChannelAlias = (channels: Record<string, number>, alias: string, dmxAddress: number) => {
+  const key = normalizeChannelKey(alias);
+  if (!key || channels[key] !== undefined) return;
+  channels[key] = dmxAddress;
+};
+
+const addFixtureChannelAliases = (
+  channels: Record<string, number>,
+  channel: { name?: string; type?: string },
+  dmxAddress: number
+) => {
+  const type = normalizeChannelKey(channel.type);
+  const name = normalizeChannelKey(channel.name);
+
+  addChannelAlias(channels, type, dmxAddress);
+  addChannelAlias(channels, name, dmxAddress);
+
+  if (name.includes('pan_fine') || name === 'fine_pan') addChannelAlias(channels, 'pan_fine', dmxAddress);
+  else if (name === 'pan' || name.includes('pan_coarse')) addChannelAlias(channels, 'pan', dmxAddress);
+
+  if (name.includes('tilt_fine') || name === 'fine_tilt') addChannelAlias(channels, 'tilt_fine', dmxAddress);
+  else if (name === 'tilt' || name.includes('tilt_coarse')) addChannelAlias(channels, 'tilt', dmxAddress);
+
+  if (name.includes('colour_wheel') || name.includes('color_wheel') || name === 'colour' || name === 'color') {
+    addChannelAlias(channels, 'color_wheel', dmxAddress);
+  }
+
+  if (name.includes('lamp')) addChannelAlias(channels, 'lamp', dmxAddress);
+  if (name.includes('shutter')) addChannelAlias(channels, 'shutter', dmxAddress);
+  if (name.includes('strobe')) addChannelAlias(channels, 'strobe', dmxAddress);
+};
+
+const resolveControlChannel = (controlType: string, channels: Record<string, number>) => {
+  const key = normalizeControlKey(controlType);
+  const aliases = CONTROL_CHANNEL_ALIASES[key] || [key];
+  for (const alias of aliases) {
+    const channel = channels[normalizeChannelKey(alias)];
+    if (channel !== undefined) return channel;
+  }
+  return undefined;
+};
 
 const loadLocalMidiMappings = (): Record<string, LocalMidiMapping> => {
   if (typeof window === 'undefined') return {};
@@ -470,6 +538,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     deselectAllFixtures,
     getDmxChannelValue,
     setDmxChannelValue,
+    getChannelRange,
     getChannelInfo,
     getFixtureColor,
     isChannelAssigned,
@@ -521,6 +590,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
   const [red, setRed] = useState(255);
   const [green, setGreen] = useState(255);
   const [blue, setBlue] = useState(255);
+  const [colorWheel, setColorWheel] = useState(0);
   const [gobo, setGobo] = useState(0);
 
   const defaultGoboSteps = useMemo(
@@ -945,6 +1015,10 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
           setBlue(value);
           updateRGB(red, green, value);
         },
+        'color_wheel': (value: number) => {
+          setColorWheel(value);
+          applyControl('color_wheel', value);
+        },
         'dimmer': (value: number) => {
           setDimmer(value);
           updateDimmer(value);
@@ -1059,11 +1133,11 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         break;
       case 'pan':
         setPanValue(value);
-        setPanTiltXY((prev) => ({ ...prev, x: (value / 255) * 100 }));
+        setPanTiltXY((prev) => ({ ...prev, x: getControlNormalizedFromValue('pan', value) * 100 }));
         break;
       case 'tilt':
         setTiltValue(value);
-        setPanTiltXY((prev) => ({ ...prev, y: ((255 - value) / 255) * 100 }));
+        setPanTiltXY((prev) => ({ ...prev, y: (1 - getControlNormalizedFromValue('tilt', value)) * 100 }));
         break;
       case 'red':
         setRed(value);
@@ -1078,6 +1152,8 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         setGobo(value);
         break;
       case 'color_wheel':
+      case 'colorWheel':
+        setColorWheel(value);
         setColorHue((value / 255) * 360);
         setColorSaturation(100);
         break;
@@ -1272,7 +1348,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
             const dmxAddress = fixture.startAddress + index - 1;
             if (selectedChannels.includes(dmxAddress)) {
               hasSelectedChannel = true;
-              fixtureChannels[channel.type.toLowerCase()] = dmxAddress;
+              addFixtureChannelAliases(fixtureChannels, channel, dmxAddress);
             }
           });
 
@@ -1313,7 +1389,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         const fixtureChannels: { [key: string]: number } = {};
         fixture.channels.forEach((channel, index) => {
           const dmxAddress = fixture.startAddress + index - 1;
-          fixtureChannels[channel.type.toLowerCase()] = dmxAddress;
+          addFixtureChannelAliases(fixtureChannels, channel, dmxAddress);
         });
 
         return {
@@ -1329,71 +1405,15 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     const affectedFixtures = getAffectedFixtures();
     if (affectedFixtures.length === 0) return false;
 
-    // Map control types to possible channel type variations
-    const channelTypeMap: Record<string, string[]> = {
-      'pan': ['pan', 'pan_coarse', 'pan_fine'],
-      'tilt': ['tilt', 'tilt_coarse', 'tilt_fine'],
-      'dimmer': ['dimmer', 'intensity', 'master'],
-      'red': ['red', 'r'],
-      'green': ['green', 'g'],
-      'blue': ['blue', 'b'],
-      'gobo': ['gobo', 'gobowheel', 'gobo_wheel'],
-      'shutter': ['shutter'],
-      'strobe': ['strobe'],
-      'lamp': ['lamp', 'lamp_on', 'lamp_control'],
-      'reset': ['reset', 'reset_control', 'function'],
-    };
-
-    const possibleTypes = channelTypeMap[controlType.toLowerCase()] || [controlType.toLowerCase()];
-
-    // Check if any affected fixture has this channel type
-    return affectedFixtures.some(({ channels }) => {
-      return possibleTypes.some(type => channels[type] !== undefined);
-    });
+    return affectedFixtures.some(({ channels }) => resolveControlChannel(controlType, channels) !== undefined);
   };
 
   // Apply control value to DMX channels
   const applyControl = (controlType: string, value: number) => {
     const affectedFixtures = getAffectedFixtures();
 
-    affectedFixtures.forEach(({ channels }, index) => {
-      let targetChannel: number | undefined;
-
-      switch (controlType) {
-        case 'dimmer':
-          targetChannel = channels['dimmer'] ?? channels['intensity'] ?? channels['master'];
-          break;
-        case 'pan':
-          targetChannel = channels['pan'];
-          break;
-        case 'tilt':
-          targetChannel = channels['tilt'];
-          break;
-        case 'red':
-          targetChannel = channels['red'] ?? channels['r'];
-          break;
-        case 'green':
-          targetChannel = channels['green'] ?? channels['g'];
-          break;
-        case 'blue':
-          targetChannel = channels['blue'] ?? channels['b'];
-          break;
-        case 'gobo':
-          targetChannel = channels['gobo'] ?? channels['gobowheel'] ?? channels['gobo_wheel'];
-          break;
-        case 'shutter':
-          targetChannel = channels['shutter'];
-          break;
-        case 'strobe':
-          targetChannel = channels['strobe'];
-          break;
-        case 'lamp':
-          targetChannel = channels['lamp'] ?? channels['lamp_on'] ?? channels['lamp_control'];
-          break;
-        case 'reset':
-          targetChannel = channels['reset'] ?? channels['reset_control'] ?? channels['function'];
-          break;
-      }
+    affectedFixtures.forEach(({ channels }) => {
+      const targetChannel = resolveControlChannel(controlType, channels);
 
       if (targetChannel !== undefined) {
         setDmxChannelValue(targetChannel, value);
@@ -1401,28 +1421,130 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     });
   };
 
+  const openEmissionGates = (force = false) => {
+    let openedShutter = false;
+    let openedStrobe = false;
+    let openedLamp = false;
+
+    getAffectedFixtures().forEach(({ channels }) => {
+      const shutterChannel = resolveControlChannel('shutter', channels);
+      if (shutterChannel !== undefined && (force || getDmxChannelValue(shutterChannel) <= 3)) {
+        setDmxChannelValue(shutterChannel, 255);
+        openedShutter = true;
+      }
+
+      const strobeChannel = resolveControlChannel('strobe', channels);
+      if (strobeChannel !== undefined && (force || getDmxChannelValue(strobeChannel) <= 3)) {
+        setDmxChannelValue(strobeChannel, 255);
+        openedStrobe = true;
+      }
+
+      const lampChannel = resolveControlChannel('lamp', channels);
+      if (lampChannel !== undefined && (force || getDmxChannelValue(lampChannel) <= 25)) {
+        setDmxChannelValue(lampChannel, 255);
+        openedLamp = true;
+      }
+    });
+
+    if (openedShutter) setShutter(255);
+    if (openedStrobe) setStrobe(255);
+    if (openedLamp) setLamp(255);
+  };
+
+  const turnBeamOn = () => {
+    setDimmer(255);
+    applyControl('dimmer', 255);
+    openEmissionGates(true);
+  };
+
+  const scaleNormalizedToChannelRange = (channel: number, normalized: number) => {
+    const range = getChannelRange(channel);
+    const min = Math.max(0, Math.min(255, Math.round(range.min)));
+    const max = Math.max(min, Math.min(255, Math.round(range.max)));
+    return Math.round(min + clamp01(normalized) * (max - min));
+  };
+
+  const normalizeValueFromChannelRange = (channel: number, value: number) => {
+    const range = getChannelRange(channel);
+    const min = Math.max(0, Math.min(255, Math.round(range.min)));
+    const max = Math.max(min, Math.min(255, Math.round(range.max)));
+    if (max <= min) return 0;
+    return clamp01((value - min) / (max - min));
+  };
+
+  const getControlNormalizedFromValue = (controlType: string, value: number) => {
+    const affectedFixtures = getAffectedFixtures();
+    for (const { channels } of affectedFixtures) {
+      const targetChannel = resolveControlChannel(controlType, channels);
+      if (targetChannel !== undefined) return normalizeValueFromChannelRange(targetChannel, value);
+    }
+    return clamp01(value / 255);
+  };
+
+  const getNormalizedControlPreviewValue = (controlType: string, normalized: number) => {
+    const affectedFixtures = getAffectedFixtures();
+    for (const { channels } of affectedFixtures) {
+      const targetChannel = resolveControlChannel(controlType, channels);
+      if (targetChannel !== undefined) return scaleNormalizedToChannelRange(targetChannel, normalized);
+    }
+    return Math.round(clamp01(normalized) * 255);
+  };
+
+  const applyNormalizedControl = (controlType: string, normalized: number) => {
+    const affectedFixtures = getAffectedFixtures();
+    affectedFixtures.forEach(({ channels }) => {
+      const targetChannel = resolveControlChannel(controlType, channels);
+      if (targetChannel === undefined) return;
+      setDmxChannelValue(targetChannel, scaleNormalizedToChannelRange(targetChannel, normalized));
+    });
+  };
+
+  const applyPanTiltNormalized = (panNormalized: number, tiltNormalized: number) => {
+    const panNorm = clamp01(panNormalized);
+    const tiltNorm = clamp01(tiltNormalized);
+    const panDmx = getNormalizedControlPreviewValue('pan', panNorm);
+    const tiltDmx = getNormalizedControlPreviewValue('tilt', tiltNorm);
+
+    setPanValue(panDmx);
+    setTiltValue(tiltDmx);
+    setPanTiltXY({ x: panNorm * 100, y: (1 - tiltNorm) * 100 });
+    applyNormalizedControl('pan', panNorm);
+    applyNormalizedControl('tilt', tiltNorm);
+  };
+
   useEffect(() => {
     const handleRoliRgbStripChange = (event: Event) => {
-      const detail = (event as CustomEvent<{ r: number; g: number; b: number }>).detail;
+      const detail = (event as CustomEvent<{
+        r: number;
+        g: number;
+        b: number;
+        colorWheelValue?: number;
+        colorWheelLabel?: string;
+      }>).detail;
       if (!detail) return;
       setRed(detail.r);
       setGreen(detail.g);
       setBlue(detail.b);
+      if (detail.colorWheelValue !== undefined) {
+        const value = clampDmxValue(detail.colorWheelValue);
+        setColorWheel(value);
+        setColorHue((value / 255) * 360);
+        setColorSaturation(100);
+        applyControl('color_wheel', value);
+        if (dimmer > 0) openEmissionGates(false);
+      }
       updateRGB(detail.r, detail.g, detail.b);
     };
 
     window.addEventListener(ROLI_RGB_STRIP_CHANGE_EVENT, handleRoliRgbStripChange);
     return () => window.removeEventListener(ROLI_RGB_STRIP_CHANGE_EVENT, handleRoliRgbStripChange);
-  }, [updateRGB]);
+  }, [applyControl, dimmer, openEmissionGates, updateRGB]);
 
   // --- Roli Lightpad: touch in + LED feedback ---
   // Use refs so the touch handler always sees the latest store values without
   // re-subscribing on every keystroke.
   const roliApplyRef = useRef<{
-    apply: (controlType: string, value: number) => void;
-    setPanValue: (v: number) => void;
-    setTiltValue: (v: number) => void;
-    setPanTiltXY: (xy: { x: number; y: number }) => void;
+    applyPanTiltNormalized: (panNormalized: number, tiltNormalized: number) => void;
     togglePanTiltAutopilot: () => void;
     setPanTiltAutopilot: (cfg: Record<string, unknown>) => void;
     panTiltAutopilotEnabled: boolean;
@@ -1430,10 +1552,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     addNotification: (n: { message: string; type?: string; priority?: string }) => void;
     autoplayOnRelease: boolean;
   }>({
-    apply: () => {},
-    setPanValue: () => {},
-    setTiltValue: () => {},
-    setPanTiltXY: () => {},
+    applyPanTiltNormalized: () => {},
     togglePanTiltAutopilot: () => {},
     setPanTiltAutopilot: () => {},
     panTiltAutopilotEnabled: false,
@@ -1558,14 +1677,10 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
       if (ev.phase !== 'move' && ev.phase !== 'start') return;
       // Ignore decay frames after release. Real touches sit well above 0.05.
       if (ev.z < 0.05) return;
-      const p = Math.round(Math.max(0, Math.min(255, ev.x * 255)));
-      const t = Math.round(Math.max(0, Math.min(255, (1 - ev.y) * 255)));
-      roliApplyRef.current.setPanValue(p);
-      roliApplyRef.current.setTiltValue(t);
-      roliApplyRef.current.setPanTiltXY({ x: (p / 255) * 100, y: (1 - t / 255) * 100 });
-      paintApc40Crosshair({ x: p / 255, y: 1 - t / 255, source: 'roli' });
-      roliApplyRef.current.apply('pan', p);
-      roliApplyRef.current.apply('tilt', t);
+      const panNorm = clamp01(ev.x);
+      const tiltNorm = clamp01(1 - ev.y);
+      roliApplyRef.current.applyPanTiltNormalized(panNorm, tiltNorm);
+      paintApc40Crosshair({ x: panNorm, y: 1 - tiltNorm, source: 'roli' });
     });
   }, [roli.onTouch, paintRoliPanTiltFrame]);
 
@@ -1608,13 +1723,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
 
     setPanTiltXY({ x, y });
 
-    const panVal = Math.round((x / 100) * 255);
-    const tiltVal = Math.round(((100 - y) / 100) * 255); // Invert Y axis
-
-    setPanValue(panVal);
-    setTiltValue(tiltVal);
-    applyControl('pan', panVal);
-    applyControl('tilt', tiltVal);
+    applyPanTiltNormalized(x / 100, (100 - y) / 100);
   };
 
   // Reset Pan/Tilt to center position
@@ -1625,15 +1734,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
       togglePanTiltAutopilot();
     }
 
-    const centerValue = 127; // DMX center position (50% of 255)
-    const centerPercentage = 50; // 50% for XY pad
-
-    setPanValue(centerValue);
-    setTiltValue(centerValue);
-    setPanTiltXY({ x: centerPercentage, y: centerPercentage });
-
-    applyControl('pan', centerValue);
-    applyControl('tilt', centerValue);
+    applyPanTiltNormalized(0.5, 0.5);
   };
 
   const updateColorPosition = useCallback(
@@ -1650,12 +1751,15 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
       setColorStripX(x * 100);
 
       const { r, g, b } = colour;
+      const wheelValue = Math.round(colour.h / 360 * 127);
       setRed(r);
       setGreen(g);
       setBlue(b);
+      setColorWheel(wheelValue);
       applyControl('red', r);
       applyControl('green', g);
       applyControl('blue', b);
+      applyControl('color_wheel', wheelValue);
     },
     [applyControl]
   );
@@ -1940,12 +2044,12 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
           break;
         case 'pan':
           setPanValue(scaledValue);
-          setPanTiltXY(prev => ({ ...prev, x: (scaledValue / 255) * 100 }));
+          setPanTiltXY(prev => ({ ...prev, x: getControlNormalizedFromValue('pan', scaledValue) * 100 }));
           applyControl('pan', scaledValue);
           break;
         case 'tilt':
           setTiltValue(scaledValue);
-          setPanTiltXY(prev => ({ ...prev, y: (scaledValue / 255) * 100 }));
+          setPanTiltXY(prev => ({ ...prev, y: (1 - getControlNormalizedFromValue('tilt', scaledValue)) * 100 }));
           applyControl('tilt', scaledValue);
           break;
         case 'red':
@@ -1959,6 +2063,11 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         case 'blue':
           setBlue(scaledValue);
           applyControl('blue', scaledValue);
+          break;
+        case 'color_wheel':
+        case 'colorWheel':
+          setColorWheel(scaledValue);
+          applyControl('color_wheel', scaledValue);
           break;
         case 'gobo':
           setGobo(scaledValue);
@@ -2283,6 +2392,8 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
   const hasSelection = getAffectedFixtures().length > 0;
   const capabilities = getFixtureCapabilities();
   const hasChannelSelection = selectedChannels.length > 0;
+  const hasColorWheelControl = hasControlType('color_wheel');
+  const colorWheelSlots = getFirstFixtureColorWheelSlots(getAffectedFixtures().map(({ fixture }) => fixture));
 
   useEffect(() => {
     if (selectionMode === 'channels' && !hasChannelSelection) {
@@ -2348,40 +2459,42 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     // Find fixtures with pan/tilt channels to get their current values
     const affectedFixtures = getAffectedFixtures();
     const panTiltFixtures = affectedFixtures.filter(({ channels }) =>
-      channels.pan !== undefined && channels.tilt !== undefined
+      resolveControlChannel('pan', channels) !== undefined && resolveControlChannel('tilt', channels) !== undefined
     );
 
     if (panTiltFixtures.length === 0) return;
 
     // Use the first fixture's pan/tilt values for UI synchronization
     const firstFixture = panTiltFixtures[0];
-    const currentPanValue = getDmxChannelValue(firstFixture.channels.pan!);
-    const currentTiltValue = getDmxChannelValue(firstFixture.channels.tilt!);
+    const panChannel = resolveControlChannel('pan', firstFixture.channels)!;
+    const tiltChannel = resolveControlChannel('tilt', firstFixture.channels)!;
+    const currentPanValue = getDmxChannelValue(panChannel);
+    const currentTiltValue = getDmxChannelValue(tiltChannel);
 
     // Update UI states to reflect autopilot position
     if (currentPanValue !== panValue) {
       setPanValue(currentPanValue);
-      setPanTiltXY(prev => ({ ...prev, x: (currentPanValue / 255) * 100 }));
+      setPanTiltXY(prev => ({ ...prev, x: getControlNormalizedFromValue('pan', currentPanValue) * 100 }));
     }
 
     if (currentTiltValue !== tiltValue) {
       setTiltValue(currentTiltValue);
-      setPanTiltXY(prev => ({ ...prev, y: ((255 - currentTiltValue) / 255) * 100 })); // Invert Y for UI
+      setPanTiltXY(prev => ({ ...prev, y: (1 - getControlNormalizedFromValue('tilt', currentTiltValue)) * 100 }));
     }
 
     // Check every 100ms when autopilot is active
     const interval = setInterval(() => {
-      const newPanValue = getDmxChannelValue(firstFixture.channels.pan!);
-      const newTiltValue = getDmxChannelValue(firstFixture.channels.tilt!);
+      const newPanValue = getDmxChannelValue(panChannel);
+      const newTiltValue = getDmxChannelValue(tiltChannel);
 
       if (newPanValue !== panValue) {
         setPanValue(newPanValue);
-        setPanTiltXY(prev => ({ ...prev, x: (newPanValue / 255) * 100 }));
+        setPanTiltXY(prev => ({ ...prev, x: getControlNormalizedFromValue('pan', newPanValue) * 100 }));
       }
 
       if (newTiltValue !== tiltValue) {
         setTiltValue(newTiltValue);
-        setPanTiltXY(prev => ({ ...prev, y: ((255 - newTiltValue) / 255) * 100 })); // Invert Y for UI
+        setPanTiltXY(prev => ({ ...prev, y: (1 - getControlNormalizedFromValue('tilt', newTiltValue)) * 100 }));
       }
     }, 100);
 
@@ -2402,12 +2515,13 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
 
   const showMidiOscPanel = fixtures.length > 0 || groups.length > 0 || scenes.length > 0;
   const showBasicPanel = hasControlType('dimmer');
+  const hasEmissionGate = hasControlType('shutter') || hasControlType('strobe') || hasControlType('lamp');
   const spanControlPanelIds = visibleSpanPanelIds.filter((panelId) => {
     switch (panelId) {
       case 'midiOsc': return showMidiOscPanel;
       case 'basic': return showBasicPanel;
       case 'panTilt': return hasControlType('pan') || hasControlType('tilt');
-      case 'rgb': return hasControlType('red') || hasControlType('green') || hasControlType('blue');
+      case 'rgb': return hasControlType('red') || hasControlType('green') || hasControlType('blue') || hasControlType('color_wheel');
       case 'effects': return hasControlType('gobo') || hasControlType('shutter') || hasControlType('strobe') || hasControlType('lamp') || hasControlType('reset');
       case 'envelopes': return selectionMode === 'channels' && selectedChannels.length > 0;
       case 'directDmx': return selectionMode === 'channels' && selectedChannels.length > 0 && !touchLayout;
@@ -3141,9 +3255,23 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                 onChange={(val) => {
                   setDimmer(val);
                   applyControl('dimmer', val);
+                  if (val > 0) openEmissionGates(false);
                 }}
                 {...midiPropsFor('dimmer')}
               />
+              {hasEmissionGate && (
+                <SkeuoButton
+                  variant="wide"
+                  accent="green"
+                  compact
+                  disabled={!hasSelection}
+                  onClick={turnBeamOn}
+                  title="Set dimmer full and open shutter/strobe/lamp channels"
+                >
+                  <LucideIcon name="Lightbulb" />
+                  Beam On
+                </SkeuoButton>
+              )}
               </div>
             </div>
           </div>
@@ -3186,7 +3314,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                     if (panTiltAutopilot.enabled) togglePanTiltAutopilot();
                     setPanValue(val);
                     applyControl('pan', val);
-                    setPanTiltXY(prev => ({ ...prev, x: (val / 255) * 100 }));
+                    setPanTiltXY(prev => ({ ...prev, x: getControlNormalizedFromValue('pan', val) * 100 }));
                   }}
                   {...midiPropsFor('pan')}
                 />
@@ -3200,7 +3328,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                     if (panTiltAutopilot.enabled) togglePanTiltAutopilot();
                     setTiltValue(val);
                     applyControl('tilt', val);
-                    setPanTiltXY(prev => ({ ...prev, y: (val / 255) * 100 }));
+                    setPanTiltXY(prev => ({ ...prev, y: (1 - getControlNormalizedFromValue('tilt', val)) * 100 }));
                   }}
                   {...midiPropsFor('tilt')}
                 />
@@ -3210,19 +3338,17 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
               <ArtbastardXYPad
                 ref={xyPadHandleRef}
                 className={styles.panTiltPad}
-                pan={panValue}
-                tilt={tiltValue}
+                pan={Math.round(clamp01(panTiltXY.x / 100) * 255)}
+                tilt={Math.round(clamp01((100 - panTiltXY.y) / 100) * 255)}
                 disabled={!hasSelection}
                 onPanTiltChange={(p, t) => {
                   if (panTiltAutopilot.enabled) {
                     togglePanTiltAutopilot();
                   }
-                  setPanValue(p);
-                  setTiltValue(t);
-                  setPanTiltXY({ x: (p / 255) * 100, y: (1 - t / 255) * 100 });
-                  paintApc40Crosshair({ x: p / 255, y: 1 - t / 255, source: 'supercontrol' });
-                  applyControl('pan', p);
-                  applyControl('tilt', t);
+                  const panNorm = clamp01(p / 255);
+                  const tiltNorm = clamp01(t / 255);
+                  applyPanTiltNormalized(panNorm, tiltNorm);
+                  paintApc40Crosshair({ x: panNorm, y: 1 - tiltNorm, source: 'supercontrol' });
                 }}
                 onPathSaved={(points) => {
                   setPanTiltAutopilot({ customPath: points, pathType: 'custom' });
@@ -3241,10 +3367,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
               {(() => {
                 // Keep the Roli touch handler ref in sync with the latest closures.
                 roliApplyRef.current = {
-                  apply: applyControl,
-                  setPanValue,
-                  setTiltValue,
-                  setPanTiltXY,
+                  applyPanTiltNormalized,
                   togglePanTiltAutopilot,
                   setPanTiltAutopilot,
                   panTiltAutopilotEnabled: panTiltAutopilot.enabled,
@@ -3354,6 +3477,50 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
               </div>
               <div className={styles.rgbSliders}>
                 <div className={styles.faderStack}>
+                <DmxFaderRow
+                  label="Color Wheel"
+                  fullWidth
+                  value={colorWheel}
+                  disabled={!hasSelection || !hasColorWheelControl}
+                  controlName="color_wheel"
+                  oscAddress="/color/wheel"
+                  labelColor="#f472b6"
+                  accentColor="#f472b6"
+                  subtitle="Fixture wheel / split-colour channel"
+                  meta={hasColorWheelControl ? 'wheel' : 'no wheel'}
+                  presetValues={colorWheelSlots.length > 0 ? colorWheelSlots.map((slot) => slot.value) : undefined}
+                  onChange={(val) => {
+                    setColorWheel(val);
+                    setColorHue((val / 255) * 360);
+                    setColorSaturation(100);
+                    applyControl('color_wheel', val);
+                  }}
+                  {...midiPropsFor('color_wheel')}
+                />
+                {colorWheelSlots.length > 0 && (
+                  <div className={styles.colorWheelSlotGrid} aria-label="Fixed color wheel slots">
+                    {colorWheelSlots.map((slot) => (
+                      <button
+                        key={`${slot.label}-${slot.value}`}
+                        type="button"
+                        className={`${styles.colorWheelSlotButton} ${colorWheel >= slot.min && colorWheel <= slot.max ? styles.active : ''}`}
+                        disabled={!hasSelection || !hasColorWheelControl}
+                        onClick={() => {
+                          setColorWheel(slot.value);
+                          setColorHue(slot.hue);
+                          setColorSaturation(slot.label.toLowerCase().includes('white') ? 0 : 100);
+                          applyControl('color_wheel', slot.value);
+                          if (dimmer > 0) openEmissionGates(false);
+                        }}
+                        title={`${slot.label}: DMX ${slot.value} (${slot.min}-${slot.max})`}
+                      >
+                        <span className={styles.colorWheelSlotSwatch} style={{ backgroundColor: slot.hex }} />
+                        <span>{slot.label.replace(/^Wheel\s+/, '')}</span>
+                        <small>{slot.value}</small>
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <DmxFaderRow
                   label="Red"
                   fullWidth

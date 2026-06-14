@@ -121,15 +121,17 @@ describe('APC40 workflow decoder', () => {
       pressed: true,
     });
 
-    // Track Select row (note 0x33) is intentionally unmapped on channels 0-7
-    // since APC40 hardware emits unreliable CCs in some modes.
     expect(decodeApc40Message({
       _type: 'noteon',
       source: 'Akai APC40',
       channel: 6,
       note: 0x33,
       velocity: 127,
-    })).toBeNull();
+    })).toEqual({
+      type: 'color-wheel-slot',
+      model: 'apc40-mk1',
+      trackIndex: 6,
+    });
 
     expect(decodeApc40Message({
       _type: 'noteon',

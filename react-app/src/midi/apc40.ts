@@ -5,6 +5,7 @@ export type Apc40Action =
   | { type: 'scene-launch'; model: Apc40Model; sceneIndex: number }
   | { type: 'select-fixture'; model: Apc40Model; trackIndex: number; pressed: boolean }
   | { type: 'select-group'; model: Apc40Model; trackIndex: number; pressed: boolean }
+  | { type: 'color-wheel-slot'; model: Apc40Model; trackIndex: number }
   | { type: 'track-stop'; model: Apc40Model; trackIndex: number }
   | { type: 'activator'; model: Apc40Model; trackIndex: number }
   | { type: 'solo-cue'; model: Apc40Model; trackIndex: number }
@@ -176,8 +177,7 @@ export function decodeApc40Message(message: MidiLikeMessage): Apc40Action | null
   const scene = sceneLaunch(model, note);
   if (scene) return scene;
 
-  // Note 0x33 on channels 0-7 (Track Select row) is intentionally unmapped — the hardware
-  // emits unreliable CCs in some modes. Selection lives on Solo/Cue + Activator.
+  if (note === 0x33 && trackIndex >= 0 && trackIndex <= 7) return { type: 'color-wheel-slot', model, trackIndex };
   if (note === 0x34) return { type: 'track-stop', model, trackIndex };
   // Device Control cluster (right side of APC40, channel 0):
   // 0x3A = Clip/Track toggle  → Full On latch

@@ -870,9 +870,9 @@ export const APC40_CATALOG: Apc40CatalogEntry[] = [
   },
   {
     "key": "trackSelect",
-    "category": "selection",
-    "label": "Track Select (1-8) \\u2014 UNMAPPED",
-    "description": "Reserved \\u2014 APC40 hardware emits unreliable CCs in some modes, so selection lives on Solo/Cue and Activator instead."
+    "category": "effect",
+    "label": "Track Select (1-8) \\u2014 Color Wheel slots",
+    "description": "Select fixed color-wheel slots for the selected MiniBeam / color-wheel fixture. Buttons spread across the fixture's available fixed wheel colours."
   },
   {
     "key": "trackStop",

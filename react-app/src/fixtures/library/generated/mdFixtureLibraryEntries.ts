@@ -695,8 +695,8 @@ export const mdFixtureLibraryEntries: FixtureLibraryEntry[] = [
         "channels": 18,
         "channelData": [
           {
-            "name": "Colour",
-            "type": "color",
+            "name": "Colour Wheel",
+            "type": "color_wheel",
             "ranges": [
               {
                 "min": 0,
@@ -806,7 +806,7 @@ export const mdFixtureLibraryEntries: FixtureLibraryEntry[] = [
           },
           {
             "name": "Pan Fine",
-            "type": "pan",
+            "type": "pan_fine",
             "ranges": [
               {
                 "min": 0,
@@ -828,7 +828,7 @@ export const mdFixtureLibraryEntries: FixtureLibraryEntry[] = [
           },
           {
             "name": "Tilt Fine",
-            "type": "tilt",
+            "type": "tilt_fine",
             "ranges": [
               {
                 "min": 0,
@@ -861,7 +861,7 @@ export const mdFixtureLibraryEntries: FixtureLibraryEntry[] = [
           },
           {
             "name": "Lamp",
-            "type": "other",
+            "type": "lamp",
             "ranges": [
               {
                 "min": 0,
@@ -900,6 +900,7 @@ export const mdFixtureLibraryEntries: FixtureLibraryEntry[] = [
       "BEAM",
       "SPOT",
       "GOBO",
+      "COLOR-WHEEL",
       "PRISM",
       "FROST",
       "MINIBEAM"

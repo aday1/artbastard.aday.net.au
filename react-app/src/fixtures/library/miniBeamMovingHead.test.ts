@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  getFixtureLibraryEntryById,
   miniBeamMovingHead,
   toCanvasFixtureTemplate,
   toStoreFixtureTemplate,
@@ -66,5 +67,31 @@ describe('AB-FIX-002 MiniBeam Moving Head Spot', () => {
     expect(storeTemplate.modes?.[0].channels).toBe(18);
     expect(storeTemplate.photoUrl).toBe('/fixtures/ab-fix-002-minibeam-moving-head-generated.png');
     expect(storeTemplate.modes).toEqual(canvasTemplate.modes);
+  });
+
+  it('keeps the active markdown profile wired to color wheel and coarse pan/tilt roles', () => {
+    const activeEntry = getFixtureLibraryEntryById('minibeam-moving-head');
+    const channelTypes = activeEntry?.modes[0].channelData.map((channel) => channel.type);
+
+    expect(channelTypes).toEqual([
+      'color_wheel',
+      'strobe',
+      'dimmer',
+      'gobo',
+      'prism',
+      'other',
+      'other',
+      'other',
+      'focus',
+      'pan',
+      'pan_fine',
+      'tilt',
+      'tilt_fine',
+      'macro',
+      'reset',
+      'lamp',
+      'speed',
+      'speed',
+    ]);
   });
 });

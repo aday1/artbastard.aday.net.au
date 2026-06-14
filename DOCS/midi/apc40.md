@@ -148,9 +148,11 @@ in one table.
 
 The track-control encoder ring LEDs (0x38-0x3f) are output-only. The
 hardware also emits CC presses on these same addresses when the encoders
-are pushed, but we intentionally do **not** map them: the APC40's mode
-behavior in that range is unreliable and would silently rewrite DMX.
-Fixture/group selection lives on the Solo/Cue and Activator rows instead.
+are pushed, but we intentionally do **not** map the push CC aliases: the
+APC40's mode behavior in that range is unreliable and would silently
+rewrite DMX. Fixture/group selection lives on the Solo/Cue and Activator
+rows instead. The physical Track Select note row selects fixed Color Wheel
+slots for the selected color-wheel fixture.
 
 ## Device knob role assignments (default)
 
@@ -180,7 +182,7 @@ is in effect. `controlName` must be a SuperControl role name from
 | recordArm      | selection  | Record Arm row \u2014 SOLO GROUP (1-8)  | Latch: solo group N. Snapshots DMX on first solo, blacks out fixtures not in soloed groups, restores snapshot when last solo released.            |
 | selectFixture  | selection  | Solo/Cue (1-8) \u2014 select FIXTURE      | Select fixture N (positional). Each column maps to `fixtures[N]`.                                                                                    |
 | selectGroup    | selection  | Activator (1-8) \u2014 select GROUP       | Select fixture group N (positional). Each column maps to `groups[N]`.                                                                                |
-| trackSelect    | selection  | Track Select (1-8) \u2014 UNMAPPED        | Reserved \u2014 APC40 hardware emits unreliable CCs in some modes, so selection lives on Solo/Cue and Activator instead.                                  |
+| trackSelect    | effect     | Track Select (1-8) \u2014 Color Wheel slots | Select fixed color-wheel slots for the selected MiniBeam / color-wheel fixture. Buttons spread across the fixture's available fixed wheel colours.    |
 | trackStop      | utility    | Clip Stop row                        | Stop/unselect the active scene in that column for the current deck.                                                                                  |
 | stopAll        | utility    | Stop All Clips                       | Stop all Deck A/B scenes and ACT playback.                                                                                                           |
 | masterButton   | utility    | Master Select \u2014 FREEZE DMX           | Press once to freeze DMX output and light the Master LED; press again to unfreeze and flush current store state. APC40 MK1 may emit this as Ch 9 CC20 instead of Note 0x33. |
