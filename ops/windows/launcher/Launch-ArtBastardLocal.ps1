@@ -463,6 +463,236 @@ Get-Content -LiteralPath $LogPath -Wait -Tail 120 | Where-Object { $_ -match $pa
     return $panelScriptPath
 }
 
+function Write-ControlPanelScript {
+    $panelDir = Join-Path $env:TEMP "ArtBastardLauncher"
+    if (-not (Test-Path -LiteralPath $panelDir)) {
+        New-Item -ItemType Directory -Force -Path $panelDir | Out-Null
+    }
+
+    $controlScriptPath = Join-Path $panelDir "rig-control.ps1"
+    $controlScript = @'
+param(
+    [Parameter(Mandatory = $true)]
+    [string]$RepoPath,
+    [Parameter(Mandatory = $true)]
+    [string]$LogPath,
+    [Parameter(Mandatory = $true)]
+    [string]$LogPanelScriptPath,
+    [int]$Port = 3030
+)
+
+$ErrorActionPreference = "Continue"
+
+function Invoke-AbApi {
+    param(
+        [ValidateSet('GET', 'POST', 'DELETE')]
+        [string]$Method,
+        [string]$Path,
+        [object]$Body = $null
+    )
+
+    $uri = "http://localhost:$Port/api$Path"
+    if ($null -ne $Body) {
+        return Invoke-RestMethod -Method $Method -Uri $uri -ContentType 'application/json' -Body ($Body | ConvertTo-Json -Depth 6) -TimeoutSec 8
+    }
+    return Invoke-RestMethod -Method $Method -Uri $uri -TimeoutSec 8
+}
+
+function Show-Status {
+    try {
+        $health = Invoke-AbApi -Method GET -Path '/health'
+        $active = Invoke-AbApi -Method GET -Path '/midi/active'
+        $saved = Invoke-AbApi -Method GET -Path '/midi/auto-connect'
+        Write-Host "Server: $($health.status) | sockets: $($health.socketConnections) | uptime: $([math]::Round($health.uptime, 0))s" -ForegroundColor Green
+        Write-Host "Art-Net: $($health.artnetStatus)" -ForegroundColor Cyan
+        $activeText = if ($active.inputs.Count -gt 0) { $active.inputs -join ', ' } else { '(none)' }
+        $savedText = if ($saved.devices.Count -gt 0) { $saved.devices -join ', ' } else { '(none)' }
+        Write-Host "Active server MIDI: $activeText" -ForegroundColor DarkYellow
+        Write-Host "Saved server MIDI:  $savedText" -ForegroundColor DarkYellow
+    } catch {
+        Write-Host "Server/control API not reachable on port $Port yet: $($_.Exception.Message)" -ForegroundColor Yellow
+    }
+}
+
+function Select-FromList {
+    param([array]$Items, [string]$Prompt)
+
+    if (-not $Items -or $Items.Count -eq 0) {
+        Write-Host "No items available." -ForegroundColor Yellow
+        return $null
+    }
+
+    for ($i = 0; $i -lt $Items.Count; $i++) {
+        Write-Host ("  [{0}] {1}" -f ($i + 1), $Items[$i]) -ForegroundColor Gray
+    }
+
+    $choice = Read-Host $Prompt
+    if ([string]::IsNullOrWhiteSpace($choice)) { return $null }
+    $index = 0
+    if ([int]::TryParse($choice, [ref]$index) -and $index -ge 1 -and $index -le $Items.Count) {
+        return $Items[$index - 1]
+    }
+
+    Write-Host "Invalid selection." -ForegroundColor Yellow
+    return $null
+}
+
+function Connect-ServerMidi {
+    try {
+        $interfaces = Invoke-AbApi -Method GET -Path '/midi/interfaces'
+        $device = Select-FromList -Items @($interfaces.inputs) -Prompt 'Map which MIDI input to server?'
+        if (-not $device) { return }
+
+        $rememberAnswer = Read-Host 'Remember this for next startup? [Y/n]'
+        $remember = $rememberAnswer -notmatch '^(n|no)$'
+        $result = Invoke-AbApi -Method POST -Path '/midi/server/connect' -Body @{ inputName = $device; remember = $remember }
+        Write-Host "Mapped to server: $device" -ForegroundColor Green
+        Write-Host "Active: $($result.active -join ', ')" -ForegroundColor DarkYellow
+    } catch {
+        Write-Host "MIDI map failed: $($_.Exception.Message)" -ForegroundColor Red
+    }
+}
+
+function Disconnect-ServerMidi {
+    try {
+        $active = Invoke-AbApi -Method GET -Path '/midi/active'
+        $devices = @($active.inputs)
+        if ($devices.Count -eq 0) {
+            Write-Host "No active server MIDI inputs." -ForegroundColor Yellow
+            return
+        }
+
+        Write-Host "  [A] all active inputs" -ForegroundColor Gray
+        for ($i = 0; $i -lt $devices.Count; $i++) {
+            Write-Host ("  [{0}] {1}" -f ($i + 1), $devices[$i]) -ForegroundColor Gray
+        }
+
+        $choice = Read-Host 'Unmap which server MIDI input?'
+        $forgetAnswer = Read-Host 'Also remove from saved startup mapping? [y/N]'
+        $forget = $forgetAnswer -match '^(y|yes)$'
+        if ($choice -match '^(a|all)$') {
+            $forgetText = if ($forget) { 'true' } else { 'false' }
+            $result = Invoke-AbApi -Method DELETE -Path "/midi/server/active?forget=$forgetText"
+            Write-Host "Unmapped: $($result.disconnected -join ', ')" -ForegroundColor Green
+            return
+        }
+
+        $index = 0
+        if ([int]::TryParse($choice, [ref]$index) -and $index -ge 1 -and $index -le $devices.Count) {
+            $device = $devices[$index - 1]
+            Invoke-AbApi -Method POST -Path '/midi/server/disconnect' -Body @{ inputName = $device; forget = $forget } | Out-Null
+            Write-Host "Unmapped from server: $device" -ForegroundColor Green
+        } else {
+            Write-Host "Invalid selection." -ForegroundColor Yellow
+        }
+    } catch {
+        Write-Host "MIDI unmap failed: $($_.Exception.Message)" -ForegroundColor Red
+    }
+}
+
+function Clear-SavedServerMidi {
+    $answer = Read-Host 'Clear all saved server MIDI auto-connect devices? [y/N]'
+    if ($answer -notmatch '^(y|yes)$') { return }
+    try {
+        Invoke-AbApi -Method DELETE -Path '/midi/auto-connect' | Out-Null
+        Write-Host "Saved server MIDI auto-connect list cleared." -ForegroundColor Green
+    } catch {
+        Write-Host "Could not clear saved MIDI devices: $($_.Exception.Message)" -ForegroundColor Red
+    }
+}
+
+function Start-LauncherUpdate {
+    $launcherPath = Join-Path $RepoPath 'ops\windows\launcher\Launch-ArtBastardLocal.ps1'
+    if (-not (Test-Path -LiteralPath $launcherPath)) {
+        Write-Host "Launcher not found: $launcherPath" -ForegroundColor Red
+        return
+    }
+    Start-Process -FilePath 'powershell.exe' -WorkingDirectory (Split-Path -Parent $launcherPath) -ArgumentList @('-NoExit', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $launcherPath, '-Branch', 'main', '-Port', "$Port")
+    Write-Host "Started LIVE git update + relaunch in a foreground PowerShell window." -ForegroundColor Green
+}
+
+function Start-CurrentRelaunch {
+    $startPath = Join-Path $RepoPath 'start.ps1'
+    if (-not (Test-Path -LiteralPath $startPath)) {
+        Write-Host "start.ps1 not found: $startPath" -ForegroundColor Red
+        return
+    }
+    Start-Process -FilePath 'powershell.exe' -WorkingDirectory $RepoPath -ArgumentList @('-NoExit', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $startPath, '-Port', "$Port", '-MidiSelect')
+    Write-Host "Started current-code relaunch + MIDI setup in a foreground PowerShell window." -ForegroundColor Green
+}
+
+function Open-CustomLogLayout {
+    $validModes = @('all', 'midi', 'rig', 'server', 'dmx', 'osc')
+    Write-Host "Modes: $($validModes -join ', ')" -ForegroundColor Cyan
+    $first = Read-Host 'Left/top panel mode [midi]'
+    $second = Read-Host 'Right/top panel mode [rig]'
+    $third = Read-Host 'Right/bottom panel mode [server]'
+    if ([string]::IsNullOrWhiteSpace($first)) { $first = 'midi' }
+    if ([string]::IsNullOrWhiteSpace($second)) { $second = 'rig' }
+    if ([string]::IsNullOrWhiteSpace($third)) { $third = 'server' }
+    if ($validModes -notcontains $first -or $validModes -notcontains $second -or $validModes -notcontains $third) {
+        Write-Host "Invalid mode. Layout cancelled." -ForegroundColor Yellow
+        return
+    }
+
+    $wt = Get-Command wt.exe -ErrorAction SilentlyContinue
+    if (-not $wt) {
+        Write-Host "Windows Terminal not found." -ForegroundColor Yellow
+        return
+    }
+
+    $args = @(
+        '-w', 'artbastard-local',
+        'new-tab', '--title', "AB-$first", 'powershell.exe', '-NoExit', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $LogPanelScriptPath, '-LogPath', $LogPath, '-Mode', $first,
+        ';',
+        'split-pane', '-H', '--title', "AB-$second", 'powershell.exe', '-NoExit', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $LogPanelScriptPath, '-LogPath', $LogPath, '-Mode', $second,
+        ';',
+        'split-pane', '-V', '--title', "AB-$third", 'powershell.exe', '-NoExit', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $LogPanelScriptPath, '-LogPath', $LogPath, '-Mode', $third
+    )
+    Start-Process -FilePath $wt.Source -ArgumentList $args
+    Write-Host "Opened custom log layout. Resize panes by dragging splitters or Alt+Shift+Arrow." -ForegroundColor Green
+}
+
+try { $Host.UI.RawUI.WindowTitle = 'ArtBastard - Rig Control' } catch { }
+while ($true) {
+    Clear-Host
+    Write-Host '================================================================' -ForegroundColor DarkMagenta
+    Write-Host '  ARTBASTARD RIG CONTROL' -ForegroundColor Magenta
+    Write-Host '================================================================' -ForegroundColor DarkMagenta
+    Write-Host "Repo: $RepoPath" -ForegroundColor DarkGray
+    Write-Host "Port: $Port" -ForegroundColor DarkGray
+    Write-Host 'Resize panes with mouse drag or Alt+Shift+Arrow. Use P to change panel roles.' -ForegroundColor Cyan
+    Write-Host ''
+    Show-Status
+    Write-Host ''
+    Write-Host '[U] Update git LIVE/main + relaunch server' -ForegroundColor Green
+    Write-Host '[R] Relaunch current code + MIDI setup' -ForegroundColor Green
+    Write-Host '[M] Map MIDI input to server now' -ForegroundColor DarkYellow
+    Write-Host '[D] Unmap active server MIDI input' -ForegroundColor DarkYellow
+    Write-Host '[C] Clear saved server MIDI auto-connect' -ForegroundColor Yellow
+    Write-Host '[P] Open custom colored log panel layout' -ForegroundColor Cyan
+    Write-Host '[S] Refresh status' -ForegroundColor White
+    Write-Host '[Q] Close this control pane' -ForegroundColor DarkGray
+    Write-Host ''
+    $choice = Read-Host 'Choose'
+    switch -Regex ($choice) {
+        '^(u|U)$' { Start-LauncherUpdate; Pause }
+        '^(r|R)$' { Start-CurrentRelaunch; Pause }
+        '^(m|M)$' { Connect-ServerMidi; Pause }
+        '^(d|D)$' { Disconnect-ServerMidi; Pause }
+        '^(c|C)$' { Clear-SavedServerMidi; Pause }
+        '^(p|P)$' { Open-CustomLogLayout; Pause }
+        '^(s|S|)$' { }
+        '^(q|Q)$' { return }
+        default { Write-Host "Unknown choice." -ForegroundColor Yellow; Pause }
+    }
+}
+'@
+
+    Set-Content -LiteralPath $controlScriptPath -Value $controlScript -Encoding UTF8
+    return $controlScriptPath
+}
+
 function Start-LogPanels {
     $wt = Get-Command wt.exe -ErrorAction SilentlyContinue
     if (-not $wt) {
@@ -481,9 +711,10 @@ function Start-LogPanels {
     }
 
     $panelScriptPath = Write-LogPanelScript
+    $controlScriptPath = Write-ControlPanelScript
     $wtArgs = @(
         "-w", "artbastard-local",
-        "new-tab", "--title", "ArtBastard-all", "powershell.exe", "-NoExit", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $panelScriptPath, "-LogPath", $logPath, "-Mode", "all",
+        "new-tab", "--title", "Rig-Control", "powershell.exe", "-NoExit", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $controlScriptPath, "-RepoPath", $repoPath, "-LogPath", $logPath, "-LogPanelScriptPath", $panelScriptPath, "-Port", "$Port",
         ";",
         "split-pane", "-H", "--title", "MIDI-OSC-DMX", "powershell.exe", "-NoExit", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $panelScriptPath, "-LogPath", $logPath, "-Mode", "midi",
         ";",

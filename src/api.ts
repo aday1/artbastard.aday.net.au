@@ -105,6 +105,17 @@ function resolveSessionIdFromRequest(req: Request): string {
   return DEFAULT_SESSION_ID;
 }
 
+const requireLocalControlRequest: RequestHandler = (req, res, next) => {
+  const remoteAddress = req.socket.remoteAddress || req.ip || '';
+  const normalizedAddress = remoteAddress.replace(/^::ffff:/, '');
+  if (normalizedAddress === '127.0.0.1' || normalizedAddress === '::1' || normalizedAddress === 'localhost') {
+    next();
+    return;
+  }
+
+  res.status(403).json({ success: false, error: 'Local launcher control endpoint only' });
+};
+
 // Add error handling middleware to ensure all responses are valid JSON
 apiRouter.use((req, res, next) => {
   // Store the original res.json function
@@ -540,6 +551,69 @@ apiRouter.post('/midi/learn', midiLearnHandler);
 
 apiRouter.get('/midi/active', (_req, res) => {
   res.json({ inputs: getActiveMidiInputNames() });
+});
+
+apiRouter.get('/midi/interfaces', requireLocalControlRequest, (_req, res) => {
+  res.json(listMidiInterfaces());
+});
+
+apiRouter.get('/midi/auto-connect', requireLocalControlRequest, (_req, res) => {
+  const config = loadConfig() as any;
+  res.json({ devices: Array.isArray(config.autoConnectMidiDevices) ? config.autoConnectMidiDevices : [] });
+});
+
+apiRouter.post('/midi/server/connect', requireLocalControlRequest, async (req, res) => {
+  try {
+    const { inputName, remember = true } = req.body || {};
+    if (typeof inputName !== 'string' || !inputName.trim()) {
+      return res.status(400).json({ success: false, error: 'inputName is required' });
+    }
+
+    const trimmedInputName = inputName.trim();
+    await connectMidiInput(global.io, trimmedInputName);
+    if (remember !== false) rememberMidiAutoConnectDevice(trimmedInputName);
+    res.json({ success: true, active: getActiveMidiInputNames() });
+  } catch (error) {
+    log('Error connecting server MIDI input from API', 'ERROR', { error, body: req.body });
+    res.status(500).json({ success: false, error: `Failed to connect server MIDI input: ${error instanceof Error ? error.message : String(error)}` });
+  }
+});
+
+apiRouter.post('/midi/server/disconnect', requireLocalControlRequest, (req, res) => {
+  try {
+    const { inputName, forget = false } = req.body || {};
+    if (typeof inputName !== 'string' || !inputName.trim()) {
+      return res.status(400).json({ success: false, error: 'inputName is required' });
+    }
+
+    const trimmedInputName = inputName.trim();
+    disconnectMidiInput(global.io, trimmedInputName);
+    if (forget) forgetMidiAutoConnectDevice(trimmedInputName);
+    res.json({ success: true, active: getActiveMidiInputNames() });
+  } catch (error) {
+    log('Error disconnecting server MIDI input from API', 'ERROR', { error, body: req.body });
+    res.status(500).json({ success: false, error: `Failed to disconnect server MIDI input: ${error instanceof Error ? error.message : String(error)}` });
+  }
+});
+
+apiRouter.delete('/midi/server/active', requireLocalControlRequest, (req, res) => {
+  try {
+    const forget = req.query.forget === 'true';
+    const active = getActiveMidiInputNames();
+    active.forEach((inputName) => {
+      disconnectMidiInput(global.io, inputName);
+      if (forget) forgetMidiAutoConnectDevice(inputName);
+    });
+    res.json({ success: true, disconnected: active, active: getActiveMidiInputNames() });
+  } catch (error) {
+    log('Error disconnecting all server MIDI inputs from API', 'ERROR', { error });
+    res.status(500).json({ success: false, error: `Failed to disconnect server MIDI inputs: ${error instanceof Error ? error.message : String(error)}` });
+  }
+});
+
+apiRouter.delete('/midi/auto-connect', requireLocalControlRequest, (_req, res) => {
+  clearMidiAutoConnectDevices();
+  res.json({ success: true, devices: [] });
 });
 
 apiRouter.post('/midi/cancel-learn', (req, res) => {
