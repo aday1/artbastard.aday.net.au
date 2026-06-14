@@ -35,7 +35,8 @@ import {
   getChannelNames, // Added import
   getChannelRanges, // Added import
   setChannelRange, // Added import
-  saveFixtures // Added import to sync server fixtures
+  saveFixtures, // Added import to sync server fixtures
+  getActiveMidiInputNames
 } from './index';
 import {
   loadFixturesData,
@@ -530,6 +531,10 @@ const midiLearnHandler: RequestHandler = (req: Request, res: Response) => {
 };
 
 apiRouter.post('/midi/learn', midiLearnHandler);
+
+apiRouter.get('/midi/active', (_req, res) => {
+  res.json({ inputs: getActiveMidiInputNames() });
+});
 
 apiRouter.post('/midi/cancel-learn', (req, res) => {
   try {

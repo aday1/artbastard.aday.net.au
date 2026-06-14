@@ -133,6 +133,15 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         window.dispatchEvent(new CustomEvent('serverRoliStatus', { detail: status }));
       });
 
+      const dispatchServerMidiInputsActive = (inputs: string[]) => {
+        const activeInputs = Array.isArray(inputs) ? inputs : [];
+        (window as any).__artbastardServerMidiInputsActive = activeInputs;
+        window.dispatchEvent(new CustomEvent('serverMidiInputsActive', { detail: activeInputs }));
+      };
+
+      socketInstance.on('midiInputsActive', dispatchServerMidiInputsActive);
+      socketInstance.on('activeMidiInterfaces', dispatchServerMidiInputsActive);
+
       socketInstance.on('oscChannelActivity', (data: { channelIndex: number; value: number }) => {
         useStore.getState().reportOscActivity(data.channelIndex, data.value);
       });
@@ -571,6 +580,8 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           socketInstance.off('session:error');
           socketInstance.off('bridge:registry');
           socketInstance.off('availableClockSources');
+          socketInstance.off('midiInputsActive');
+          socketInstance.off('activeMidiInterfaces');
           socketInstance.off('midiClockInputs');
           socketInstance.off('midiClockInputChanged');
           socketInstance.off('dmxUpdate');

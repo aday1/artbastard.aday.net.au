@@ -1,6 +1,6 @@
 param(
     [ValidateSet("ask", "main", "dev")]
-    [string]$Branch = "ask",
+    [string]$Branch = "main",
     [int]$Port = 3030
 )
 
@@ -43,15 +43,46 @@ function Write-Step {
 
 function Show-Splash {
     Write-Host ""
-    Write-Host "     _         _   ____            _                _ " -ForegroundColor Magenta
-    Write-Host "    / \   _ __| |_| __ )  __ _ ___| |_ __ _ _ __ __| |" -ForegroundColor Magenta
-    Write-Host "   / _ \ | '__| __|  _ \ / _` / __| __/ _` | '__/ _` |" -ForegroundColor Cyan
-    Write-Host "  / ___ \| |  | |_| |_) | (_| \__ \ || (_| | | | (_| |" -ForegroundColor Cyan
-    Write-Host " /_/   \_\_|   \__|____/ \__,_|___/\__\__,_|_|  \__,_|" -ForegroundColor Yellow
+    Write-Host "======================================================================" -ForegroundColor DarkMagenta
+    Write-Host "      ARTBASTARD LOCAL RIG LAUNCHER" -ForegroundColor Magenta
+    Write-Host "      LIVE/main | Server MIDI first | OSC + Art-Net + DMX" -ForegroundColor Cyan
+    Write-Host "======================================================================" -ForegroundColor DarkMagenta
+    Write-Host "   _         _   ____            _                _ " -ForegroundColor Magenta
+    Write-Host "  / \   _ __| |_| __ )  __ _ ___| |_ __ _ _ __ __| |" -ForegroundColor Magenta
+    Write-Host " / _ \ | '__| __|  _ \ / _` / __| __/ _` | '__/ _` |" -ForegroundColor Cyan
+    Write-Host "/ ___ \| |  | |_| |_) | (_| \__ \ || (_| | | | (_| |" -ForegroundColor Cyan
+    Write-Host "\_/   \_\_|   \__|____/ \__,_|___/\__\__,_|_|  \__,_|" -ForegroundColor Yellow
+    Write-Host "======================================================================" -ForegroundColor DarkMagenta
+    Write-Host "Default launch: LIVE branch, git fetch/pull, MIDI setup, local server." -ForegroundColor Green
+    Write-Host "Controller policy: APC40/X-Touch auto-map on server; ROLI server claim first." -ForegroundColor Green
     Write-Host ""
     if (Test-Path $splashPath) {
         Write-Host "Splash art: $splashPath" -ForegroundColor DarkGray
     }
+}
+
+function Format-Age {
+    param([datetime]$Timestamp)
+
+    $age = (Get-Date) - $Timestamp
+    if ($age.TotalSeconds -lt 60) { return "just now" }
+    if ($age.TotalMinutes -lt 60) { return "{0:N0} min ago" -f $age.TotalMinutes }
+    if ($age.TotalHours -lt 48) { return "{0:N1} hr ago" -f $age.TotalHours }
+    return "{0:N1} days ago" -f $age.TotalDays
+}
+
+function Get-ArtifactAgeText {
+    param(
+        [string]$Label,
+        [string]$Path
+    )
+
+    if (-not (Test-Path -LiteralPath $Path)) {
+        return "${Label}: missing"
+    }
+
+    $item = Get-Item -LiteralPath $Path
+    return "${Label}: $(Format-Age -Timestamp $item.LastWriteTime) ($($item.LastWriteTime.ToString('yyyy-MM-dd HH:mm')))"
 }
 
 function Invoke-Git {
@@ -286,6 +317,13 @@ function Show-LaunchSummary {
     Write-Step "Launch diagnostics"
     Write-Host "Branch: $SelectedBranch" -ForegroundColor Green
     Write-Host "HTTP UI/API: $url" -ForegroundColor Green
+    Write-Host "Last build age:" -ForegroundColor Cyan
+    Write-Host "  $(Get-ArtifactAgeText -Label 'Backend dist/server.js' -Path (Join-Path $repoPath 'dist\server.js'))" -ForegroundColor Cyan
+    Write-Host "  $(Get-ArtifactAgeText -Label 'Frontend react-app/dist' -Path (Join-Path $repoPath 'react-app\dist\index.html'))" -ForegroundColor Cyan
+    try {
+        $commitAge = (& git -C $repoPath log -1 --format=%cr 2>$null)
+        if ($commitAge) { Write-Host "  Git commit: $commitAge" -ForegroundColor Cyan }
+    } catch { }
     Write-Host "Socket.IO: same origin as HTTP, websocket/polling on port $Port" -ForegroundColor Green
     Write-Host "Art-Net: $($cfg.artNetIp):$($cfg.artNetPort) UDP" -ForegroundColor Green
     Write-Host "OSC receive: 0.0.0.0:$($cfg.oscReceivePort) UDP" -ForegroundColor Green
@@ -357,6 +395,84 @@ try {
     Write-Host $probeResult
 }
 
+function Write-LogPanelScript {
+    $panelDir = Join-Path $env:TEMP "ArtBastardLauncher"
+    if (-not (Test-Path -LiteralPath $panelDir)) {
+        New-Item -ItemType Directory -Force -Path $panelDir | Out-Null
+    }
+
+    $panelScriptPath = Join-Path $panelDir "log-panel.ps1"
+    $panelScript = @'
+param(
+    [Parameter(Mandatory = $true)]
+    [string]$LogPath,
+    [ValidateSet("all", "midi", "rig")]
+    [string]$Mode = "all"
+)
+
+$ErrorActionPreference = "Continue"
+$patterns = @{
+    all = "."
+    midi = "\[(MIDI|OSC|DMX|ARTNET|TOUCHOSC)\]"
+    rig = "\[(SERVER|SYSTEM|WARN|ERROR|CLOCK)\]|ROLI|APC|screensaver|Ableton|ArtNet|RtMidi"
+}
+$titles = @{
+    all = "All server log"
+    midi = "MIDI / OSC / DMX"
+    rig = "ROLI / APC / warnings"
+}
+
+try { $Host.UI.RawUI.WindowTitle = "ArtBastard - $($titles[$Mode])" } catch { }
+Write-Host "ArtBastard $($titles[$Mode])" -ForegroundColor Magenta
+Write-Host "Tailing $LogPath" -ForegroundColor DarkGray
+Write-Host ""
+
+if (-not (Test-Path -LiteralPath $LogPath)) {
+    New-Item -ItemType File -Force -Path $LogPath | Out-Null
+}
+
+Get-Content -LiteralPath $LogPath -Wait -Tail 120 | Where-Object { $_ -match $patterns[$Mode] }
+'@
+
+    Set-Content -LiteralPath $panelScriptPath -Value $panelScript -Encoding UTF8
+    return $panelScriptPath
+}
+
+function Start-LogPanels {
+    $wt = Get-Command wt.exe -ErrorAction SilentlyContinue
+    if (-not $wt) {
+        Write-Host "Windows Terminal not found; live logs remain in this launcher window and in logs\app.log." -ForegroundColor Yellow
+        return
+    }
+
+    $logsDir = Join-Path $repoPath "logs"
+    if (-not (Test-Path -LiteralPath $logsDir)) {
+        New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
+    }
+
+    $logPath = Join-Path $logsDir "app.log"
+    if (-not (Test-Path -LiteralPath $logPath)) {
+        New-Item -ItemType File -Force -Path $logPath | Out-Null
+    }
+
+    $panelScriptPath = Write-LogPanelScript
+    $wtArgs = @(
+        "-w", "artbastard-local",
+        "new-tab", "--title", "ArtBastard all", "powershell.exe", "-NoExit", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $panelScriptPath, "-LogPath", $logPath, "-Mode", "all",
+        ";",
+        "split-pane", "-H", "--title", "MIDI OSC DMX", "powershell.exe", "-NoExit", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $panelScriptPath, "-LogPath", $logPath, "-Mode", "midi",
+        ";",
+        "split-pane", "-V", "--title", "ROLI APC warnings", "powershell.exe", "-NoExit", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $panelScriptPath, "-LogPath", $logPath, "-Mode", "rig"
+    )
+
+    try {
+        Start-Process -FilePath $wt.Source -ArgumentList $wtArgs | Out-Null
+        Write-Host "Opened Windows Terminal split panes for live logs." -ForegroundColor Green
+    } catch {
+        Write-Host "Could not open Windows Terminal log panes: $($_.Exception.Message)" -ForegroundColor Yellow
+    }
+}
+
 function Start-ArtBastard {
     Write-Step "Launching ArtBastard"
     Set-Location $repoPath
@@ -392,6 +508,7 @@ function Start-ArtBastard {
 
     Write-Host "Starting on $url" -ForegroundColor Green
     Write-Host $modeNote -ForegroundColor Cyan
+    Start-LogPanels
     Write-Host "Leave this window open while running ArtBastard." -ForegroundColor DarkGray
     Write-Countdown -Message "Relaunching ArtBastard" -Seconds 5
 
@@ -399,7 +516,8 @@ function Start-ArtBastard {
         "-NoProfile",
         "-ExecutionPolicy", "Bypass",
         "-File", (Join-Path $repoPath "start.ps1"),
-        "-Port", "$Port"
+        "-Port", "$Port",
+        "-MidiSelect"
     )
     if ($script:CodeUpdatedThisRun) {
         $startArgs += "-Clear"

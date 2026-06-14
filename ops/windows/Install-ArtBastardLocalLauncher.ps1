@@ -108,7 +108,7 @@ function Write-Launcher {
     $launcher = @'
 param(
     [ValidateSet("ask", "main", "dev")]
-    [string]$Branch = "ask",
+    [string]$Branch = "main",
     [int]$Port = 3030
 )
 
@@ -362,7 +362,7 @@ function Start-ArtBastard {
         Write-Host "Microsoft Edge not found; ArtBastard will use the default browser." -ForegroundColor Yellow
     }
     Write-Host "Starting on $url" -ForegroundColor Green
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoPath "start.ps1") -Port $Port
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoPath "start.ps1") -Port $Port -MidiSelect
 }
 
 try {
@@ -393,7 +393,7 @@ function New-Shortcut {
     $shell = New-Object -ComObject WScript.Shell
     $shortcut = $shell.CreateShortcut($desktopShortcut)
     $shortcut.TargetPath = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
-    $shortcut.Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$launcherPath`""
+    $shortcut.Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$launcherPath`" -Branch main -Port $Port"
     $shortcut.WorkingDirectory = $launcherDir
     $launcherIcon = Join-Path $launcherDir "assets\artbastard-launcher.ico"
     if (Test-Path $launcherIcon) {
@@ -401,7 +401,7 @@ function New-Shortcut {
     } else {
         $shortcut.IconLocation = "$env:SystemRoot\System32\shell32.dll,220"
     }
-    $shortcut.Description = "Choose LIVE/main or DEV/dev, update ArtBastard, check Art-Net/MIDI/OSC, then launch locally."
+    $shortcut.Description = "Launch ArtBastard LIVE/main, update from git, run MIDI setup, show log panes, then start locally."
     $shortcut.Save()
     Write-Host "Shortcut ready: $desktopShortcut" -ForegroundColor Green
 }

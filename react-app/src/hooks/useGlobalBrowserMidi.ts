@@ -19,6 +19,7 @@ export const useGlobalBrowserMidi = () => {
   const [inputs, setInputs] = useState<WebMidi.MIDIInput[]>([]);
   const [serverRoliClaimed, setServerRoliClaimed] = useState(false);
   const serverRoliClaimedRef = useRef(false);
+  const serverActiveMidiNamesRef = useRef<Set<string>>(new Set());
   const midiAccessRef = useRef<WebMidi.MIDIAccess | null>(null);
   
   // Load saved active inputs from localStorage on initialization
@@ -82,6 +83,29 @@ export const useGlobalBrowserMidi = () => {
     });
   }, []);
 
+  const isServerOwnedInput = useCallback((input: WebMidi.MIDIInput | null | undefined) => {
+    const name = input?.name || '';
+    return Boolean(name && serverActiveMidiNamesRef.current.has(name));
+  }, []);
+
+  const releaseBrowserInputForServer = useCallback((input: WebMidi.MIDIInput) => {
+    const handler = handlerRefs.current.get(input.id);
+    if (handler) {
+      input.removeEventListener('midimessage', handler);
+      handlerRefs.current.delete(input.id);
+    }
+    input.onmidimessage = null;
+    setActiveInputs(prev => {
+      if (!prev.has(input.id)) return prev;
+      const newSet = new Set(prev);
+      newSet.delete(input.id);
+      saveActiveInputs(newSet);
+      return newSet;
+    });
+    void input.close().catch(() => undefined);
+    debugLog.log('[GlobalBrowserMidi] Released browser MIDI input because server owns it:', input.name);
+  }, []);
+
   useEffect(() => {
     const applyServerRoliStatus = (status: any) => {
       const claimed = Boolean(status?.connected && (status?.inputName || status?.outputName));
@@ -106,6 +130,30 @@ export const useGlobalBrowserMidi = () => {
     window.addEventListener('serverRoliStatus', onStatus);
     return () => window.removeEventListener('serverRoliStatus', onStatus);
   }, []);
+
+  useEffect(() => {
+    const applyActiveServerInputs = (inputs: unknown) => {
+      const names = new Set(Array.isArray(inputs) ? inputs.filter((name): name is string => typeof name === 'string') : []);
+      serverActiveMidiNamesRef.current = names;
+      const access = midiAccessRef.current;
+      if (!access || names.size === 0) return;
+      Array.from(access.inputs.values()).forEach((input) => {
+        if (names.has(input.name || '')) releaseBrowserInputForServer(input);
+      });
+    };
+
+    const cached = (window as any).__artbastardServerMidiInputsActive;
+    if (cached) applyActiveServerInputs(cached);
+
+    fetch('/api/midi/active')
+      .then((response) => response.ok ? response.json() : null)
+      .then((payload) => payload && applyActiveServerInputs(payload.inputs))
+      .catch(() => undefined);
+
+    const onActive = (event: Event) => applyActiveServerInputs((event as CustomEvent).detail);
+    window.addEventListener('serverMidiInputsActive', onActive);
+    return () => window.removeEventListener('serverMidiInputsActive', onActive);
+  }, [releaseBrowserInputForServer]);
 
   const maybeAutoApplyTemplate = useCallback(
     async (deviceName: string, inputId?: string) => {
@@ -239,6 +287,11 @@ export const useGlobalBrowserMidi = () => {
 
     const input = midiAccess.inputs.get(inputId);
     if (!input) return;
+
+    if (isServerOwnedInput(input)) {
+      debugLog.log('[GlobalBrowserMidi] Browser MIDI input deferred to active server MIDI:', input.name);
+      return;
+    }
 
     if (serverRoliClaimedRef.current && isRoliblockLike(input.name || '')) {
       debugLog.log('[GlobalBrowserMidi] Browser ROLI input deferred to server:', input.name);
@@ -425,7 +478,7 @@ export const useGlobalBrowserMidi = () => {
       type: 'success',
       priority: 'normal'
     });
-  }, [midiAccess, addNotification]);
+  }, [midiAccess, addNotification, isServerOwnedInput]);
 
   useEffect(() => {
     if (!midiAccess) return;
@@ -438,6 +491,7 @@ export const useGlobalBrowserMidi = () => {
       // ROLI Lightpad inputs are engine-owned (see connectBrowserInput).
       // Don't dispatch detection events or auto-attach generic listeners.
       if (isRoliblockLike(input.name || '')) return;
+      if (isServerOwnedInput(input)) return;
 
       // Re-attach listener for any input we previously connected (this session
       // or persisted in localStorage) but no longer have a live handler for —
@@ -474,13 +528,14 @@ export const useGlobalBrowserMidi = () => {
       }
       dispatchDetectedMidiController(controller);
     });
-  }, [midiAccess, inputs, activeInputs, connectBrowserInput, maybeAutoApplyTemplate, serverRoliClaimed]);
+  }, [midiAccess, inputs, activeInputs, connectBrowserInput, maybeAutoApplyTemplate, serverRoliClaimed, isServerOwnedInput]);
 
   useEffect(() => {
     const handleConnectBrowser = (event: Event) => {
       const controller = (event as CustomEvent<DetectedMidiController>).detail;
       if (!midiAccess || !controller || controller.transport !== 'browser') return;
       if (!midiAccess.inputs.has(controller.id)) return;
+      if (isServerOwnedInput(midiAccess.inputs.get(controller.id))) return;
       if (controller.templateId) void maybeAutoApplyTemplate(controller.name, controller.id);
       connectBrowserInput(controller.id);
       dispatchConnectedMidiController(controller);
@@ -488,7 +543,7 @@ export const useGlobalBrowserMidi = () => {
 
     window.addEventListener(MIDI_CONNECT_BROWSER_EVENT, handleConnectBrowser);
     return () => window.removeEventListener(MIDI_CONNECT_BROWSER_EVENT, handleConnectBrowser);
-  }, [midiAccess, connectBrowserInput, maybeAutoApplyTemplate]);
+  }, [midiAccess, connectBrowserInput, maybeAutoApplyTemplate, isServerOwnedInput]);
   // Disconnect from a browser MIDI input
   const disconnectBrowserInput = useCallback((inputId: string) => {
     if (!midiAccess) return;

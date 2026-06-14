@@ -412,8 +412,8 @@ async function connectMidiInput(io: Server, inputName: string, isBrowserMidi = f
         // try to open them — Windows MIDI ports are single-owner and Chrome
         // already holds them, which produces a recurring "Internal RtMidi error"
         // every reconnect attempt. Silently skip.
-        if (/\b(roli|lightpad|seaboard|block)\b/i.test(inputName)) {
-            log(`Skipping ROLI-family input (browser-engine-owned): ${inputName}`, 'MIDI');
+        if (isRoliFamilyInputName(inputName)) {
+            log(`Skipping ROLI-family input (server ROLI/browser engine-owned): ${inputName}`, 'MIDI');
             return;
         }
 
@@ -579,6 +579,7 @@ async function connectMidiInput(io: Server, inputName: string, isBrowserMidi = f
         
         io.emit('midiInterfaceSelected', inputName);
         io.emit('midiInputsActive', Object.keys(activeMidiInputs));
+        io.emit('activeMidiInterfaces', Object.keys(activeMidiInputs));
 
         const detectedTemplate = detectControllerTemplateFromDeviceName(inputName);
         if (detectedTemplate) {
@@ -636,6 +637,7 @@ function disconnectMidiInput(io: Server, inputName: string) {
         delete activeMidiInputs[inputName];
         log(`MIDI input disconnected: ${inputName}`, 'MIDI');
         io.emit('midiInputsActive', Object.keys(activeMidiInputs));
+        io.emit('activeMidiInterfaces', Object.keys(activeMidiInputs));
         io.emit('midiInterfaceDisconnected', inputName);
 
         if (activeMidiOutputs[inputName]) {
@@ -1180,6 +1182,27 @@ const findOutputNameForInput = (inputName: string): string | null => {
     });
     return loose || null;
 };
+
+const isRoliFamilyInputName = (inputName: string): boolean => {
+    const normalized = inputName.toLowerCase();
+    return /\b(roli|lightpad|seaboard|block)\b/i.test(inputName) || normalized.includes('holybell');
+};
+
+const getDefaultServerAutoConnectMidiDevices = (): string[] => {
+    try {
+        return easymidi.getInputs().filter((inputName) => {
+            if (isRoliFamilyInputName(inputName)) return false;
+            return Boolean(detectControllerTemplateFromDeviceName(inputName));
+        });
+    } catch (error) {
+        log('Failed to detect default server MIDI auto-connect devices', 'WARN', { error });
+        return [];
+    }
+};
+
+export function getActiveMidiInputNames(): string[] {
+    return Object.keys(activeMidiInputs);
+}
 
 const rememberAutoConnectDevice = (deviceName: string) => {
     try {
@@ -2011,13 +2034,18 @@ async function startLaserTime(io: Server) {
     
     // Auto-connect MIDI devices from config
     const config = loadConfig();
-    const autoConnectDevices = (config as any).autoConnectMidiDevices || [];
+    const configuredAutoConnectDevices = (config as any).autoConnectMidiDevices || [];
+    const hasConfiguredAutoConnect = Array.isArray(configuredAutoConnectDevices) && configuredAutoConnectDevices.length > 0;
+    const autoConnectDevices = hasConfiguredAutoConnect
+        ? configuredAutoConnectDevices
+        : getDefaultServerAutoConnectMidiDevices();
     if (Array.isArray(autoConnectDevices) && autoConnectDevices.length > 0) {
-        console.log(`\n🎹 Auto-connecting ${autoConnectDevices.length} MIDI device(s) from config:`);
+        const sourceLabel = hasConfiguredAutoConnect ? 'config' : 'smart defaults';
+        console.log(`\n🎹 Auto-connecting ${autoConnectDevices.length} MIDI device(s) from ${sourceLabel}:`);
         autoConnectDevices.forEach((device, idx) => {
             console.log(`   ${idx + 1}. ${device}`);
         });
-        log(`Auto-connecting ${autoConnectDevices.length} MIDI device(s) from config`, 'MIDI', { devices: autoConnectDevices });
+        log(`Auto-connecting ${autoConnectDevices.length} MIDI device(s) from ${sourceLabel}`, 'MIDI', { devices: autoConnectDevices });
         // Wait a moment for MIDI to initialize, then connect devices
         setTimeout(async () => {
             for (const deviceName of autoConnectDevices) {
@@ -2034,7 +2062,7 @@ async function startLaserTime(io: Server) {
             console.log(`\n🎹 MIDI devices ready! Move a knob to see console output.\n`);
         }, 500); // Small delay to ensure MIDI is initialized
     } else {
-        console.log(`\n🎹 No MIDI devices configured for auto-connect. Use the start script menu to configure.\n`);
+        console.log(`\n🎹 No server MIDI auto-connect devices found. Use the startup MIDI menu or Settings > MIDI & OSC to configure.\n`);
     }
     
     initOsc(io);
@@ -2052,6 +2080,7 @@ async function startLaserTime(io: Server) {
         
         // Send currently active MIDI interfaces
         socket.emit('midiInputsActive', Object.keys(activeMidiInputs));
+        socket.emit('activeMidiInterfaces', Object.keys(activeMidiInputs));
 
         socket.on('setDmxChannel', ({ channel, value }: { channel: number; value: number }) => {
             const sessionId = (socket as any).data?.sessionId || DEFAULT_SESSION_ID;
