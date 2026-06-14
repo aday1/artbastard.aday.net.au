@@ -96,6 +96,17 @@
   gap: 0.5rem;
   min-height: 1.8rem;
   margin-bottom: 12px;
+  min-width: 0;
+  padding-inline: 5.25rem;
+  position: relative;
+}
+
+.titleCluster {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-width: 0;
 }
 
 .laneBadge {
@@ -116,6 +127,52 @@
   a {
     color: inherit;
   }
+}
+
+.fullAppButton {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 32px;
+  max-width: 82px;
+  padding: 0 8px;
+  border: 1px solid #08070a;
+  border-radius: 3px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), transparent 42%),
+    linear-gradient(180deg, #403947, #17141c);
+  color: #f2e9d8;
+  cursor: pointer;
+  font-family: var(--rk-mono, var(--font-mono, monospace));
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1;
+  text-transform: uppercase;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.45),
+    0 1px 0 rgba(255, 255, 255, 0.08);
+
+  &:hover,
+  &:focus-visible {
+    color: #0d0a07;
+    background:
+      linear-gradient(180deg, #f0c06d 0%, #d68c34 52%, #8f551f 100%);
+    outline: none;
+  }
+}
+
+.fullAppLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tabNavigation {
@@ -230,6 +287,20 @@
 
   .mobileTitle {
     font-size: 16px;
+  }
+
+  .titleRow {
+    padding-inline: 3rem;
+  }
+
+  .fullAppButton {
+    min-width: 34px;
+    width: 34px;
+    padding: 0;
+  }
+
+  .fullAppLabel {
+    display: none;
   }
 
   .tab {

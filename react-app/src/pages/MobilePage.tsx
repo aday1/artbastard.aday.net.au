@@ -31,6 +31,12 @@ const MobilePage: React.FC = () => {
     });
   }, []);
 
+  const openFullApp = React.useCallback(() => {
+    const target = `${window.location.pathname}${window.location.search}#/fixture`;
+    window.history.replaceState(null, '', target);
+    window.location.reload();
+  }, []);
+
   React.useEffect(() => {
     document.documentElement.classList.add('ab-mobile-page');
     return () => document.documentElement.classList.remove('ab-mobile-page');
@@ -94,10 +100,22 @@ const MobilePage: React.FC = () => {
     <div className={styles.mobilePage}>
       <div className={styles.mobileHeader}>
         <div className={styles.titleRow}>
-          <h1 className={styles.mobileTitle}>
-            <SiteBrandingLink brand="artbastard">ArtBastard</SiteBrandingLink>
-          </h1>
-          <DeployLaneBadge placement="inline" className={styles.laneBadge} />
+          <div className={styles.titleCluster}>
+            <h1 className={styles.mobileTitle}>
+              <SiteBrandingLink brand="artbastard">ArtBastard</SiteBrandingLink>
+            </h1>
+            <DeployLaneBadge placement="inline" className={styles.laneBadge} />
+          </div>
+          <button
+            type="button"
+            className={styles.fullAppButton}
+            onClick={openFullApp}
+            aria-label="Open full ArtBastard app"
+            title="Open full app"
+          >
+            <LucideIcon name="MonitorUp" size={16} aria-hidden="true" />
+            <span className={styles.fullAppLabel}>Full app</span>
+          </button>
         </div>
         <div className={`${styles.tabNavigation} ab-view-tabs`} role="tablist" aria-label="Mobile control tabs">
           {tabs.map((tab) => (
