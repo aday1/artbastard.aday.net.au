@@ -46,7 +46,8 @@ export function useMetronomeAudio(
   enabled: boolean,
   bpm: number,
   beatsPerBar: number,
-  onBeat?: (beatIndex: number, isAccent: boolean) => void
+  onBeat?: (beatIndex: number, isAccent: boolean) => void,
+  soundEnabled = true
 ) {
   const ctxRef = useRef<AudioContext | null>(null);
   const timerRef = useRef<number | null>(null);
@@ -65,22 +66,24 @@ export function useMetronomeAudio(
       return;
     }
 
-    const ctx = getContext();
-    if (!ctx) return;
+    const ctx = soundEnabled ? getContext() : null;
+    if (soundEnabled && !ctx) return;
     ctxRef.current = ctx;
 
     const secondsPerBeat = 60 / bpm;
-    nextNoteTimeRef.current = ctx.currentTime + 0.05;
+    nextNoteTimeRef.current = (ctx?.currentTime ?? performance.now() / 1000) + 0.05;
     beatIndexRef.current = 0;
 
     const schedule = () => {
       const context = ctxRef.current;
-      if (!context) return;
+      const currentTime = context?.currentTime ?? performance.now() / 1000;
 
-      while (nextNoteTimeRef.current < context.currentTime + 0.12) {
+      while (nextNoteTimeRef.current < currentTime + 0.12) {
         const idx = beatIndexRef.current % beatsPerBar;
         const accent = idx === 0;
-        playClick(context, nextNoteTimeRef.current, accent);
+        if (context && soundEnabled) {
+          playClick(context, nextNoteTimeRef.current, accent);
+        }
         onBeatRef.current?.(idx, accent);
         nextNoteTimeRef.current += secondsPerBeat;
         beatIndexRef.current += 1;
@@ -96,14 +99,13 @@ export function useMetronomeAudio(
         timerRef.current = null;
       }
     };
-  }, [enabled, bpm, beatsPerBar]);
+  }, [enabled, bpm, beatsPerBar, soundEnabled]);
 
   useEffect(() => {
     return () => {
       if (timerRef.current != null) {
         window.clearTimeout(timerRef.current);
       }
-      void ctxRef.current?.close();
       ctxRef.current = null;
     };
   }, []);

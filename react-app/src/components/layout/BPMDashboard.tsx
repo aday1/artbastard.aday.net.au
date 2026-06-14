@@ -4,6 +4,9 @@ import { HorizontalFader } from '../ui/controls';
 import { MetronomePanel } from '../audio/MetronomePanel';
 import styles from './BPMDashboard.module.scss';
 import { debugLog } from '../../utils/debugLog';
+import { useSuperControlMidiLearn } from '../../hooks/useSuperControlMidiLearn';
+import { useMetronomeAudio } from '../../hooks/useMetronomeAudio';
+import { APC40_GRID_SLOT_COUNT, apc40DeckSceneName } from '../../midi/apc40WorkflowHelpers';
 
 
 interface BPMDashboardProps {
@@ -11,22 +14,20 @@ interface BPMDashboardProps {
 }
 
 export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
-  // Initialize from localStorage or default to collapsed
-  const [isExpanded, setIsExpanded] = useState(() => {
-    try {
-      const saved = localStorage.getItem('bpmDashboardExpanded');
-      return saved ? JSON.parse(saved) : false; // Default to collapsed
-    } catch {
-      return false;
-    }
-  });
+  const [isExpanded, setIsExpanded] = useState(false);
   const [tapCount, setTapCount] = useState(0);
   const [lastTapTime, setLastTapTime] = useState(0);
   const tapTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastProcessedMidiKeyRef = useRef<string | null>(null);
+  const lastAutopilotMidiToggleAtRef = useRef(0);
+  const lastClockBeatAtRef = useRef(0);
+  const skipNextClockBeatStampRef = useRef(false);
 
   const {
     midiClockBpm,
     midiClockIsPlaying,
+    midiClockCurrentBeat,
+    midiClockCurrentBar,
     autoSceneTempoSource,
     autoSceneManualBpm,
     autoSceneTapTempoBpm,
@@ -40,6 +41,7 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
     requestToggleMasterClockPlayPause,
     setMidiClockBpm,
     setMidiClockIsPlaying,
+    setMidiClockBeatBar,
     socket,
     // Autopilot controls
     autopilotTrackEnabled,
@@ -55,16 +57,19 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
     setPanTiltAutopilot,
     setColorSliderAutopilot,
     debugAutopilotState,
-    startMidiLearn,
-    cancelMidiLearn,
-    midiLearnTarget,
+    midiMessages,
     // Scene controls
     scenes,
     saveScene,
     loadScene,
-    quickSceneSave,
-    quickSceneLoad,
+    quickSceneSaveA,
+    quickSceneLoadA,
+    quickSceneSaveB,
+    quickSceneLoadB,
+    quickSceneSaveMidiMapping,
     quickSceneMidiMapping,
+    quickSceneSaveBMidiMapping,
+    quickSceneLoadBMidiMapping,
     addNotification,
     // Transition controls
     transitionDuration,
@@ -73,19 +78,49 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
     setTransitionEasing,
   } = useStore();
 
+  const {
+    isLearning: isSuperControlLearning,
+    currentLearningControlName,
+    startLearn: startSuperControlLearn,
+    cancelLearn: cancelSuperControlLearn,
+    processMidiForControl,
+  } = useSuperControlMidiLearn();
+
 
   // Handle toggle collapse/expand
   const toggleExpanded = () => {
-    const newExpandedState = !isExpanded;
-    setIsExpanded(newExpandedState);
-    
-    // Save to localStorage
-    try {
-      localStorage.setItem('bpmDashboardExpanded', JSON.stringify(newExpandedState));
-    } catch (error) {
-      console.warn('Failed to save BPM Dashboard expanded state:', error);
-    }
+    setIsExpanded(prev => !prev);
   };
+
+  useEffect(() => {
+    if (!midiMessages.length) return;
+    const latestMessage = midiMessages[midiMessages.length - 1];
+    const messageType = latestMessage.type || latestMessage._type || 'unknown';
+    const messageKey = [
+      latestMessage.timestamp ?? '',
+      messageType,
+      latestMessage.channel,
+      latestMessage.controller ?? '',
+      latestMessage.note ?? '',
+      latestMessage.value ?? '',
+      latestMessage.velocity ?? '',
+    ].join(':');
+    if (lastProcessedMidiKeyRef.current === messageKey) return;
+    lastProcessedMidiKeyRef.current = messageKey;
+    processMidiForControl(latestMessage, {
+      autopilotTrackToggle: (value) => {
+        if (value <= 0) return;
+        const now = Date.now();
+        if (now - lastAutopilotMidiToggleAtRef.current < 350) return;
+        lastAutopilotMidiToggleAtRef.current = now;
+        const nextEnabled = !useStore.getState().autopilotTrackEnabled;
+        setAutopilotTrackEnabled(nextEnabled);
+        if (nextEnabled) {
+          setAutopilotTrackAutoPlay(true);
+        }
+      },
+    });
+  }, [midiMessages, processMidiForControl, setAutopilotTrackEnabled, setAutopilotTrackAutoPlay]);
 
   // Handle header click (but allow button clicks to propagate)
   const handleHeaderClick = (e: React.MouseEvent) => {
@@ -104,7 +139,13 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
       currentBPM: autoSceneTempoSource === 'tap_tempo' ? autoSceneTapTempoBpm : autoSceneManualBpm 
     });
     
-    if (socket) {
+    if (!midiClockIsPlaying && (autoSceneTempoSource === 'manual_bpm' || autoSceneTempoSource === 'tap_tempo')) {
+      requestMasterClockSourceChange('internal');
+      setMidiClockBpm(currentBpm || 120);
+    }
+
+    const socketIsConnected = Boolean((socket as unknown as { connected?: boolean } | null)?.connected);
+    if (socketIsConnected) {
       // Use server-side toggle
       requestToggleMasterClockPlayPause();
     } else {
@@ -127,6 +168,13 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
         ? autoSceneManualBpm
         : midiClockBpm;
   const isPlaying = midiClockIsPlaying;
+  const beatIntervalMs = currentBpm > 0 ? 60000 / currentBpm : 600;
+  const socketIsConnected = Boolean((socket as unknown as { connected?: boolean } | null)?.connected);
+  const quickSceneSlotIndex = APC40_GRID_SLOT_COUNT - 1;
+  const quickSceneAName = apc40DeckSceneName('A', quickSceneSlotIndex);
+  const quickSceneBName = apc40DeckSceneName('B', quickSceneSlotIndex);
+  const quickSceneAReady = scenes.some((scene) => scene.name === quickSceneAName);
+  const quickSceneBReady = scenes.some((scene) => scene.name === quickSceneBName);
   const sourceLabel =
     autoSceneTempoSource === 'ableton_link'
       ? `Ableton Link${abletonLinkAvailable ? ` (${abletonLinkPeers})` : ' unavailable'}`
@@ -137,6 +185,35 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
             ? `Ableton Link${abletonLinkAvailable ? ` (${abletonLinkPeers})` : ''}`
             : 'MIDI Clock'
           : 'Manual BPM';
+
+  useEffect(() => {
+    if (!midiClockIsPlaying) return;
+    if (skipNextClockBeatStampRef.current) {
+      skipNextClockBeatStampRef.current = false;
+      return;
+    }
+    lastClockBeatAtRef.current = Date.now();
+  }, [midiClockCurrentBeat, midiClockCurrentBar, midiClockIsPlaying]);
+
+  useMetronomeAudio(
+    midiClockIsPlaying,
+    currentBpm,
+    4,
+    (beatIndex) => {
+      const serverBeatFresh = socketIsConnected && Date.now() - lastClockBeatAtRef.current < beatIntervalMs * 1.8;
+      if (serverBeatFresh) return;
+
+      const nextBeat = beatIndex + 1;
+      const currentBeat = useStore.getState().midiClockCurrentBeat || 1;
+      const currentBar = useStore.getState().midiClockCurrentBar || 1;
+      const nextBar = nextBeat === 1 && currentBeat === 4
+        ? currentBar + 1
+        : currentBar;
+      skipNextClockBeatStampRef.current = true;
+      setMidiClockBeatBar(nextBeat, nextBar);
+    },
+    false
+  );
 
   const selectTempoSource = (source: 'internal_clock' | 'manual_bpm' | 'tap_tempo' | 'ableton_link') => {
     setAutoSceneTempoSource(source);
@@ -213,10 +290,10 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
           <span className={styles.sourceBadge} title={`Tempo source: ${sourceLabel}`}>
             {sourceLabel}
           </span>
-          <div style={{marginLeft:'0.5rem'}} onClick={e=>e.stopPropagation()}>
+          <div className={styles.sourceSelectWrap} onClick={e=>e.stopPropagation()}>
             <select value={autoSceneTempoSource} onChange={(e)=>{
-              const v = e.target.value as any; setAutoSceneTempoSource(v);
-            }} style={{fontSize:'0.6rem'}}>
+              const v = e.target.value as any; selectTempoSource(v);
+            }} className={styles.sourceSelect}>
               <option value="manual_bpm">Internal</option>
               <option value="tap_tempo">Tap</option>
               <option value="internal_clock">MIDI Clock</option>
@@ -225,10 +302,22 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
           </div>
           <div className={`${styles.quickStatus} ${isPlaying ? styles.playing : ''}`}>
             <span className={styles.bpmValue}>{Math.round(currentBpm)}</span>
+            <span className={styles.beatReadout}>{midiClockCurrentBar || 1}.{midiClockCurrentBeat || 1}</span>
             <span className={styles.playStatus}>{isPlaying ? 'Playing' : 'Stopped'}</span>
           </div>
         </div>
-        <button className={styles.expandButton} onClick={toggleExpanded}>
+        <button
+          type="button"
+          className={`${styles.transportButton} ${isPlaying ? styles.transportStop : styles.transportPlay}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            handlePlayPause();
+          }}
+          title={isPlaying ? 'Stop tempo clock' : 'Start tempo clock'}
+        >
+          {isPlaying ? 'Stop' : 'Play'}
+        </button>
+        <button className={styles.expandButton} onClick={toggleExpanded} aria-label={isExpanded ? 'Collapse BPM controls' : 'Expand BPM controls'}>
           {isExpanded ? '▲' : '▼'}
         </button>
       </div>
@@ -271,7 +360,39 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
             )}
           </div>
 
-          <MetronomePanel showBpmInput={false} />
+          <div className={styles.transportSection}>
+            <label className={styles.sectionLabel}>Tempo Transport</label>
+            <div className={styles.transportControls}>
+              <button
+                type="button"
+                className={`${styles.transportButtonLarge} ${isPlaying ? styles.transportStop : styles.transportPlay}`}
+                onClick={handlePlayPause}
+              >
+                {isPlaying ? 'Stop Tempo' : 'Play Tempo'}
+              </button>
+              <button
+                type="button"
+                className={styles.tapTempoButton}
+                onClick={handleTap}
+              >
+                Tap{tapCount > 0 ? ` (${tapCount})` : ''}
+              </button>
+              <button
+                type="button"
+                className={styles.resetTempoButton}
+                onClick={handleReset}
+              >
+                Reset
+              </button>
+            </div>
+            <div className={styles.transportReadout}>
+              <span>{midiClockCurrentBar || 1}.{midiClockCurrentBeat || 1}</span>
+              <span>{Math.round(currentBpm)} BPM</span>
+              <span>{sourceLabel}</span>
+            </div>
+          </div>
+
+          <MetronomePanel compact showBpmInput={false} />
 
           <div className={styles.bpmSection}>
             <label className={styles.sectionLabel}>BPM Setting</label>
@@ -318,20 +439,19 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
               </button>
               <div className={styles.midiLearnContainer}>
                 <button
-                  className={`${styles.midiLearnButton} ${midiLearnTarget?.type === 'superControl' && midiLearnTarget?.controlName === 'autopilotTrackToggle' ? styles.learning : ''}`}
+                  className={`${styles.midiLearnButton} ${isSuperControlLearning && currentLearningControlName === 'autopilotTrackToggle' ? styles.learning : ''}`}
                   onClick={() => {
-                    if (midiLearnTarget?.type === 'superControl' && midiLearnTarget?.controlName === 'autopilotTrackToggle') {
-                      cancelMidiLearn();
+                    if (isSuperControlLearning && currentLearningControlName === 'autopilotTrackToggle') {
+                      cancelSuperControlLearn();
                     } else {
-                      startMidiLearn({ type: 'superControl', controlName: 'autopilotTrackToggle' });
+                      startSuperControlLearn('autopilotTrackToggle');
                     }
                   }}
                 >
-                  Learn
+                  {isSuperControlLearning && currentLearningControlName === 'autopilotTrackToggle' ? 'Listening' : 'Learn'}
                 </button>
-                <span className={styles.oscAddress}>/control/autopilotTrackToggle</span>
+                <span className={styles.oscAddress}>Track toggle</span>
               </div>
-              
               <button
                 className={`${styles.autopilotButton} ${panTiltAutopilot.enabled ? styles.active : ''}`}
                 onClick={togglePanTiltAutopilot}
@@ -423,48 +543,133 @@ export const BPMDashboard: React.FC<BPMDashboardProps> = ({ className }) => {
             <div className={styles.quickSceneControls}>
               <button
                 className={styles.quickSceneButton}
-                onClick={quickSceneSave}
-                title="Save current DMX state as a quick scene"
+                onClick={quickSceneSaveA}
+                title="Save current DMX state to Deck A clip 40"
               >
                 <span className={styles.sceneIcon}>📸</span>
-                Quick Save
-              </button>
-              
-              <button
-                className={styles.quickSceneButton}
-                onClick={quickSceneLoad}
-                title="Load the most recently saved scene"
-                disabled={scenes.length === 0}
-              >
-                <span className={styles.sceneIcon}>⚡</span>
-                Quick Load
+                Save A
               </button>
               
               <div className={styles.midiLearnContainer}>
                 <button
-                  className={`${styles.midiLearnButton} ${midiLearnTarget?.type === 'superControl' && midiLearnTarget?.controlName === 'quickSceneLoad' ? styles.learning : ''}`}
+                  className={`${styles.midiLearnButton} ${isSuperControlLearning && currentLearningControlName === 'quickSceneSaveA' ? styles.learning : ''}`}
                   onClick={() => {
-                    if (midiLearnTarget?.type === 'superControl' && midiLearnTarget?.controlName === 'quickSceneLoad') {
-                      cancelMidiLearn();
+                    if (isSuperControlLearning && currentLearningControlName === 'quickSceneSaveA') {
+                      cancelSuperControlLearn();
                     } else {
-                      startMidiLearn({ type: 'superControl', controlName: 'quickSceneLoad' });
+                      startSuperControlLearn('quickSceneSaveA');
                     }
                   }}
-                  title="Learn MIDI control for Quick Scene Load"
+                  title={quickSceneSaveMidiMapping ? 'Re-learn MIDI control for Quick Scene Save A' : 'Learn MIDI control for Quick Scene Save A'}
                 >
-                  Learn
+                  {isSuperControlLearning && currentLearningControlName === 'quickSceneSaveA'
+                    ? 'Listening'
+                    : quickSceneSaveMidiMapping
+                      ? 'Mapped'
+                      : 'Learn'}
                 </button>
-                <span className={styles.oscAddress}>/control/quickSceneLoad</span>
+                <span className={styles.oscAddress}>Save A</span>
+              </div>
+              <button
+                className={styles.quickSceneButton}
+                onClick={quickSceneLoadA}
+                title="Load Deck A clip 40 and arm it for crossfade"
+                disabled={!quickSceneAReady}
+              >
+                <span className={styles.sceneIcon}>⚡</span>
+                Load A
+              </button>
+              
+              <div className={styles.midiLearnContainer}>
+                <button
+                  className={`${styles.midiLearnButton} ${isSuperControlLearning && currentLearningControlName === 'quickSceneLoadA' ? styles.learning : ''}`}
+                  onClick={() => {
+                    if (isSuperControlLearning && currentLearningControlName === 'quickSceneLoadA') {
+                      cancelSuperControlLearn();
+                    } else {
+                      startSuperControlLearn('quickSceneLoadA');
+                    }
+                  }}
+                  title={quickSceneMidiMapping ? 'Re-learn MIDI control for Quick Scene Load A' : 'Learn MIDI control for Quick Scene Load A'}
+                >
+                  {isSuperControlLearning && currentLearningControlName === 'quickSceneLoadA'
+                    ? 'Listening'
+                    : quickSceneMidiMapping
+                      ? 'Mapped'
+                      : 'Learn'}
+                </button>
+                <span className={styles.oscAddress}>Load A</span>
+              </div>
+
+              <button
+                className={styles.quickSceneButton}
+                onClick={quickSceneSaveB}
+                title="Save current DMX state to Deck B clip 40"
+              >
+                <span className={styles.sceneIcon}>📸</span>
+                Save B
+              </button>
+
+              <div className={styles.midiLearnContainer}>
+                <button
+                  className={`${styles.midiLearnButton} ${isSuperControlLearning && currentLearningControlName === 'quickSceneSaveB' ? styles.learning : ''}`}
+                  onClick={() => {
+                    if (isSuperControlLearning && currentLearningControlName === 'quickSceneSaveB') {
+                      cancelSuperControlLearn();
+                    } else {
+                      startSuperControlLearn('quickSceneSaveB');
+                    }
+                  }}
+                  title={quickSceneSaveBMidiMapping ? 'Re-learn MIDI control for Quick Scene Save B' : 'Learn MIDI control for Quick Scene Save B'}
+                >
+                  {isSuperControlLearning && currentLearningControlName === 'quickSceneSaveB'
+                    ? 'Listening'
+                    : quickSceneSaveBMidiMapping
+                      ? 'Mapped'
+                      : 'Learn'}
+                </button>
+                <span className={styles.oscAddress}>Save B</span>
+              </div>
+
+              <button
+                className={styles.quickSceneButton}
+                onClick={quickSceneLoadB}
+                title="Load Deck B clip 40 and arm it for crossfade"
+                disabled={!quickSceneBReady}
+              >
+                <span className={styles.sceneIcon}>⚡</span>
+                Load B
+              </button>
+
+              <div className={styles.midiLearnContainer}>
+                <button
+                  className={`${styles.midiLearnButton} ${isSuperControlLearning && currentLearningControlName === 'quickSceneLoadB' ? styles.learning : ''}`}
+                  onClick={() => {
+                    if (isSuperControlLearning && currentLearningControlName === 'quickSceneLoadB') {
+                      cancelSuperControlLearn();
+                    } else {
+                      startSuperControlLearn('quickSceneLoadB');
+                    }
+                  }}
+                  title={quickSceneLoadBMidiMapping ? 'Re-learn MIDI control for Quick Scene Load B' : 'Learn MIDI control for Quick Scene Load B'}
+                >
+                  {isSuperControlLearning && currentLearningControlName === 'quickSceneLoadB'
+                    ? 'Listening'
+                    : quickSceneLoadBMidiMapping
+                      ? 'Mapped'
+                      : 'Learn'}
+                </button>
+                <span className={styles.oscAddress}>Load B</span>
               </div>
             </div>
             
             {scenes.length > 0 && (
               <div className={styles.sceneStatus}>
                 <span className={styles.sceneCount}>
-                  {scenes.length} scene{scenes.length !== 1 ? 's' : ''} available
+                  Recall slots: A {quickSceneAReady ? 'ready' : 'empty'} / B {quickSceneBReady ? 'ready' : 'empty'}
                 </span>
                 <span className={styles.latestScene}>
-                  Latest: {scenes[scenes.length - 1]?.name}
+                  Deck clip 40 is reserved for quick recall and APC40 crossfade.
                 </span>
               </div>
             )}

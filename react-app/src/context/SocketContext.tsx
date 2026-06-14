@@ -139,7 +139,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         } = useStore.getState();
 
         if (data && typeof data.bpm === 'number') {
-          setMidiClockBpm(data.bpm);
+          setMidiClockBpm(data.bpm, false);
         }
         if (data && typeof data.isPlaying === 'boolean') {
           setMidiClockIsPlaying(data.isPlaying);

@@ -29,8 +29,14 @@ export const MidiDmxProcessor: React.FC = () => {
     masterSliders,
     updateMasterSliderValue,
     midiLearnTarget,
+    quickSceneSave,
+    quickSceneSaveMidiMapping,
+    quickSceneSaveB,
+    quickSceneSaveBMidiMapping,
     quickSceneLoad,
     quickSceneMidiMapping,
+    quickSceneLoadB,
+    quickSceneLoadBMidiMapping,
   } = useStore(state => ({
     midiMappings: state.midiMappings,
     superControlMidiMappings: state.superControlMidiMappings,
@@ -42,8 +48,14 @@ export const MidiDmxProcessor: React.FC = () => {
     masterSliders: state.masterSliders,
     updateMasterSliderValue: state.updateMasterSliderValue,
     midiLearnTarget: state.midiLearnTarget,
+    quickSceneSave: state.quickSceneSave,
+    quickSceneSaveMidiMapping: state.quickSceneSaveMidiMapping,
+    quickSceneSaveB: state.quickSceneSaveB,
+    quickSceneSaveBMidiMapping: state.quickSceneSaveBMidiMapping,
     quickSceneLoad: state.quickSceneLoad,
     quickSceneMidiMapping: state.quickSceneMidiMapping,
+    quickSceneLoadB: state.quickSceneLoadB,
+    quickSceneLoadBMidiMapping: state.quickSceneLoadBMidiMapping,
   }));
   const { scaleValue } = useMidiScaling();
   
@@ -72,6 +84,24 @@ export const MidiDmxProcessor: React.FC = () => {
     const bounded = Math.max(0, Math.min(1, normalized));
     return Math.round(bounded * 127);
   }, []);
+
+  const matchesPressMapping = useCallback((mapping: any, message: any) => {
+    const messageType = message.type || message._type;
+    if (messageType === 'cc' && mapping.controller !== undefined) {
+      return mapping.channel === message.channel &&
+        mapping.controller === message.controller &&
+        (typeof message.value !== 'number' || message.value > 0);
+    }
+    if (messageType === 'noteon' && mapping.note !== undefined) {
+      return mapping.channel === message.channel &&
+        mapping.note === message.note &&
+        (message.velocity ?? 127) > 0;
+    }
+    if (messageType === 'pitch' && mapping.pitch && typeof message.value === 'number') {
+      return mapping.channel === message.channel && normalizePitchToMidiValue(message.value) > 0;
+    }
+    return false;
+  }, [normalizePitchToMidiValue]);
 
   // Listen for direct MIDI messages (bypass store for lower latency)
   useEffect(() => {
@@ -311,34 +341,29 @@ export const MidiDmxProcessor: React.FC = () => {
       }
     }
 
-    // --- Process for Quick Scene Load MIDI Control ---
-    if (!messageHandledByMasterSlider && quickSceneMidiMapping) {
-      let quickSceneTriggered = false;
-      
-      // Check for CC messages
-      if (((latestMessage as any).type || (latestMessage as any)._type) === 'cc' && 
-          quickSceneMidiMapping.controller !== undefined &&
-          quickSceneMidiMapping.channel === latestMessage.channel &&
-          quickSceneMidiMapping.controller === latestMessage.controller) {
-        
-        debugLog.log(`[MidiDmxProcessor] Quick Scene Load triggered by MIDI CC ${quickSceneMidiMapping.controller} on CH ${quickSceneMidiMapping.channel}`);
-        quickSceneLoad();
-        quickSceneTriggered = true;
-      }
-      // Check for Note messages
-      else if (((latestMessage as any).type || (latestMessage as any)._type) === 'noteon' && 
-               quickSceneMidiMapping.note !== undefined &&
-               quickSceneMidiMapping.channel === latestMessage.channel &&
-               quickSceneMidiMapping.note === latestMessage.note) {
-        
-        debugLog.log(`[MidiDmxProcessor] Quick Scene Load triggered by MIDI Note ${quickSceneMidiMapping.note} on CH ${quickSceneMidiMapping.channel}`);
-        quickSceneLoad();
-        quickSceneTriggered = true;
-      }
-      
-      if (quickSceneTriggered) {
-        messageHandledByMasterSlider = true; // Prevent further processing
-      }
+    // --- Process for Quick Scene MIDI Controls ---
+    if (!messageHandledByMasterSlider && quickSceneSaveMidiMapping && matchesPressMapping(quickSceneSaveMidiMapping, latestMessage)) {
+      debugLog.log('[MidiDmxProcessor] Quick Scene Save A triggered by MIDI');
+      quickSceneSave();
+      messageHandledByMasterSlider = true;
+    }
+
+    if (!messageHandledByMasterSlider && quickSceneSaveBMidiMapping && matchesPressMapping(quickSceneSaveBMidiMapping, latestMessage)) {
+      debugLog.log('[MidiDmxProcessor] Quick Scene Save B triggered by MIDI');
+      quickSceneSaveB();
+      messageHandledByMasterSlider = true;
+    }
+
+    if (!messageHandledByMasterSlider && quickSceneMidiMapping && matchesPressMapping(quickSceneMidiMapping, latestMessage)) {
+      debugLog.log('[MidiDmxProcessor] Quick Scene Load A triggered by MIDI');
+      quickSceneLoad();
+      messageHandledByMasterSlider = true;
+    }
+
+    if (!messageHandledByMasterSlider && quickSceneLoadBMidiMapping && matchesPressMapping(quickSceneLoadBMidiMapping, latestMessage)) {
+      debugLog.log('[MidiDmxProcessor] Quick Scene Load B triggered by MIDI');
+      quickSceneLoadB();
+      messageHandledByMasterSlider = true;
     }
 
     // --- Process for Direct DMX Channel Mappings (if not handled by a master slider) ---
@@ -527,7 +552,7 @@ export const MidiDmxProcessor: React.FC = () => {
       });
     }
 
-  }, [midiMessages, midiMappings, superControlMidiMappings, applySuperControlMidi, masterSliders, channelRangeMappings, stableFunctions, midiLearnTarget, normalizePitchToMidiValue, superControlLearnTarget, rebindSuperControl]); // Use stable functions
+  }, [midiMessages, midiMappings, superControlMidiMappings, applySuperControlMidi, masterSliders, channelRangeMappings, stableFunctions, midiLearnTarget, normalizePitchToMidiValue, matchesPressMapping, superControlLearnTarget, rebindSuperControl, quickSceneSave, quickSceneSaveMidiMapping, quickSceneSaveB, quickSceneSaveBMidiMapping, quickSceneLoad, quickSceneMidiMapping, quickSceneLoadB, quickSceneLoadBMidiMapping]); // Use stable functions
   /**
    * Set a custom range mapping for a specific DMX channel
    */

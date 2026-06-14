@@ -131,16 +131,29 @@ export const useSuperControlMidiLearn = () => {
         [controlName]: mapping
       }))
       
-      // Special handling for quickSceneLoad
-      if (controlName === 'quickSceneLoad') {
+      // Special handling for quick scene buttons
+      if (controlName === 'quickSceneSave' || controlName === 'quickSceneSaveA') {
+        const { setQuickSceneSaveMidiMapping } = useStore.getState();
+        setQuickSceneSaveMidiMapping(mapping);
+      }
+      if (controlName === 'quickSceneLoad' || controlName === 'quickSceneLoadA') {
         const { setQuickSceneMidiMapping } = useStore.getState();
         setQuickSceneMidiMapping(mapping);
+      }
+      if (controlName === 'quickSceneSaveB') {
+        const { setQuickSceneSaveBMidiMapping } = useStore.getState();
+        setQuickSceneSaveBMidiMapping(mapping);
+      }
+      if (controlName === 'quickSceneLoadB') {
+        const { setQuickSceneLoadBMidiMapping } = useStore.getState();
+        setQuickSceneLoadBMidiMapping(mapping);
       }
       
       const event = new CustomEvent('superControlMidiMappingCreated', { detail: { controlName, mapping } })
       window.dispatchEvent(event)
       
       setLearnStatus('success')
+      useStore.setState({ midiLearnTarget: null });
       addNotification({
         message: `${controlName} mapped to MIDI CC ${mapping.controller} on CH ${mapping.channel}.`,
         type: 'success',
@@ -168,16 +181,29 @@ export const useSuperControlMidiLearn = () => {
         [controlName]: mapping
       }))
       
-      // Special handling for quickSceneLoad
-      if (controlName === 'quickSceneLoad') {
+      // Special handling for quick scene buttons
+      if (controlName === 'quickSceneSave' || controlName === 'quickSceneSaveA') {
+        const { setQuickSceneSaveMidiMapping } = useStore.getState();
+        setQuickSceneSaveMidiMapping(mapping);
+      }
+      if (controlName === 'quickSceneLoad' || controlName === 'quickSceneLoadA') {
         const { setQuickSceneMidiMapping } = useStore.getState();
         setQuickSceneMidiMapping(mapping);
+      }
+      if (controlName === 'quickSceneSaveB') {
+        const { setQuickSceneSaveBMidiMapping } = useStore.getState();
+        setQuickSceneSaveBMidiMapping(mapping);
+      }
+      if (controlName === 'quickSceneLoadB') {
+        const { setQuickSceneLoadBMidiMapping } = useStore.getState();
+        setQuickSceneLoadBMidiMapping(mapping);
       }
       
       const event = new CustomEvent('superControlMidiMappingCreated', { detail: { controlName, mapping } })
       window.dispatchEvent(event)
       
       setLearnStatus('success')
+      useStore.setState({ midiLearnTarget: null });
       addNotification({
         message: `${controlName} mapped to MIDI Note ${mapping.note} on CH ${mapping.channel}.`,
         type: 'success',
@@ -204,15 +230,28 @@ export const useSuperControlMidiLearn = () => {
         [controlName]: mapping
       }))
 
-      if (controlName === 'quickSceneLoad') {
+      if (controlName === 'quickSceneSave' || controlName === 'quickSceneSaveA') {
+        const { setQuickSceneSaveMidiMapping } = useStore.getState();
+        setQuickSceneSaveMidiMapping(mapping);
+      }
+      if (controlName === 'quickSceneLoad' || controlName === 'quickSceneLoadA') {
         const { setQuickSceneMidiMapping } = useStore.getState();
         setQuickSceneMidiMapping(mapping);
+      }
+      if (controlName === 'quickSceneSaveB') {
+        const { setQuickSceneSaveBMidiMapping } = useStore.getState();
+        setQuickSceneSaveBMidiMapping(mapping);
+      }
+      if (controlName === 'quickSceneLoadB') {
+        const { setQuickSceneLoadBMidiMapping } = useStore.getState();
+        setQuickSceneLoadBMidiMapping(mapping);
       }
 
       const event = new CustomEvent('superControlMidiMappingCreated', { detail: { controlName, mapping } })
       window.dispatchEvent(event)
 
       setLearnStatus('success')
+      useStore.setState({ midiLearnTarget: null });
       addNotification({
         message: `${controlName} mapped to MIDI Pitch on CH ${mapping.channel}.`,
         type: 'success',

@@ -176,6 +176,38 @@
   gap: 0.65rem;
 }
 
+.playStopBtn {
+  min-width: 4.5rem;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #f8fafc;
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.12s ease;
+
+  &:hover {
+    filter: brightness(1.08);
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
+}
+
+.playBtn {
+  background: linear-gradient(180deg, #10b981, #047857);
+  border-color: rgba(110, 231, 183, 0.45);
+}
+
+.stopBtn {
+  background: linear-gradient(180deg, #ef4444, #991b1b);
+  border-color: rgba(252, 165, 165, 0.5);
+}
+
 .powerSwitch {
   display: inline-flex;
   align-items: center;

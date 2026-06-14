@@ -54,7 +54,13 @@ import {
   enqueueDmxBackendChannel,
   enqueueDmxBackendUpdates,
 } from './dmxBackendQueue'
-import { channelMatchesRoleAliases, fixtureDmxAddress } from '../midi/apc40WorkflowHelpers'
+import {
+  APC40_GRID_SLOT_COUNT,
+  apc40DeckSceneName,
+  channelMatchesRoleAliases,
+  fixtureDmxAddress,
+  type Apc40Deck,
+} from '../midi/apc40WorkflowHelpers'
 
 export interface MidiMapping {
   channel: number
@@ -944,7 +950,10 @@ interface State extends AutomationState, TransitionTrackerSlice {
   autoSceneIsFlashing: boolean; // Shared flashing state for downbeat border flash
 
   // Quick Scene State
-  quickSceneMidiMapping: MidiMapping | null; // MIDI mapping for quick scene load
+  quickSceneSaveMidiMapping: MidiMapping | null; // MIDI mapping for quick scene save A
+  quickSceneMidiMapping: MidiMapping | null; // MIDI mapping for quick scene load A
+  quickSceneSaveBMidiMapping: MidiMapping | null; // MIDI mapping for quick scene save B
+  quickSceneLoadBMidiMapping: MidiMapping | null; // MIDI mapping for quick scene load B
 
   // Tempo Play/Pause State
   tempoPlayPauseMidiMapping: MidiMapping | null; // MIDI mapping for tempo play/pause
@@ -1211,7 +1220,7 @@ interface State extends AutomationState, TransitionTrackerSlice {
     } | null;
     connectedClients?: number;
   }) => void;
-  setMidiClockBpm: (bpm: number) => void; // Called by WS handler, and also repurposed for user requests
+  setMidiClockBpm: (bpm: number, emitToServer?: boolean) => void; // Called by WS handler, and also repurposed for user requests
   setMidiClockIsPlaying: (isPlaying: boolean) => void; // Called by WS handler
   setMidiClockBeatBar: (beat: number, bar: number) => void; // Called by WS handler
   requestToggleMasterClockPlayPause: () => void; // Renamed action
@@ -1233,7 +1242,16 @@ interface State extends AutomationState, TransitionTrackerSlice {
   // Quick Scene Functions
   quickSceneSave: () => void;
   quickSceneLoad: () => void;
+  quickSceneSaveA: () => void;
+  quickSceneLoadA: () => void;
+  quickSceneSaveB: () => void;
+  quickSceneLoadB: () => void;
+  quickSceneSaveDeck: (deck: Apc40Deck) => void;
+  quickSceneLoadDeck: (deck: Apc40Deck) => void;
+  setQuickSceneSaveMidiMapping: (mapping: MidiMapping | null) => void;
   setQuickSceneMidiMapping: (mapping: MidiMapping | null) => void;
+  setQuickSceneSaveBMidiMapping: (mapping: MidiMapping | null) => void;
+  setQuickSceneLoadBMidiMapping: (mapping: MidiMapping | null) => void;
 
   // Tempo Play/Pause Functions
   setTempoPlayPauseMidiMapping: (mapping: MidiMapping | null) => void;
@@ -2117,7 +2135,42 @@ export const useStore = create<State>()(
       })(),
 
       // Quick Scene State Init
-      quickSceneMidiMapping: null,
+      quickSceneSaveMidiMapping: (() => {
+        try {
+          const saved = localStorage.getItem('quickSceneSaveMidiMapping');
+          return saved ? JSON.parse(saved) : null;
+        } catch (e) {
+          console.error('Failed to load quick scene save MIDI mapping:', e);
+          return null;
+        }
+      })(),
+      quickSceneMidiMapping: (() => {
+        try {
+          const saved = localStorage.getItem('quickSceneMidiMapping');
+          return saved ? JSON.parse(saved) : null;
+        } catch (e) {
+          console.error('Failed to load quick scene load MIDI mapping:', e);
+          return null;
+        }
+      })(),
+      quickSceneSaveBMidiMapping: (() => {
+        try {
+          const saved = localStorage.getItem('quickSceneSaveBMidiMapping');
+          return saved ? JSON.parse(saved) : null;
+        } catch (e) {
+          console.error('Failed to load quick scene save B MIDI mapping:', e);
+          return null;
+        }
+      })(),
+      quickSceneLoadBMidiMapping: (() => {
+        try {
+          const saved = localStorage.getItem('quickSceneLoadBMidiMapping');
+          return saved ? JSON.parse(saved) : null;
+        } catch (e) {
+          console.error('Failed to load quick scene load B MIDI mapping:', e);
+          return null;
+        }
+      })(),
 
       // Tempo Play/Pause State Init
       tempoPlayPauseMidiMapping: (() => {
@@ -4809,42 +4862,117 @@ export const useStore = create<State>()(
       },
 
       // Quick Scene Functions
-      quickSceneSave: () => {
-        const timestamp = new Date().toISOString().slice(11, 19).replace(/:/g, '-');
-        const quickName = `Quick_${timestamp}`;
+      quickSceneSave: () => get().quickSceneSaveA(),
+
+      quickSceneLoad: () => get().quickSceneLoadA(),
+
+      quickSceneSaveA: () => {
+        get().quickSceneSaveDeck('A' as Apc40Deck);
+      },
+
+      quickSceneLoadA: () => {
+        get().quickSceneLoadDeck('A' as Apc40Deck);
+      },
+
+      quickSceneSaveB: () => {
+        get().quickSceneSaveDeck('B' as Apc40Deck);
+      },
+
+      quickSceneLoadB: () => {
+        get().quickSceneLoadDeck('B' as Apc40Deck);
+      },
+
+      quickSceneSaveDeck: (deck: Apc40Deck) => {
+        const slotIndex = APC40_GRID_SLOT_COUNT - 1;
+        const quickName = apc40DeckSceneName(deck, slotIndex);
         const oscAddress = sceneNameToOscPath(quickName);
 
         get().saveScene(quickName, oscAddress);
+        if (deck === 'A') get().setApc40SceneA(quickName);
+        else get().setApc40SceneB(quickName);
+        get().setApc40StatePatch({ activeDeck: deck });
         get().addNotification({
-          message: `Quick scene saved as "${quickName}"`,
+          message: `Quick Scene ${deck} saved to Deck ${deck} clip 40`,
           type: 'success',
           priority: 'normal'
         });
       },
 
-      quickSceneLoad: () => {
+      quickSceneLoadDeck: (deck: Apc40Deck) => {
+        const slotIndex = APC40_GRID_SLOT_COUNT - 1;
+        const quickName = apc40DeckSceneName(deck, slotIndex);
         const { scenes } = get();
-        if (scenes.length === 0) {
+        const quickScene = scenes.find((scene) => scene.name === quickName);
+        if (!quickScene) {
           get().addNotification({
-            message: 'No scenes available to load',
+            message: `Quick Scene ${deck} is empty. Save Deck ${deck} clip 40 first.`,
             type: 'warning',
             priority: 'normal'
           });
           return;
         }
 
-        // Load the most recently saved scene
-        const latestScene = scenes[scenes.length - 1];
-        get().loadScene(latestScene.name);
+        if (deck === 'A') get().setApc40SceneA(quickName);
+        else get().setApc40SceneB(quickName);
+        get().setApc40StatePatch({ activeDeck: deck });
+        get().loadScene(quickScene.name);
         get().addNotification({
-          message: `Quick loaded scene "${latestScene.name}"`,
+          message: `Quick loaded Deck ${deck} clip 40`,
           type: 'success',
           priority: 'normal'
         });
       },
 
+      setQuickSceneSaveMidiMapping: (mapping) => {
+        set({ quickSceneSaveMidiMapping: mapping });
+        try {
+          if (mapping) {
+            localStorage.setItem('quickSceneSaveMidiMapping', JSON.stringify(mapping));
+          } else {
+            localStorage.removeItem('quickSceneSaveMidiMapping');
+          }
+        } catch (e) {
+          console.error('Failed to save quick scene save MIDI mapping:', e);
+        }
+      },
+
       setQuickSceneMidiMapping: (mapping) => {
         set({ quickSceneMidiMapping: mapping });
+        try {
+          if (mapping) {
+            localStorage.setItem('quickSceneMidiMapping', JSON.stringify(mapping));
+          } else {
+            localStorage.removeItem('quickSceneMidiMapping');
+          }
+        } catch (e) {
+          console.error('Failed to save quick scene load MIDI mapping:', e);
+        }
+      },
+
+      setQuickSceneSaveBMidiMapping: (mapping) => {
+        set({ quickSceneSaveBMidiMapping: mapping });
+        try {
+          if (mapping) {
+            localStorage.setItem('quickSceneSaveBMidiMapping', JSON.stringify(mapping));
+          } else {
+            localStorage.removeItem('quickSceneSaveBMidiMapping');
+          }
+        } catch (e) {
+          console.error('Failed to save quick scene save B MIDI mapping:', e);
+        }
+      },
+
+      setQuickSceneLoadBMidiMapping: (mapping) => {
+        set({ quickSceneLoadBMidiMapping: mapping });
+        try {
+          if (mapping) {
+            localStorage.setItem('quickSceneLoadBMidiMapping', JSON.stringify(mapping));
+          } else {
+            localStorage.removeItem('quickSceneLoadBMidiMapping');
+          }
+        } catch (e) {
+          console.error('Failed to save quick scene load B MIDI mapping:', e);
+        }
       },
 
       setTempoPlayPauseMidiMapping: (mapping) => {
@@ -6122,12 +6250,12 @@ export const useStore = create<State>()(
             payload.bridge?.linkPeers ?? get().abletonLinkPeers,
         }),
 
-      setMidiClockBpm: (bpm) => {
+      setMidiClockBpm: (bpm, emitToServer = true) => {
         set({ midiClockBpm: bpm });
 
         // Also emit to server if socket is available for BPM changes
         const { socket } = get();
-        if (socket) {
+        if (socket && emitToServer) {
           socket.emit('setInternalClockBPM', bpm);
           debugLog.log('Store: Sending setInternalClockBPM to server:', bpm);
         }
@@ -6142,7 +6270,8 @@ export const useStore = create<State>()(
 
       requestToggleMasterClockPlayPause: () => {
         const { socket } = get();
-        if (socket) {
+        const socketIsConnected = Boolean((socket as unknown as { connected?: boolean } | null)?.connected);
+        if (socketIsConnected) {
           debugLog.log('Store: Requesting master clock play/pause toggle via socket');
           socket.emit('toggleMasterClockPlayPause');
         } else {

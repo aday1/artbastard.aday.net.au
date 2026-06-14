@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useStore } from '../../store';
-import { useSocket } from '../../context/SocketContext';
-import { playMetronomeClick, useMetronomeAudio } from '../../hooks/useMetronomeAudio';
+import { useMetronomeAudio } from '../../hooks/useMetronomeAudio';
 import styles from './MetronomePanel.module.scss';
 
 export interface MetronomePanelProps {
@@ -39,7 +38,6 @@ export const MetronomePanel: React.FC<MetronomePanelProps> = ({
     requestToggleMasterClockPlayPause,
     socket,
   } = useStore();
-  const { connected } = useSocket();
 
   const [soundOn, setSoundOn] = useState(true);
   const [pulseKey, setPulseKey] = useState(0);
@@ -61,19 +59,14 @@ export const MetronomePanel: React.FC<MetronomePanelProps> = ({
     window.setTimeout(() => setLocalFlash(false), 120);
   }, []);
 
-  useEffect(() => {
-    if (!midiClockIsPlaying) return;
-    triggerPulse();
-    if (soundOn && connected) {
-      playMetronomeClick((midiClockCurrentBeat || 1) === 1);
-    }
-  }, [midiClockCurrentBeat, midiClockIsPlaying, soundOn, connected, triggerPulse]);
-
   useMetronomeAudio(
-    midiClockIsPlaying && soundOn && !connected,
+    midiClockIsPlaying,
     currentBpm,
     beatsPerBar,
-    () => triggerPulse()
+    () => {
+      triggerPulse();
+    },
+    soundOn
   );
 
   useEffect(() => {
@@ -81,7 +74,8 @@ export const MetronomePanel: React.FC<MetronomePanelProps> = ({
   }, [currentBpm]);
 
   const handleTogglePlay = () => {
-    if (socket) {
+    const socketIsConnected = Boolean((socket as unknown as { connected?: boolean } | null)?.connected);
+    if (socketIsConnected) {
       requestToggleMasterClockPlayPause();
     } else {
       const next = !midiClockIsPlaying;
@@ -153,6 +147,13 @@ export const MetronomePanel: React.FC<MetronomePanelProps> = ({
       </div>
 
       <div className={styles.transportRow}>
+        <button
+          type="button"
+          className={[styles.playStopBtn, midiClockIsPlaying ? styles.stopBtn : styles.playBtn].filter(Boolean).join(' ')}
+          onClick={handleTogglePlay}
+        >
+          {midiClockIsPlaying ? 'Stop' : 'Play'}
+        </button>
         <label className={styles.powerSwitch}>
           <input
             type="checkbox"

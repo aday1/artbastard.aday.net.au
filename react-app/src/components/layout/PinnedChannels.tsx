@@ -10,6 +10,7 @@ import styles from './PinnedChannels.module.scss';
 import { debugLog } from '../../utils/debugLog';
 import { useAppContextMenu } from '../../context/ContextMenuContext';
 import { MetronomePanel } from '../audio/MetronomePanel';
+import { APC40_GRID_SLOT_COUNT, apc40DeckSceneName } from '../../midi/apc40WorkflowHelpers';
 
 
 export interface PinnedChannelsProps {
@@ -38,12 +39,16 @@ export const PinnedChannels: React.FC<PinnedChannelsProps> = ({ variant = 'sideb
     setChannelRange,
     envelopeAutomation,
     toggleEnvelope,
-    quickSceneSave,
-    quickSceneLoad,
+    quickSceneSaveA,
+    quickSceneLoadA,
+    quickSceneSaveB,
+    quickSceneLoadB,
     scenes,
     loadScene,
     deleteScene,
+    quickSceneSaveMidiMapping,
     quickSceneMidiMapping,
+    setQuickSceneSaveMidiMapping,
     setQuickSceneMidiMapping,
     startMidiLearn,
     cancelMidiLearn,
@@ -210,6 +215,11 @@ export const PinnedChannels: React.FC<PinnedChannelsProps> = ({ variant = 'sideb
 
   // Current BPM value
   const currentBpm = autoSceneTempoSource === 'tap_tempo' ? autoSceneTapTempoBpm : autoSceneManualBpm;
+  const quickSceneSlotIndex = APC40_GRID_SLOT_COUNT - 1;
+  const quickSceneAName = apc40DeckSceneName('A', quickSceneSlotIndex);
+  const quickSceneBName = apc40DeckSceneName('B', quickSceneSlotIndex);
+  const quickSceneAReady = scenes.some(scene => scene.name === quickSceneAName);
+  const quickSceneBReady = scenes.some(scene => scene.name === quickSceneBName);
 
   // Flash effect for tempo when playing
   useEffect(() => {
@@ -375,8 +385,16 @@ export const PinnedChannels: React.FC<PinnedChannelsProps> = ({ variant = 'sideb
     }
   };
 
+  const handleStartMidiLearnQuickSceneSave = () => {
+    startMidiLearn({ type: 'superControl', controlName: 'quickSceneSaveA' });
+  };
+
+  const handleForgetMidiQuickSceneSave = () => {
+    setQuickSceneSaveMidiMapping(null);
+  };
+
   const handleStartMidiLearnQuickScene = () => {
-    startMidiLearn({ type: 'superControl', controlName: 'quickSceneLoad' });
+    startMidiLearn({ type: 'superControl', controlName: 'quickSceneLoadA' });
   };
 
   const handleForgetMidiQuickScene = () => {
@@ -453,54 +471,41 @@ export const PinnedChannels: React.FC<PinnedChannelsProps> = ({ variant = 'sideb
 
         {!isCollapsed && (
           <div className={styles.quickSceneControls}>
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
               <button
-                onClick={quickSceneSave}
+                onClick={quickSceneSaveA}
                 className={styles.quickSaveButton}
-                title="Quick Save Scene (saves with timestamp)"
+                title="Save current DMX state to Deck A clip 40"
               >
                 <LucideIcon name="Save" size={14} />
-                <span>Quick Save{scenes.length > 0 ? ` (New Scene)` : ''}</span>
+                <span>Save A</span>
               </button>
-              <div style={{ display: 'flex', gap: '4px', flex: 1 }}>
-                <button
-                  onClick={() => {
-                    const sceneToLoad = selectedQuickSceneName || scenes[scenes.length - 1]?.name;
-                    if (sceneToLoad) {
-                      loadScene(sceneToLoad);
-                    } else if (scenes.length > 0) {
-                      loadScene(scenes[scenes.length - 1].name);
-                    }
-                  }}
-                  className={styles.quickLoadButton}
-                  title="Load selected scene"
-                  disabled={scenes.length === 0}
-                  style={{ flex: 1 }}
-                >
-                  <LucideIcon name="RotateCcw" size={14} />
-                  <span>Quick Load</span>
-                </button>
-                {scenes.length > 0 && (
-                  <select
-                    value={selectedQuickSceneName || scenes[scenes.length - 1]?.name || ''}
-                    onChange={(e) => {
-                      const selectedScene = scenes.find(s => s.name === e.target.value);
-                      if (selectedScene) {
-                        setSelectedQuickSceneName(selectedScene.name);
-                      }
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                    className={styles.quickLoadSelect}
-                    title="Select scene to load"
-                  >
-                    {scenes.slice().reverse().map((scene) => (
-                      <option key={scene.name} value={scene.name}>
-                        {scene.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
+              <button
+                onClick={quickSceneLoadA}
+                className={styles.quickLoadButton}
+                title="Load Deck A clip 40 and arm it for crossfade"
+                disabled={!quickSceneAReady}
+              >
+                <LucideIcon name="RotateCcw" size={14} />
+                <span>Load A</span>
+              </button>
+              <button
+                onClick={quickSceneSaveB}
+                className={styles.quickSaveButton}
+                title="Save current DMX state to Deck B clip 40"
+              >
+                <LucideIcon name="Save" size={14} />
+                <span>Save B</span>
+              </button>
+              <button
+                onClick={quickSceneLoadB}
+                className={styles.quickLoadButton}
+                title="Load Deck B clip 40 and arm it for crossfade"
+                disabled={!quickSceneBReady}
+              >
+                <LucideIcon name="RotateCcw" size={14} />
+                <span>Load B</span>
+              </button>
             </div>
 
             {/* Quick Scene Panel with advanced controls */}
@@ -653,13 +658,57 @@ export const PinnedChannels: React.FC<PinnedChannelsProps> = ({ variant = 'sideb
                 </button>
 
                 {/* MIDI Learn/Forget Buttons */}
-                <div style={{ display: 'flex', gap: '4px', marginBottom: '6px' }}>
+                <div style={{ display: 'flex', gap: '4px', marginBottom: '6px', flexWrap: 'wrap' }}>
+                  <button
+                    onClick={handleStartMidiLearnQuickSceneSave}
+                    title="Learn MIDI control for quick scene save A"
+                    className={`${styles.midiLearnButton} ${midiLearnTarget?.type === 'superControl' && midiLearnTarget.controlName === 'quickSceneSaveA' ? styles.flashing : ''}`}
+                    style={{
+                      flex: '1 1 92px',
+                      padding: '4px 8px',
+                      backgroundColor: quickSceneSaveMidiMapping ? '#0d9488' : undefined,
+                      color: 'white',
+                      borderRadius: '3px',
+                      fontSize: '11px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '4px',
+                      border: 'none'
+                    }}
+                  >
+                    <LucideIcon name="Save" size={12} />
+                    {quickSceneSaveMidiMapping ? `Save A: ${quickSceneSaveMidiMapping.controller ?? quickSceneSaveMidiMapping.note ?? 'Pitch'}` : 'Save A MIDI'}
+                  </button>
+
+                  {quickSceneSaveMidiMapping && (
+                    <button
+                      onClick={handleForgetMidiQuickSceneSave}
+                      title="Forget quick save MIDI mapping"
+                      className={styles.forgetMidiButton}
+                      style={{
+                        padding: '4px 8px',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        color: '#fca5a5',
+                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                        borderRadius: '3px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      <LucideIcon name="X" size={12} />
+                    </button>
+                  )}
+
                   <button
                     onClick={handleStartMidiLearnQuickScene}
-                    title="Learn MIDI control for quick scene load"
-                    className={`${styles.midiLearnButton} ${midiLearnTarget?.type === 'superControl' && midiLearnTarget.controlName === 'quickSceneLoad' ? styles.flashing : ''}`}
+                    title="Learn MIDI control for quick scene load A"
+                    className={`${styles.midiLearnButton} ${midiLearnTarget?.type === 'superControl' && midiLearnTarget.controlName === 'quickSceneLoadA' ? styles.flashing : ''}`}
                     style={{
-                      flex: 1,
+                      flex: '1 1 92px',
                       padding: '4px 8px',
                       backgroundColor: quickSceneMidiMapping ? '#8b5cf6' : undefined,
                       color: 'white',
@@ -674,7 +723,7 @@ export const PinnedChannels: React.FC<PinnedChannelsProps> = ({ variant = 'sideb
                     }}
                   >
                     <LucideIcon name="Zap" size={12} />
-                    {quickSceneMidiMapping ? `MIDI: ${quickSceneMidiMapping.controller ?? quickSceneMidiMapping.note}` : 'MIDI Learn'}
+                    {quickSceneMidiMapping ? `Load A: ${quickSceneMidiMapping.controller ?? quickSceneMidiMapping.note ?? 'Pitch'}` : 'Load A MIDI'}
                   </button>
 
                   {quickSceneMidiMapping && (
