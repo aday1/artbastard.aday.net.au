@@ -13,6 +13,7 @@ const LED_ORANGE = 5;
 const LED_ORANGE_BLINK = 6;
 const IDLE_MS = Math.max(1000, Math.min(600000, Number(process.env.APC40_SERVER_SCREENSAVER_IDLE_MS) || 8000));
 const FRAME_MS = Math.max(60, Math.min(1000, Number(process.env.APC40_SERVER_SCREENSAVER_FRAME_MS) || 120));
+const OPEN_RETRY_MS = Math.max(5000, Math.min(300000, Number(process.env.APC40_SERVER_SCREENSAVER_RETRY_MS) || 30000));
 
 interface Apc40ServerScreensaverState {
   enabled: boolean;
@@ -25,6 +26,7 @@ interface Apc40ServerScreensaverState {
   frameTimer: NodeJS.Timeout | null;
   monitorTimer: NodeJS.Timeout | null;
   lastError: string | null;
+  nextOpenAttemptAt: number | null;
 }
 
 const state: Apc40ServerScreensaverState = {
@@ -38,6 +40,7 @@ const state: Apc40ServerScreensaverState = {
   frameTimer: null,
   monitorTimer: null,
   lastError: null,
+  nextOpenAttemptAt: null,
 };
 
 function isApc40OutputName(name: string): boolean {
@@ -66,9 +69,15 @@ function clearGrid(): void {
 }
 
 function openOutputs(): boolean {
+  const now = Date.now();
+  if (state.nextOpenAttemptAt && now < state.nextOpenAttemptAt) {
+    return false;
+  }
+
   const outputNames = easymidi.getOutputs().filter(isApc40OutputName);
   if (outputNames.length === 0) {
     state.lastError = 'No APC40 MIDI output found';
+    state.nextOpenAttemptAt = now + OPEN_RETRY_MS;
     return false;
   }
 
@@ -88,12 +97,14 @@ function openOutputs(): boolean {
 
   if (opened.length === 0) {
     state.lastError = 'APC40 output exists but could not be opened';
+    state.nextOpenAttemptAt = now + OPEN_RETRY_MS;
     return false;
   }
 
   state.outputs = opened;
   state.outputNames = openedNames;
   state.lastError = null;
+  state.nextOpenAttemptAt = null;
   return true;
 }
 
@@ -206,5 +217,6 @@ export function getApc40ServerScreensaverStatus() {
     outputNames: [...state.outputNames],
     lastBrowserSeenAt: state.lastBrowserSeenAt,
     lastError: state.lastError,
+    nextOpenAttemptAt: state.nextOpenAttemptAt,
   };
 }

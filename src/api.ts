@@ -570,7 +570,10 @@ apiRouter.post('/midi/server/connect', requireLocalControlRequest, async (req, r
     }
 
     const trimmedInputName = inputName.trim();
-    await connectMidiInput(global.io, trimmedInputName);
+    const connected = await connectMidiInput(global.io, trimmedInputName);
+    if (!connected) {
+      return res.status(409).json({ success: false, error: `Could not claim MIDI input "${trimmedInputName}" on the server` });
+    }
     if (remember !== false) rememberMidiAutoConnectDevice(trimmedInputName);
     res.json({ success: true, active: getActiveMidiInputNames() });
   } catch (error) {

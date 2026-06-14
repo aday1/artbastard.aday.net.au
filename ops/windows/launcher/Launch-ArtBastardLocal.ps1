@@ -658,7 +658,7 @@ function Show-Status {
         Write-Host -NoNewline $health.status.ToUpperInvariant() -ForegroundColor Green
         Write-Host "  sockets:$($health.socketConnections)  uptime:$(Format-Uptime -Seconds $health.uptime)" -ForegroundColor Gray
         Write-Host -NoNewline 'ART-NET    ' -ForegroundColor DarkGray
-        $artNetColor = if ($health.artnetStatus -eq 'reachable') { [ConsoleColor]::Green } else { [ConsoleColor]::Yellow }
+        $artNetColor = if ($health.artnetStatus -in @('alive', 'reachable')) { [ConsoleColor]::Green } else { [ConsoleColor]::Yellow }
         Write-Host $health.artnetStatus.ToUpperInvariant() -ForegroundColor $artNetColor
         $activeText = if ($active.inputs.Count -gt 0) { $active.inputs -join ', ' } else { '(none)' }
         $savedText = if ($saved.devices.Count -gt 0) { $saved.devices -join ', ' } else { '(none)' }
@@ -758,6 +758,41 @@ function Clear-SavedServerMidi {
     }
 }
 
+function Load-SceneFromConsole {
+    try {
+        $scenes = @(Invoke-AbApi -Method GET -Path '/scenes')
+        $sceneNames = @($scenes | Where-Object { $_.name } | ForEach-Object { [string]$_.name })
+        if ($sceneNames.Count -eq 0) {
+            Write-Host "No scenes are saved yet." -ForegroundColor Yellow
+            return
+        }
+
+        $filter = Read-Host 'Filter scenes (Enter for all)'
+        if (-not [string]::IsNullOrWhiteSpace($filter)) {
+            $sceneNames = @($sceneNames | Where-Object { $_ -match [regex]::Escape($filter) })
+        }
+
+        $scene = Select-FromList -Items $sceneNames -Prompt 'Load which scene?'
+        if (-not $scene) { return }
+
+        Invoke-AbApi -Method POST -Path '/scenes/load' -Body @{ name = $scene } | Out-Null
+        Write-Host "Loaded scene: $scene" -ForegroundColor Green
+    } catch {
+        Write-Host "Scene load failed: $($_.Exception.Message)" -ForegroundColor Red
+    }
+}
+
+function Open-StageCanvas {
+    $url = "http://localhost:$Port/#/fixture"
+    try {
+        Start-Process $url
+        Write-Host "Opened stage canvas: $url" -ForegroundColor Green
+        Write-Host "Stage layout loads with the current fixture project. Saved stage/layout imports live under Settings > Project YAML (layout/fixtures)." -ForegroundColor Cyan
+    } catch {
+        Write-Host "Could not open stage canvas: $($_.Exception.Message)" -ForegroundColor Red
+    }
+}
+
 function Start-LauncherUpdate {
     $launcherPath = Join-Path $RepoPath 'ops\windows\launcher\Launch-ArtBastardLocal.ps1'
     if (-not (Test-Path -LiteralPath $launcherPath)) {
@@ -829,6 +864,8 @@ while ($true) {
     Write-ActionLine 'M' 'Map server MIDI' 'claim one input for backend/server console' DarkYellow
     Write-ActionLine 'D' 'Unmap server MIDI' 'release active backend MIDI input(s)' DarkYellow
     Write-ActionLine 'C' 'Clear boot MIDI' 'remove saved server auto-connect list' Yellow
+    Write-ActionLine 'L' 'Load scene' 'choose and fire a saved scene from the console' Green
+    Write-ActionLine 'G' 'Stage canvas' 'open fixture/stage map; stage layout comes from project data' Cyan
     Write-ActionLine 'P' 'Panel layout' 'open custom colored panes: all/midi/rig/server/dmx/osc' Cyan
     Write-ActionLine 'S' 'Refresh' 'redraw this control plane' White
     Write-ActionLine 'Q' 'Close pane' 'leave server/log panes running' DarkGray
@@ -840,6 +877,8 @@ while ($true) {
         '^(m|M)$' { Connect-ServerMidi; Pause }
         '^(d|D)$' { Disconnect-ServerMidi; Pause }
         '^(c|C)$' { Clear-SavedServerMidi; Pause }
+        '^(l|L)$' { Load-SceneFromConsole; Pause }
+        '^(g|G)$' { Open-StageCanvas; Pause }
         '^(p|P)$' { Open-CustomLogLayout; Pause }
         '^(s|S|)$' { }
         '^(q|Q)$' { return }

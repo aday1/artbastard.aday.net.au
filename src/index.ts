@@ -174,8 +174,7 @@ let artnetSender: any;
 
 // Keep track of ArtNet ping status to reduce log noise
 let lastArtNetStatus = 'unknown';
-let artNetFailureCount = 0;
-const MAX_CONSECUTIVE_FAILURES = 3; // Only log every 3rd failure
+let lastArtNetTransitionAt: number | null = null;
 
 // Initialize global ArtNet ping status
 (global as any).artNetPingStatus = 'unknown';
@@ -399,12 +398,12 @@ function initializeMidi(io: Server) {
     }
 }
 
-async function connectMidiInput(io: Server, inputName: string, isBrowserMidi = false) {
+async function connectMidiInput(io: Server, inputName: string, isBrowserMidi = false): Promise<boolean> {
     try {
         // Skip hardware MIDI connection if using browser MIDI
         if (isBrowserMidi) {
             log(`Using browser MIDI for input: ${inputName}`, 'MIDI');
-            return;
+            return true;
         }
 
         // ROLI Lightpad / Seaboard / Block devices are owned by the browser-side
@@ -414,7 +413,7 @@ async function connectMidiInput(io: Server, inputName: string, isBrowserMidi = f
         // every reconnect attempt. Silently skip.
         if (isRoliFamilyInputName(inputName)) {
             log(`Skipping ROLI-family input (server ROLI/browser engine-owned): ${inputName}`, 'MIDI');
-            return;
+            return false;
         }
 
         if (isRunningInWsl()) {
@@ -424,7 +423,7 @@ async function connectMidiInput(io: Server, inputName: string, isBrowserMidi = f
         // Check if we're already connected to this input
         if (activeMidiInputs[inputName]) {
             log(`Already connected to MIDI input: ${inputName}`, 'MIDI');
-            return;
+            return true;
         }
 
         // Windows-specific: Verify the input exists before connecting
@@ -598,6 +597,7 @@ async function connectMidiInput(io: Server, inputName: string, isBrowserMidi = f
         
         // Log a helpful message about testing the connection
         log(`MIDI connection established. Try moving a control on ${inputName} to verify it's working.`, 'MIDI');
+        return true;
     } catch (error: any) {
         const errorMsg = error?.message || String(error);
         log(`Error connecting to MIDI input ${inputName}`, 'ERROR', { error: errorMsg, stack: error?.stack });
@@ -627,6 +627,7 @@ async function connectMidiInput(io: Server, inputName: string, isBrowserMidi = f
         }
         
         io.emit('midiInterfaceError', userMessage);
+        return false;
     }
 }
 
@@ -1950,12 +1951,6 @@ function pingArtNetDevice(io: Server, ip?: string) {
     })
         .then((result: any) => {
             if (result.alive) {
-                // Only log status changes from unreachable to alive
-                if (lastArtNetStatus !== 'alive') {
-                    log(`ArtNet device at ${targetIp} is alive (ICMP ping reply)`, 'ARTNET');
-                    lastArtNetStatus = 'alive';
-                    artNetFailureCount = 0;
-                }
                 (global as any).artNetPingStatus = 'alive'; // Update global status
                 const sample = recordArtNetPingSample({
                     ip: targetIp,
@@ -1963,21 +1958,30 @@ function pingArtNetDevice(io: Server, ip?: string) {
                     ok: true,
                     latencyMs: result.time,
                 });
+                if (lastArtNetStatus !== 'alive') {
+                    const previousStatus = lastArtNetStatus;
+                    lastArtNetStatus = 'alive';
+                    lastArtNetTransitionAt = Date.now();
+                    const message = previousStatus === 'unknown'
+                        ? `ARTNET ONLINE: ${targetIp} answered ICMP ping${sample.latencyMs !== null ? ` (${sample.latencyMs}ms)` : ''}`
+                        : `ARTNET RECOVERED: ${targetIp} is back online${sample.latencyMs !== null ? ` (${sample.latencyMs}ms)` : ''}`;
+                    log(message, 'ARTNET', { ip: targetIp, previousStatus, status: 'alive', latencyMs: sample.latencyMs });
+                    io.emit('artnetHealthTransition', {
+                        ip: targetIp,
+                        previousStatus,
+                        status: 'alive',
+                        ok: true,
+                        latencyMs: sample.latencyMs,
+                        timestamp: sample.iso,
+                        message
+                    });
+                }
                 io.emit('artnetPingUpdate', sample);
                 io.emit('artnetStatus', { ip: targetIp, status: 'alive', latencyMs: sample.latencyMs });
             } else {
                 // Device is unreachable - suppress warnings, only log on status change
                 const newStatus = 'unreachable';
                 (global as any).artNetPingStatus = newStatus;
-
-                if (lastArtNetStatus !== newStatus) {
-                    // Only log when status changes from alive to unreachable
-                    log(`ArtNet device at ${targetIp} is unreachable (no ICMP ping reply)`, 'INFO');
-                    artNetFailureCount = 0;
-                }
-                // Suppress repeated warnings - don't log if already unreachable
-
-                lastArtNetStatus = newStatus;
                 const sample = recordArtNetPingSample({
                     ip: targetIp,
                     status: newStatus,
@@ -1985,6 +1989,21 @@ function pingArtNetDevice(io: Server, ip?: string) {
                     latencyMs: result.time,
                     message: `ArtNet device at ${targetIp} is not responding to ping`,
                 });
+                if (lastArtNetStatus !== newStatus) {
+                    const previousStatus = lastArtNetStatus;
+                    lastArtNetStatus = newStatus;
+                    lastArtNetTransitionAt = Date.now();
+                    const message = `ARTNET OFFLINE: ${targetIp} missed ICMP ping`;
+                    log(message, 'WARN', { ip: targetIp, previousStatus, status: newStatus });
+                    io.emit('artnetHealthTransition', {
+                        ip: targetIp,
+                        previousStatus,
+                        status: newStatus,
+                        ok: false,
+                        timestamp: sample.iso,
+                        message
+                    });
+                }
                 io.emit('artnetPingUpdate', sample);
                 io.emit('artnetStatus', {
                     ip: targetIp,
@@ -1997,15 +2016,6 @@ function pingArtNetDevice(io: Server, ip?: string) {
             // Suppress error logging - just update status silently
             const newStatus = 'unreachable';
             (global as any).artNetPingStatus = newStatus;
-
-            if (lastArtNetStatus !== newStatus) {
-                // Only log when status changes
-                log(`ArtNet device at ${targetIp} is unreachable (ICMP ping failed)`, 'INFO');
-                artNetFailureCount = 0;
-            }
-            // Suppress repeated warnings
-
-            lastArtNetStatus = newStatus;
             const sample = recordArtNetPingSample({
                 ip: targetIp,
                 status: newStatus,
@@ -2013,6 +2023,21 @@ function pingArtNetDevice(io: Server, ip?: string) {
                 latencyMs: null,
                 message: `ArtNet device at ${targetIp} is not responding to ping`,
             });
+            if (lastArtNetStatus !== newStatus) {
+                const previousStatus = lastArtNetStatus;
+                lastArtNetStatus = newStatus;
+                lastArtNetTransitionAt = Date.now();
+                const message = `ARTNET OFFLINE: ${targetIp} ICMP ping failed`;
+                log(message, 'WARN', { ip: targetIp, previousStatus, status: newStatus, error: error.message });
+                io.emit('artnetHealthTransition', {
+                    ip: targetIp,
+                    previousStatus,
+                    status: newStatus,
+                    ok: false,
+                    timestamp: sample.iso,
+                    message
+                });
+            }
             io.emit('artnetPingUpdate', sample);
             io.emit('artnetStatus', {
                 ip: targetIp,
@@ -2076,9 +2101,14 @@ async function startLaserTime(io: Server) {
             for (const deviceName of autoConnectDevices) {
                 try {
                     console.log(`   Connecting to: ${deviceName}...`);
-                    await connectMidiInput(io, deviceName);
-                    console.log(`   ✅ Successfully connected to: ${deviceName}`);
-                    log(`Auto-connected MIDI device: ${deviceName}`, 'MIDI');
+                    const connected = await connectMidiInput(io, deviceName);
+                    if (connected && activeMidiInputs[deviceName]) {
+                        console.log(`   ✅ Successfully connected to: ${deviceName}`);
+                        log(`Auto-connected MIDI device: ${deviceName}`, 'MIDI');
+                    } else {
+                        console.log(`   ❌ Failed to connect to: ${deviceName}`);
+                        log(`Failed to auto-connect MIDI device "${deviceName}"`, 'WARN');
+                    }
                 } catch (error: any) {
                     console.log(`   ❌ Failed to connect to: ${deviceName} - ${error?.message || String(error)}`);
                     log(`Failed to auto-connect MIDI device "${deviceName}": ${error?.message || String(error)}`, 'WARN');
