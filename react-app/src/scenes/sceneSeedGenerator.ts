@@ -83,7 +83,7 @@ interface SceneSeedTemplate {
 const DEFAULT_OPTIONS: SceneSeedOptions = {
   packId: 'smart-starter-40',
   target: 'deck-a',
-  includeAutomation: true,
+  includeAutomation: false,
 };
 
 export const SCENE_SEED_PACKS: Array<{ id: SceneSeedPackId; label: string; description: string }> =

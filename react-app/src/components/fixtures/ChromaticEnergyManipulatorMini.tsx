@@ -333,6 +333,11 @@ const ChromaticEnergyManipulatorMini: React.FC<ChromaticEnergyManipulatorMiniPro
     getFixturesByFlagCategory: state.getFixturesByFlagCategory
   }));
   const { settings } = useChromaticEnergyManipulatorSettings();
+
+  useEffect(() => {
+    setShowQuickActions(settings.showQuickActions);
+  }, [settings.showQuickActions]);
+
   // Get fixture channels - Enhanced version
   const getFixtureChannels = (fixtureId: string): EnhancedChannels => {
     const fixture = fixtures.find(f => f.id === fixtureId);
@@ -1023,6 +1028,8 @@ const ChromaticEnergyManipulatorMini: React.FC<ChromaticEnergyManipulatorMiniPro
   }, [hsvColor, showHSVControls]);
 
   useEffect(() => {
+    if (!settings.enableKeyboardShortcuts) return;
+
     const handleKeyPress = (event: KeyboardEvent) => {
       if (selectedFixtures.length === 0) return;
       
@@ -1076,7 +1083,7 @@ const ChromaticEnergyManipulatorMini: React.FC<ChromaticEnergyManipulatorMiniPro
       }
     };    window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [selectedFixtures, applyColorPreset, randomizeColor, centerMovement, undo, redo]);
+  }, [selectedFixtures, applyColorPreset, randomizeColor, centerMovement, undo, redo, settings.enableKeyboardShortcuts]);
   // Update color and movement when selection changes
   useEffect(() => {
     if (selectedFixtures.length > 0) {
@@ -1253,9 +1260,10 @@ const ChromaticEnergyManipulatorMini: React.FC<ChromaticEnergyManipulatorMiniPro
   const hasRgbChannels = firstSelectedRgbChannels.redChannel !== undefined && firstSelectedRgbChannels.greenChannel !== undefined && firstSelectedRgbChannels.blueChannel !== undefined;
   const hasMovementChannels = firstSelectedMovementChannels.panChannel !== undefined && firstSelectedMovementChannels.tiltChannel !== undefined;
   const hasEnhancedChannels = Object.values(firstSelectedEnhancedChannels).some(channel => channel !== undefined);
+  const controllerClassName = `${styles.chromaticEnergyManipulatorMini} ${settings.enableAnimations ? '' : styles.animationsDisabled}`;
   if (!isDockable) {
     return (
-      <div className={styles.chromaticEnergyManipulatorMini}>
+      <div className={controllerClassName}>
         <div className={styles.container}>
           {/* Error Display */}
           {connectionError && (
@@ -1308,7 +1316,7 @@ const ChromaticEnergyManipulatorMini: React.FC<ChromaticEnergyManipulatorMiniPro
       component="professional-fixture-controller"
       title="Chromatic Energy Manipulator"
       defaultPosition={{ zone: 'floating', offset: { x: 20, y: 300 } }}
-      className={styles.chromaticEnergyManipulatorMini}
+      className={controllerClassName}
       isCollapsed={isCollapsed}
       onCollapsedChange={onCollapsedChange}
       width="280px"

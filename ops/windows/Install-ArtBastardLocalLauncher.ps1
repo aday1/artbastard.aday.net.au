@@ -93,7 +93,12 @@ function Write-Launcher {
 
         $assetSource = Join-Path $bundledLauncherDir "assets"
         if (Test-Path $assetSource) {
-            Copy-Item -LiteralPath $assetSource -Destination $launcherDir -Recurse -Force
+            $assetTarget = Join-Path $launcherDir "assets"
+            $assetSourceResolved = (Resolve-Path -LiteralPath $assetSource).Path
+            $assetTargetResolved = if (Test-Path $assetTarget) { (Resolve-Path -LiteralPath $assetTarget).Path } else { $assetTarget }
+            if ($assetSourceResolved -ne $assetTargetResolved) {
+                Copy-Item -LiteralPath $assetSource -Destination $launcherDir -Recurse -Force
+            }
         }
 
         Write-Host "Launcher installed from bundled ops\windows\launcher files." -ForegroundColor Green

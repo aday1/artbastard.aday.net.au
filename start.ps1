@@ -3,6 +3,7 @@ param(
     [switch]$Reset,
     [switch]$Help,
     [switch]$Admin,
+    [switch]$MidiSelect,
     [int]$Port = 3030
 )
 
@@ -23,6 +24,7 @@ if ($Help) {
     Write-Host "  .\start.ps1 -Clear    # DESTRUCTIVE: Removes node_modules, cache, builds - full reinstall" -ForegroundColor Red
     Write-Host "  .\start.ps1 -Reset    # Factory reset - clears all saved state (fixtures, scenes, config)" -ForegroundColor Magenta
     Write-Host "  .\start.ps1 -Admin    # Run as Administrator (useful for MIDI and system operations)" -ForegroundColor Yellow
+    Write-Host "  .\start.ps1 -MidiSelect # Optional: configure MIDI auto-connect before startup" -ForegroundColor Yellow
     Write-Host "  .\start.ps1 -Port 8080 # Specify web server port (default: 3030)" -ForegroundColor Cyan
     Write-Host "  .\start.ps1 -Help     # Display this help" -ForegroundColor White
     Write-Host ""
@@ -825,13 +827,14 @@ if (-not $Clear) {
     Write-Host ""
     
     # MIDI Device Auto-Connect Configuration
-    Write-Host " ================================================================ " -ForegroundColor Magenta
-    Write-Host "  MIDI Device Auto-Connect Configuration" -ForegroundColor Magenta
-    Write-Host " ================================================================ " -ForegroundColor Magenta
-    Write-Host ""
-    Write-Host "  Configure which MIDI devices should auto-connect on startup." -ForegroundColor Cyan
-    Write-Host "  Press Enter to skip and use current configuration." -ForegroundColor Yellow
-    Write-Host ""
+    if ($MidiSelect) {
+        Write-Host " ================================================================ " -ForegroundColor Magenta
+        Write-Host "  MIDI Device Auto-Connect Configuration" -ForegroundColor Magenta
+        Write-Host " ================================================================ " -ForegroundColor Magenta
+        Write-Host ""
+        Write-Host "  Configure which MIDI devices should auto-connect on startup." -ForegroundColor Cyan
+        Write-Host "  Press Enter to skip and use current configuration." -ForegroundColor Yellow
+        Write-Host ""
     
     # Check if Node.js is available
     $nodeAvailable = $false
@@ -844,7 +847,7 @@ if (-not $Clear) {
         $nodeAvailable = $false
     }
     
-    if ($nodeAvailable) {
+        if ($nodeAvailable) {
         # Check if the MIDI selector script exists
         $midiSelectorScript = Join-Path $PSScriptRoot "scripts\select-midi-devices.js"
         if (Test-Path $midiSelectorScript) {
@@ -867,8 +870,11 @@ if (-not $Clear) {
         } else {
             Write-Host "  (i)  MIDI selector script not found, skipping configuration" -ForegroundColor Yellow
         }
+        } else {
+            Write-Host "  (i)  Node.js not available, skipping MIDI configuration" -ForegroundColor Yellow
+        }
     } else {
-        Write-Host "  (i)  Node.js not available, skipping MIDI configuration" -ForegroundColor Yellow
+        Write-Host "  (i)  Skipping startup MIDI selector. Configure MIDI after launch in Settings > MIDI & OSC, or run .\start.ps1 -MidiSelect." -ForegroundColor Cyan
     }
     
     Write-Host ""

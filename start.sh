@@ -18,6 +18,7 @@
 CLEAR=false
 RESET=false
 HELP=false
+MIDI_SELECT=false
 PORT=3030
 
 # Parse arguments
@@ -37,6 +38,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -Help|--help|-h)
             HELP=true
+            shift
+            ;;
+        -MidiSelect|--midi-select)
+            MIDI_SELECT=true
             shift
             ;;
         *)
@@ -367,17 +372,18 @@ if [ "$CLEAR" = true ]; then
     BROWSER_PID=$(start_browser_when_ready)
     
     # MIDI Device Auto-Connect Configuration
-    echo ""
-    echo "🎹 ════════════════════════════════════════════════════════════════ 🎹"
-    echo "🎹  MIDI Device Auto-Connect Configuration"
-    echo "🎹 ════════════════════════════════════════════════════════════════ 🎹"
-    echo ""
-    echo "  Configure which MIDI devices should auto-connect on startup."
-    echo "  Press Enter to skip and use current configuration."
-    echo ""
+    if [ "$MIDI_SELECT" = true ]; then
+        echo ""
+        echo "🎹 ════════════════════════════════════════════════════════════════ 🎹"
+        echo "🎹  MIDI Device Auto-Connect Configuration"
+        echo "🎹 ════════════════════════════════════════════════════════════════ 🎹"
+        echo ""
+        echo "  Configure which MIDI devices should auto-connect on startup."
+        echo "  Press Enter to skip and use current configuration."
+        echo ""
     
     # Check if Node.js is available
-    if command -v node >/dev/null 2>&1; then
+        if command -v node >/dev/null 2>&1; then
         # Check if the MIDI selector script exists
         MIDI_SELECTOR_SCRIPT="$(dirname "$0")/scripts/select-midi-devices.js"
         if [ -f "$MIDI_SELECTOR_SCRIPT" ]; then
@@ -393,8 +399,11 @@ if [ "$CLEAR" = true ]; then
         else
             echo "  ℹ️  MIDI selector script not found, skipping configuration"
         fi
+        else
+            echo "  ℹ️  Node.js not available, skipping MIDI configuration"
+        fi
     else
-        echo "  ℹ️  Node.js not available, skipping MIDI configuration"
+        echo "  ℹ️  Skipping startup MIDI selector. Configure MIDI after launch in Settings > MIDI & OSC, or run ./start.sh --midi-select."
     fi
     
     # Start server
@@ -562,6 +571,7 @@ else
 fi
 
 echo ""
+if [ "$MIDI_SELECT" = true ]; then
 echo "🎹 ════════════════════════════════════════════════════════════════ 🎹"
 echo "🎹  MIDI Device Auto-Connect Configuration"
 echo "🎹 ════════════════════════════════════════════════════════════════ 🎹"
@@ -589,6 +599,9 @@ if command -v node >/dev/null 2>&1; then
     fi
 else
     echo "  ℹ️  Node.js not available, skipping MIDI configuration"
+fi
+else
+    echo "  ℹ️  Skipping startup MIDI selector. Configure MIDI after launch in Settings > MIDI & OSC, or run ./start.sh --midi-select."
 fi
 
 echo ""

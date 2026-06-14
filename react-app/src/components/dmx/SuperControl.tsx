@@ -458,9 +458,9 @@ function buildRoliPanTiltFrame(
   for (let y = 0; y < ROLI_GRID_ROWS; y++) {
     for (let x = 0; x < ROLI_GRID_COLS; x++) {
       const idx = (y * ROLI_GRID_COLS + x) * 4;
-      frame[idx] = 0;
-      frame[idx + 1] = isGhost ? 150 : 210;
-      frame[idx + 2] = isGhost ? 210 : 255;
+      frame[idx] = isGhost ? 8 : 14;
+      frame[idx + 1] = 0;
+      frame[idx + 2] = 0;
       frame[idx + 3] = 255;
     }
   }
@@ -494,8 +494,36 @@ function buildRoliPanTiltFrame(
     }
   };
 
+  const drawRing = (center: { x: number; y: number }, radius: number, color: [number, number, number, number]) => {
+    for (let y = 0; y < ROLI_GRID_ROWS; y++) {
+      for (let x = 0; x < ROLI_GRID_COLS; x++) {
+        const distance = Math.hypot(x - center.x, y - center.y);
+        if (Math.abs(distance - radius) <= 0.42) put(x, y, color);
+      }
+    }
+  };
+
+  const drawTargetReticle = (center: { x: number; y: number }) => {
+    const mainRed: [number, number, number, number] = isGhost ? [160, 0, 0, 255] : [255, 0, 0, 255];
+    const dimRed: [number, number, number, number] = isGhost ? [90, 0, 0, 255] : isHealth ? [190, 0, 0, 255] : [130, 0, 0, 255];
+    const hotRed: [number, number, number, number] = isGhost ? [210, 20, 0, 255] : [255, 24, 0, 255];
+
+    for (let x = 0; x < ROLI_GRID_COLS; x++) put(x, center.y, dimRed);
+    for (let y = 0; y < ROLI_GRID_ROWS; y++) put(center.x, y, dimRed);
+
+    drawRing(center, 2, mainRed);
+    drawRing(center, 5, mainRed);
+    drawRing(center, 7, dimRed);
+
+    for (let offset = -1; offset <= 1; offset++) {
+      put(center.x + offset, center.y, hotRed);
+      put(center.x, center.y + offset, hotRed);
+    }
+    put(center.x, center.y, [255, 80, 50, 255]);
+  };
+
   const trail = path.slice(-(isHealth ? 18 : isGhost ? 36 : 24)).map(mapRoliPanTiltLedPoint);
-  const trailColor: [number, number, number, number] = isGhost ? [255, 70, 0, 255] : [255, 40, 0, 255];
+  const trailColor: [number, number, number, number] = isGhost ? [120, 0, 0, 255] : [180, 0, 0, 255];
   for (let i = 1; i < trail.length; i++) drawLine(trail[i - 1], trail[i], trailColor);
   if (trail.length === 1) {
     const only = toCell(trail[0]);
@@ -503,22 +531,7 @@ function buildRoliPanTiltFrame(
   }
 
   const cell = toCell(mapRoliPanTiltLedPoint(cursor));
-  const reticleRadius = isHealth ? 5 : 4;
-  const reticleColor: [number, number, number, number] = isGhost ? [0, 0, 80, 255] : [0, 0, 0, 255];
-  for (let offset = -reticleRadius; offset <= reticleRadius; offset++) {
-    put(cell.x + offset, cell.y, reticleColor);
-    put(cell.x, cell.y + offset, reticleColor);
-  }
-
-  const cursorColor: [number, number, number, number] = [255, 255, 255, 255];
-  const haloColor: [number, number, number, number] = [255, 220, 0, 255];
-  for (let dy = -3; dy <= 3; dy++) {
-    for (let dx = -3; dx <= 3; dx++) {
-      const distance = Math.abs(dx) + Math.abs(dy);
-      if (distance > 3) continue;
-      put(cell.x + dx, cell.y + dy, distance <= 2 ? cursorColor : haloColor);
-    }
-  }
+  drawTargetReticle(cell);
 
   return frame;
 }
@@ -528,6 +541,10 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
   const { settings: superControlPrefs } = useSuperControlPreferences();
   const touchLayout =
     preferTouchLayout || isMobile || isTablet || isTouch || superControlPrefs.compactMode;
+  const autopilotUiSyncIntervalMs = Math.max(
+    50,
+    Math.min(1000, Number(superControlPrefs.autoUpdateRate) || 50)
+  );
   const {
     fixtures,
     groups,
@@ -2482,7 +2499,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
       setPanTiltXY(prev => ({ ...prev, y: (1 - getControlNormalizedFromValue('tilt', currentTiltValue)) * 100 }));
     }
 
-    // Check every 100ms when autopilot is active
+    // Sync the UI readout while autopilot is active; the interval is user-configurable.
     const interval = setInterval(() => {
       const newPanValue = getDmxChannelValue(panChannel);
       const newTiltValue = getDmxChannelValue(tiltChannel);
@@ -2496,10 +2513,10 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         setTiltValue(newTiltValue);
         setPanTiltXY(prev => ({ ...prev, y: (1 - getControlNormalizedFromValue('tilt', newTiltValue)) * 100 }));
       }
-    }, 100);
+    }, autopilotUiSyncIntervalMs);
 
     return () => clearInterval(interval);
-  }, [panTiltAutopilot.enabled, panValue, tiltValue, getDmxChannelValue]);
+  }, [panTiltAutopilot.enabled, panValue, tiltValue, getDmxChannelValue, autopilotUiSyncIntervalMs]);
 
   const getQuickTip = () => {
     if (fixtures.length === 0) {
@@ -2531,7 +2548,12 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
 
   return (
     <div
-      className={['ab-rack-module', styles.superControl, touchLayout ? styles.touchLayout : ''].filter(Boolean).join(' ')}
+      className={[
+        'ab-rack-module',
+        styles.superControl,
+        touchLayout ? styles.touchLayout : '',
+        superControlPrefs.enableAnimations ? '' : styles.animationsDisabled,
+      ].filter(Boolean).join(' ')}
       data-embedded-workbench={embeddedWorkbench ? 'true' : undefined}
     >
       {touchLayout && selectionMode === 'channels' && hasChannelSelection && (

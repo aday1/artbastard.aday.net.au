@@ -1,14 +1,21 @@
+// @vitest-environment jsdom
 import React from 'react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { Apc40SceneLaunchStrip } from './Apc40SceneLaunchStrip';
 import { useStore } from '../../store';
+
+vi.mock('axios', () => ({
+  default: {
+    post: vi.fn(() => Promise.resolve({ data: { success: true } })),
+  },
+}));
 
 const makeAct = (id: string, name: string) => ({
   id,
   name,
   description: '',
-  steps: [],
+  steps: [{ id: `${id}-step`, sceneName: 'Warm Scene', duration: 1000 }],
   triggers: [],
   enabled: true,
   createdAt: Date.now(),
@@ -42,5 +49,19 @@ describe('Apc40SceneLaunchStrip', () => {
     expect(screen.getByText('Peak')).toBeDefined();
     expect(screen.queryByText('empty')).toBeNull();
     expect(screen.getByTitle(/SCENE LAUNCH 2.*Peak/).getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('starts the clicked ACT from the launch strip', () => {
+    useStore.setState({
+      scenes: [{ name: 'Warm Scene', channelValues: new Array(512).fill(0) }],
+      acts: [makeAct('act-1', 'Warmup')],
+      actPlaybackState: { currentActId: null, isPlaying: false },
+    } as any);
+
+    render(<Apc40SceneLaunchStrip />);
+    fireEvent.click(screen.getByTitle(/SCENE LAUNCH 1.*Warmup/));
+
+    expect(useStore.getState().actPlaybackState.currentActId).toBe('act-1');
+    expect(useStore.getState().actPlaybackState.isPlaying).toBe(true);
   });
 });

@@ -162,6 +162,15 @@ export function log(message: string, type: LogType = 'INFO', data?: any, explici
   const consoleMessage = `${chalk.dim(timestamp)} ${logConfig.color(formattedMessage)}${dataStr}`;
   const fileMessage = `${now.toISOString()} - [${logConfig.label}] ${message}${data ? ' ' + JSON.stringify(data) : ''}\n`;
 
+  const logEvent = {
+    timestamp: now.toISOString(),
+    time: timestamp,
+    type: logConfig.label,
+    message,
+    data,
+    text: `${timestamp} ${formattedMessage}${dataStr.replace(/\u001b\[[0-9;]*m/g, '')}`,
+  };
+
   // Write to file unless skipFile is true
   if (isLoggingEnabled && !options.skipFile) {
     try {
@@ -198,6 +207,15 @@ export function log(message: string, type: LogType = 'INFO', data?: any, explici
     } else {
       console.log(consoleMessage);
     }
+  }
+
+  try {
+    const io = (global as any).io;
+    if (io && typeof io.emit === 'function') {
+      io.emit('serverLog', logEvent);
+    }
+  } catch {
+    // Never let log streaming interfere with the logger itself.
   }
 }
 

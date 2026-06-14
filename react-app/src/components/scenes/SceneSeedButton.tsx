@@ -25,7 +25,7 @@ export const SceneSeedButton: React.FC<SceneSeedButtonProps> = ({ className, com
   const [open, setOpen] = useState(false);
   const [packId, setPackId] = useState<SceneSeedPackId>('smart-starter-40');
   const [target, setTarget] = useState<SceneSeedTarget>('deck-a');
-  const [includeAutomation, setIncludeAutomation] = useState(true);
+  const [includeAutomation, setIncludeAutomation] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
   const [lastSummary, setLastSummary] = useState<string>('');
 
@@ -109,7 +109,7 @@ export const SceneSeedButton: React.FC<SceneSeedButtonProps> = ({ className, com
               checked={includeAutomation}
               onChange={(event) => setIncludeAutomation(event.target.checked)}
             />
-            Include automated timelines
+            Include animated timelines
           </label>
 
           <p>{selectedPack.description}</p>

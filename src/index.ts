@@ -45,6 +45,27 @@ export interface MidiMessage {
     source?: string;
 }
 
+function getOscArgValue(arg: any): any {
+    if (arg && typeof arg === 'object' && 'value' in arg) {
+        return arg.value;
+    }
+    return arg;
+}
+
+function logMidiEvent(source: string, type: string, msg: MidiMessage, extra: Record<string, any> = {}) {
+    log(`MIDI ${source} ${type}`, 'MIDI', {
+        source,
+        type,
+        channel: msg.channel !== undefined ? msg.channel + 1 : undefined,
+        note: msg.note,
+        controller: msg.controller,
+        value: msg.value,
+        velocity: msg.velocity,
+        pitch: msg.pitch,
+        ...extra,
+    });
+}
+
 // Type definitions
 interface Fixture {
     name: string;
@@ -485,15 +506,9 @@ async function connectMidiInput(io: Server, inputName: string, isBrowserMidi = f
             try {
                 // Add source information to the message
                 const msgWithSource = { ...msg, source: inputName };
-                // Console output for visibility
-                const channel = (msg.channel !== undefined) ? msg.channel + 1 : '?';
-                const note = msg.note !== undefined ? msg.note : '?';
-                const velocity = msg.velocity !== undefined ? msg.velocity : '?';
-                console.log(`🎹 [${inputName}] Note On: Ch ${channel} | Note ${note} | Vel ${velocity}`);
-                log('MIDI', 'MIDI', { channel: msg.channel, note: msg.note, velocity: msg.velocity });
+                logMidiEvent(inputName, 'noteon', msgWithSource as MidiMessage);
                 handleMidiMessage(io, 'noteon', msgWithSource as MidiMessage);
             } catch (error) {
-                console.error(`❌ Error handling Note On message from ${inputName}:`, error);
                 log('Error handling noteon message', 'ERROR', { error, inputName });
             }
         });
@@ -502,14 +517,9 @@ async function connectMidiInput(io: Server, inputName: string, isBrowserMidi = f
             try {
                 // Also forward noteoff events with source information
                 const msgWithSource = { ...msg, source: inputName };
-                // Console output for visibility
-                const channel = (msg.channel !== undefined) ? msg.channel + 1 : '?';
-                const note = msg.note !== undefined ? msg.note : '?';
-                console.log(`🎹 [${inputName}] Note Off: Ch ${channel} | Note ${note}`);
-                log('Received noteoff', 'MIDI', { message: msgWithSource });
+                logMidiEvent(inputName, 'noteoff', msgWithSource as MidiMessage);
                 io.emit('midiMessage', msgWithSource);
             } catch (error) {
-                console.error(`❌ Error handling Note Off message from ${inputName}:`, error);
                 log('Error handling noteoff message', 'ERROR', { error, inputName });
             }
         });
@@ -518,15 +528,9 @@ async function connectMidiInput(io: Server, inputName: string, isBrowserMidi = f
             try {
                 // Add source information to the message
                 const msgWithSource = { ...msg, source: inputName };
-                // Console output for visibility - this is the main one for knobs
-                const channel = (msg.channel !== undefined) ? msg.channel + 1 : '?';
-                const controller = msg.controller !== undefined ? msg.controller : '?';
-                const value = msg.value !== undefined ? msg.value : '?';
-                console.log(`🎛️  [${inputName}] CC: Ch ${channel} | CC ${controller} | Value ${value}`);
-                log('Received cc', 'MIDI', { message: msgWithSource });
+                logMidiEvent(inputName, 'cc', msgWithSource as MidiMessage);
                 handleMidiMessage(io, 'cc', msgWithSource as MidiMessage);
             } catch (error) {
-                console.error(`❌ Error handling CC message from ${inputName}:`, error);
                 log('Error handling cc message', 'ERROR', { error, inputName });
             }
         });
@@ -534,13 +538,9 @@ async function connectMidiInput(io: Server, inputName: string, isBrowserMidi = f
         newInput.on('pitch', (msg: MidiMessage) => {
             try {
                 const msgWithSource = { ...msg, source: inputName };
-                const channel = (msg.channel !== undefined) ? msg.channel + 1 : '?';
-                const value = msg.value !== undefined ? msg.value : '?';
-                console.log(`🎚️  [${inputName}] Pitch: Ch ${channel} | Value ${value}`);
-                log('Received pitch', 'MIDI', { message: msgWithSource });
+                logMidiEvent(inputName, 'pitch', msgWithSource as MidiMessage);
                 handleMidiMessage(io, 'pitch', msgWithSource as MidiMessage);
             } catch (error) {
-                console.error(`❌ Error handling Pitch message from ${inputName}:`, error);
                 log('Error handling pitch message', 'ERROR', { error, inputName });
             }
         });
@@ -727,8 +727,15 @@ function initOsc(io: Server) {
                     }
 
                     value = Math.max(0.0, Math.min(1.0, value)); // Clamp to 0.0-1.0
+                    const dmxValue = Math.floor(value * 255);
 
-                    log(`OSC activity for DMX ${channelIndex + 1} (${assignedAddress}): ${value}`, 'OSC', { args: oscMsg.args });
+                    log('OSC address activity', 'OSC', {
+                        address: assignedAddress,
+                        channel: channelIndex + 1,
+                        value,
+                        dmxValue,
+                        source: sourceHost
+                    });
                     io.emit('oscChannelActivity', { channelIndex, value });
                 }
             });
@@ -751,6 +758,13 @@ function initOsc(io: Server) {
                         else if (value <= 255.0) value = value / 255.0;
                     }
                     const dmxValue = Math.floor(Math.max(0, Math.min(1.0, value)) * 255);
+                    log('OSC /channel -> DMX', 'OSC', {
+                        address: oscMsg.address,
+                        channel: channelId,
+                        value: Math.max(0, Math.min(1.0, value)),
+                        dmxValue,
+                        source: sourceHost
+                    });
                     updateDmxChannel(channelId - 1, dmxValue, io);
                 }
             }
@@ -1400,10 +1414,14 @@ function handleMidiMessage(io: Server, type: 'noteon' | 'cc' | 'pitch', msg: Mid
             if (Object.keys(channelUpdates).length > 0) {
                 const source = (msg as any).source || 'Unknown';
                 const affectedChannels = Object.keys(channelUpdates).map(c => parseInt(c)).sort((a, b) => a - b);
-                // Console output showing which DMX channels are being updated
-                console.log(`  → DMX: ${affectedChannels.join(', ')} = ${Object.values(channelUpdates)[0]} (from CC ${msg.controller})`);
-                
-                log('MIDI CC', 'MIDI', { channel: msg.channel, controller: msg.controller, value: msg.value, dmxChannels: Object.keys(channelUpdates).length, quiet: true });
+                log('MIDI CC -> DMX', 'MIDI', {
+                    source,
+                    channel: msg.channel !== undefined ? msg.channel + 1 : undefined,
+                    controller: msg.controller,
+                    value: msg.value,
+                    dmxChannels: affectedChannels.map((channel) => channel + 1).join(','),
+                    dmxValue: Object.values(channelUpdates)[0]
+                });
 
                 // Update each channel and emit a single batch update
                 Object.entries(channelUpdates).forEach(([channelIdx, value]) => {
@@ -1429,6 +1447,13 @@ function handleMidiMessage(io: Server, type: 'noteon' | 'cc' | 'pitch', msg: Mid
             }
 
             if (Object.keys(channelUpdates).length > 0) {
+                log('MIDI pitch -> DMX', 'MIDI', {
+                    source: (msg as any).source || 'Unknown',
+                    channel: msg.channel !== undefined ? msg.channel + 1 : undefined,
+                    value: msg.value,
+                    dmxChannels: Object.keys(channelUpdates).map((channel) => parseInt(channel, 10) + 1).join(','),
+                    dmxValue: scaledValue
+                });
                 Object.entries(channelUpdates).forEach(([channelIdx, value]) => {
                     updateDmxChannel(parseInt(channelIdx, 10), value, io);
                 });
@@ -1543,18 +1568,22 @@ function updateDmxChannel(
             }
             // Don't emit status for every failed transmit - too noisy
         }
-        // Log DMX updates - show all changes, but use quiet mode for small changes to reduce noise
-        const changeAmount = Math.abs(previousValue - clampedValue);
-        if (changeAmount > 0) {
-            // Log significant changes (>10) normally, smaller changes quietly
-            if (changeAmount > 10 || clampedValue === 0 || clampedValue === 255) {
-                log('DMX', 'DMX', { channel: channel + 1, from: previousValue, to: clampedValue });
-            } else {
-                log('DMX', 'DMX', { channel: channel + 1, from: previousValue, to: clampedValue, quiet: true });
-            }
-        }
     } else {
         log('ArtNet sender not initialized', 'WARN');
+    }
+
+    if (previousValue !== clampedValue) {
+        log('DMX channel changed', 'DMX', {
+            channel: channel + 1,
+            from: previousValue,
+            to: clampedValue,
+            sessionId,
+            transport: hasActiveBridge(sessionId)
+                ? 'bridge'
+                : artnetSender && sessionId === DEFAULT_SESSION_ID
+                    ? 'artnet'
+                    : 'memory'
+        });
     }
 
     // Send OSC update if sending is enabled
@@ -1753,8 +1782,13 @@ function sendOscMessage(address: string, args: any[], customHost?: string, custo
 
         portToUse.send(message);
 
-        const argSummary = args.length > 0 && typeof args[0] === 'number' ? args[0] : args.length;
-        log('OSC sent', 'OSC', { address, value: argSummary });
+        const firstArgValue = args.length > 0 ? getOscArgValue(args[0]) : undefined;
+        log('OSC sent', 'OSC', {
+            address,
+            value: typeof firstArgValue === 'number' ? firstArgValue : args.length,
+            host: customHost || oscConfig.sendHost,
+            port: customPort || oscConfig.sendPort
+        });
 
         // Emit to clients for debugging/monitoring
         if (global.io) {
@@ -2156,7 +2190,7 @@ async function startLaserTime(io: Server) {
 
         // Handle browser MIDI messages
         socket.on('browserMidiMessage', (msg: MidiMessage) => {
-            log('Received browser MIDI message', 'MIDI', { msg, socketId: socket.id });
+            logMidiEvent((msg as any).source || 'browser', msg._type || 'unknown', msg, { socket: socket.id });
             // Forward the message to all clients to maintain MIDI visualization
             io.emit('midiMessage', msg);
 

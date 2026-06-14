@@ -55,6 +55,27 @@ export interface UseRoliLightpadResult {
   clearFrame: () => boolean;
 }
 
+const ROLI_DEVICE_CHANGE_EVENT = 'roli-device-change';
+const ROLI_TOUCH_EVENT = 'roli-touch';
+
+function dispatchRoliDeviceChange(list?: RoliDeviceInfo[]): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(ROLI_DEVICE_CHANGE_EVENT, {
+    detail: Array.isArray(list) ? list : getRoliDevices(),
+  }));
+}
+
+function dispatchRoliTouch(ev: Parameters<RoliTouchCallback>[0]): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(ROLI_TOUCH_EVENT, { detail: ev }));
+}
+
+function installRoliEngineFanout(): void {
+  setOnDeviceChange((list) => dispatchRoliDeviceChange(list));
+  setOnHandshakeDone(() => dispatchRoliDeviceChange());
+  setOnTouch((ev) => dispatchRoliTouch(ev));
+}
+
 /**
  * Subscribes to a Roli Lightpad block of a given role and exposes touch +
  * LED output. Multiple instances can coexist (e.g. one for the primary XY
@@ -77,15 +98,10 @@ export function useRoliLightpad(options: UseRoliLightpadOptions = {}): UseRoliLi
   useEffect(() => {
     let cancelled = false;
 
-    // setOnDeviceChange / setOnHandshakeDone / setOnTouch are singletons on the
-    // engine — mounting multiple hook instances must NOT clobber each other.
-    // We register fanout callbacks here per-mount; the engine itself only
-    // remembers the most recent. To support multiple instances, the engine
-    // delivers events to a single listener and we re-fan them via window
-    // events so every hook instance can hear them.
-    const handleDeviceChange = () => {
+    const handleDeviceChange = (event?: Event) => {
       if (cancelled) return;
-      setDevices(getRoliDevices());
+      const detail = (event as CustomEvent<RoliDeviceInfo[] | undefined> | undefined)?.detail;
+      setDevices(Array.isArray(detail) ? detail : getRoliDevices());
     };
     const handleTouchEvent = (e: Event) => {
       const ev = (e as CustomEvent).detail as Parameters<RoliTouchCallback>[0];
@@ -93,22 +109,10 @@ export function useRoliLightpad(options: UseRoliLightpadOptions = {}): UseRoliLi
       touchRef.current?.(ev);
     };
 
-    setOnDeviceChange((list) => {
-      if (cancelled) return;
-      setDevices(list);
-      window.dispatchEvent(new CustomEvent('roli-device-change'));
-    });
-    setOnHandshakeDone(() => {
-      if (cancelled) return;
-      setDevices(getRoliDevices());
-      window.dispatchEvent(new CustomEvent('roli-device-change'));
-    });
-    setOnTouch((ev) => {
-      window.dispatchEvent(new CustomEvent('roli-touch', { detail: ev }));
-    });
+    installRoliEngineFanout();
 
-    window.addEventListener('roli-device-change', handleDeviceChange);
-    window.addEventListener('roli-touch', handleTouchEvent);
+    window.addEventListener(ROLI_DEVICE_CHANGE_EVENT, handleDeviceChange);
+    window.addEventListener(ROLI_TOUCH_EVENT, handleTouchEvent);
 
     const isRoliStateStale = () => {
       const current = getRoliDevices();
@@ -160,15 +164,15 @@ export function useRoliLightpad(options: UseRoliLightpadOptions = {}): UseRoliLi
 
     return () => {
       cancelled = true;
-      window.removeEventListener('roli-device-change', handleDeviceChange);
-      window.removeEventListener('roli-touch', handleTouchEvent);
+      window.removeEventListener(ROLI_DEVICE_CHANGE_EVENT, handleDeviceChange);
+      window.removeEventListener(ROLI_TOUCH_EVENT, handleTouchEvent);
       window.removeEventListener(MIDI_CONNECT_ROLI_EVENT, handleConnectRoli);
       window.removeEventListener('focus', handleMaybeStaleBrowserResume);
       window.removeEventListener('online', handleMaybeStaleBrowserResume);
       window.removeEventListener('pageshow', handleMaybeStaleBrowserResume);
       document.removeEventListener('visibilitychange', handleMaybeStaleBrowserResume);
-      // Leave engine-level callbacks installed — other mounts may still rely
-      // on them. Full teardown happens via disconnectRoliLightpad().
+      // Leave stable engine-level fanout installed — other mounts may still
+      // rely on it. Full teardown happens via disconnectRoliLightpad().
     };
   }, [role]);
 

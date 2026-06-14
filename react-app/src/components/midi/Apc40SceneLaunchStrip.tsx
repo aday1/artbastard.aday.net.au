@@ -14,6 +14,8 @@ const APC40_FIRST_NOTE = 0x52; // see midi/apc40.ts:69-74
 export const Apc40SceneLaunchStrip: React.FC = () => {
   const acts = useStore((s) => s.acts);
   const activeActId = useStore((s) => s.actPlaybackState?.currentActId ?? null);
+  const playAct = useStore((s) => s.playAct);
+  const stopAct = useStore((s) => s.stopAct);
   const launchActs = acts.slice(0, APC40_SCENE_LAUNCH_COUNT);
 
   if (launchActs.length === 0) return null;
@@ -34,9 +36,12 @@ export const Apc40SceneLaunchStrip: React.FC = () => {
               key={act.id}
               type="button"
               className={`${styles.cell} ${active ? styles.active : ''}`}
-              title={`SCENE LAUNCH ${i + 1} (MIDI note 0x${noteHex}) → ${act.name}`}
+              title={`SCENE LAUNCH ${i + 1} (MIDI note 0x${noteHex}) -> ${act.name}`}
               aria-pressed={!!active}
-              tabIndex={-1}
+              onClick={() => {
+                if (active) stopAct();
+                else playAct(act.id);
+              }}
             >
               <span className={styles.number}>{i + 1}</span>
               <span className={styles.label}>{act.name}</span>

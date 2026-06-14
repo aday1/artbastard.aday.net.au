@@ -3,7 +3,7 @@ import { useStore } from '../store';
 import { detectTemplateForMidiInterface, getTemplateById } from '../components/midi/midiControllerTemplates';
 import { debugLog } from '../utils/debugLog';
 import { recordBrowserMidiMessage } from '../midi/midiTransportDedupe';
-import { setRoliMidiAccess, isRoliblockLike } from '../engines/roliLightpad';
+import { disconnectRoliLightpad, setRoliMidiAccess, isRoliblockLike } from '../engines/roliLightpad';
 import {
   DetectedMidiController,
   MIDI_CONNECT_BROWSER_EVENT,
@@ -17,6 +17,9 @@ export const useGlobalBrowserMidi = () => {
   const [browserMidiEnabled, setBrowserMidiEnabled] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inputs, setInputs] = useState<WebMidi.MIDIInput[]>([]);
+  const [serverRoliClaimed, setServerRoliClaimed] = useState(false);
+  const serverRoliClaimedRef = useRef(false);
+  const midiAccessRef = useRef<WebMidi.MIDIAccess | null>(null);
   
   // Load saved active inputs from localStorage on initialization
   const loadSavedActiveInputs = (): Set<string> => {
@@ -65,6 +68,45 @@ export const useGlobalBrowserMidi = () => {
     applyMidiControllerTemplate: state.applyMidiControllerTemplate,
   }));
 
+  const closeRoliInputsForServer = useCallback((access: WebMidi.MIDIAccess | null) => {
+    if (!access) return;
+    Array.from(access.inputs.values()).forEach((input) => {
+      if (!isRoliblockLike(input.name || '')) return;
+      const handler = handlerRefs.current.get(input.id);
+      if (handler) {
+        input.removeEventListener('midimessage', handler);
+        handlerRefs.current.delete(input.id);
+      }
+      input.onmidimessage = null;
+      void input.close().catch(() => undefined);
+    });
+  }, []);
+
+  useEffect(() => {
+    const applyServerRoliStatus = (status: any) => {
+      const claimed = Boolean(status?.connected && (status?.inputName || status?.outputName));
+      serverRoliClaimedRef.current = claimed;
+      setServerRoliClaimed(claimed);
+      if (claimed) {
+        disconnectRoliLightpad();
+        closeRoliInputsForServer(midiAccessRef.current);
+        debugLog.log('[GlobalBrowserMidi] Browser ROLI engine deferred to server ROLI:', status);
+      }
+    };
+
+    const cached = (window as any).__artbastardServerRoliStatus;
+    if (cached) applyServerRoliStatus(cached);
+
+    fetch('/api/roli/server/status')
+      .then((response) => response.ok ? response.json() : null)
+      .then((status) => status && applyServerRoliStatus(status))
+      .catch(() => undefined);
+
+    const onStatus = (event: Event) => applyServerRoliStatus((event as CustomEvent).detail);
+    window.addEventListener('serverRoliStatus', onStatus);
+    return () => window.removeEventListener('serverRoliStatus', onStatus);
+  }, []);
+
   const maybeAutoApplyTemplate = useCallback(
     async (deviceName: string, inputId?: string) => {
       const templateId = detectTemplateForMidiInterface(deviceName);
@@ -107,16 +149,31 @@ export const useGlobalBrowserMidi = () => {
     const initMidi = async () => {
       try {
         if (navigator.requestMIDIAccess) {
+          try {
+            const statusResponse = await fetch('/api/roli/server/status');
+            const status = statusResponse.ok ? await statusResponse.json() : null;
+            const claimed = Boolean(status?.connected && (status?.inputName || status?.outputName));
+            serverRoliClaimedRef.current = claimed;
+            setServerRoliClaimed(claimed);
+          } catch {
+            // Keep Web MIDI available if the status endpoint is not reachable yet.
+          }
+
           // SysEx is required for ROLI Lightpad handshake. We request it once
           // up-front and hand the same MIDIAccess to the ROLI engine to avoid
           // a second prompt (Chrome treats SysEx as a separate permission, so
           // a second requestMIDIAccess with a different sysex flag silently
           // fails when the engine later tries to connect).
-          const access = await navigator.requestMIDIAccess({ sysex: true });
+          const access = await navigator.requestMIDIAccess({ sysex: !serverRoliClaimedRef.current });
           if (cancelled) return;
+          midiAccessRef.current = access;
           setMidiAccess(access);
           setBrowserMidiEnabled(true);
-          setRoliMidiAccess(access);
+          if (!serverRoliClaimedRef.current) {
+            setRoliMidiAccess(access);
+          } else {
+            closeRoliInputsForServer(access);
+          }
           
           // Update inputs list
           const inputList = Array.from(access.inputs.values());
@@ -129,7 +186,11 @@ export const useGlobalBrowserMidi = () => {
           const handleStateChange = () => {
             const newInputs = Array.from(access.inputs.values());
             setInputs(newInputs);
-            setRoliMidiAccess(access);
+            if (!serverRoliClaimedRef.current) {
+              setRoliMidiAccess(access);
+            } else {
+              closeRoliInputsForServer(access);
+            }
             debugLog.log('[GlobalBrowserMidi] MIDI devices changed:', newInputs.map(i => i.name));
           };
           access.addEventListener('statechange', handleStateChange);
@@ -146,10 +207,12 @@ export const useGlobalBrowserMidi = () => {
         try {
           const access = await navigator.requestMIDIAccess({ sysex: false });
           if (cancelled) return;
+          midiAccessRef.current = access;
           setMidiAccess(access);
           setBrowserMidiEnabled(true);
           const inputList = Array.from(access.inputs.values());
           setInputs(inputList);
+          if (serverRoliClaimedRef.current) closeRoliInputsForServer(access);
           const handleStateChange = () => {
             setInputs(Array.from(access.inputs.values()));
           };
@@ -176,6 +239,11 @@ export const useGlobalBrowserMidi = () => {
 
     const input = midiAccess.inputs.get(inputId);
     if (!input) return;
+
+    if (serverRoliClaimedRef.current && isRoliblockLike(input.name || '')) {
+      debugLog.log('[GlobalBrowserMidi] Browser ROLI input deferred to server:', input.name);
+      return;
+    }
 
     // ROLI Lightpad inputs are owned by the roliLightpad engine. Attaching a
     // generic listener here breaks the engine's onmidimessage handler (the two
@@ -406,7 +474,7 @@ export const useGlobalBrowserMidi = () => {
       }
       dispatchDetectedMidiController(controller);
     });
-  }, [midiAccess, inputs, activeInputs, connectBrowserInput, maybeAutoApplyTemplate]);
+  }, [midiAccess, inputs, activeInputs, connectBrowserInput, maybeAutoApplyTemplate, serverRoliClaimed]);
 
   useEffect(() => {
     const handleConnectBrowser = (event: Event) => {
@@ -616,6 +684,7 @@ export const useGlobalBrowserMidi = () => {
     error,
     browserInputs: inputs,
     activeBrowserInputs: Array.from(activeInputs),
+    serverRoliClaimed,
     connectBrowserInput,
     disconnectBrowserInput,
     releaseBrowserInput,

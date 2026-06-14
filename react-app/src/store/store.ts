@@ -1110,7 +1110,7 @@ interface State extends AutomationState, TransitionTrackerSlice {
 
   // Scene Actions
   saveScene: (name: string, oscAddress: string) => void
-  loadScene: (nameOrIndex: string | number) => void
+  loadScene: (nameOrIndex: string | number, options?: { silent?: boolean }) => void
   loadNextScene: () => void
   loadPreviousScene: () => void
   deleteScene: (name: string) => void
@@ -4050,7 +4050,7 @@ export const useStore = create<State>()(
           type: 'success'
         });
       },
-      loadScene: (nameOrIndex) => {
+      loadScene: (nameOrIndex, options: { silent?: boolean } = {}) => {
         const override = get().pendingSceneTransitionOverride;
         if (override) {
           set({
@@ -4144,18 +4144,22 @@ export const useStore = create<State>()(
               activeSceneName: sceneName,
             });
             
-            get().addNotification({ 
-              message: `Loading animated scene '${sceneName}' (timeline enabled)`, 
-              type: 'info' 
-            });
+            if (!options.silent) {
+              get().addNotification({ 
+                message: `Loading animated scene '${sceneName}' (timeline enabled)`, 
+                type: 'info' 
+              });
+            }
           } else {
             // Static scene - stop any currently playing timeline and use normal transition
             window.dispatchEvent(new CustomEvent('stopSceneTimeline'));
             
-            get().addNotification({ 
-              message: `Loading scene '${sceneName}' (${transitionDuration}ms transition)`, 
-              type: 'info' 
-            });
+            if (!options.silent) {
+              get().addNotification({ 
+                message: `Loading scene '${sceneName}' (${transitionDuration}ms transition)`, 
+                type: 'info' 
+              });
+            }
           }
 
           // Also send to backend for consistency

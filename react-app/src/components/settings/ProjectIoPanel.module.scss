@@ -1,0 +1,163 @@
+.stateManagement {
+  color: var(--text-primary, #f8fafc);
+
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 10px;
+    color: var(--text-primary, #f8fafc);
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  h4 {
+    margin: 0 0 10px;
+    color: var(--text-primary, #f8fafc);
+    font-size: 15px;
+    font-weight: 700;
+  }
+}
+
+.description,
+.hint {
+  color: var(--text-secondary, #cbd5e1);
+  line-height: 1.45;
+}
+
+.description {
+  margin: 0 0 18px;
+  font-size: 14px;
+}
+
+.hint {
+  margin: 0 0 10px;
+  font-size: 12px;
+}
+
+.section {
+  margin-bottom: 16px;
+  padding: 14px;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.16));
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.28);
+}
+
+.buttonGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.buttonPair {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.actionButton {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 11px;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.18));
+  border-radius: 8px;
+  background: var(--bg-primary, rgba(15, 23, 42, 0.78));
+  color: var(--text-primary, #f8fafc);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.1;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease, transform 0.16s ease;
+
+  &:hover:not(:disabled) {
+    border-color: var(--accent-color, #38bdf8);
+    background: var(--bg-hover, rgba(30, 41, 59, 0.92));
+    color: var(--text-primary, #ffffff);
+    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent-color, #38bdf8);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  i {
+    font-size: 0.95em;
+  }
+}
+
+.iconButton {
+  min-width: 34px;
+  padding-inline: 9px;
+}
+
+.bundleButton {
+  font-weight: 800;
+}
+
+.previewBlock {
+  margin-top: 12px;
+}
+
+.previewHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.previewMeta {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--text-primary, #f8fafc);
+  font-size: 13px;
+}
+
+.previewPane {
+  max-height: 380px;
+  margin: 0;
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  color: #e5e7eb;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: pre;
+}
+
+@media (max-width: 720px) {
+  .section {
+    padding: 12px;
+  }
+
+  .buttonGroup,
+  .previewHeader {
+    align-items: stretch;
+  }
+
+  .actionButton {
+    flex: 1 1 auto;
+  }
+
+  .previewHeader {
+    flex-wrap: wrap;
+  }
+
+  .previewMeta {
+    flex-basis: 100%;
+  }
+}

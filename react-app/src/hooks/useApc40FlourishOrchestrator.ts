@@ -6,7 +6,6 @@
  * Event sources, in order:
  *  - Zustand store: selectedFixtures, isTransitioning, apc40CrossfaderState.activeDeck, bridgeConnected
  *  - dmxStore: blackout
- *  - window CustomEvents: apc40:clip-launch
  */
 
 import { useEffect, useRef } from 'react';
@@ -77,20 +76,12 @@ export function useApc40FlourishOrchestrator(): void {
       prevBlackout = next;
     });
 
-    // --- window CustomEvents --------------------------------------------------
-    const onClipLaunch = (ev: Event) => {
-      const detail = (ev as CustomEvent<{ row: number; col: number }>).detail;
-      triggerFlourish('clipLaunch', { row: detail?.row ?? 0, column: detail?.col ?? 0 });
-    };
-    window.addEventListener('apc40:clip-launch', onClipLaunch);
-
     return () => {
       // Hook is single-mount; cast through unknown so TS accepts the
       // unsubscribe call even when zustand's middleware overloads obscure
       // the return type.
       (unsubMain as unknown as (() => void) | undefined)?.();
       (unsubDmx as unknown as (() => void) | undefined)?.();
-      window.removeEventListener('apc40:clip-launch', onClipLaunch);
     };
   }, []);
 }

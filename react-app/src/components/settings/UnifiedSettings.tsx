@@ -1845,7 +1845,7 @@ export const UnifiedSettings: React.FC = () => {
                   </label>
                   <p className={styles.settingDescription} style={{ marginBottom: '1rem' }}>
                     Super Control is the single fixture interface for color, pan/tilt, gobos, scenes, MIDI learn, and autopilot.
-                    These preferences apply on desktop and touch surfaces.
+                    Runtime wiring: the 5 toggles below all have consumers. Compact mode and animations affect current Super Control; keyboard shortcuts, auto-select, and quick actions apply to the legacy fixture controller that shares these preferences. Auto Update Rate below also works for Super Control autopilot UI sync.
                   </p>
                   <div className={styles.advancedToggles}>
                     <label className={styles.checkboxLabel}>
@@ -1858,7 +1858,7 @@ export const UnifiedSettings: React.FC = () => {
                       />
                       <span className={styles.checkboxText}>Keyboard Shortcuts</span>
                       <span className={styles.settingDescription} style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                        Enable keyboard shortcuts for quick fixture control (e.g., arrow keys, number keys)
+                        Legacy fixture controller: Ctrl+R randomizes color, Ctrl+C centers pan/tilt, 1/2/3 select red/green/blue, 0 blacks out, and Ctrl+Z/Ctrl+Y undo or redo. Shortcuts are ignored while typing in inputs.
                       </span>
                     </label>
                     <label className={styles.checkboxLabel}>
@@ -1871,7 +1871,7 @@ export const UnifiedSettings: React.FC = () => {
                       />
                       <span className={styles.checkboxText}>Auto-select First Fixture</span>
                       <span className={styles.settingDescription} style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                        Automatically select the first fixture when opening Super Control
+                        Legacy fixture controller: when nothing is selected, chooses the first RGB fixture; if none exists, falls back to a dimmer fixture, then the first fixture in the rig.
                       </span>
                     </label>
                     <label className={styles.checkboxLabel}>
@@ -1884,7 +1884,7 @@ export const UnifiedSettings: React.FC = () => {
                       />
                       <span className={styles.checkboxText}>Show Quick Actions</span>
                       <span className={styles.settingDescription} style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                        Display quick action buttons for common color operations and presets
+                        Legacy fixture controller: starts the Quick Actions drawer open so color swatches, Random, and Restore are visible immediately after selecting fixtures.
                       </span>
                     </label>
                     <label className={styles.checkboxLabel}>
@@ -1897,7 +1897,7 @@ export const UnifiedSettings: React.FC = () => {
                       />
                       <span className={styles.checkboxText}>Enable Animations</span>
                       <span className={styles.settingDescription} style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                        Enable smooth transitions and animations in Super Control
+                        Current Super Control and legacy fixture controller: enables hover motion, panel fade/pulse states, MIDI-learn pulses, and loading spinners. Turning this off removes UI motion; it does not stop DMX, clock, or autopilot playback.
                       </span>
                     </label>
                     <label className={styles.checkboxLabel}>
@@ -1910,8 +1910,7 @@ export const UnifiedSettings: React.FC = () => {
                       />
                       <span className={styles.checkboxText}>Compact Mode</span>
                       <span className={styles.settingDescription} style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                        Use a more compact touch-friendly layout in Super Control (also enabled on phones and tablets). 
-                        Useful for smaller screens or when you need to see more information at once.
+                        Current Super Control: forces the touch layout on desktop too, shows the selected-channel fader strip, limits envelope cards to two channels, hides the Direct DMX panel, and uses larger touch targets.
                       </span>
                     </label>
                   </div>
@@ -1942,8 +1941,7 @@ export const UnifiedSettings: React.FC = () => {
                     <span className={styles.checkboxText}>Verbose store and MIDI logs</span>
                   </label>
                   <p className={styles.settingDescription}>
-                    Gates store and MIDI console output in production. Always on in dev builds.
-                    Persists via localStorage key artbastard-debug.
+                    Writes production debug output to the browser console for socket setup, MIDI echo filtering, MIDI clock input changes, master clock updates, DMX restore/update events, state import/export, BPM play/tap actions, and autopilot diagnostics. Use it when tracking duplicate MIDI messages, reconnect loops, YAML import side effects, or unexpected DMX fan-out. Dev builds log regardless; this persists via localStorage key artbastard-debug.
                   </p>
                 </div>
 
@@ -1964,9 +1962,7 @@ export const UnifiedSettings: React.FC = () => {
                     className={styles.settingInput}
                   />
                   <p className={styles.settingDescription}>
-                    Update frequency in milliseconds for Super Control. Lower values (50-100ms) provide 
-                    more responsive updates but use more CPU. Higher values (500-1000ms) reduce CPU usage but may feel less responsive. 
-                    Default: 50ms for smooth real-time control.
+                    Current Super Control autopilot UI sync interval. Lower values (50-100ms) make the pan/tilt readout follow autopilot more smoothly; higher values (250-1000ms) reduce browser work on slower tablets. This changes UI refresh cadence only, not DMX output rate or the server clock.
                   </p>
                 </div>
 

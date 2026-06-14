@@ -8,6 +8,8 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import { log } from './logger';
 import { getArtNetPingHistory, getLastArtNetPing } from './artnetMonitor';
+import { connectServerRoli, disconnectServerRoli, getServerRoliStatus, sendServerRoliTestFrame } from './roliServerDriver';
+import { getApc40ServerScreensaverStatus } from './apc40ServerScreensaver';
 
 const execAsync = promisify(exec);
 import {
@@ -170,9 +172,27 @@ apiRouter.get('/logs', (req, res) => {
       return;
     }
 
-    // Read the log file content
-    const logContent = fs.readFileSync(LOG_FILE, 'utf-8');
-    res.type('text/plain').send(logContent);
+    const typesParam = typeof req.query.types === 'string' ? req.query.types : '';
+    const wantedTypes = new Set(
+      typesParam
+        .split(',')
+        .map((type) => type.trim().toUpperCase())
+        .filter(Boolean)
+    );
+    const tail = Math.max(0, Math.min(5000, Number(req.query.tail || 0) || 0));
+
+    let lines = fs.readFileSync(LOG_FILE, 'utf-8').split(/\r?\n/).filter(Boolean);
+    if (wantedTypes.size > 0) {
+      lines = lines.filter((line) => {
+        const match = line.match(/\[(\w+)\]/);
+        return Boolean(match && wantedTypes.has(match[1].toUpperCase()));
+      });
+    }
+    if (tail > 0 && lines.length > tail) {
+      lines = lines.slice(-tail);
+    }
+
+    res.type('text/plain').send(lines.join('\n'));
   } catch (error) {
     log('Error reading log file', 'ERROR', { error });
     res.status(500).type('text/plain').send('Error reading log file');
@@ -195,6 +215,33 @@ apiRouter.post('/logs/clear', (req, res) => {
     log('Error clearing log file', 'ERROR', { error });
     res.status(500).json({ error: 'Failed to clear logs' });
   }
+});
+
+apiRouter.get('/roli/server/status', (_req, res) => {
+  res.json(getServerRoliStatus());
+});
+
+apiRouter.post('/roli/server/connect', async (req, res) => {
+  const io = (global as any).io as Server;
+  const { inputName, outputName } = req.body || {};
+  res.json(await connectServerRoli(io, inputName, outputName));
+});
+
+apiRouter.post('/roli/server/disconnect', (_req, res) => {
+  disconnectServerRoli();
+  res.json(getServerRoliStatus());
+});
+
+apiRouter.post('/roli/server/test-frame', (_req, res) => {
+  const sent = sendServerRoliTestFrame();
+  res.json({ sent, status: getServerRoliStatus() });
+});
+
+apiRouter.get('/screensaver/server/status', (_req, res) => {
+  res.json({
+    roli: getServerRoliStatus(),
+    apc40: getApc40ServerScreensaverStatus(),
+  });
 });
 
 // Helper functions for fixture templates

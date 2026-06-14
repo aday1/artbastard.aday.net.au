@@ -21,6 +21,7 @@ import { DmxPinnedChannels } from '../dmx/DmxPinnedChannels';
 import { DmxActiveChannelsSummary } from '../dmx/DmxActiveChannelsSummary';
 import { DmxChannelsViewport } from '../dmx/DmxChannelsViewport';
 import { DmxPageHeader } from '../dmx/DmxPageHeader';
+import { ServerLogPanels } from '../debug/ServerLogPanels';
 import { filterDmxChannels, filterFixtures, isFixtureActive } from '../dmx/dmxFiltering';
 import styles from './DmxChannelControlPage.module.scss';
 import pageStyles from '../../pages/Pages.module.scss';
@@ -649,6 +650,8 @@ export const DmxChannelControlPage: React.FC<DmxChannelControlPageProps> = ({
           )}
 
           {/* Embedded MIDI Monitor section removed */}
+
+          <ServerLogPanels />
 
           {/* Pinned Channels Section */}
           <DmxPinnedChannels

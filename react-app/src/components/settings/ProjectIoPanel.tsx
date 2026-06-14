@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { stringify as yamlStringify, parse as yamlParse } from 'yaml';
 import { useStore } from '../../store';
-import styles from './SettingsPanel.module.scss';
+import styles from './ProjectIoPanel.module.scss';
 
 const SECTIONS = [
   { id: 'fixtures', label: 'Fixtures' },
@@ -205,11 +205,11 @@ const ProjectIoPanel: React.FC = () => {
           Preview the YAML in the panel below, or download directly. Files are saved
           as <code>artbastard-&lt;section&gt;-&lt;date&gt;.yaml</code>.
         </p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        <div className={styles.buttonGroup}>
           {SECTIONS.map((s) => (
-            <div key={s.id} style={{ display: 'flex', gap: 4 }}>
+            <div key={s.id} className={styles.buttonPair}>
               <button
-                className={styles.actionButton ?? ''}
+                className={styles.actionButton}
                 disabled={busy !== null}
                 onClick={() => handlePreview(s.id)}
                 title={`Preview ${s.label} as YAML in the pane below`}
@@ -217,7 +217,7 @@ const ProjectIoPanel: React.FC = () => {
                 {busy === s.id ? '…' : `Preview ${s.label}`}
               </button>
               <button
-                className={styles.actionButton ?? ''}
+                className={`${styles.actionButton} ${styles.iconButton}`}
                 disabled={busy !== null}
                 onClick={() => handleExport(s.id)}
                 title={`Download ${s.id}.yaml`}
@@ -227,60 +227,44 @@ const ProjectIoPanel: React.FC = () => {
             </div>
           ))}
           <button
-            className={styles.actionButton ?? ''}
+            className={`${styles.actionButton} ${styles.bundleButton}`}
             disabled={busy !== null}
             onClick={handleExportBundle}
-            style={{ fontWeight: 600 }}
           >
             {busy === 'bundle' ? 'Bundling…' : 'Download all (full backup)'}
           </button>
         </div>
 
         {preview && (
-          <div style={{ marginTop: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-              <strong style={{ flex: 1 }}>
+          <div className={styles.previewBlock}>
+            <div className={styles.previewHeader}>
+              <strong className={styles.previewMeta}>
                 Preview: {preview.section}.yaml ({preview.text.split('\n').length} lines,{' '}
                 {preview.text.length.toLocaleString()} chars)
               </strong>
               <button
-                className={styles.actionButton ?? ''}
+                className={styles.actionButton}
                 onClick={handleCopyPreview}
                 title="Copy YAML to clipboard"
               >
                 <i className="fas fa-copy" /> Copy
               </button>
               <button
-                className={styles.actionButton ?? ''}
+                className={styles.actionButton}
                 onClick={handleDownloadPreview}
                 title="Download the previewed YAML to a file"
               >
                 <i className="fas fa-download" /> Download
               </button>
               <button
-                className={styles.actionButton ?? ''}
+                className={`${styles.actionButton} ${styles.iconButton}`}
                 onClick={() => setPreview(null)}
                 title="Clear preview"
               >
                 <i className="fas fa-times" />
               </button>
             </div>
-            <pre
-              style={{
-                margin: 0,
-                padding: 12,
-                background: 'rgba(0,0,0,0.35)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: 6,
-                maxHeight: 380,
-                overflow: 'auto',
-                fontSize: 12,
-                lineHeight: 1.4,
-                fontFamily:
-                  'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-                whiteSpace: 'pre',
-              }}
-            >
+            <pre className={styles.previewPane}>
               {preview.text}
             </pre>
           </div>
@@ -293,11 +277,11 @@ const ProjectIoPanel: React.FC = () => {
           Picks a YAML file and replaces the matching section. Mismatches surface as
           warnings (e.g. group references a fixture id not in the current rig).
         </p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        <div className={styles.buttonGroup}>
           {SECTIONS.map((s) => (
             <button
               key={s.id}
-              className={styles.actionButton ?? ''}
+              className={styles.actionButton}
               disabled={busy !== null}
               onClick={() => handleImportClick(s.id)}
             >

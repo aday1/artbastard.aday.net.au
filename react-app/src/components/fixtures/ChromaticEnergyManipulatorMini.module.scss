@@ -621,6 +621,14 @@
   }
 }
 
+.animationsDisabled,
+.animationsDisabled * {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  transition-duration: 0ms !important;
+}
+
 // Theme variations
 [data-theme="artsnob"] .chromaticEnergyManipulatorMini {
   background: linear-gradient(145deg, #2a2a2a, #1e1e1e);

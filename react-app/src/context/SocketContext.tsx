@@ -124,6 +124,15 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         useStore.getState().addMidiMessage(normalizedMessage);
       });
 
+      socketInstance.on('serverLog', (entry: any) => {
+        window.dispatchEvent(new CustomEvent('serverLog', { detail: entry }));
+      });
+
+      socketInstance.on('serverRoliStatus', (status: any) => {
+        (window as any).__artbastardServerRoliStatus = status;
+        window.dispatchEvent(new CustomEvent('serverRoliStatus', { detail: status }));
+      });
+
       socketInstance.on('oscChannelActivity', (data: { channelIndex: number; value: number }) => {
         useStore.getState().reportOscActivity(data.channelIndex, data.value);
       });

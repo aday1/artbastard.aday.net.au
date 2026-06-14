@@ -15,6 +15,8 @@ import { registerBridgeSocketMiddleware, attachBridgeSocketHandlers } from './br
 import { subscribeBridgeClock } from './bridgeRegistry';
 import { attachClientSessionHandlers, onClientDisconnect, resolveClientSessionId } from './sessionHandlers';
 import { initSessions, ensureSession, DEFAULT_SESSION_ID } from './sessionManager';
+import { getServerRoliStatus, initializeServerRoli, connectServerRoli, disconnectServerRoli, sendServerRoliTestFrame, setServerRoliBrowserClientCount } from './roliServerDriver';
+import { initializeApc40ServerScreensaver, setApc40ServerScreensaverBrowserClientCount } from './apc40ServerScreensaver';
 
 // Declare global io instance for use in API routes
 declare global {
@@ -82,6 +84,9 @@ try {
   // Make io available globally for use in other modules
   global.io = io;
 
+  initializeServerRoli(io);
+  initializeApc40ServerScreensaver();
+
   void initAbletonLinkBridge().then((ok) => {
     if (ok) {
       log('Ableton Link native bridge initialized', 'CLOCK');
@@ -108,6 +113,15 @@ try {
   });
 
   registerBridgeSocketMiddleware(io);
+
+  const updateServerRoliBrowserClientCount = () => {
+    let count = 0;
+    io.sockets.sockets.forEach((clientSocket) => {
+      if ((clientSocket as any).data?.role !== 'bridge') count += 1;
+    });
+    setServerRoliBrowserClientCount(count);
+    setApc40ServerScreensaverBrowserClientCount(count);
+  };
 
   // Add specific middleware for rate limiting and validation (clients only)
   io.use((socket, next) => {
@@ -303,6 +317,8 @@ try {
       return;
     }
 
+    updateServerRoliBrowserClientCount();
+
     const sessionId = resolveClientSessionId(socket.handshake.auth as { sessionId?: string });
     ensureSession(sessionId);
     attachClientSessionHandlers(io, socket);
@@ -313,6 +329,7 @@ try {
     // Send initial clock state and available sources
     socket.emit('masterClockUpdate', clockManager.getState());
     socket.emit('availableClockSources', clockManager.getAvailableSources());
+    socket.emit('serverRoliStatus', getServerRoliStatus());
     void clockManager.refreshMidiInputs().then((inputs) => {
       socket.emit('midiClockInputs', {
         inputs,
@@ -343,6 +360,21 @@ try {
     socket.on('getMidiInterfaces', () => {
       const midiInterfaces = listMidiInterfaces();
       socket.emit('midiInterfaces', midiInterfaces.inputs);
+    });
+
+    socket.on('connectServerRoli', async (payload: { inputName?: string; outputName?: string } = {}) => {
+      socket.emit('serverRoliStatus', await connectServerRoli(io, payload.inputName, payload.outputName));
+    });
+
+    socket.on('disconnectServerRoli', () => {
+      disconnectServerRoli();
+      socket.emit('serverRoliStatus', getServerRoliStatus());
+    });
+
+    socket.on('sendServerRoliTestFrame', () => {
+      const sent = sendServerRoliTestFrame();
+      socket.emit('serverRoliStatus', getServerRoliStatus());
+      socket.emit('serverRoliTestFrameResult', { sent });
     });
 
     socket.on('updateArtNetConfig', (config) => {
@@ -491,6 +523,7 @@ try {
     socket.on('disconnect', (reason) => {
       log('User disconnected', 'SERVER', { reason, socketId: socket.id });
       onClientDisconnect(socket);
+      setTimeout(updateServerRoliBrowserClientCount, 0);
     });
 
     // Handle reconnection attempts

@@ -574,14 +574,8 @@ export function useApc40Workflow() {
       }
 
       setDeckScene(deck, action.index, scene.name);
-      state.loadScene(scene.name);
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(
-          new CustomEvent('apc40:clip-launch', {
-            detail: { row: action.row, col: action.column, sceneName: scene.name },
-          })
-        );
-      }
+      state.setPendingSceneTransitionOverride({ transitionMs: 0, easing: 'linear' });
+      state.loadScene(scene.name, { silent: true });
       publishSurfaceState({
         mode: null,
         lastChange: makeLastChange(
@@ -591,11 +585,6 @@ export function useApc40Workflow() {
           `Loaded from row ${action.row + 1}, column ${action.column + 1}.`,
           { sceneName: scene.name }
         ),
-      });
-      state.addNotification({
-        message: `APC40 Deck ${deck} launched ${scene.name}`,
-        type: 'success',
-        priority: 'low',
       });
       return;
     }
