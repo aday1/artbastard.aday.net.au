@@ -538,7 +538,7 @@ $titles = @{
 function Write-ColoredLogLine {
     param([string]$Line)
 
-    $displayTime = (Get-Date).ToString('HH:mm:ss.fff')
+    $displayTime = (Get-Date).ToString('HH:mm:ss')
     $displayType = 'LOG'
     $displayMessage = $Line
 
@@ -547,7 +547,7 @@ function Write-ColoredLogLine {
         $displayType = $match.Groups['type'].Value
         $displayMessage = $match.Groups['message'].Value
         try {
-            $displayTime = ([datetimeoffset]::Parse($match.Groups['iso'].Value)).ToLocalTime().ToString('HH:mm:ss.fff')
+            $displayTime = ([datetimeoffset]::Parse($match.Groups['iso'].Value)).ToLocalTime().ToString('HH:mm:ss')
         } catch { }
     }
 
@@ -572,7 +572,7 @@ try { $Host.UI.RawUI.WindowTitle = "ArtBastard - $($titles[$Mode])" } catch { }
 Write-Host "================================================================" -ForegroundColor DarkMagenta
 Write-Host "  ArtBastard $($titles[$Mode])" -ForegroundColor Magenta
 Write-Host "================================================================" -ForegroundColor DarkMagenta
-Write-Host "Local timestamps: HH:mm:ss.fff | source: $LogPath" -ForegroundColor DarkGray
+Write-Host "Local timestamps: HH:mm:ss | source: $LogPath" -ForegroundColor DarkGray
 Write-Host "Resize panes with mouse drag or Alt+Shift+Arrow. Use Rig Control for layouts." -ForegroundColor Cyan
 Write-Host ""
 
@@ -694,6 +694,21 @@ function Select-FromList {
     return $null
 }
 
+function Get-FirstValue {
+    param([object[]]$Values, [object]$Default = '?')
+    foreach ($value in $Values) {
+        if ($null -ne $value -and "$value" -ne '') { return $value }
+    }
+    return $Default
+}
+
+function Format-ShortText {
+    param([object]$Value, [int]$Width = 28)
+    $text = if ($null -ne $Value -and "$Value" -ne '') { [string]$Value } else { '(unnamed)' }
+    if ($text.Length -gt $Width) { return $text.Substring(0, $Width - 1) + '…' }
+    return $text
+}
+
 function Connect-ServerMidi {
     try {
         $interfaces = Invoke-AbApi -Method GET -Path '/midi/interfaces'
@@ -758,10 +773,117 @@ function Clear-SavedServerMidi {
     }
 }
 
-function Load-SceneFromConsole {
+function Get-SceneNames {
     try {
         $scenes = @(Invoke-AbApi -Method GET -Path '/scenes')
-        $sceneNames = @($scenes | Where-Object { $_.name } | ForEach-Object { [string]$_.name })
+        return @($scenes | Where-Object { $_.name } | ForEach-Object { [string]$_.name })
+    } catch {
+        return @()
+    }
+}
+
+function Show-QuickSceneSlots {
+    $sceneNames = @(Get-SceneNames | Select-Object -First 9)
+    if ($sceneNames.Count -eq 0) { return }
+
+    Write-Host 'QUICK SCENES' -ForegroundColor White
+    for ($i = 0; $i -lt $sceneNames.Count; $i++) {
+        Write-Host -NoNewline ("[{0}] " -f ($i + 1)) -ForegroundColor Green
+        Write-Host $sceneNames[$i] -ForegroundColor Gray
+    }
+    Write-Host ''
+}
+
+function Load-QuickSceneSlot {
+    param([int]$Slot)
+    $sceneNames = @(Get-SceneNames | Select-Object -First 9)
+    if ($Slot -lt 1 -or $Slot -gt $sceneNames.Count) {
+        Write-Host "No quick scene assigned to slot $Slot." -ForegroundColor Yellow
+        return
+    }
+
+    $scene = $sceneNames[$Slot - 1]
+    try {
+        Invoke-AbApi -Method POST -Path '/scenes/load' -Body @{ name = $scene } | Out-Null
+        Write-Host "Loaded quick scene [$Slot]: $scene" -ForegroundColor Green
+    } catch {
+        Write-Host "Quick scene load failed: $($_.Exception.Message)" -ForegroundColor Red
+    }
+}
+
+function Show-CurrentLayout {
+    try {
+        $health = Invoke-AbApi -Method GET -Path '/health'
+        $state = Invoke-AbApi -Method GET -Path '/state'
+        $activeMidi = Invoke-AbApi -Method GET -Path '/midi/active'
+        $savedMidi = Invoke-AbApi -Method GET -Path '/midi/auto-connect'
+        $roli = Invoke-AbApi -Method GET -Path '/roli/server/status'
+        $screensaver = Invoke-AbApi -Method GET -Path '/screensaver/server/status'
+
+        $fixtures = @($state.fixtures)
+        $groups = @($state.groups)
+        $fixtureLayout = @($state.fixtureLayout)
+        $masterSliders = @($state.masterSliders)
+        $scenes = @($state.scenes)
+
+        Write-Rule 'CURRENT LAYOUT'
+        Write-Host -NoNewline 'ART-NET    ' -ForegroundColor DarkGray
+        $artNetColor = if ($health.artnetStatus -in @('alive', 'reachable')) { [ConsoleColor]::Green } else { [ConsoleColor]::Yellow }
+        Write-Host "$($health.artnetStatus.ToUpperInvariant())  $($health.artnetLastPing.ip)" -ForegroundColor $artNetColor
+
+        Write-Host -NoNewline 'SERVER MIDI ' -ForegroundColor DarkGray
+        $activeText = if ($activeMidi.inputs.Count -gt 0) { $activeMidi.inputs -join ', ' } else { '(none active)' }
+        Write-Host $activeText -ForegroundColor DarkYellow
+        Write-Host -NoNewline 'BOOT MIDI   ' -ForegroundColor DarkGray
+        $savedText = if ($savedMidi.devices.Count -gt 0) { $savedMidi.devices -join ', ' } else { '(none saved)' }
+        Write-Host $savedText -ForegroundColor DarkYellow
+
+        Write-Host -NoNewline 'ROLI        ' -ForegroundColor DarkGray
+        $roliName = @($roli.inputName, $roli.outputName) | Where-Object { $_ } | Select-Object -Unique
+        $roliText = if ($roli.connected) { "claimed: $($roliName -join ', ')" } else { "not claimed" }
+        if ($roli.lastError) { $roliText += " | $($roli.lastError)" }
+        elseif ($roli.error) { $roliText += " | $($roli.error)" }
+        Write-Host $roliText -ForegroundColor DarkYellow
+
+        Write-Host -NoNewline 'APC40 SS    ' -ForegroundColor DarkGray
+        $ssText = "active:$($screensaver.active) outputs:$(@($screensaver.outputNames).Count)"
+        if ($screensaver.lastError) { $ssText += " | $($screensaver.lastError)" }
+        Write-Host $ssText -ForegroundColor DarkYellow
+
+        Write-Host ''
+        Write-Host "Fixtures: $($fixtures.Count) | Groups: $($groups.Count) | Stage placements: $($fixtureLayout.Count) | Master sliders: $($masterSliders.Count) | Scenes: $($scenes.Count)" -ForegroundColor Cyan
+        Write-Host 'Stage layout is fixture/project data, not a scene-style load. Import/export it via Project YAML layout/fixtures.' -ForegroundColor DarkGray
+        Write-Host ''
+
+        Write-Host 'FIXTURES' -ForegroundColor White
+        $fixtures |
+            Sort-Object { [int](Get-FirstValue -Values @($_.startAddress, $_.dmxAddress) -Default 9999) } |
+            Select-Object -First 16 |
+            ForEach-Object {
+                $addr = Get-FirstValue -Values @($_.startAddress, $_.dmxAddress) -Default '?'
+                $channels = if ($_.channels) { @($_.channels).Count } else { Get-FirstValue -Values @($_.channelCount) -Default '?' }
+                $type = Get-FirstValue -Values @($_.type, $_.category) -Default 'fixture'
+                Write-Host ("  @{0,-3} {1,-28} {2,3}ch  {3}" -f $addr, (Format-ShortText $_.name 28), $channels, $type) -ForegroundColor Gray
+            }
+        if ($fixtures.Count -gt 16) { Write-Host "  ... $($fixtures.Count - 16) more fixtures" -ForegroundColor DarkGray }
+
+        if ($groups.Count -gt 0) {
+            Write-Host ''
+            Write-Host 'GROUPS' -ForegroundColor White
+            $groups | Select-Object -First 10 | ForEach-Object {
+                $memberCount = if ($_.fixtureIds) { @($_.fixtureIds).Count } elseif ($_.fixtureIndices) { @($_.fixtureIndices).Count } else { 0 }
+                Write-Host ("  {0,-28} {1} fixtures" -f (Format-ShortText $_.name 28), $memberCount) -ForegroundColor Gray
+            }
+            if ($groups.Count -gt 10) { Write-Host "  ... $($groups.Count - 10) more groups" -ForegroundColor DarkGray }
+        }
+    } catch {
+        Write-Host "Current layout failed: $($_.Exception.Message)" -ForegroundColor Red
+    }
+}
+
+function Load-SceneFromConsole {
+    try {
+        $sceneNames = @(Get-SceneNames)
         if ($sceneNames.Count -eq 0) {
             Write-Host "No scenes are saved yet." -ForegroundColor Yellow
             return
@@ -858,12 +980,14 @@ while ($true) {
     Write-Host 'STATUS' -ForegroundColor White
     Show-Status
     Write-Host ''
+    Show-QuickSceneSlots
     Write-Host 'ACTIONS' -ForegroundColor White
     Write-ActionLine 'U' 'Update + relaunch' 'git pull LIVE/main, rebuild if needed' Green
     Write-ActionLine 'R' 'Relaunch current' 'skip git, run start.ps1 with MIDI setup' Green
     Write-ActionLine 'M' 'Map server MIDI' 'claim one input for backend/server console' DarkYellow
     Write-ActionLine 'D' 'Unmap server MIDI' 'release active backend MIDI input(s)' DarkYellow
     Write-ActionLine 'C' 'Clear boot MIDI' 'remove saved server auto-connect list' Yellow
+    Write-ActionLine 'V' 'Show current layout' 'MIDI, ROLI, Art-Net, fixtures, groups, scene count' White
     Write-ActionLine 'L' 'Load scene' 'choose and fire a saved scene from the console' Green
     Write-ActionLine 'G' 'Stage canvas' 'open fixture/stage map; stage layout comes from project data' Cyan
     Write-ActionLine 'P' 'Panel layout' 'open custom colored panes: all/midi/rig/server/dmx/osc' Cyan
@@ -877,8 +1001,10 @@ while ($true) {
         '^(m|M)$' { Connect-ServerMidi; Pause }
         '^(d|D)$' { Disconnect-ServerMidi; Pause }
         '^(c|C)$' { Clear-SavedServerMidi; Pause }
+        '^(v|V)$' { Show-CurrentLayout; Pause }
         '^(l|L)$' { Load-SceneFromConsole; Pause }
         '^(g|G)$' { Open-StageCanvas; Pause }
+        '^[1-9]$' { Load-QuickSceneSlot -Slot ([int]$choice); Pause }
         '^(p|P)$' { Open-CustomLogLayout; Pause }
         '^(s|S|)$' { }
         '^(q|Q)$' { return }
