@@ -395,6 +395,7 @@ function New-Shortcut {
     $shortcut.TargetPath = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
     $shortcut.Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$launcherPath`" -Branch main -Port $Port"
     $shortcut.WorkingDirectory = $launcherDir
+    $shortcut.WindowStyle = 3
     $launcherIcon = Join-Path $launcherDir "assets\artbastard-launcher.ico"
     if (Test-Path $launcherIcon) {
         $shortcut.IconLocation = $launcherIcon

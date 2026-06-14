@@ -576,6 +576,33 @@ param(
 
 $ErrorActionPreference = "Continue"
 
+function Write-Rule {
+    param([string]$Text = '')
+    Write-Host '================================================================' -ForegroundColor DarkMagenta
+    if ($Text) { Write-Host ("  {0}" -f $Text) -ForegroundColor Magenta }
+}
+
+function Write-ActionLine {
+    param(
+        [string]$Key,
+        [string]$Label,
+        [string]$Hint,
+        [ConsoleColor]$Color = [ConsoleColor]::Cyan
+    )
+    Write-Host -NoNewline '[' -ForegroundColor DarkGray
+    Write-Host -NoNewline $Key -ForegroundColor $Color
+    Write-Host -NoNewline '] ' -ForegroundColor DarkGray
+    Write-Host -NoNewline $Label -ForegroundColor $Color
+    if ($Hint) { Write-Host "  $Hint" -ForegroundColor DarkGray } else { Write-Host '' }
+}
+
+function Format-Uptime {
+    param([double]$Seconds)
+    $span = [TimeSpan]::FromSeconds([Math]::Max(0, $Seconds))
+    if ($span.TotalHours -ge 1) { return ('{0:00}:{1:00}:{2:00}' -f [Math]::Floor($span.TotalHours), $span.Minutes, $span.Seconds) }
+    return ('{0:00}:{1:00}' -f $span.Minutes, $span.Seconds)
+}
+
 function Invoke-AbApi {
     param(
         [ValidateSet('GET', 'POST', 'DELETE')]
@@ -596,12 +623,18 @@ function Show-Status {
         $health = Invoke-AbApi -Method GET -Path '/health'
         $active = Invoke-AbApi -Method GET -Path '/midi/active'
         $saved = Invoke-AbApi -Method GET -Path '/midi/auto-connect'
-        Write-Host "Server: $($health.status) | sockets: $($health.socketConnections) | uptime: $([math]::Round($health.uptime, 0))s" -ForegroundColor Green
-        Write-Host "Art-Net: $($health.artnetStatus)" -ForegroundColor Cyan
+        Write-Host -NoNewline 'SERVER     ' -ForegroundColor DarkGray
+        Write-Host -NoNewline $health.status.ToUpperInvariant() -ForegroundColor Green
+        Write-Host "  sockets:$($health.socketConnections)  uptime:$(Format-Uptime -Seconds $health.uptime)" -ForegroundColor Gray
+        Write-Host -NoNewline 'ART-NET    ' -ForegroundColor DarkGray
+        $artNetColor = if ($health.artnetStatus -eq 'reachable') { [ConsoleColor]::Green } else { [ConsoleColor]::Yellow }
+        Write-Host $health.artnetStatus.ToUpperInvariant() -ForegroundColor $artNetColor
         $activeText = if ($active.inputs.Count -gt 0) { $active.inputs -join ', ' } else { '(none)' }
         $savedText = if ($saved.devices.Count -gt 0) { $saved.devices -join ', ' } else { '(none)' }
-        Write-Host "Active server MIDI: $activeText" -ForegroundColor DarkYellow
-        Write-Host "Saved server MIDI:  $savedText" -ForegroundColor DarkYellow
+        Write-Host -NoNewline 'MIDI LIVE  ' -ForegroundColor DarkGray
+        Write-Host $activeText -ForegroundColor DarkYellow
+        Write-Host -NoNewline 'MIDI BOOT  ' -ForegroundColor DarkGray
+        Write-Host $savedText -ForegroundColor DarkYellow
     } catch {
         Write-Host "Server/control API not reachable on port $Port yet: $($_.Exception.Message)" -ForegroundColor Yellow
     }
@@ -700,7 +733,7 @@ function Start-LauncherUpdate {
         Write-Host "Launcher not found: $launcherPath" -ForegroundColor Red
         return
     }
-    Start-Process -FilePath 'powershell.exe' -WorkingDirectory (Split-Path -Parent $launcherPath) -ArgumentList @('-NoExit', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $launcherPath, '-Branch', 'main', '-Port', "$Port")
+    Start-Process -FilePath 'powershell.exe' -WindowStyle Maximized -WorkingDirectory (Split-Path -Parent $launcherPath) -ArgumentList @('-NoExit', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $launcherPath, '-Branch', 'main', '-Port', "$Port")
     Write-Host "Started LIVE git update + relaunch in a foreground PowerShell window." -ForegroundColor Green
 }
 
@@ -710,7 +743,7 @@ function Start-CurrentRelaunch {
         Write-Host "start.ps1 not found: $startPath" -ForegroundColor Red
         return
     }
-    Start-Process -FilePath 'powershell.exe' -WorkingDirectory $RepoPath -ArgumentList @('-NoExit', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $startPath, '-Port', "$Port", '-MidiSelect')
+    Start-Process -FilePath 'powershell.exe' -WindowStyle Maximized -WorkingDirectory $RepoPath -ArgumentList @('-NoExit', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $startPath, '-Port', "$Port", '-MidiSelect')
     Write-Host "Started current-code relaunch + MIDI setup in a foreground PowerShell window." -ForegroundColor Green
 }
 
@@ -735,7 +768,7 @@ function Open-CustomLogLayout {
     }
 
     $args = @(
-        '-w', 'artbastard-local',
+        '-F', '-w', 'artbastard-local',
         'new-tab', '--title', "AB-$first", 'powershell.exe', '-NoExit', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $LogPanelScriptPath, '-LogPath', $LogPath, '-Mode', $first,
         ';',
         'split-pane', '-H', '--title', "AB-$second", 'powershell.exe', '-NoExit', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $LogPanelScriptPath, '-LogPath', $LogPath, '-Mode', $second,
@@ -749,23 +782,25 @@ function Open-CustomLogLayout {
 try { $Host.UI.RawUI.WindowTitle = 'ArtBastard - Rig Control' } catch { }
 while ($true) {
     Clear-Host
-    Write-Host '================================================================' -ForegroundColor DarkMagenta
-    Write-Host '  ARTBASTARD RIG CONTROL' -ForegroundColor Magenta
-    Write-Host '================================================================' -ForegroundColor DarkMagenta
+    Write-Rule 'ARTBASTARD RIG CONTROL'
+    Write-Host '  foreground console | local controls | server MIDI owner' -ForegroundColor Cyan
+    Write-Rule
     Write-Host "Repo: $RepoPath" -ForegroundColor DarkGray
     Write-Host "Port: $Port" -ForegroundColor DarkGray
     Write-Host 'Resize panes with mouse drag or Alt+Shift+Arrow. Use P to change panel roles.' -ForegroundColor Cyan
     Write-Host ''
+    Write-Host 'STATUS' -ForegroundColor White
     Show-Status
     Write-Host ''
-    Write-Host '[U] Update git LIVE/main + relaunch server' -ForegroundColor Green
-    Write-Host '[R] Relaunch current code + MIDI setup' -ForegroundColor Green
-    Write-Host '[M] Map MIDI input to server now' -ForegroundColor DarkYellow
-    Write-Host '[D] Unmap active server MIDI input' -ForegroundColor DarkYellow
-    Write-Host '[C] Clear saved server MIDI auto-connect' -ForegroundColor Yellow
-    Write-Host '[P] Open custom colored log panel layout' -ForegroundColor Cyan
-    Write-Host '[S] Refresh status' -ForegroundColor White
-    Write-Host '[Q] Close this control pane' -ForegroundColor DarkGray
+    Write-Host 'ACTIONS' -ForegroundColor White
+    Write-ActionLine 'U' 'Update + relaunch' 'git pull LIVE/main, rebuild if needed' Green
+    Write-ActionLine 'R' 'Relaunch current' 'skip git, run start.ps1 with MIDI setup' Green
+    Write-ActionLine 'M' 'Map server MIDI' 'claim one input for backend/server console' DarkYellow
+    Write-ActionLine 'D' 'Unmap server MIDI' 'release active backend MIDI input(s)' DarkYellow
+    Write-ActionLine 'C' 'Clear boot MIDI' 'remove saved server auto-connect list' Yellow
+    Write-ActionLine 'P' 'Panel layout' 'open custom colored panes: all/midi/rig/server/dmx/osc' Cyan
+    Write-ActionLine 'S' 'Refresh' 'redraw this control plane' White
+    Write-ActionLine 'Q' 'Close pane' 'leave server/log panes running' DarkGray
     Write-Host ''
     $choice = Read-Host 'Choose'
     switch -Regex ($choice) {
@@ -806,7 +841,7 @@ function Start-LogPanels {
     $panelScriptPath = Write-LogPanelScript
     $controlScriptPath = Write-ControlPanelScript
     $wtArgs = @(
-        "-w", "artbastard-local",
+        "-F", "-w", "artbastard-local",
         "new-tab", "--title", "Rig-Control", "powershell.exe", "-NoExit", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $controlScriptPath, "-RepoPath", $repoPath, "-LogPath", $logPath, "-LogPanelScriptPath", $panelScriptPath, "-Port", "$Port",
         ";",
         "split-pane", "-H", "--title", "MIDI-OSC-DMX", "powershell.exe", "-NoExit", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $panelScriptPath, "-LogPath", $logPath, "-Mode", "midi",
