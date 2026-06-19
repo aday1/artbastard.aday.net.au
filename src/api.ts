@@ -15,6 +15,7 @@ const execAsync = promisify(exec);
 import {
   setDmxChannel,
   setDmxChannels,
+  blackoutDmxOutput,
   learnMidiMapping,
   loadScene,
   saveScene,
@@ -1024,8 +1025,7 @@ apiRouter.post('/factory-reset', (_req, res) => {
     }
 
     // Reset in-memory state so live clients don't keep stale values
-    const emptyDmx = new Array(512).fill(0);
-    setDmxChannels(emptyDmx);
+    const emptyDmx = blackoutDmxOutput();
     const resetConfig = resetConfigState();
 
     // Reload config + scenes + acts from disk (now empty), then notify clients
@@ -1038,6 +1038,12 @@ apiRouter.post('/factory-reset', (_req, res) => {
     global.io?.emit('sceneList', resetScenes);
     global.io?.emit('actsUpdated', resetActs);
     global.io?.emit('dmxStateRestored', { dmxChannels: emptyDmx });
+    global.io?.emit('dmxBlackout', {
+      dmxChannels: emptyDmx,
+      channelCount: emptyDmx.length,
+      reason: 'factory-reset',
+      timestamp: Date.now()
+    });
     global.io?.emit('fixturesLoaded', []);
     global.io?.emit('fixturesUpdated', []);
     global.io?.emit('fixtureLayoutUpdate', []);

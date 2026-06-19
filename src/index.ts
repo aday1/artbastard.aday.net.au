@@ -1821,6 +1821,16 @@ function setDmxChannels(channels: number[], sessionId: string = DEFAULT_SESSION_
     }
 }
 
+function blackoutDmxOutput(sessionId: string = DEFAULT_SESSION_ID): number[] {
+    const blackoutChannels = new Array(512).fill(0);
+    setDmxChannels(blackoutChannels, sessionId);
+    log('Factory reset blackout sent: all DMX channels set to 0', 'DMX', {
+        sessionId,
+        channelCount: blackoutChannels.length,
+    });
+    return blackoutChannels;
+}
+
 // OSC message sending function
 function sendOscMessage(address: string, args: any[], customHost?: string, customPort?: number) {
     let portToUse: any = null;
@@ -2595,6 +2605,7 @@ export {
     addSocketHandlers,
     updateDmxChannel as setDmxChannel, // Export with alias
     setDmxChannels, // Export new function for bulk channel setting
+    blackoutDmxOutput,
     loadScene, saveScene,
     updateScene,
     loadScenes,

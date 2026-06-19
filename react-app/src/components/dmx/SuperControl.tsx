@@ -567,6 +567,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     deselectAllFixtures,
     getDmxChannelValue,
     setDmxChannelValue,
+    blackoutAllDmxChannels,
     strobeSafetyEnabled,
     applyStrobeSafetyLock,
     setStrobeSafetyEnabled,
@@ -2470,6 +2471,8 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
       phase: 0,
     });
     setStrobeSafetyEnabled(true);
+    blackoutAllDmxChannels(true);
+    window.setTimeout(() => blackoutAllDmxChannels(true), 100);
 
     // Clear local Super Control/browser tweaks, including channel ranges and
     // strobe override preferences, without deleting backend scenes or fixtures.

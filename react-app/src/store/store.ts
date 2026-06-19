@@ -1060,6 +1060,7 @@ interface State extends AutomationState, TransitionTrackerSlice {
   getDmxChannelValue: (channel: number) => number
   setDmxChannel: (channel: number, value: number, sendToBackend?: boolean) => void
   setMultipleDmxChannels: (updates: DmxChannelBatchUpdate, sendToBackend?: boolean) => void; // New action for batch updates
+  blackoutAllDmxChannels: (sendToBackend?: boolean) => void;
   setDmxChannelValue: (channel: number, value: number) => void
   setDmxChannelsForTransition: (values: number[]) => void;
   setCurrentTransitionFrameId: (frameId: number | null) => void;
@@ -2888,7 +2889,29 @@ export const useStore = create<State>()(
         } else {
           debugLog.log('[STORE] setMultipleDmxChannels: Skipping backend request (sendToBackend=false)');
         }
-      }, setDmxChannelValue: (channel, value) => {
+      },
+
+      blackoutAllDmxChannels: (sendToBackend = true) => {
+        const zeroChannels = new Array(512).fill(0);
+        const zeroUpdates: Record<number, number> = {};
+        for (let channel = 0; channel < 512; channel += 1) {
+          zeroUpdates[channel] = 0;
+        }
+
+        set({
+          dmxChannels: zeroChannels,
+          dmxFrozen: false,
+        });
+
+        if (sendToBackend) {
+          debugLog.log('[STORE] blackoutAllDmxChannels: Queueing full-universe blackout batch');
+          enqueueDmxBackendUpdates(zeroUpdates, () => {
+            get().addNotification({ message: 'Failed to send factory reset blackout', type: 'error', priority: 'high' });
+          });
+        }
+      },
+
+      setDmxChannelValue: (channel, value) => {
         get().setDmxChannel(channel, value);
 
         // Record the change if recording is active

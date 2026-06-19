@@ -92,6 +92,7 @@ export const UnifiedSettings: React.FC = () => {
     updateUiSettings,
     setDmxVisualEffects,
     addNotification,
+    blackoutAllDmxChannels,
     dmxFaderOrientation,
     setDmxFaderOrientation,
   } = useStore(state => ({
@@ -109,6 +110,7 @@ export const UnifiedSettings: React.FC = () => {
     updateUiSettings: state.updateUiSettings,
     setDmxVisualEffects: state.setDmxVisualEffects,
     addNotification: state.addNotification,
+    blackoutAllDmxChannels: state.blackoutAllDmxChannels,
     dmxFaderOrientation: state.dmxFaderOrientation,
     setDmxFaderOrientation: state.setDmxFaderOrientation,
   }))
@@ -396,6 +398,8 @@ export const UnifiedSettings: React.FC = () => {
     }
 
     try {
+      blackoutAllDmxChannels(true);
+
       // 1. Full backend wipe — deletes scenes, config, fixtures, acts, templates,
       // appearance, last DMX state, export archives. Logs and bridge revocations
       // stay intact.
@@ -470,6 +474,7 @@ export const UnifiedSettings: React.FC = () => {
         pinnedChannels: [],
         selectedChannels: [],
         dmxChannels: new Array(512).fill(0),
+        dmxFrozen: false,
         strobeSafetyEnabled: true,
         panTiltAutopilot: {
           enabled: false,
@@ -549,7 +554,7 @@ export const UnifiedSettings: React.FC = () => {
       });
 
       addNotification({
-        message: 'Factory reset complete. Reloading…',
+        message: 'Factory reset complete. Blackout sent. Reloading…',
         type: 'success',
       });
 
