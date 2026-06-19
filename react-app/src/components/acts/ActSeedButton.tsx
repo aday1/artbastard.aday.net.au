@@ -17,7 +17,7 @@ export const ActSeedButton: React.FC<ActSeedButtonProps> = ({ className }) => {
   const [open, setOpen] = useState(false);
   const [packId, setPackId] = useState<ActSeedPackId>('starter-acts');
   const [includeTriggers, setIncludeTriggers] = useState(true);
-  const [avoidStrobe, setAvoidStrobe] = useState(false);
+  const [avoidStrobe, setAvoidStrobe] = useState(true);
   const [isSeeding, setIsSeeding] = useState(false);
   const [lastSummary, setLastSummary] = useState('');
 
@@ -84,13 +84,17 @@ export const ActSeedButton: React.FC<ActSeedButtonProps> = ({ className }) => {
             Add OSC play/stop triggers
           </label>
 
-          <label className={styles.checkRow}>
+          <label className={`${styles.checkRow} ${styles.noStrobeRow}`}>
             <input
               type="checkbox"
               checked={avoidStrobe}
               onChange={(event) => setAvoidStrobe(event.target.checked)}
             />
-            No strobe effects
+            <LucideIcon name="ShieldOff" size={16} />
+            <span>
+              <strong>NO STROBE SAFETY MODE</strong>
+              <small>Skip strobe ACTS and strobe scene references</small>
+            </span>
           </label>
 
           <p>{avoidStrobe ? `${selectedPack.description} Strobe ACTS and strobe scene references will be skipped.` : selectedPack.description}</p>

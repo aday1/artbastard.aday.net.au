@@ -30,6 +30,7 @@ import { StageMapDashboard } from '../fixtures/StageMapDashboard';
 import { debugLog } from '../../utils/debugLog';
 import { rangesToTickSteps } from '../../utils/fixtureChannelTicks';
 import { findMovementSpeedTargets, movementSpeedDmxValue } from '../../utils/movementSpeedChannels';
+import { findStrobeSafetyTargets } from '../../utils/strobeSafety';
 import type { FixtureChannelRange } from '../../store/types';
 import { getFirstFixtureColorWheelSlots } from '../../fixtures/colorWheelSlots';
 import styles from './SuperControl.module.scss';
@@ -565,6 +566,9 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     deselectAllFixtures,
     getDmxChannelValue,
     setDmxChannelValue,
+    strobeSafetyEnabled,
+    applyStrobeSafetyLock,
+    setStrobeSafetyEnabled,
     getChannelRange,
     getChannelInfo,
     getFixtureColor,
@@ -1474,10 +1478,12 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         openedShutter = true;
       }
 
-      const strobeChannel = resolveControlChannel('strobe', channels);
-      if (strobeChannel !== undefined && (force || getDmxChannelValue(strobeChannel) <= 3)) {
-        setDmxChannelValue(strobeChannel, 255);
-        openedStrobe = true;
+      if (!strobeSafetyEnabled) {
+        const strobeChannel = resolveControlChannel('strobe', channels);
+        if (strobeChannel !== undefined && (force || getDmxChannelValue(strobeChannel) <= 3)) {
+          setDmxChannelValue(strobeChannel, 255);
+          openedStrobe = true;
+        }
       }
 
       const lampChannel = resolveControlChannel('lamp', channels);
@@ -2528,10 +2534,30 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     Math.abs(movementSnapSpeed - MOVEMENT_SNAP_DEFAULT_SPEED) < 0.005
       ? 'Default'
       : `${Math.round(movementSnapSpeed * 100)}%`;
+  const strobeSafetyTargets = findStrobeSafetyTargets(fixtures);
+  const selectedStrobeSafetyTargets = findStrobeSafetyTargets(getAffectedFixtures().map(({ fixture }) => fixture));
+  const strobeSafetyChannelCount = strobeSafetyTargets.length;
+  const selectedStrobeSafetyChannelCount = selectedStrobeSafetyTargets.length;
+  const strobeSafetySignature = strobeSafetyTargets
+    .map((target) => `${target.dmxAddress}:${target.safeValue}`)
+    .join('|');
+  const firstStrobeSafetyValue = strobeSafetyTargets[0]?.safeValue ?? 0;
   const capabilities = getFixtureCapabilities();
   const hasChannelSelection = selectedChannels.length > 0;
   const hasColorWheelControl = hasControlType('color_wheel');
   const colorWheelSlots = getFirstFixtureColorWheelSlots(getAffectedFixtures().map(({ fixture }) => fixture));
+
+  useEffect(() => {
+    if (!strobeSafetyEnabled || strobeSafetyChannelCount === 0) return;
+    applyStrobeSafetyLock();
+    setStrobe(firstStrobeSafetyValue);
+  }, [
+    applyStrobeSafetyLock,
+    firstStrobeSafetyValue,
+    strobeSafetyChannelCount,
+    strobeSafetyEnabled,
+    strobeSafetySignature,
+  ]);
 
   useEffect(() => {
     if (selectionMode === 'channels' && !hasChannelSelection) {
@@ -2553,6 +2579,13 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     movementSpeedTargets.forEach((target) => {
       setDmxChannelValue(target.dmxAddress, movementSpeedDmxValue(target, speed));
     });
+  };
+
+  const toggleStrobeSafety = (enabled: boolean) => {
+    setStrobeSafetyEnabled(enabled);
+    if (enabled) {
+      setStrobe(selectedStrobeSafetyTargets[0]?.safeValue ?? strobeSafetyTargets[0]?.safeValue ?? 0);
+    }
   };
 
   const handleSelectAllFixtures = () => {
@@ -2809,6 +2842,21 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                   Capabilities
                 </SkeuoButton>
               </div>
+
+              {strobeSafetyChannelCount > 0 && (
+                <div className={`${styles.strobeSafetyGlobal} ${strobeSafetyEnabled ? styles.strobeSafetyLocked : styles.strobeSafetyArmed}`}>
+                  <div>
+                    <LucideIcon name={strobeSafetyEnabled ? 'ShieldCheck' : 'ShieldAlert'} size={20} />
+                    <span>
+                      <strong>{strobeSafetyEnabled ? 'STROBE LOCKED OFF' : 'STROBES ENABLED'}</strong>
+                      <small>{strobeSafetyChannelCount} patched strobe channel(s)</small>
+                    </span>
+                  </div>
+                  <button type="button" onClick={() => toggleStrobeSafety(!strobeSafetyEnabled)}>
+                    {strobeSafetyEnabled ? 'ENABLE STROBE' : 'DISABLE STROBE'}
+                  </button>
+                </div>
+              )}
 
               {selectionMode === 'fixtures' && fixtures.length > 0 && (
                 <div className={styles.quickActions}>
@@ -3869,6 +3917,36 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
             {renderPanelHeader('effects', <LucideIcon name="Zap" />, 'Effects')}
             <div className={styles.gridItemContent}>
               <div className={styles.section}>
+                {strobeSafetyChannelCount > 0 && (
+                  <div className={`${styles.strobeSafetyPanel} ${strobeSafetyEnabled ? styles.strobeSafetyLocked : styles.strobeSafetyArmed}`}>
+                    <div className={styles.strobeSafetyHeader}>
+                      <LucideIcon name={strobeSafetyEnabled ? 'ShieldCheck' : 'ShieldAlert'} size={28} />
+                      <div>
+                        <strong>STROBE SAFETY LOCK</strong>
+                        <span>
+                          {strobeSafetyEnabled
+                            ? `${strobeSafetyChannelCount} patched strobe channel(s) held safe.`
+                            : `${strobeSafetyChannelCount} patched strobe channel(s) can respond to playback and manual control.`}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className={styles.strobeSafetyButton}
+                      onClick={() => toggleStrobeSafety(!strobeSafetyEnabled)}
+                    >
+                      <LucideIcon name={strobeSafetyEnabled ? 'Unlock' : 'Ban'} size={18} />
+                      {strobeSafetyEnabled ? 'ENABLE STROBE' : 'DISABLE STROBE'}
+                    </button>
+                    <small>
+                      {strobeSafetyEnabled
+                        ? 'Hard lock is active across Super Control, scenes, ACT playback, automation, and DMX batches.'
+                        : selectedStrobeSafetyChannelCount > 0
+                          ? `${selectedStrobeSafetyChannelCount} selected strobe channel(s) will lock immediately.`
+                          : 'Select fixtures to see which strobe channels are affected.'}
+                    </small>
+                  </div>
+                )}
                 {hasControlType('gobo') && (
                   <>
                     <label className={styles.goboSectionLabel}>GOBO Wheel</label>
@@ -3948,7 +4026,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                     min={0}
                     max={255}
                     step={1}
-                    disabled={!hasSelection}
+                    disabled={!hasSelection || strobeSafetyEnabled}
                     onChange={(val) => {
                       setStrobe(val);
                       applyControl('strobe', val);

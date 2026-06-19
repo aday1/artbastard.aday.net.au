@@ -99,6 +99,44 @@
   }
 }
 
+.noStrobeRow {
+  align-items: flex-start;
+  padding: 0.75rem;
+  border: 2px solid rgba(45, 212, 191, 0.58);
+  border-radius: 6px;
+  background: rgba(6, 78, 59, 0.28);
+  color: var(--color-text);
+
+  > span {
+    color: #5eead4;
+    flex: 0 0 auto;
+    margin-top: 1px;
+  }
+
+  input {
+    margin-top: 2px;
+    accent-color: #14b8a6;
+  }
+
+  span:last-child {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  strong {
+    font-size: 0.84rem;
+    letter-spacing: 0;
+  }
+
+  small {
+    color: var(--color-secondary);
+    font-size: 0.78rem;
+    font-weight: 500;
+    line-height: 1.25;
+  }
+}
+
 .applyButton {
   width: 100%;
   background: var(--color-secondary);

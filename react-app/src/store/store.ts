@@ -58,6 +58,11 @@ import {
   enqueueDmxBackendUpdates,
 } from './dmxBackendQueue'
 import {
+  applyStrobeSafetyToDmxValues,
+  strobeSafetyUpdates,
+  strobeSafetyValueForChannel,
+} from '../utils/strobeSafety'
+import {
   APC40_GRID_SLOT_COUNT,
   apc40DeckSceneName,
   channelMatchesRoleAliases,
@@ -574,6 +579,7 @@ interface UiSettings {
 // Helper functions for localStorage persistence
 const AUTO_SCENE_STORAGE_KEY = 'artbastard-auto-scene-settings';
 const SUPER_CONTROL_MIDI_MAPPINGS_STORAGE_KEY = 'artbastard-supercontrol-midi-mappings-v1';
+const STROBE_SAFETY_STORAGE_KEY = 'artbastard-strobe-safety-enabled-v2';
 
 const saveAutoSceneSettings = (settings: AutoSceneSettings) => {
   try {
@@ -618,6 +624,23 @@ const saveSuperControlMidiMappings = (mappings: SuperControlBinding[]) => {
   }
 };
 
+const loadStrobeSafetyEnabled = (): boolean => {
+  try {
+    const stored = localStorage.getItem(STROBE_SAFETY_STORAGE_KEY);
+    return stored === null ? true : stored !== 'false';
+  } catch {
+    return true;
+  }
+};
+
+const saveStrobeSafetyEnabled = (enabled: boolean) => {
+  try {
+    localStorage.setItem(STROBE_SAFETY_STORAGE_KEY, enabled ? 'true' : 'false');
+  } catch (error) {
+    console.warn('Failed to save strobe safety setting to localStorage:', error);
+  }
+};
+
 // Helper to save current auto-scene settings from store state
 const saveCurrentAutoSceneSettings = (state: {
   autoSceneEnabled: boolean;
@@ -655,6 +678,9 @@ interface State extends AutomationState, TransitionTrackerSlice {
   // the APC40 Master Select / Detail View freeze controls. Press again to unfreeze.
   dmxFrozen: boolean
   setDmxFrozen: (frozen: boolean) => void
+  strobeSafetyEnabled: boolean
+  applyStrobeSafetyLock: () => void
+  setStrobeSafetyEnabled: (enabled: boolean) => void
   oscAssignments: string[]
   superControlOscAddresses: Record<string, string> // OSC addresses for SuperControl controls
   channelNames: string[]
@@ -1595,11 +1621,39 @@ export const useStore = create<State>()(
         if (wasFrozen && !frozen) {
           // Unfreezing: flush the current store state out to the backend so
           // the rig snaps to whatever the operator dialed in while frozen.
-          const channels = get().dmxChannels;
+          const channels = get().strobeSafetyEnabled
+            ? applyStrobeSafetyToDmxValues(get().fixtures || [], get().dmxChannels)
+            : get().dmxChannels;
           const updates: Record<number, number> = {};
           for (let i = 0; i < channels.length; i += 1) updates[i] = channels[i];
           enqueueDmxBackendUpdates(updates, () => {
             get().addNotification({ message: 'Failed to flush DMX after unfreeze', type: 'error', priority: 'high' });
+          });
+        }
+      },
+      strobeSafetyEnabled: loadStrobeSafetyEnabled(),
+      applyStrobeSafetyLock: () => {
+        const updates = strobeSafetyUpdates(get().fixtures || []);
+        if (Object.keys(updates).length > 0) {
+          get().setMultipleDmxChannels(updates, true);
+        }
+      },
+      setStrobeSafetyEnabled: (enabled) => {
+        set({ strobeSafetyEnabled: enabled });
+        saveStrobeSafetyEnabled(enabled);
+
+        if (enabled) {
+          get().applyStrobeSafetyLock();
+          get().addNotification({
+            message: 'Strobe safety lock enabled',
+            type: 'success',
+            priority: 'normal',
+          });
+        } else {
+          get().addNotification({
+            message: 'Strobe control enabled',
+            type: 'info',
+            priority: 'normal',
           });
         }
       },
@@ -2771,9 +2825,13 @@ export const useStore = create<State>()(
       setDmxChannel: (channel, value, sendToBackend = true) => {
         debugLog.log(`[STORE] setDmxChannel called: channel=${channel}, value=${value}, sendToBackend=${sendToBackend}`);
 
+        const guardedValue = get().strobeSafetyEnabled
+          ? strobeSafetyValueForChannel(get().fixtures || [], channel) ?? value
+          : value;
+
         // Get channel range and clamp value
         const channelRange = get().getChannelRange(channel);
-        const clampedValue = Math.max(channelRange.min, Math.min(channelRange.max, value));
+        const clampedValue = Math.max(channelRange.min, Math.min(channelRange.max, guardedValue));
 
         const dmxChannels = [...get().dmxChannels]
         dmxChannels[channel] = clampedValue
@@ -2787,7 +2845,7 @@ export const useStore = create<State>()(
         } else if (sendToBackend && get().dmxFrozen) {
           debugLog.log(`[STORE] DMX backend send suppressed (FROZEN): channel=${channel}, value=${clampedValue}`);
         } else {
-          debugLog.log(`[STORE] DMX channel updated locally (no backend request): channel=${channel}, value=${value}`);
+          debugLog.log(`[STORE] DMX channel updated locally (no backend request): channel=${channel}, value=${clampedValue}`);
         }
       },
 
@@ -2795,12 +2853,19 @@ export const useStore = create<State>()(
         debugLog.log('[STORE] setMultipleDmxChannels: Called with updates batch:', updates, 'sendToBackend:', sendToBackend);
         const currentDmxChannels = get().dmxChannels;
         const newDmxChannels = [...currentDmxChannels];
+        const guardedUpdates: Record<number, number> = {};
         let changesApplied = false;
         for (const channelStr in updates) {
           const channel = parseInt(channelStr, 10);
           if (channel >= 0 && channel < newDmxChannels.length) {
-            if (newDmxChannels[channel] !== updates[channel]) { // Check if value actually changes
-              newDmxChannels[channel] = updates[channel];
+            const requestedValue = updates[channel];
+            const safeValue = get().strobeSafetyEnabled
+              ? strobeSafetyValueForChannel(get().fixtures || [], channel)
+              : undefined;
+            const nextValue = safeValue ?? requestedValue;
+            guardedUpdates[channel] = nextValue;
+            if (newDmxChannels[channel] !== nextValue) { // Check if value actually changes
+              newDmxChannels[channel] = nextValue;
               changesApplied = true;
             }
           }
@@ -2814,8 +2879,8 @@ export const useStore = create<State>()(
         }
 
         if (sendToBackend && !get().dmxFrozen) {
-          debugLog.log('[STORE] setMultipleDmxChannels: Queueing backend DMX batch:', updates);
-          enqueueDmxBackendUpdates(updates, () => {
+          debugLog.log('[STORE] setMultipleDmxChannels: Queueing backend DMX batch:', guardedUpdates);
+          enqueueDmxBackendUpdates(guardedUpdates, () => {
             get().addNotification({ message: 'Failed to send DMX batch update to server', type: 'error', priority: 'high' });
           });
         } else if (sendToBackend && get().dmxFrozen) {
@@ -2832,14 +2897,18 @@ export const useStore = create<State>()(
           get().addRecordingEvent({
             type: 'dmx',
             channel,
-            value
+            value: get().getDmxChannelValue(channel)
           });
         }
       },
 
       setDmxChannelsForTransition: (values) => {
+        const nextValues = get().strobeSafetyEnabled
+          ? applyStrobeSafetyToDmxValues(get().fixtures || [], values)
+          : values;
+
         // Update local state
-        set({ dmxChannels: values });
+        set({ dmxChannels: nextValues });
 
         // Balanced approach - responsive but not spammy
         const now = Date.now();
@@ -2856,8 +2925,8 @@ export const useStore = create<State>()(
 
           if (lastTransitionDmxValues) {
             // Compare with last sent values - send meaningful changes
-            for (let i = 0; i < values.length && i < 512; i++) {
-              const currentValue = values[i] || 0;
+            for (let i = 0; i < nextValues.length && i < 512; i++) {
+              const currentValue = nextValues[i] || 0;
               const lastValue = lastTransitionDmxValues[i] || 0;
 
               // Only include channels that changed by more than 3 DMX values (more responsive)
@@ -2868,8 +2937,8 @@ export const useStore = create<State>()(
             }
           } else {
             // First update - send all non-zero values
-            for (let i = 0; i < values.length && i < 512; i++) {
-              const currentValue = values[i] || 0;
+            for (let i = 0; i < nextValues.length && i < 512; i++) {
+              const currentValue = nextValues[i] || 0;
               if (currentValue > 0) {
                 updates[i] = currentValue;
                 hasChanges = true;
@@ -2882,8 +2951,8 @@ export const useStore = create<State>()(
             if (isTransitionComplete) {
               // Final update - send all non-zero values to ensure we reach target
               const finalUpdates: Record<number, number> = {};
-              for (let i = 0; i < values.length && i < 512; i++) {
-                const currentValue = values[i] || 0;
+              for (let i = 0; i < nextValues.length && i < 512; i++) {
+                const currentValue = nextValues[i] || 0;
                 if (currentValue > 0) {
                   finalUpdates[i] = currentValue;
                 }
@@ -2898,7 +2967,7 @@ export const useStore = create<State>()(
           // Update tracking values
           set({
             lastDmxTransitionUpdate: now,
-            lastTransitionDmxValues: [...values]
+            lastTransitionDmxValues: [...nextValues]
           });
         }
       },
@@ -3769,6 +3838,9 @@ export const useStore = create<State>()(
       addFixture: (fixture) => {
         const updatedFixtures = refreshFixtureCatalogPhotos([...get().fixtures, fixture]);
         set({ fixtures: updatedFixtures });
+        if (get().strobeSafetyEnabled) {
+          get().applyStrobeSafetyLock();
+        }
         
         // Save to localStorage immediately
         try {
@@ -3800,6 +3872,9 @@ export const useStore = create<State>()(
       deleteFixture: (fixtureId) => {
         const updatedFixtures = get().fixtures.filter(f => f.id !== fixtureId);
         set({ fixtures: updatedFixtures });
+        if (get().strobeSafetyEnabled) {
+          get().applyStrobeSafetyLock();
+        }
         
         // Save to localStorage
         try {
@@ -3831,6 +3906,9 @@ export const useStore = create<State>()(
       setFixtures: (fixtures) => {
         const refreshedFixtures = refreshFixtureCatalogPhotos(fixtures);
         set({ fixtures: refreshedFixtures });
+        if (get().strobeSafetyEnabled) {
+          get().applyStrobeSafetyLock();
+        }
         // Save to localStorage for persistence across server restarts
         try {
           localStorage.setItem('artbastard-fixtures', JSON.stringify(refreshedFixtures));

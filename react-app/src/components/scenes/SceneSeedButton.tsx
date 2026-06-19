@@ -26,7 +26,7 @@ export const SceneSeedButton: React.FC<SceneSeedButtonProps> = ({ className, com
   const [packId, setPackId] = useState<SceneSeedPackId>('smart-starter-40');
   const [target, setTarget] = useState<SceneSeedTarget>('deck-a');
   const [includeAutomation, setIncludeAutomation] = useState(false);
-  const [avoidStrobe, setAvoidStrobe] = useState(false);
+  const [avoidStrobe, setAvoidStrobe] = useState(true);
   const [isSeeding, setIsSeeding] = useState(false);
   const [lastSummary, setLastSummary] = useState<string>('');
 
@@ -114,13 +114,17 @@ export const SceneSeedButton: React.FC<SceneSeedButtonProps> = ({ className, com
             Include animated timelines
           </label>
 
-          <label className={styles.checkRow}>
+          <label className={`${styles.checkRow} ${styles.noStrobeRow}`}>
             <input
               type="checkbox"
               checked={avoidStrobe}
               onChange={(event) => setAvoidStrobe(event.target.checked)}
             />
-            No strobe effects
+            <LucideIcon name="ShieldOff" size={16} />
+            <span>
+              <strong>NO STROBE SAFETY MODE</strong>
+              <small>Skip strobe looks and hold strobe channels safe</small>
+            </span>
           </label>
 
           <p>{avoidStrobe ? `${selectedPack.description} Strobe looks will be skipped and strobe channels are held safe.` : selectedPack.description}</p>
