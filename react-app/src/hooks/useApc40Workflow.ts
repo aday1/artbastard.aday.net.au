@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { isClientSceneTransitionActive } from '../utils/sceneTransitionGuard';
 import { useStore, type Apc40LastChange } from '../store';
 import { decodeApc40Message, isApc40Source } from '../midi/apc40';
 import {
@@ -1401,6 +1402,7 @@ export function useApc40Workflow() {
   useEffect(() => {
     const interval = window.setInterval(() => {
       if (autoGroupsRef.current.size === 0) return;
+      if (isClientSceneTransitionActive(useStore.getState())) return;
 
       const state = useStore.getState();
       const now = Date.now();

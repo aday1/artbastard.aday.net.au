@@ -186,5 +186,38 @@ describe('actSeedGenerator', () => {
     expect(act.totalDuration).toBe(end);
     expect(act.markers?.[0].time).toBe(0);
   });
+
+  it('builds one ACT from explicitly selected scenes', () => {
+    const result = generateSeededActList(seededScenes, [], {
+      mode: 'from-scenes',
+      packId: 'starter-acts',
+      actSlot: 2,
+      sceneNames: ['APC40 Deck A 01', 'APC40 Deck A 02'],
+      includeTriggers: false,
+      avoidStrobe: true,
+    });
+
+    expect(result.generatedActs).toHaveLength(1);
+    expect(result.generatedActs[0].name).toBe('ACT Seed 02 - Selection 02');
+    expect(result.generatedActs[0].steps.map((step) => step.sceneName)).toEqual([
+      'APC40 Deck A 01',
+      'APC40 Deck A 02',
+    ]);
+  });
+
+  it('seeds one ACT template into a chosen launch slot', () => {
+    const result = generateSeededActList(seededScenes, [], {
+      mode: 'single-template',
+      packId: 'starter-acts',
+      actSlot: 4,
+      templateId: 'movement-sweep',
+      includeTriggers: false,
+      avoidStrobe: true,
+    });
+
+    expect(result.generatedActs).toHaveLength(1);
+    expect(result.generatedActs[0].seed?.templateId).toBe('movement-sweep');
+    expect(result.generatedActs[0].steps.length).toBeGreaterThan(0);
+  });
 });
 

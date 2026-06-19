@@ -33,6 +33,9 @@ import { findMovementSpeedTargets, movementSpeedDmxValue } from '../../utils/mov
 import { findStrobeSafetyTargets } from '../../utils/strobeSafety';
 import { clearSuperControlFactoryResetStorage } from '../../utils/factoryResetStorage';
 import { readSuperControlValuesFromSelection } from '../../utils/superControlSelectionSync';
+import {
+  SCENE_TRANSITION_COMPLETE_EVENT,
+} from '../../utils/sceneTransitionGuard';
 import type { FixtureChannelRange } from '../../store/types';
 import { getFirstFixtureColorWheelSlots } from '../../fixtures/colorWheelSlots';
 import styles from './SuperControl.module.scss';
@@ -590,7 +593,6 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     superControlExternalUpdate,
     // Scene functions from global store
     scenes,
-    activeSceneName,
     deleteScene,
     loadScene: storeLoadScene,
     addNotification,
@@ -2596,7 +2598,6 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         selectedGroups,
         selectedCapabilities,
         selectedChannels,
-        activeSceneName,
       }),
     [
       selectionMode,
@@ -2604,11 +2605,10 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
       selectedGroups,
       selectedCapabilities,
       selectedChannels,
-      activeSceneName,
     ]
   );
 
-  useEffect(() => {
+  const syncSuperControlFromLiveDmx = useCallback(() => {
     const affectedFixtures = getAffectedFixtures();
     if (affectedFixtures.length === 0) return;
 
@@ -2647,7 +2647,19 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
       b: values.blue ?? roliColourStateRef.current.b,
       colorWheel: values.color_wheel ?? roliColourStateRef.current.colorWheel,
     };
-  }, [selectionSyncKey, fixtures, groups, getDmxChannelValue]);
+  }, [getDmxChannelValue]);
+
+  useEffect(() => {
+    syncSuperControlFromLiveDmx();
+  }, [selectionSyncKey, syncSuperControlFromLiveDmx]);
+
+  useEffect(() => {
+    const handleTransitionComplete = () => {
+      syncSuperControlFromLiveDmx();
+    };
+    window.addEventListener(SCENE_TRANSITION_COMPLETE_EVENT, handleTransitionComplete);
+    return () => window.removeEventListener(SCENE_TRANSITION_COMPLETE_EVENT, handleTransitionComplete);
+  }, [syncSuperControlFromLiveDmx]);
 
   const availableControls = useMemo(
     () => CONTROL_AVAILABILITY.map((control) => ({

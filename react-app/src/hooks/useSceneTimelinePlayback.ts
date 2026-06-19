@@ -9,6 +9,7 @@ import {
   getEffectiveTimelineDuration,
   type SceneTimelineStartDetail,
 } from '../utils/sceneTimelinePlayback';
+import { isClientSceneTransitionActive } from '../utils/sceneTransitionGuard';
 
 interface ScenePlaybackState {
   sceneName: string | null;
@@ -49,6 +50,9 @@ export const useSceneTimelinePlayback = () => {
 
   const applyAtTime = useCallback(
     (sceneName: string, timeMs: number) => {
+      if (isClientSceneTransitionActive(useStore.getState())) {
+        return;
+      }
       const timeline = resolveTimeline(sceneName);
       if (!timeline?.enabled) {
         return;
@@ -78,24 +82,33 @@ export const useSceneTimelinePlayback = () => {
 
   const startTimeline = useCallback(
     (detail: SceneTimelineStartDetail) => {
-      const { sceneName, timelineOverride, startAtMs = 0 } = detail;
-      const timeline = timelineOverride ?? scenes.find((s) => s.name === sceneName)?.timeline;
-      if (!timeline?.enabled) {
-        return;
-      }
+      const begin = () => {
+        if (isClientSceneTransitionActive(useStore.getState())) {
+          window.setTimeout(begin, 50);
+          return;
+        }
 
-      playbackStateRef.current = {
-        sceneName,
-        isPlaying: true,
-        startTime: Date.now(),
-        startAtMs,
-        currentTime: startAtMs,
-        direction: 1,
-        timelineOverride: timelineOverride ?? null,
+        const { sceneName, timelineOverride, startAtMs = 0 } = detail;
+        const timeline = timelineOverride ?? scenes.find((s) => s.name === sceneName)?.timeline;
+        if (!timeline?.enabled) {
+          return;
+        }
+
+        playbackStateRef.current = {
+          sceneName,
+          isPlaying: true,
+          startTime: Date.now(),
+          startAtMs,
+          currentTime: startAtMs,
+          direction: 1,
+          timelineOverride: timelineOverride ?? null,
+        };
+
+        applyAtTime(sceneName, startAtMs);
+        dispatchSceneTimelinePlayhead({ sceneName, timeMs: startAtMs, isPlaying: true });
       };
 
-      applyAtTime(sceneName, startAtMs);
-      dispatchSceneTimelinePlayhead({ sceneName, timeMs: startAtMs, isPlaying: true });
+      begin();
     },
     [applyAtTime, scenes]
   );

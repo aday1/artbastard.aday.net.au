@@ -38,9 +38,15 @@ import {
 } from './transitionTrackerSlice'
 import { sceneNameToOscPath } from '../utils/sceneCapture'
 import { debugLog } from '../utils/debugLog'
+import {
+  dispatchSceneTransitionComplete,
+  isClientSceneTransitionActive,
+  sceneTimelineStartDelayMs,
+} from '../utils/sceneTransitionGuard'
 import { shouldUseTouchOptimizedChrome } from '../utils/deviceSurface'
 import {
   generateSeededSceneList,
+  captureSelectionToApcSlot as buildCaptureSelectionScene,
   type SceneSeedOptions,
   type SceneSeedSummary,
 } from '../scenes/sceneSeedGenerator'
@@ -1154,7 +1160,7 @@ interface State extends AutomationState, TransitionTrackerSlice {
 
   // Scene Actions
   saveScene: (name: string, oscAddress: string) => void
-  loadScene: (nameOrIndex: string | number, options?: { silent?: boolean }) => void
+  loadScene: (nameOrIndex: string | number, options?: { silent?: boolean; force?: boolean }) => void
   loadNextScene: () => void
   loadPreviousScene: () => void
   deleteScene: (name: string) => void
@@ -1162,6 +1168,7 @@ interface State extends AutomationState, TransitionTrackerSlice {
   setTuningScene: (name: string | null) => void;
   updateActiveScene: () => void; // Save current DMX values to the active scene
   seedScenesFromFixtures: (options?: Partial<SceneSeedOptions>) => Promise<SceneSeedSummary>;
+  captureSelectionToApcSlot: (options: { deck: Apc40Deck; slot: number; fixtureIds?: string[] }) => Promise<SceneSeedSummary>;
 
   // ACTS Actions
   createAct: (name: string, description?: string) => void
@@ -1708,7 +1715,7 @@ export const useStore = create<State>()(
 
         const tick = () => {
           const state = get();
-          if (!state.dimmerFadeEnabled) return;
+          if (!state.dimmerFadeEnabled || isClientSceneTransitionActive(state)) return;
 
           const periodMs = Math.max(2, state.dimmerFadePeriodSeconds) * 1000;
           const elapsedMs = Date.now() - state.dimmerFadeStartedAt;
@@ -3070,11 +3077,12 @@ export const useStore = create<State>()(
           // Send if there are changes OR if transition is complete (to ensure final values are set)
           if (hasChanges || isTransitionComplete) {
             if (isTransitionComplete) {
-              // Final update - send all non-zero values to ensure we reach target
               const finalUpdates: Record<number, number> = {};
+              const baseline = lastTransitionDmxValues || [];
               for (let i = 0; i < nextValues.length && i < 512; i++) {
                 const currentValue = nextValues[i] || 0;
-                if (currentValue > 0) {
+                const lastSent = baseline[i] || 0;
+                if (currentValue !== lastSent) {
                   finalUpdates[i] = currentValue;
                 }
               }
@@ -3095,15 +3103,18 @@ export const useStore = create<State>()(
 
       setCurrentTransitionFrameId: (frameId) => set({ currentTransitionFrame: frameId }),
 
-      clearTransitionState: () => set({
-        isTransitioning: false,
-        transitionStartTime: null,
-        fromDmxValues: null,
-        toDmxValues: null,
-        currentTransitionFrame: null,
-        lastDmxTransitionUpdate: null,
-        lastTransitionDmxValues: null,
-      }),
+      clearTransitionState: () => {
+        set({
+          isTransitioning: false,
+          transitionStartTime: null,
+          fromDmxValues: null,
+          toDmxValues: null,
+          currentTransitionFrame: null,
+          lastDmxTransitionUpdate: null,
+          lastTransitionDmxValues: null,
+        });
+        dispatchSceneTransitionComplete();
+      },
 
       setTransitionDuration: (duration) => {
         if (duration >= 0) {
@@ -4252,7 +4263,7 @@ export const useStore = create<State>()(
           type: 'success'
         });
       },
-      loadScene: (nameOrIndex, options: { silent?: boolean } = {}) => {
+      loadScene: (nameOrIndex, options: { silent?: boolean; force?: boolean } = {}) => {
         const override = get().pendingSceneTransitionOverride;
         if (override) {
           set({
@@ -4273,6 +4284,23 @@ export const useStore = create<State>()(
 
         if (scene) {
           const sceneName = scene.name;
+
+          if (
+            !options.force &&
+            sceneName === get().activeSceneName &&
+            !get().isTransitioning
+          ) {
+            debugLog.log(`[STORE] Scene "${sceneName}" already active, skipping reload`);
+            if (!options.silent) {
+              get().addNotification({
+                message: `Scene "${sceneName}" is already loaded`,
+                type: 'info',
+                priority: 'low',
+              });
+            }
+            return;
+          }
+
           debugLog.log(`[STORE] Loading scene "${sceneName}" with transition`);
 
           // Cancel any ongoing transition
@@ -4326,9 +4354,7 @@ export const useStore = create<State>()(
               activeSceneName: sceneName,
             });
 
-            const timelineStartDelayMs = transitionDuration > 0
-              ? Math.min(Math.max(transitionDuration, 150), 1200)
-              : 100;
+            const timelineStartDelayMs = sceneTimelineStartDelayMs(transitionDuration);
 
             // Trigger timeline playback after the initial scene look has settled,
             // so gobo wheels do not race through intermediate slots on load.
@@ -4475,6 +4501,60 @@ export const useStore = create<State>()(
             priority: 'normal',
           });
         }
+
+        return result;
+      },
+
+      captureSelectionToApcSlot: async (options) => {
+        const { fixtures, scenes, dmxChannels, selectedFixtures } = get();
+        const fixtureIds = options.fixtureIds?.length
+          ? options.fixtureIds
+          : selectedFixtures.length > 0
+            ? selectedFixtures
+            : fixtures.map((fixture) => fixture.id);
+        const result = buildCaptureSelectionScene(fixtures, dmxChannels, scenes, {
+          deck: options.deck,
+          slot: options.slot,
+          selectedFixtureIds: fixtureIds,
+        });
+
+        if (result.disabledReason) {
+          get().addNotification({
+            message: result.disabledReason,
+            type: 'info',
+            priority: 'normal',
+          });
+          return result;
+        }
+
+        set({ scenes: result.scenes });
+
+        try {
+          await axios.post('/api/scenes', result.scenes);
+          get().addNotification({
+            message: `Captured ${fixtureIds.length} fixture${fixtureIds.length === 1 ? '' : 's'} to APC40 Deck ${options.deck} slot ${options.slot}`,
+            type: 'success',
+            priority: 'normal',
+          });
+        } catch (error) {
+          console.error('Failed to save captured scene slot:', error);
+          get().addNotification({
+            message: 'Captured scene locally, but server save failed',
+            type: 'warning',
+            priority: 'high',
+          });
+        }
+
+        if (result.skipped > 0) {
+          get().addNotification({
+            message: `Slot kept because a handmade scene already uses APC40 Deck ${options.deck} ${String(options.slot).padStart(2, '0')}`,
+            type: 'warning',
+            priority: 'normal',
+          });
+        }
+
+        if (options.deck === 'A') get().setApc40SceneA(apc40DeckSceneName(options.deck, options.slot - 1));
+        else get().setApc40SceneB(apc40DeckSceneName(options.deck, options.slot - 1));
 
         return result;
       },
@@ -5320,6 +5400,8 @@ export const useStore = create<State>()(
         get().setColorSliderAutopilot({ enabled });
       },
       updateAutopilotValues: () => {
+        if (isClientSceneTransitionActive(get())) return;
+
         const { channelAutopilots, panTiltAutopilot, colorSliderAutopilot, setDmxChannel, bpm, lastAutopilotUpdate, setExampleSliderValue, midiClockIsPlaying, isPlaying } = get();
         const now = Date.now();
         const timeElapsed = (now - lastAutopilotUpdate) / 1000; // in seconds

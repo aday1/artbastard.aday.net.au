@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { useStore } from '../../store/store';
+import { isClientSceneTransitionActive } from '../../utils/sceneTransitionGuard';
 import { HorizontalFader, RangeWindowControl } from '../ui/controls';
 import { RemasterPanel } from '../ui/remaster/RemasterPanel';
 import styles from './ModularAutomation.module.scss';
@@ -100,6 +101,10 @@ const ModularAutomation: React.FC = () => {
 
   // Color Animation Loop
   const animateColor = useCallback(() => {
+    if (isClientSceneTransitionActive(useStore.getState())) {
+      animationFrameRefs.current.color = requestAnimationFrame(animateColor);
+      return;
+    }
     if (!modularAutomation.color.enabled || selectedFixtures.length === 0) {
       if (animationFrameRefs.current.color) {
         cancelAnimationFrame(animationFrameRefs.current.color);
@@ -206,6 +211,10 @@ const ModularAutomation: React.FC = () => {
 
   // Dimmer Animation Loop
   const animateDimmer = useCallback(() => {
+    if (isClientSceneTransitionActive(useStore.getState())) {
+      animationFrameRefs.current.dimmer = requestAnimationFrame(animateDimmer);
+      return;
+    }
     if (!modularAutomation.dimmer.enabled || selectedFixtures.length === 0) {
       if (animationFrameRefs.current.dimmer) {
         cancelAnimationFrame(animationFrameRefs.current.dimmer);

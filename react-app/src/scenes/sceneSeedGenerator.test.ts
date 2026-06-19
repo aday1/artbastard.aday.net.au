@@ -3,6 +3,7 @@ import type { Fixture, Scene } from '../store';
 import {
   SCENE_SEED_GENERATOR_ID,
   generateSeededSceneList,
+  captureSelectionToApcSlot,
 } from './sceneSeedGenerator';
 
 const rgbPar: Fixture = {
@@ -181,5 +182,41 @@ describe('sceneSeedGenerator', () => {
     expect(reseeded.refreshed).toBe(1);
     expect(reseeded.scenes.find((scene) => scene.name === handmade.name)).toBe(handmade);
     expect(reseeded.scenes.find((scene) => scene.name === existingGenerated.name)?.seed?.generatedBy).toBe(SCENE_SEED_GENERATOR_ID);
+  });
+
+  it('seeds one refined look into a chosen APC slot', () => {
+    const result = generateSeededSceneList([rgbPar], [], {
+      mode: 'single-slot',
+      packId: 'smart-starter-40',
+      target: 'deck-a',
+      deck: 'A',
+      slot: 7,
+      templateId: 'full-blue',
+      includeAutomation: false,
+      avoidStrobe: true,
+    });
+
+    expect(result.generatedScenes).toHaveLength(1);
+    expect(result.generatedScenes[0].name).toBe('APC40 Deck A 07');
+    expect(result.generatedScenes[0].seed?.templateId).toBe('full-blue');
+    expect(result.generatedScenes[0].channelValues.slice(0, 4)).toEqual([0, 20, 255, 255]);
+  });
+
+  it('captures selected fixture channels into one APC slot', () => {
+    const dmxChannels = new Array(512).fill(0);
+    dmxChannels[0] = 200;
+    dmxChannels[1] = 40;
+    dmxChannels[3] = 255;
+
+    const result = captureSelectionToApcSlot([rgbPar], dmxChannels, [], {
+      deck: 'A',
+      slot: 3,
+      selectedFixtureIds: [rgbPar.id],
+    });
+
+    expect(result.generatedScenes).toHaveLength(1);
+    expect(result.generatedScenes[0].name).toBe('APC40 Deck A 03');
+    expect(result.generatedScenes[0].channelValues[0]).toBe(200);
+    expect(result.generatedScenes[0].channelValues[3]).toBe(255);
   });
 });

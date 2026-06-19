@@ -563,12 +563,10 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         debugLog.log('[SocketContext] Channel values length:', channelValues.length);
         debugLog.log('[SocketContext] First 10 channel values:', channelValues.slice(0, 10));
 
-        // Cancel any ongoing frontend transition FIRST since backend has loaded the scene
         const store = useStore.getState();
-        if (store.isTransitioning && store.currentTransitionFrame) {
-          window.cancelAnimationFrame(store.currentTransitionFrame);
-          useStore.setState({ currentTransitionFrame: null, isTransitioning: false });
-          debugLog.log('[SocketContext] Cancelled frontend transition for backend scene load');
+        if (store.isTransitioning) {
+          debugLog.log('[SocketContext] Ignoring backend sceneLoaded during client scene transition');
+          return;
         }
 
         // Update all DMX channels with the scene values using bulk update

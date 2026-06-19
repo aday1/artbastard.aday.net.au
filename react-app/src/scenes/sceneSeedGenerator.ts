@@ -8,6 +8,8 @@ export const SCENE_SEED_GENERATOR_VERSION = 1;
 
 export type SceneSeedPackId = 'compact-starter' | 'smart-starter-40' | 'smart-ab-80';
 export type SceneSeedTarget = 'deck-a' | 'deck-b' | 'decks-a-b';
+export type SceneSeedMode = 'pack' | 'single-slot' | 'capture-selection';
+export type SceneSeedFixtureScope = 'all' | 'movers' | 'washes';
 
 export interface SceneSeedMetadata {
   generatedBy: typeof SCENE_SEED_GENERATOR_ID;
@@ -25,6 +27,12 @@ export interface SceneSeedOptions {
   target: SceneSeedTarget;
   includeAutomation: boolean;
   avoidStrobe: boolean;
+  mode?: SceneSeedMode;
+  /** APC clip slot number, 1-40. */
+  slot?: number;
+  templateId?: string;
+  fixtureIds?: string[];
+  deck?: Apc40Deck;
 }
 
 export interface SceneSeedSummary {
@@ -79,6 +87,15 @@ interface SceneSeedTemplate {
   speed?: number;
   animation?: AnimationKind;
   durationMs?: number;
+  fixtureScope?: SceneSeedFixtureScope;
+}
+
+export interface CaptureSelectionToSlotOptions {
+  deck: Apc40Deck;
+  /** APC clip slot number, 1-40. */
+  slot: number;
+  selectedFixtureIds: string[];
+  mergeFromExistingSlot?: boolean;
 }
 
 const DEFAULT_OPTIONS: SceneSeedOptions = {
@@ -164,6 +181,43 @@ const SMART_TEMPLATES: SceneSeedTemplate[] = [
   { id: 'finale-full', label: 'Finale Full', intensity: 255, color: { red: 255, green: 255, blue: 255, white: 255, amber: 255, uv: 120 }, movement: { pan: 127, tilt: 127, spread: 70 }, gobo: 128, prism: 200, zoom: 180, shutter: 255 },
 ];
 
+const PICK_ONLY_TEMPLATES: SceneSeedTemplate[] = [
+  { id: 'full-red', label: 'Full Red', intensity: 255, color: { red: 255, green: 0, blue: 0 }, colorWheel: COLOR_WHEEL_VALUES.red, shutter: 255 },
+  { id: 'full-blue', label: 'Full Blue', intensity: 255, color: { red: 0, green: 20, blue: 255 }, colorWheel: COLOR_WHEEL_VALUES.blue, shutter: 255 },
+  { id: 'full-green', label: 'Full Green', intensity: 255, color: { red: 0, green: 255, blue: 0 }, colorWheel: COLOR_WHEEL_VALUES.green, shutter: 255 },
+  { id: 'solid-amber', label: 'Solid Amber', intensity: 255, color: { red: 255, green: 120, blue: 0, amber: 255 }, colorWheel: COLOR_WHEEL_VALUES.amber, shutter: 255 },
+  { id: 'solid-cyan', label: 'Solid Cyan', intensity: 255, color: { red: 0, green: 255, blue: 255 }, colorWheel: COLOR_WHEEL_VALUES.cyan, shutter: 255 },
+  { id: 'heads-move-slow', label: 'Heads Move Slow', intensity: 235, color: { red: 220, green: 230, blue: 255, white: 180 }, colorWheel: COLOR_WHEEL_VALUES.open, movement: { pan: 80, tilt: 140 }, gobo: 0, zoom: 140, shutter: 255, animation: 'movement-slow', durationMs: 12000, fixtureScope: 'movers' },
+  { id: 'heads-move-wide', label: 'Heads Move Wide', intensity: 230, color: { red: 255, green: 255, blue: 255, white: 120 }, movement: { pan: 127, tilt: 130, spread: 64 }, zoom: 160, shutter: 255, animation: 'movement-slow', durationMs: 10000, fixtureScope: 'movers' },
+  { id: 'washes-full-red', label: 'Washes Full Red', intensity: 255, color: { red: 255, green: 0, blue: 0 }, colorWheel: COLOR_WHEEL_VALUES.red, shutter: 255, fixtureScope: 'washes' },
+  { id: 'washes-full-blue', label: 'Washes Full Blue', intensity: 255, color: { red: 0, green: 20, blue: 255 }, colorWheel: COLOR_WHEEL_VALUES.blue, shutter: 255, fixtureScope: 'washes' },
+];
+
+export const SCENE_SEED_PICK_TEMPLATE_IDS = [
+  'full-red',
+  'full-blue',
+  'full-green',
+  'solid-amber',
+  'solid-cyan',
+  'washes-full-red',
+  'washes-full-blue',
+  'warm-wash',
+  'cool-wash',
+  'heads-move-slow',
+  'heads-move-wide',
+  'move-slow',
+  'left-sweep',
+  'right-sweep',
+  'center-spot',
+  'gobo-texture',
+  'wash-slow',
+  'amber-glow',
+  'blackout',
+  'full-open',
+] as const;
+
+const ALL_SCENE_TEMPLATES: SceneSeedTemplate[] = [...SMART_TEMPLATES, ...PICK_ONLY_TEMPLATES];
+
 const COMPACT_TEMPLATE_IDS = new Set([
   'blackout',
   'full-open',
@@ -224,10 +278,64 @@ function allTargets(fixtures: Fixture[]): FixtureChannelTarget[] {
   return targets;
 }
 
+function filterFixturesByIds(fixtures: Fixture[], fixtureIds?: string[]): Fixture[] {
+  if (!fixtureIds || fixtureIds.length === 0) return fixtures;
+  const allowed = new Set(fixtureIds);
+  return fixtures.filter((fixture) => allowed.has(fixture.id));
+}
+
+function isMoverFixture(fixture: Fixture): boolean {
+  const types = fixture.channels.map((channel) => normalizeChannelType(channel.type));
+  return types.some((type) => type === 'pan' || type.includes('pan'))
+    && types.some((type) => type === 'tilt' || type.includes('tilt'));
+}
+
+function isWashFixture(fixture: Fixture): boolean {
+  if (isMoverFixture(fixture)) return false;
+  return fixture.channels.some((channel) => {
+    const type = normalizeChannelType(channel.type);
+    return type === 'red' || type === 'green' || type === 'blue' || type === 'dimmer' || type.includes('intensity');
+  });
+}
+
+function scopeTargets(
+  targets: FixtureChannelTarget[],
+  scope: SceneSeedFixtureScope = 'all'
+): FixtureChannelTarget[] {
+  if (scope === 'all') return targets;
+  return targets.filter((target) => {
+    if (scope === 'movers') return isMoverFixture(target.fixture);
+    return isWashFixture(target.fixture);
+  });
+}
+
+function resolveDeck(options: SceneSeedOptions): Apc40Deck {
+  if (options.deck) return options.deck;
+  return options.target === 'deck-b' ? 'B' : 'A';
+}
+
+function resolveSlotIndex(slot?: number): number {
+  const slotNumber = slot ?? 1;
+  return Math.max(0, Math.min(39, slotNumber - 1));
+}
+
+function findSceneSeedTemplate(templateId?: string): SceneSeedTemplate | undefined {
+  if (!templateId) return undefined;
+  return ALL_SCENE_TEMPLATES.find((template) => template.id === templateId);
+}
+
 function matchesRole(target: FixtureChannelTarget, aliases: string[]): boolean {
   return aliases.some((alias) => {
     const normalized = normalizeChannelType(alias);
-    return target.type === normalized || target.type.includes(normalized) || normalized.includes(target.type);
+    if (target.type === normalized) return true;
+    if (normalized.length <= 2) {
+      return (
+        target.type.startsWith(`${normalized}_`) ||
+        target.type.endsWith(`_${normalized}`) ||
+        target.type === `${normalized}1`
+      );
+    }
+    return target.type.includes(normalized) || normalized.includes(target.type);
   });
 }
 
@@ -445,27 +553,28 @@ function applyTemplate(
   includeAutomation: boolean,
   avoidStrobe: boolean
 ): Pick<Scene, 'channelValues' | 'timeline'> {
+  const scopedTargets = scopeTargets(fixtureTargets, template.fixtureScope ?? 'all');
   const values = new Array(512).fill(0);
-  const dimmer = targetsForRole(fixtureTargets, 'dimmer');
-  const red = targetsForRole(fixtureTargets, 'red');
-  const green = targetsForRole(fixtureTargets, 'green');
-  const blue = targetsForRole(fixtureTargets, 'blue');
-  const white = targetsForRole(fixtureTargets, 'white');
-  const amber = targetsForRole(fixtureTargets, 'amber');
-  const uv = targetsForRole(fixtureTargets, 'uv');
-  const colorWheel = targetsForRole(fixtureTargets, 'colorWheel');
-  const pan = targetsForRole(fixtureTargets, 'pan');
-  const tilt = targetsForRole(fixtureTargets, 'tilt');
-  const gobo = targetsForRole(fixtureTargets, 'gobo');
-  const goboRotation = targetsForRole(fixtureTargets, 'goboRotation');
-  const prism = targetsForRole(fixtureTargets, 'prism');
-  const iris = targetsForRole(fixtureTargets, 'iris');
-  const focus = targetsForRole(fixtureTargets, 'focus');
-  const zoom = targetsForRole(fixtureTargets, 'zoom');
-  const strobe = targetsForRole(fixtureTargets, 'strobe');
-  const shutter = targetsForRole(fixtureTargets, 'shutter');
-  const macro = targetsForRole(fixtureTargets, 'macro');
-  const speed = targetsForRole(fixtureTargets, 'speed');
+  const dimmer = targetsForRole(scopedTargets, 'dimmer');
+  const red = targetsForRole(scopedTargets, 'red');
+  const green = targetsForRole(scopedTargets, 'green');
+  const blue = targetsForRole(scopedTargets, 'blue');
+  const white = targetsForRole(scopedTargets, 'white');
+  const amber = targetsForRole(scopedTargets, 'amber');
+  const uv = targetsForRole(scopedTargets, 'uv');
+  const colorWheel = targetsForRole(scopedTargets, 'colorWheel');
+  const pan = targetsForRole(scopedTargets, 'pan');
+  const tilt = targetsForRole(scopedTargets, 'tilt');
+  const gobo = targetsForRole(scopedTargets, 'gobo');
+  const goboRotation = targetsForRole(scopedTargets, 'goboRotation');
+  const prism = targetsForRole(scopedTargets, 'prism');
+  const iris = targetsForRole(scopedTargets, 'iris');
+  const focus = targetsForRole(scopedTargets, 'focus');
+  const zoom = targetsForRole(scopedTargets, 'zoom');
+  const strobe = targetsForRole(scopedTargets, 'strobe');
+  const shutter = targetsForRole(scopedTargets, 'shutter');
+  const macro = targetsForRole(scopedTargets, 'macro');
+  const speed = targetsForRole(scopedTargets, 'speed');
 
   if ((template.intensity ?? 0) > 0) {
     writeTargets(values, dimmer, template.intensity ?? 220);
@@ -501,8 +610,8 @@ function applyTemplate(
   if (template.speed !== undefined) writeTargets(values, speed, template.speed);
 
   const timelineTargets = avoidStrobe
-    ? fixtureTargets.filter((target) => !matchesRole(target, ROLE_ALIASES.strobe))
-    : fixtureTargets;
+    ? scopedTargets.filter((target) => !matchesRole(target, ROLE_ALIASES.strobe))
+    : scopedTargets;
   const timeline = createTimeline(template, values, timelineTargets, includeAutomation, avoidStrobe);
   return { channelValues: values, timeline };
 }
@@ -529,6 +638,14 @@ function isStrobeTemplate(template: SceneSeedTemplate): boolean {
     (template.strobe ?? 0) > 0 ||
     /\bstrobe\b/i.test(`${template.id} ${template.label}`)
   );
+}
+
+export function listSceneSeedPickTemplates(avoidStrobe: boolean): SceneSeedTemplate[] {
+  const byId = new Map(ALL_SCENE_TEMPLATES.map((template) => [template.id, template] as const));
+  const templates = SCENE_SEED_PICK_TEMPLATE_IDS
+    .map((id) => byId.get(id))
+    .filter((template): template is SceneSeedTemplate => Boolean(template));
+  return avoidStrobe ? templates.filter((template) => !isStrobeTemplate(template)) : templates;
 }
 
 function templatesForOptions(options: SceneSeedOptions): SceneSeedTemplate[] {
@@ -619,35 +736,11 @@ function capabilityLabels(targets: FixtureChannelTarget[], avoidStrobe: boolean)
   return labels.filter(([, roleTargets]) => roleTargets.length > 0).map(([label]) => label as string);
 }
 
-export function generateSeededSceneList(
-  fixtures: Fixture[],
+function mergeGeneratedScenes(
   existingScenes: Scene[],
-  partialOptions: Partial<SceneSeedOptions> = {}
+  generatedScenes: Scene[],
+  options: SceneSeedOptions
 ): SceneSeedSummary {
-  const options: SceneSeedOptions = { ...DEFAULT_OPTIONS, ...partialOptions };
-  const fixtureTargets = allTargets(fixtures);
-
-  if (fixtures.length === 0 || fixtureTargets.length === 0) {
-    return {
-      scenes: existingScenes,
-      generatedScenes: [],
-      created: 0,
-      refreshed: 0,
-      skipped: 0,
-      capabilities: [],
-      disabledReason: 'Add fixtures before seeding scenes.',
-    };
-  }
-
-  const generatedScenes: Scene[] = [];
-  const templates = templatesForOptions(options);
-  decksForOptions(options).forEach((deck) => {
-    templates.forEach((template, slot) => {
-      const deckTemplate = deck === 'B' ? deckBVariant(template) : template;
-      generatedScenes.push(buildScene(deckTemplate, fixtureTargets, options, deck, slot));
-    });
-  });
-
   const seedNames = new Set(generatedScenes.map((scene) => scene.name));
   const existingByName = new Map(existingScenes.map((scene) => [scene.name, scene]));
   const handmadeScenes = existingScenes.filter((scene) => {
@@ -659,7 +752,6 @@ export function generateSeededSceneList(
     const existing = existingByName.get(scene.name);
     return existing && !isSeedScene(existing);
   });
-
   const allowedGeneratedScenes = generatedScenes.filter((scene) => {
     const existing = existingByName.get(scene.name);
     return !existing || isSeedScene(existing);
@@ -673,6 +765,150 @@ export function generateSeededSceneList(
     created,
     refreshed,
     skipped: blockedByHandmade.length,
+    capabilities: [],
+  };
+}
+
+export function captureSelectionToApcSlot(
+  fixtures: Fixture[],
+  dmxChannels: number[],
+  existingScenes: Scene[],
+  options: CaptureSelectionToSlotOptions
+): SceneSeedSummary {
+  if (fixtures.length === 0 || options.selectedFixtureIds.length === 0) {
+    return {
+      scenes: existingScenes,
+      generatedScenes: [],
+      created: 0,
+      refreshed: 0,
+      skipped: 0,
+      capabilities: [],
+      disabledReason: 'Select fixtures before capturing a scene slot.',
+    };
+  }
+
+  const slotIndex = resolveSlotIndex(options.slot);
+  const deck = options.deck;
+  const name = apc40DeckSceneName(deck, slotIndex);
+  const existing = existingScenes.find((scene) => scene.name === name);
+  const baseValues = options.mergeFromExistingSlot !== false && existing
+    ? [...existing.channelValues]
+    : [...dmxChannels];
+  const channelValues = baseValues.length >= 512 ? baseValues.slice(0, 512) : [...baseValues, ...new Array(512 - baseValues.length).fill(0)];
+
+  const selectedFixtures = filterFixturesByIds(fixtures, options.selectedFixtureIds);
+  selectedFixtures.forEach((fixture) => {
+    fixture.channels.forEach((channel, channelIndex) => {
+      const type = normalizeChannelType(channel.type);
+      if (isUnsafeChannelType(type)) return;
+      const dmxIndex = fixtureDmxIndex(fixture, channelIndex);
+      if (dmxIndex < 0 || dmxIndex >= 512) return;
+      channelValues[dmxIndex] = dmxChannels[dmxIndex] ?? 0;
+    });
+  });
+
+  const scene: Scene = {
+    name,
+    oscAddress: sceneNameToOscPath(name),
+    channelValues,
+    seed: {
+      generatedBy: SCENE_SEED_GENERATOR_ID,
+      generatorVersion: SCENE_SEED_GENERATOR_VERSION,
+      packId: 'smart-starter-40',
+      templateId: 'capture-selection',
+      deck,
+      slot: slotIndex + 1,
+      label: `Capture ${selectedFixtures.length} fixture${selectedFixtures.length === 1 ? '' : 's'}`,
+      automated: false,
+    },
+  };
+
+  const merged = mergeGeneratedScenes(existingScenes, [scene], {
+    packId: 'smart-starter-40',
+    target: deck === 'B' ? 'deck-b' : 'deck-a',
+    includeAutomation: false,
+    avoidStrobe: false,
+    mode: 'capture-selection',
+    slot: options.slot,
+    deck,
+  });
+
+  return {
+    ...merged,
+    capabilities: [`Captured ${selectedFixtures.length} selected fixture${selectedFixtures.length === 1 ? '' : 's'}`],
+  };
+}
+
+export function generateSeededSceneList(
+  fixtures: Fixture[],
+  existingScenes: Scene[],
+  partialOptions: Partial<SceneSeedOptions> = {}
+): SceneSeedSummary {
+  const options: SceneSeedOptions = { ...DEFAULT_OPTIONS, ...partialOptions };
+  const scopedFixtures = filterFixturesByIds(fixtures, options.fixtureIds);
+  const fixtureTargets = allTargets(scopedFixtures);
+
+  if (fixtures.length === 0 || fixtureTargets.length === 0) {
+    return {
+      scenes: existingScenes,
+      generatedScenes: [],
+      created: 0,
+      refreshed: 0,
+      skipped: 0,
+      capabilities: [],
+      disabledReason: options.fixtureIds?.length
+        ? 'Selected fixtures have no writable DMX channels.'
+        : 'Add fixtures before seeding scenes.',
+    };
+  }
+
+  if (options.mode === 'single-slot') {
+    const template = findSceneSeedTemplate(options.templateId);
+    if (!template) {
+      return {
+        scenes: existingScenes,
+        generatedScenes: [],
+        created: 0,
+        refreshed: 0,
+        skipped: 0,
+        capabilities: [],
+        disabledReason: 'Choose a look template before seeding this slot.',
+      };
+    }
+    if (options.avoidStrobe && isStrobeTemplate(template)) {
+      return {
+        scenes: existingScenes,
+        generatedScenes: [],
+        created: 0,
+        refreshed: 0,
+        skipped: 0,
+        capabilities: [],
+        disabledReason: 'That look is blocked while NO STROBE safety mode is enabled.',
+      };
+    }
+
+    const deck = resolveDeck(options);
+    const slotIndex = resolveSlotIndex(options.slot);
+    const scene = buildScene(template, fixtureTargets, options, deck, slotIndex);
+    const merged = mergeGeneratedScenes(existingScenes, [scene], options);
+    return {
+      ...merged,
+      capabilities: capabilityLabels(fixtureTargets, options.avoidStrobe),
+    };
+  }
+
+  const generatedScenes: Scene[] = [];
+  const templates = templatesForOptions(options);
+  decksForOptions(options).forEach((deck) => {
+    templates.forEach((template, slot) => {
+      const deckTemplate = deck === 'B' ? deckBVariant(template) : template;
+      generatedScenes.push(buildScene(deckTemplate, fixtureTargets, options, deck, slot));
+    });
+  });
+
+  const merged = mergeGeneratedScenes(existingScenes, generatedScenes, options);
+  return {
+    ...merged,
     capabilities: capabilityLabels(fixtureTargets, options.avoidStrobe),
   };
 }

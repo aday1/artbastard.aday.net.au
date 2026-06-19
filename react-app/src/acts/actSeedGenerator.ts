@@ -5,11 +5,17 @@ export const ACT_SEED_GENERATOR_ID = 'artbastard-act-seeder';
 export const ACT_SEED_GENERATOR_VERSION = 1;
 
 export type ActSeedPackId = 'starter-acts' | 'performance-acts';
+export type ActSeedMode = 'pack' | 'single-template' | 'from-scenes';
 
 export interface ActSeedOptions {
   packId: ActSeedPackId;
   includeTriggers: boolean;
   avoidStrobe: boolean;
+  mode?: ActSeedMode;
+  templateId?: string;
+  /** APC Scene Launch button slot, 1-5. */
+  actSlot?: number;
+  sceneNames?: string[];
 }
 
 export interface ActSeedSummary {
@@ -184,6 +190,103 @@ const PERFORMANCE_TEMPLATES: ActSeedTemplate[] = [
     ],
   },
 ];
+
+export const ACT_SEED_PICK_TEMPLATE_IDS = [
+  'color-warmup',
+  'red-slow',
+  'wash-fast',
+  'gobo-texture',
+  'opening-build',
+  'movement-sweep',
+  'finale-punch',
+] as const;
+
+function allActTemplates(): ActSeedTemplate[] {
+  return PERFORMANCE_TEMPLATES;
+}
+
+export function listActSeedPickTemplates(avoidStrobe: boolean): ActSeedTemplate[] {
+  const byId = new Map(allActTemplates().map((template) => [template.id, template] as const));
+  const templates = ACT_SEED_PICK_TEMPLATE_IDS
+    .map((id) => byId.get(id))
+    .filter((template): template is ActSeedTemplate => Boolean(template));
+  if (!avoidStrobe) return templates;
+  return templates.map(sanitizeTemplateForNoStrobe).filter((template): template is ActSeedTemplate => Boolean(template));
+}
+
+function findActSeedTemplate(templateId?: string): ActSeedTemplate | undefined {
+  if (!templateId) return undefined;
+  return allActTemplates().find((template) => template.id === templateId);
+}
+
+function resolveActSlotIndex(actSlot?: number): number {
+  const slotNumber = actSlot ?? 1;
+  return Math.max(0, Math.min(4, slotNumber - 1));
+}
+
+function buildActFromSceneNames(
+  sceneNames: string[],
+  scenes: Scene[],
+  options: ActSeedOptions,
+  slotIndex: number,
+  existing?: Act
+): Act | null {
+  const availableScenes = options.avoidStrobe ? scenes.filter((scene) => !isStrobeScene(scene)) : scenes;
+  const pickedScenes = sceneNames
+    .map((name) => availableScenes.find((scene) => scene.name === name))
+    .filter((scene): scene is Scene => Boolean(scene));
+
+  if (pickedScenes.length === 0) return null;
+
+  let cursor = 0;
+  const steps: ActStep[] = pickedScenes.map((scene, index) => {
+    const step: ActStep = {
+      id: `seed-step-selection-${index + 1}`,
+      sceneName: scene.name,
+      duration: 8000,
+      startTime: cursor,
+      transitionDuration: 1200,
+      notes: `Selected scene ${index + 1}.`,
+    };
+    cursor += step.duration;
+    return step;
+  });
+
+  const actId = `seed-act-from-scenes-${slotIndex + 1}`;
+  const label = `Selection ${String(slotIndex + 1).padStart(2, '0')}`;
+  const now = Date.now();
+
+  return {
+    id: actId,
+    name: `ACT Seed ${String(slotIndex + 1).padStart(2, '0')} - ${label}`,
+    description: `Built from ${pickedScenes.length} selected scene${pickedScenes.length === 1 ? '' : 's'}. Edit, delete, or ignore whenever you want.`,
+    steps,
+    loopMode: 'none',
+    totalDuration: totalDurationForSteps(steps),
+    triggers: buildTriggers(actId, {
+      id: 'selection',
+      label,
+      description: 'Selected scenes ACT.',
+      loopMode: 'none',
+      playbackMode: 'once',
+      steps: [],
+    }, options.includeTriggers),
+    timelineEvents: [],
+    createdAt: existing?.createdAt ?? now,
+    updatedAt: now,
+    playbackMode: 'once',
+    playbackSpeed: 1,
+    markers: markersForSteps(steps),
+    seed: {
+      generatedBy: ACT_SEED_GENERATOR_ID,
+      generatorVersion: ACT_SEED_GENERATOR_VERSION,
+      packId: options.packId,
+      templateId: 'from-scenes',
+      slot: slotIndex + 1,
+      label,
+    },
+  };
+}
 
 function step(
   sceneKeys: string[],
@@ -401,11 +504,101 @@ export function generateSeededActList(
 
   const existingById = new Map(existingActs.map((act) => [act.id, act]));
   const existingByName = new Map(existingActs.map((act) => [act.name, act]));
+
+  if (options.mode === 'from-scenes') {
+    const slotIndex = resolveActSlotIndex(options.actSlot);
+    const sceneNames = (options.sceneNames ?? []).filter(Boolean);
+    if (sceneNames.length === 0) {
+      return {
+        acts: existingActs,
+        generatedActs: [],
+        created: 0,
+        refreshed: 0,
+        skipped: 0,
+        sceneCount: scenes.length,
+        disabledReason: 'Choose one or more scenes before building this ACT slot.',
+      };
+    }
+
+    const actId = `seed-act-from-scenes-${slotIndex + 1}`;
+    const act = buildActFromSceneNames(sceneNames, scenes, options, slotIndex, existingById.get(actId));
+    if (!act) {
+      return {
+        acts: existingActs,
+        generatedActs: [],
+        created: 0,
+        refreshed: 0,
+        skipped: 0,
+        sceneCount: scenes.length,
+        disabledReason: 'None of the selected scenes could be used for this ACT.',
+      };
+    }
+
+    act.id = actId;
+    return finalizeGeneratedActs(existingActs, [act], options, scenes.length, existingById, existingByName);
+  }
+
+  if (options.mode === 'single-template') {
+    const template = findActSeedTemplate(options.templateId);
+    if (!template) {
+      return {
+        acts: existingActs,
+        generatedActs: [],
+        created: 0,
+        refreshed: 0,
+        skipped: 0,
+        sceneCount: scenes.length,
+        disabledReason: 'Choose an ACT template before seeding this slot.',
+      };
+    }
+
+    const sanitized = options.avoidStrobe ? sanitizeTemplateForNoStrobe(template) : template;
+    if (!sanitized) {
+      return {
+        acts: existingActs,
+        generatedActs: [],
+        created: 0,
+        refreshed: 0,
+        skipped: 0,
+        sceneCount: scenes.length,
+        disabledReason: 'That ACT is blocked while NO STROBE safety mode is enabled.',
+      };
+    }
+
+    const slotIndex = resolveActSlotIndex(options.actSlot);
+    const actId = `seed-act-${options.packId}-${sanitized.id}`;
+    const act = buildAct(sanitized, scenes, options, slotIndex + 1, existingById.get(actId));
+    if (act.steps.length === 0) {
+      return {
+        acts: existingActs,
+        generatedActs: [],
+        created: 0,
+        refreshed: 0,
+        skipped: 0,
+        sceneCount: scenes.length,
+        disabledReason: 'That ACT template could not match any scenes in your show.',
+      };
+    }
+
+    return finalizeGeneratedActs(existingActs, [act], options, scenes.length, existingById, existingByName);
+  }
+
   const generatedActs = templatesForPack(options.packId, options.avoidStrobe).map((template, index) => {
     const actId = `seed-act-${options.packId}-${template.id}`;
     return buildAct(template, scenes, options, index + 1, existingById.get(actId));
   }).filter((act) => act.steps.length > 0);
 
+  return finalizeGeneratedActs(existingActs, generatedActs, options, scenes.length, existingById, existingByName);
+}
+
+function finalizeGeneratedActs(
+  existingActs: Act[],
+  generatedActs: Act[],
+  options: ActSeedOptions,
+  sceneCount: number,
+  existingById: Map<string, Act>,
+  existingByName: Map<string, Act>
+): ActSeedSummary {
   const blocked = generatedActs.filter((act) => {
     const existingByGeneratedId = existingById.get(act.id);
     const existingByGeneratedName = existingByName.get(act.name);
@@ -431,7 +624,7 @@ export function generateSeededActList(
     created: allowed.length - refreshed,
     refreshed,
     skipped: blocked.length,
-    sceneCount: scenes.length,
+    sceneCount,
   };
 }
 
