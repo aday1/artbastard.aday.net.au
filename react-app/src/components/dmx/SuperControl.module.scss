@@ -2546,8 +2546,74 @@ $color-wheel-checker: repeating-conic-gradient(
 
 .panTiltControls {
   display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   justify-content: center;
   margin: 10px 0;
+}
+
+.panTiltTuning {
+  display: grid;
+  gap: 10px;
+  margin: 8px 0 12px;
+  padding: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.22);
+}
+
+.panTiltTuneRow {
+  display: grid;
+  gap: 6px;
+  color: var(--text-secondary, #94a3b8);
+  font-size: 0.78rem;
+
+  span {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  strong {
+    color: var(--text-primary, #f8fafc);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.panTiltTuneScale {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary, #94a3b8);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0;
+
+  span:last-child {
+    text-align: right;
+  }
+}
+
+.panTiltDefaultButton {
+  min-height: 26px;
+  padding: 0 10px;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  border-radius: 4px;
+  background: rgba(15, 23, 42, 0.45);
+  color: var(--text-primary, #f8fafc);
+  font: inherit;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    border-color: rgba(0, 212, 255, 0.55);
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
 }
 
 // Removed all react-grid-layout and drag/resize styles - using auto-layout instead

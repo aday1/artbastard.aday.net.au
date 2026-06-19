@@ -6,6 +6,7 @@ import {
   composeColourWheelFrame,
   paintColourWheel,
 } from '../../engines/roliColourWheel';
+import { isRoliTouchForRole } from '../../engines/roliRoleGuards';
 import {
   fixtureHasColorWheel,
   getFirstFixtureColorWheelSlots,
@@ -21,7 +22,6 @@ export const RoliColourWheel: React.FC = () => {
   const roli = useRoliLightpad({ role: 'colour-wheel' });
   const selectedIds = useStore((s) => s.selectedFixtures);
   const fixtures = useStore((s) => s.fixtures);
-  const applySuperControlMidi = useStore((s) => s.applySuperControlMidi);
 
   const [colour, setColour] = useState<ColourTriplet>(null);
   const lastTouchAtRef = useRef<number>(0);
@@ -72,7 +72,7 @@ export const RoliColourWheel: React.FC = () => {
       role?: string;
       sourceTransport?: string;
     }) => {
-      if (!ev || (ev.sourceTransport !== 'server' && ev.role && ev.role !== 'colour-wheel')) return;
+      if (!isRoliTouchForRole(ev, 'colour-wheel')) return;
       if (ev.phase === 'end') {
         liveCursorRef.current = null;
         if (ev.sourceTransport !== 'server') paintColourWheel();
@@ -89,9 +89,6 @@ export const RoliColourWheel: React.FC = () => {
         b: nearestWheelSlot ? parseInt(nearestWheelSlot.hex.slice(5, 7), 16) : c.b,
         hex: nearestWheelSlot?.hex ?? c.hex,
       });
-      if (nearestWheelSlot) {
-        applySuperControlMidi('color_wheel', nearestWheelSlot.value);
-      }
       window.dispatchEvent(new CustomEvent(ROLI_RGB_STRIP_CHANGE_EVENT, {
         detail: {
           r: c.r,
@@ -111,7 +108,7 @@ export const RoliColourWheel: React.FC = () => {
       roli.onTouch(null);
       window.removeEventListener('serverRoliTouch', handleServerRoliTouch);
     };
-  }, [applySuperControlMidi, colorWheelSlots, roli]);
+  }, [colorWheelSlots, roli]);
 
   const handleRepaint = useCallback(() => {
     liveCursorRef.current = null;

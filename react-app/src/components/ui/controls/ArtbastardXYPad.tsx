@@ -44,6 +44,8 @@ export interface ArtbastardXYPadProps {
   roliDeviceName?: string | null;
   /** Fires whenever the internal path mutates (drawing, shape, Roli touch). Normalized 0..1 coords. */
   onPathChange?: (points: Array<{ x: number; y: number }>) => void;
+  /** 0 = raw points, 1 = soft Catmull-Rom curve for saved/drawn paths. */
+  pathSmoothing?: number;
 }
 
 export interface ArtbastardXYPadHandle {
@@ -90,6 +92,7 @@ export const ArtbastardXYPad = forwardRef<ArtbastardXYPadHandle, ArtbastardXYPad
   roliConnected = false,
   roliDeviceName = null,
   onPathChange,
+  pathSmoothing = 0.6,
 }, ref) => {
   const padRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -136,7 +139,7 @@ export const ArtbastardXYPad = forwardRef<ArtbastardXYPadHandle, ArtbastardXYPad
       return;
     }
     ctx.clearRect(0, 0, w, h);
-    const processed = isPredefinedShape ? interpolatePath(path) : smoothUserPath(path);
+    const processed = isPredefinedShape ? smoothUserPath(interpolatePath(path), pathSmoothing) : smoothUserPath(path, pathSmoothing);
     const gradient = ctx.createLinearGradient(0, 0, w, h);
     gradient.addColorStop(0, 'rgba(207, 62, 223, 0.8)');
     gradient.addColorStop(1, 'rgba(207, 62, 223, 0.2)');
@@ -153,7 +156,7 @@ export const ArtbastardXYPad = forwardRef<ArtbastardXYPadHandle, ArtbastardXYPad
     });
     ctx.stroke();
     ctx.shadowBlur = 0;
-  }, [path, isPredefinedShape]);
+  }, [path, isPredefinedShape, pathSmoothing]);
 
   useEffect(() => {
     drawPath();
@@ -235,7 +238,8 @@ export const ArtbastardXYPad = forwardRef<ArtbastardXYPadHandle, ArtbastardXYPad
         pathToDmxPoints(
           path,
           padRef.current?.clientWidth ?? 320,
-          padRef.current?.clientHeight ?? 320
+          padRef.current?.clientHeight ?? 320,
+          pathSmoothing
         )
       );
     }
@@ -271,9 +275,9 @@ export const ArtbastardXYPad = forwardRef<ArtbastardXYPadHandle, ArtbastardXYPad
       lastAppliedShapeSizeRef.current = shapeSize;
       setIsPredefinedShape(true);
       setPath(newPath);
-      onPathSavedRef.current?.(pathToDmxPoints(newPath, padW, padH));
+      onPathSavedRef.current?.(pathToDmxPoints(newPath, padW, padH, pathSmoothing));
     },
-    [shapeRadiusPx, shapeSize, stopPlayback]
+    [pathSmoothing, shapeRadiusPx, shapeSize, stopPlayback]
   );
 
   const applyShape = () => {
@@ -323,9 +327,9 @@ export const ArtbastardXYPad = forwardRef<ArtbastardXYPadHandle, ArtbastardXYPad
       const pad = padRef.current;
       const w = pad?.clientWidth ?? 320;
       const h = pad?.clientHeight ?? 320;
-      onSaveToSlot(id, pathToDmxPoints(path, w, h));
+      onSaveToSlot(id, pathToDmxPoints(path, w, h, pathSmoothing));
     },
-    [onSaveToSlot, path]
+    [onSaveToSlot, path, pathSmoothing]
   );
 
   const handleSlotContext = useCallback(
@@ -396,7 +400,7 @@ export const ArtbastardXYPad = forwardRef<ArtbastardXYPadHandle, ArtbastardXYPad
             const pad = padRef.current;
             const w = pad?.clientWidth ?? 320;
             const h = pad?.clientHeight ?? 320;
-            onPathSavedRef.current?.(pathToDmxPoints(prev, w, h));
+            onPathSavedRef.current?.(pathToDmxPoints(prev, w, h, pathSmoothing));
           }
           return prev;
         });
@@ -405,7 +409,7 @@ export const ArtbastardXYPad = forwardRef<ArtbastardXYPadHandle, ArtbastardXYPad
         return canvasRef.current;
       },
     }),
-    [normToPx, stopPlayback]
+    [normToPx, pathSmoothing, stopPlayback]
   );
 
   return (

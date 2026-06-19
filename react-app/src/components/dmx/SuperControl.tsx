@@ -23,11 +23,13 @@ import { RoliColourWheel, ROLI_RGB_STRIP_CHANGE_EVENT } from './RoliColourWheel'
 import { colourFromTouch } from '../../engines/roliColourWheel';
 import { ROLI_GRID_COLS, ROLI_GRID_ROWS } from '../../engines/roliLightpad';
 import { paintApc40Crosshair } from '../../engines/apc40XyCrosshair';
+import { isRoliTouchForRole } from '../../engines/roliRoleGuards';
 import { SkeuoButton } from '../ui/SkeuoButton';
 import { SelectedChannelsFaderStrip } from './SelectedChannelsFaderStrip';
 import { StageMapDashboard } from '../fixtures/StageMapDashboard';
 import { debugLog } from '../../utils/debugLog';
 import { rangesToTickSteps } from '../../utils/fixtureChannelTicks';
+import { findMovementSpeedTargets, movementSpeedDmxValue } from '../../utils/movementSpeedChannels';
 import type { FixtureChannelRange } from '../../store/types';
 import { getFirstFixtureColorWheelSlots } from '../../fixtures/colorWheelSlots';
 import styles from './SuperControl.module.scss';
@@ -72,6 +74,9 @@ const SUPER_CONTROL_LAYOUT_KEY = 'artbastard.superControl.panelLayout.v8';
 const SUPER_CONTROL_LOCAL_MIDI_MAPPINGS_KEY = 'artbastard.superControl.localMidiMappings.v1';
 const SUPER_CONTROL_PATH_SLOTS_KEY = 'artbastard.superControl.pathSlots.v1';
 const SCENE_AUTO_SAVE_TOOLTIP = 'Reserved: automatic scene capture is not wired to a live trigger yet. Use Save Scene or MIDI Save to capture the current DMX look manually.';
+const ROLI_COLOR_TRANSITION_MS = 220;
+const ROLI_TOUCH_REPAINT_DELAY_MS = 85;
+const MOVEMENT_SNAP_DEFAULT_SPEED = 0.5;
 
 interface PathSlotData {
   id: PathSlotId;
@@ -613,6 +618,8 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
   const [green, setGreen] = useState(255);
   const [blue, setBlue] = useState(255);
   const [colorWheel, setColorWheel] = useState(0);
+  const roliColourStateRef = useRef({ r: 255, g: 255, b: 255, colorWheel: 0 });
+  const roliColourAnimationRef = useRef<number | null>(null);
   const [gobo, setGobo] = useState(0);
 
   const defaultGoboSteps = useMemo(
@@ -656,11 +663,25 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
   const [strobe, setStrobe] = useState(0);
   const [lamp, setLamp] = useState(255);
   const [reset, setReset] = useState(0);
+  const [movementSnapSpeed, setMovementSnapSpeed] = useState(MOVEMENT_SNAP_DEFAULT_SPEED);
 
   // XY Pad state
   const [panTiltXY, setPanTiltXY] = useState({ x: 50, y: 50 });
   const xyPadRef = useRef<HTMLDivElement>(null);
   const [isDraggingXY, setIsDraggingXY] = useState(false);
+
+  useEffect(() => {
+    roliColourStateRef.current = { r: red, g: green, b: blue, colorWheel };
+  }, [red, green, blue, colorWheel]);
+
+  useEffect(() => {
+    return () => {
+      if (roliColourAnimationRef.current !== null) {
+        window.cancelAnimationFrame(roliColourAnimationRef.current);
+        roliColourAnimationRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     try {
@@ -1542,18 +1563,57 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         colorWheelLabel?: string;
       }>).detail;
       if (!detail) return;
-      setRed(detail.r);
-      setGreen(detail.g);
-      setBlue(detail.b);
-      if (detail.colorWheelValue !== undefined) {
-        const value = clampDmxValue(detail.colorWheelValue);
-        setColorWheel(value);
-        setColorHue((value / 255) * 360);
-        setColorSaturation(100);
-        applyControl('color_wheel', value);
-        if (dimmer > 0) openEmissionGates(false);
+      const start = roliColourStateRef.current;
+      const target = {
+        r: clampDmxValue(detail.r),
+        g: clampDmxValue(detail.g),
+        b: clampDmxValue(detail.b),
+        colorWheel: detail.colorWheelValue !== undefined
+          ? clampDmxValue(detail.colorWheelValue)
+          : start.colorWheel,
+      };
+      const hasColorWheelTarget = detail.colorWheelValue !== undefined;
+      const startedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
+
+      if (roliColourAnimationRef.current !== null) {
+        window.cancelAnimationFrame(roliColourAnimationRef.current);
+        roliColourAnimationRef.current = null;
       }
-      updateRGB(detail.r, detail.g, detail.b);
+
+      if (hasColorWheelTarget && dimmer > 0) openEmissionGates(false);
+
+      const applyFrame = (progress: number) => {
+        const eased = 1 - Math.pow(1 - Math.max(0, Math.min(1, progress)), 3);
+        const next = {
+          r: clampDmxValue(start.r + (target.r - start.r) * eased),
+          g: clampDmxValue(start.g + (target.g - start.g) * eased),
+          b: clampDmxValue(start.b + (target.b - start.b) * eased),
+          colorWheel: clampDmxValue(start.colorWheel + (target.colorWheel - start.colorWheel) * eased),
+        };
+        roliColourStateRef.current = next;
+        setRed(next.r);
+        setGreen(next.g);
+        setBlue(next.b);
+        if (hasColorWheelTarget) {
+          setColorWheel(next.colorWheel);
+          setColorHue((next.colorWheel / 255) * 360);
+          setColorSaturation(100);
+          applyControl('color_wheel', next.colorWheel);
+        }
+        updateRGB(next.r, next.g, next.b);
+      };
+
+      const tick = (now: number) => {
+        const progress = Math.min(1, (now - startedAt) / ROLI_COLOR_TRANSITION_MS);
+        applyFrame(progress);
+        if (progress < 1) {
+          roliColourAnimationRef.current = window.requestAnimationFrame(tick);
+        } else {
+          roliColourAnimationRef.current = null;
+        }
+      };
+
+      roliColourAnimationRef.current = window.requestAnimationFrame(tick);
     };
 
     window.addEventListener(ROLI_RGB_STRIP_CHANGE_EVENT, handleRoliRgbStripChange);
@@ -1602,6 +1662,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
   // on touch-start, cleared on touch-end. Capped to bound memory on slow
   // strokes / dropped touch-end events.
   const trailRef = useRef<Array<{ x: number; y: number }>>([]);
+  const roliTouchRepaintTimerRef = useRef<number | null>(null);
   const [liveTouchVersion, setLiveTouchVersion] = useState(0);
   const paintRoliPanTiltFrame = useCallback(
     (
@@ -1614,6 +1675,35 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     },
     [roli.sendRawFrame]
   );
+  const scheduleRoliPanTiltRepaint = useCallback(
+    (
+      cursor: { x: number; y: number },
+      path: Array<{ x: number; y: number }>,
+      mode: 'live' | 'ghost' | 'health',
+      deviceId?: string,
+    ) => {
+      const repaintCursor = { x: cursor.x, y: cursor.y };
+      const repaintPath = path.slice(-200).map((point) => ({ x: point.x, y: point.y }));
+      if (roliTouchRepaintTimerRef.current !== null) {
+        window.clearTimeout(roliTouchRepaintTimerRef.current);
+      }
+      roliTouchRepaintTimerRef.current = window.setTimeout(() => {
+        roliTouchRepaintTimerRef.current = null;
+        if (mode === 'live' && !liveTouchRef.current) return;
+        paintRoliPanTiltFrame(repaintCursor, repaintPath, mode, deviceId);
+      }, ROLI_TOUCH_REPAINT_DELAY_MS);
+    },
+    [paintRoliPanTiltFrame]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (roliTouchRepaintTimerRef.current !== null) {
+        window.clearTimeout(roliTouchRepaintTimerRef.current);
+        roliTouchRepaintTimerRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!roli.handshakeDone) return;
@@ -1641,7 +1731,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
       role?: string;
       sourceTransport?: string;
     }) => {
-      if (!ev || (ev.sourceTransport !== 'server' && ev.role && ev.role !== 'primary')) return;
+      if (!isRoliTouchForRole(ev, 'primary')) return;
       // Always reflect the touch on the device + canvas, even without a
       // fixture selected. Pan/tilt writes are gated on selection further down.
       liveTouchRef.current =
@@ -1660,10 +1750,13 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
       // LED feedback: paint a readable crosshair + trail. On touch-end, leave
       // the completed stroke visible as a ghost trail instead of blanking.
       if (ev.sourceTransport !== 'server') {
+        const cursor = { x: ev.x, y: ev.y };
         if (ev.phase === 'end') {
-          paintRoliPanTiltFrame({ x: ev.x, y: ev.y }, trailRef.current, 'ghost', ev.deviceId);
+          paintRoliPanTiltFrame(cursor, trailRef.current, 'ghost', ev.deviceId);
+          scheduleRoliPanTiltRepaint(cursor, trailRef.current, 'ghost', ev.deviceId);
         } else {
-          paintRoliPanTiltFrame({ x: ev.x, y: ev.y }, trailRef.current, 'live', ev.deviceId);
+          paintRoliPanTiltFrame(cursor, trailRef.current, 'live', ev.deviceId);
+          scheduleRoliPanTiltRepaint(cursor, trailRef.current, 'live', ev.deviceId);
         }
       }
 
@@ -1721,7 +1814,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
       roli.onTouch(null);
       window.removeEventListener('serverRoliTouch', handleServerRoliTouch);
     };
-  }, [roli.onTouch, paintRoliPanTiltFrame]);
+  }, [roli.onTouch, paintRoliPanTiltFrame, scheduleRoliPanTiltRepaint]);
 
   // Ensure the pad is blanked on unmount / route-away so it doesn't keep
   // showing the last touch trail when the user navigates elsewhere.
@@ -2429,6 +2522,12 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
   };
 
   const hasSelection = getAffectedFixtures().length > 0;
+  const movementSpeedTargets = findMovementSpeedTargets(getAffectedFixtures());
+  const hasMovementSpeedControl = movementSpeedTargets.length > 0;
+  const movementSnapSpeedLabel =
+    Math.abs(movementSnapSpeed - MOVEMENT_SNAP_DEFAULT_SPEED) < 0.005
+      ? 'Default'
+      : `${Math.round(movementSnapSpeed * 100)}%`;
   const capabilities = getFixtureCapabilities();
   const hasChannelSelection = selectedChannels.length > 0;
   const hasColorWheelControl = hasControlType('color_wheel');
@@ -2447,6 +2546,14 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     })),
     [fixtures, groups, selectedCapabilities, selectedChannels, selectedFixtures, selectedGroups, selectionMode]
   );
+
+  const applyMovementSnapSpeed = (normalized: number) => {
+    const speed = clamp01(normalized);
+    setMovementSnapSpeed(speed);
+    movementSpeedTargets.forEach((target) => {
+      setDmxChannelValue(target.dmxAddress, movementSpeedDmxValue(target, speed));
+    });
+  };
 
   const handleSelectAllFixtures = () => {
     selectAllFixtures();
@@ -3407,6 +3514,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                 onClearSlot={clearSlot}
                 roliConnected={roli.connected}
                 roliDeviceName={roli.deviceName}
+                pathSmoothing={panTiltAutopilot.smoothing ?? 0.6}
               />
               {(() => {
                 // Keep the Roli touch handler ref in sync with the latest closures.
@@ -3463,6 +3571,61 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                   <LucideIcon name={roliAutoplayOnRelease ? 'Play' : 'Pause'} />
                   Auto-play on release: {roliAutoplayOnRelease ? 'ON' : 'OFF'}
                 </button>
+              </div>
+              <div className={styles.panTiltTuning}>
+                {hasMovementSpeedControl && (
+                  <div className={styles.panTiltTuneRow}>
+                    <span>
+                      Mover snap speed <strong>{movementSnapSpeedLabel}</strong>
+                    </span>
+                    <HorizontalFader
+                      min={0}
+                      max={1}
+                      step={0.01}
+                      value={movementSnapSpeed}
+                      disabled={!hasSelection}
+                      onChange={applyMovementSnapSpeed}
+                    />
+                    <div className={styles.panTiltTuneScale}>
+                      <span>Slowest</span>
+                      <button
+                        type="button"
+                        className={styles.panTiltDefaultButton}
+                        disabled={!hasSelection}
+                        onClick={() => applyMovementSnapSpeed(MOVEMENT_SNAP_DEFAULT_SPEED)}
+                      >
+                        Default
+                      </button>
+                      <span>Fastest</span>
+                    </div>
+                  </div>
+                )}
+                <label className={styles.panTiltTuneRow}>
+                  <span>
+                    Auto speed <strong>{(panTiltAutopilot.speed ?? 0.5).toFixed(2)}x</strong>
+                  </span>
+                  <HorizontalFader
+                    min={0.03}
+                    max={2}
+                    step={0.01}
+                    value={panTiltAutopilot.speed ?? 0.5}
+                    disabled={!hasSelection}
+                    onChange={(speed) => setPanTiltAutopilot({ speed })}
+                  />
+                </label>
+                <label className={styles.panTiltTuneRow}>
+                  <span>
+                    Path smoothing <strong>{Math.round((panTiltAutopilot.smoothing ?? 0.6) * 100)}%</strong>
+                  </span>
+                  <HorizontalFader
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    value={panTiltAutopilot.smoothing ?? 0.6}
+                    disabled={!hasSelection}
+                    onChange={(smoothing) => setPanTiltAutopilot({ smoothing })}
+                  />
+                </label>
               </div>
               <RoliColourWheel />
               <EnvelopePlaybackControls

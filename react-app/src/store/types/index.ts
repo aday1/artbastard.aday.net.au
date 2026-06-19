@@ -326,6 +326,7 @@ export interface PanTiltAutopilotConfig {
   syncToBPM: boolean;
   customPoints?: Array<{ x: number; y: number }>;
   customPath?: Array<{ x: number; y: number }>;
+  smoothing?: number;
   phase: number;
   repeatMode?: EnvelopeRepeatMode;
   loopDirection?: EnvelopeLoopDirection;

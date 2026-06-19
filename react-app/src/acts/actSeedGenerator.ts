@@ -9,6 +9,7 @@ export type ActSeedPackId = 'starter-acts' | 'performance-acts';
 export interface ActSeedOptions {
   packId: ActSeedPackId;
   includeTriggers: boolean;
+  avoidStrobe: boolean;
 }
 
 export interface ActSeedSummary {
@@ -193,14 +194,51 @@ function step(
   return { sceneKeys, duration, transitionDuration, notes };
 }
 
-function templatesForPack(packId: ActSeedPackId): ActSeedTemplate[] {
+function isStrobeText(value: string | undefined): boolean {
+  return /\bstrobe\b/i.test(value || '');
+}
+
+function stripStrobeStepKeys(stepTemplate: ActSeedStepTemplate): ActSeedStepTemplate | null {
+  const sceneKeys = stepTemplate.sceneKeys.filter((key) => !isStrobeText(key));
+  return sceneKeys.length > 0 ? { ...stepTemplate, sceneKeys } : null;
+}
+
+function isStrobeScene(scene: Scene): boolean {
+  return [
+    scene.name,
+    scene.oscAddress,
+    scene.seed?.label,
+    scene.seed?.templateId,
+  ].some(isStrobeText);
+}
+
+function isStrobeOnlyTemplate(template: ActSeedTemplate): boolean {
+  return isStrobeText(template.id) || isStrobeText(template.label);
+}
+
+function sanitizeTemplateForNoStrobe(template: ActSeedTemplate): ActSeedTemplate | null {
+  if (isStrobeOnlyTemplate(template)) return null;
+  const steps = template.steps.map(stripStrobeStepKeys).filter((step): step is ActSeedStepTemplate => Boolean(step));
+  if (steps.length === 0) return null;
+  return {
+    ...template,
+    description: `${template.description} Strobe steps and scene fallbacks are omitted in no-strobe mode.`,
+    steps,
+  };
+}
+
+function templatesForPack(packId: ActSeedPackId, avoidStrobe: boolean): ActSeedTemplate[] {
   const ids = MD_ACT_PACK_TEMPLATE_IDS[packId];
+  let templates: ActSeedTemplate[];
   if (ids && ids.length) {
     const byId = new Map(PERFORMANCE_TEMPLATES.map((t) => [t.id, t] as const));
     const picked = ids.map((id) => byId.get(id)).filter((t): t is ActSeedTemplate => Boolean(t));
-    if (picked.length) return picked;
+    templates = picked.length ? picked : (packId === 'performance-acts' ? PERFORMANCE_TEMPLATES : STARTER_TEMPLATES);
+  } else {
+    templates = packId === 'performance-acts' ? PERFORMANCE_TEMPLATES : STARTER_TEMPLATES;
   }
-  return packId === 'performance-acts' ? PERFORMANCE_TEMPLATES : STARTER_TEMPLATES;
+  if (!avoidStrobe) return templates;
+  return templates.map(sanitizeTemplateForNoStrobe).filter((template): template is ActSeedTemplate => Boolean(template));
 }
 
 function normalize(value: string | undefined): string {
@@ -233,12 +271,13 @@ function findSceneForStep(scenes: Scene[], sceneKeys: string[], fallbackIndex: n
     ?? scenes[fallbackIndex % scenes.length];
 }
 
-function buildSteps(template: ActSeedTemplate, scenes: Scene[]): ActStep[] {
+function buildSteps(template: ActSeedTemplate, scenes: Scene[], avoidStrobe: boolean): ActStep[] {
+  const availableScenes = avoidStrobe ? scenes.filter((scene) => !isStrobeScene(scene)) : scenes;
   const usedSceneNames = new Set<string>();
   let cursor = 0;
 
   return template.steps.reduce<ActStep[]>((steps, stepTemplate, index) => {
-    const scene = findSceneForStep(scenes, stepTemplate.sceneKeys, index, usedSceneNames);
+    const scene = findSceneForStep(availableScenes, stepTemplate.sceneKeys, index, usedSceneNames);
     if (!scene) return steps;
     usedSceneNames.add(scene.name);
 
@@ -292,6 +331,10 @@ function isSeedAct(act: Act | undefined): boolean {
   return act?.seed?.generatedBy === ACT_SEED_GENERATOR_ID;
 }
 
+function isStrobeSeedAct(act: Act): boolean {
+  return isStrobeText(`${act.seed?.templateId || ''} ${act.seed?.label || ''} ${act.name}`);
+}
+
 function buildAct(
   template: ActSeedTemplate,
   scenes: Scene[],
@@ -301,7 +344,7 @@ function buildAct(
 ): Act {
   const actId = `seed-act-${options.packId}-${template.id}`;
   const name = `ACT Seed ${String(slot).padStart(2, '0')} - ${template.label}`;
-  const steps = buildSteps(template, scenes);
+  const steps = buildSteps(template, scenes, options.avoidStrobe);
   const totalDuration = totalDurationForSteps(steps);
   const now = Date.now();
 
@@ -340,6 +383,7 @@ export function generateSeededActList(
   const options: ActSeedOptions = {
     packId: 'starter-acts',
     includeTriggers: true,
+    avoidStrobe: false,
     ...partialOptions,
   };
 
@@ -357,10 +401,10 @@ export function generateSeededActList(
 
   const existingById = new Map(existingActs.map((act) => [act.id, act]));
   const existingByName = new Map(existingActs.map((act) => [act.name, act]));
-  const generatedActs = templatesForPack(options.packId).map((template, index) => {
+  const generatedActs = templatesForPack(options.packId, options.avoidStrobe).map((template, index) => {
     const actId = `seed-act-${options.packId}-${template.id}`;
     return buildAct(template, scenes, options, index + 1, existingById.get(actId));
-  });
+  }).filter((act) => act.steps.length > 0);
 
   const blocked = generatedActs.filter((act) => {
     const existingByGeneratedId = existingById.get(act.id);
@@ -376,6 +420,7 @@ export function generateSeededActList(
   const allowedNames = new Set(allowed.map((act) => act.name));
   const preservedActs = existingActs.filter((act) => {
     if (!isSeedAct(act)) return true;
+    if (options.avoidStrobe && isStrobeSeedAct(act)) return false;
     return !allowedIds.has(act.id) && !allowedNames.has(act.name);
   });
   const refreshed = allowed.filter((act) => isSeedAct(existingById.get(act.id)) || isSeedAct(existingByName.get(act.name))).length;

@@ -24,6 +24,7 @@ export interface SceneSeedOptions {
   packId: SceneSeedPackId;
   target: SceneSeedTarget;
   includeAutomation: boolean;
+  avoidStrobe: boolean;
 }
 
 export interface SceneSeedSummary {
@@ -84,6 +85,7 @@ const DEFAULT_OPTIONS: SceneSeedOptions = {
   packId: 'smart-starter-40',
   target: 'deck-a',
   includeAutomation: false,
+  avoidStrobe: false,
 };
 
 export const SCENE_SEED_PACKS: Array<{ id: SceneSeedPackId; label: string; description: string }> =
@@ -293,6 +295,12 @@ function writeRangeAware(values: number[], targets: FixtureChannelTarget[], valu
   });
 }
 
+function writeNoStrobe(values: number[], targets: FixtureChannelTarget[]): void {
+  targets.forEach((target) => {
+    values[target.dmxIndex] = rangeValue(target, ['no strobe', 'strobe off', 'open', 'off'], 0);
+  });
+}
+
 function fixtureOffset(target: FixtureChannelTarget): number {
   const fixtureNumber = target.fixture.name.match(/(\d+)/)?.[1];
   return fixtureNumber ? Number(fixtureNumber) : Math.abs(hashString(target.fixture.id || target.fixture.name));
@@ -328,9 +336,11 @@ function createTimeline(
   template: SceneSeedTemplate,
   values: number[],
   targets: FixtureChannelTarget[],
-  includeAutomation: boolean
+  includeAutomation: boolean,
+  avoidStrobe: boolean
 ): SceneTimeline | undefined {
   if (!includeAutomation || !template.animation || template.animation === 'none') return undefined;
+  if (avoidStrobe && (template.animation === 'strobe' || template.animation === 'strobe-move')) return undefined;
 
   const duration = template.durationMs ?? 4000;
   const dimmer = targetsForRole(targets, 'dimmer').map((target) => target.dmxIndex);
@@ -429,7 +439,12 @@ function createTimeline(
   };
 }
 
-function applyTemplate(template: SceneSeedTemplate, fixtureTargets: FixtureChannelTarget[], includeAutomation: boolean): Pick<Scene, 'channelValues' | 'timeline'> {
+function applyTemplate(
+  template: SceneSeedTemplate,
+  fixtureTargets: FixtureChannelTarget[],
+  includeAutomation: boolean,
+  avoidStrobe: boolean
+): Pick<Scene, 'channelValues' | 'timeline'> {
   const values = new Array(512).fill(0);
   const dimmer = targetsForRole(fixtureTargets, 'dimmer');
   const red = targetsForRole(fixtureTargets, 'red');
@@ -454,7 +469,7 @@ function applyTemplate(template: SceneSeedTemplate, fixtureTargets: FixtureChann
 
   if ((template.intensity ?? 0) > 0) {
     writeTargets(values, dimmer, template.intensity ?? 220);
-    writeRangeAware(values, shutter, template.shutter ?? 255, ['open', 'on']);
+    writeRangeAware(values, shutter, template.shutter ?? 255, avoidStrobe ? ['open', 'on', 'no strobe'] : ['open', 'on']);
   } else {
     writeTargets(values, dimmer, 0);
     writeTargets(values, shutter, template.shutter ?? 0);
@@ -477,11 +492,18 @@ function applyTemplate(template: SceneSeedTemplate, fixtureTargets: FixtureChann
   if (template.iris !== undefined) writeRangeAware(values, iris, template.iris);
   if (template.focus !== undefined) writeTargets(values, focus, template.focus);
   if (template.zoom !== undefined) writeTargets(values, zoom, template.zoom);
-  if (template.strobe !== undefined) writeRangeAware(values, strobe, template.strobe, ['strobe', 'flash']);
+  if (avoidStrobe) {
+    writeNoStrobe(values, strobe);
+  } else if (template.strobe !== undefined) {
+    writeRangeAware(values, strobe, template.strobe, ['strobe', 'flash']);
+  }
   if (template.macro !== undefined) writeRangeAware(values, macro, template.macro);
   if (template.speed !== undefined) writeTargets(values, speed, template.speed);
 
-  const timeline = createTimeline(template, values, fixtureTargets, includeAutomation);
+  const timelineTargets = avoidStrobe
+    ? fixtureTargets.filter((target) => !matchesRole(target, ROLE_ALIASES.strobe))
+    : fixtureTargets;
+  const timeline = createTimeline(template, values, timelineTargets, includeAutomation, avoidStrobe);
   return { channelValues: values, timeline };
 }
 
@@ -498,6 +520,20 @@ function selectedTemplates(packId: SceneSeedPackId): SceneSeedTemplate[] {
   }
   if (packId === 'compact-starter') return compactTemplates();
   return SMART_TEMPLATES;
+}
+
+function isStrobeTemplate(template: SceneSeedTemplate): boolean {
+  return (
+    template.animation === 'strobe' ||
+    template.animation === 'strobe-move' ||
+    (template.strobe ?? 0) > 0 ||
+    /\bstrobe\b/i.test(`${template.id} ${template.label}`)
+  );
+}
+
+function templatesForOptions(options: SceneSeedOptions): SceneSeedTemplate[] {
+  const templates = selectedTemplates(options.packId);
+  return options.avoidStrobe ? templates.filter((template) => !isStrobeTemplate(template)) : templates;
 }
 
 function decksForOptions(options: SceneSeedOptions): Apc40Deck[] {
@@ -536,6 +572,10 @@ function isSeedScene(scene: Scene | undefined): boolean {
   return scene?.seed?.generatedBy === SCENE_SEED_GENERATOR_ID;
 }
 
+function isStrobeSeedScene(scene: Scene): boolean {
+  return /\bstrobe\b/i.test(`${scene.seed?.templateId || ''} ${scene.seed?.label || ''} ${scene.name}`);
+}
+
 function buildScene(
   template: SceneSeedTemplate,
   fixtureTargets: FixtureChannelTarget[],
@@ -543,7 +583,7 @@ function buildScene(
   deck: Apc40Deck,
   slot: number
 ): Scene {
-  const sceneData = applyTemplate(template, fixtureTargets, options.includeAutomation);
+  const sceneData = applyTemplate(template, fixtureTargets, options.includeAutomation, options.avoidStrobe);
   const name = apc40DeckSceneName(deck, slot);
   const seed: SceneSeedMetadata = {
     generatedBy: SCENE_SEED_GENERATOR_ID,
@@ -565,7 +605,7 @@ function buildScene(
   };
 }
 
-function capabilityLabels(targets: FixtureChannelTarget[]): string[] {
+function capabilityLabels(targets: FixtureChannelTarget[], avoidStrobe: boolean): string[] {
   const labels = [
     ['Dimmer', targetsForRole(targets, 'dimmer')],
     ['RGB', [...targetsForRole(targets, 'red'), ...targetsForRole(targets, 'green'), ...targetsForRole(targets, 'blue')]],
@@ -574,7 +614,7 @@ function capabilityLabels(targets: FixtureChannelTarget[]): string[] {
     ['Pan / Tilt', [...targetsForRole(targets, 'pan'), ...targetsForRole(targets, 'tilt')]],
     ['Gobo', [...targetsForRole(targets, 'gobo'), ...targetsForRole(targets, 'goboRotation')]],
     ['Beam', [...targetsForRole(targets, 'prism'), ...targetsForRole(targets, 'iris'), ...targetsForRole(targets, 'focus'), ...targetsForRole(targets, 'zoom')]],
-    ['Strobe / Shutter', [...targetsForRole(targets, 'strobe'), ...targetsForRole(targets, 'shutter')]],
+    [avoidStrobe ? 'Shutter gate, no strobe' : 'Strobe / Shutter', avoidStrobe ? targetsForRole(targets, 'shutter') : [...targetsForRole(targets, 'strobe'), ...targetsForRole(targets, 'shutter')]],
   ];
   return labels.filter(([, roleTargets]) => roleTargets.length > 0).map(([label]) => label as string);
 }
@@ -584,7 +624,7 @@ export function generateSeededSceneList(
   existingScenes: Scene[],
   partialOptions: Partial<SceneSeedOptions> = {}
 ): SceneSeedSummary {
-  const options = { ...DEFAULT_OPTIONS, ...partialOptions };
+  const options: SceneSeedOptions = { ...DEFAULT_OPTIONS, ...partialOptions };
   const fixtureTargets = allTargets(fixtures);
 
   if (fixtures.length === 0 || fixtureTargets.length === 0) {
@@ -600,7 +640,7 @@ export function generateSeededSceneList(
   }
 
   const generatedScenes: Scene[] = [];
-  const templates = selectedTemplates(options.packId);
+  const templates = templatesForOptions(options);
   decksForOptions(options).forEach((deck) => {
     templates.forEach((template, slot) => {
       const deckTemplate = deck === 'B' ? deckBVariant(template) : template;
@@ -610,7 +650,11 @@ export function generateSeededSceneList(
 
   const seedNames = new Set(generatedScenes.map((scene) => scene.name));
   const existingByName = new Map(existingScenes.map((scene) => [scene.name, scene]));
-  const handmadeScenes = existingScenes.filter((scene) => !seedNames.has(scene.name) || !isSeedScene(scene));
+  const handmadeScenes = existingScenes.filter((scene) => {
+    if (!isSeedScene(scene)) return true;
+    if (options.avoidStrobe && isStrobeSeedScene(scene)) return false;
+    return !seedNames.has(scene.name);
+  });
   const blockedByHandmade = generatedScenes.filter((scene) => {
     const existing = existingByName.get(scene.name);
     return existing && !isSeedScene(existing);
@@ -629,7 +673,7 @@ export function generateSeededSceneList(
     created,
     refreshed,
     skipped: blockedByHandmade.length,
-    capabilities: capabilityLabels(fixtureTargets),
+    capabilities: capabilityLabels(fixtureTargets, options.avoidStrobe),
   };
 }
 

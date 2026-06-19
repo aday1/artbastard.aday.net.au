@@ -119,6 +119,38 @@ describe('sceneSeedGenerator', () => {
     expect(staticOnly.generatedScenes.some((scene) => scene.timeline?.enabled)).toBe(false);
   });
 
+  it('can seed scenes with strobe looks and strobe channel animation disabled', () => {
+    const result = generateSeededSceneList([rgbPar, mover], [], {
+      packId: 'smart-starter-40',
+      target: 'deck-a',
+      includeAutomation: true,
+      avoidStrobe: true,
+    });
+
+    expect(result.generatedScenes.some((scene) => /strobe/i.test(scene.seed?.templateId || ''))).toBe(false);
+    expect(result.generatedScenes.every((scene) => scene.channelValues[25] === 0)).toBe(true);
+    expect(result.generatedScenes.every((scene) => (
+      scene.timeline?.keyframes.every((keyframe) => keyframe.channelValues[25] === undefined) ?? true
+    ))).toBe(true);
+  });
+
+  it('removes previously generated strobe scenes when reseeding in no-strobe mode', () => {
+    const first = generateSeededSceneList([rgbPar, mover], [], {
+      packId: 'smart-starter-40',
+      target: 'deck-a',
+      includeAutomation: true,
+    });
+    const reseeded = generateSeededSceneList([rgbPar, mover], first.scenes, {
+      packId: 'smart-starter-40',
+      target: 'deck-a',
+      includeAutomation: true,
+      avoidStrobe: true,
+    });
+
+    expect(first.scenes.some((scene) => /strobe/i.test(`${scene.seed?.templateId} ${scene.seed?.label}`))).toBe(true);
+    expect(reseeded.scenes.some((scene) => /strobe/i.test(`${scene.seed?.templateId} ${scene.seed?.label}`))).toBe(false);
+  });
+
   it('never writes unsafe lamp or reset channels', () => {
     const result = generateSeededSceneList([mover], [], {
       packId: 'smart-starter-40',

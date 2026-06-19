@@ -14,6 +14,7 @@ import {
   smoothEnvelopeDmxValue,
 } from '../utils/envelopeEngine'
 import { normalizeChannelEnvelope } from '../utils/envelopeDefaults'
+import { samplePanTiltPath } from '../utils/panTiltPath'
 import {
   applyThemeColorsToDocument,
   applyRackChrome,
@@ -201,6 +202,7 @@ export interface PanTiltAutopilotConfig {
   syncToBPM: boolean;
   phase: number; // Phase offset in radians for internal animation
   customPath?: Array<{ x: number; y: number }>;
+  smoothing?: number; // 0 = straight point-to-point, 1 = soft curved path
   repeatMode?: import('./types').EnvelopeRepeatMode;
   loopDirection?: import('./types').EnvelopeLoopDirection;
 }
@@ -2374,6 +2376,7 @@ export const useStore = create<State>()(
         centerX: 128,
         centerY: 128,
         syncToBPM: false,
+        smoothing: 0.6,
         phase: 0
       },
       colorSliderAutopilot: {
@@ -5085,6 +5088,12 @@ export const useStore = create<State>()(
       setPanTiltAutopilot: (config) => {
         const currentConfig = get().panTiltAutopilot;
         const newConfig = { ...currentConfig, ...config };
+        if (newConfig.speed !== undefined) {
+          newConfig.speed = Math.max(0.03, Math.min(2.0, newConfig.speed));
+        }
+        if (newConfig.smoothing !== undefined) {
+          newConfig.smoothing = Math.max(0, Math.min(1, newConfig.smoothing));
+        }
         set({ panTiltAutopilot: newConfig });
         if (newConfig.enabled && !get().autopilotUpdateInterval) {
           get().startAutopilotSystem();
@@ -5242,10 +5251,16 @@ export const useStore = create<State>()(
                   break;
                 case 'custom':
                   if (panTiltAutopilot.customPath && panTiltAutopilot.customPath.length > 0) {
-                    const pathIndex = Math.floor(progress * panTiltAutopilot.customPath.length);
-                    const point = panTiltAutopilot.customPath[pathIndex % panTiltAutopilot.customPath.length];
-                    panValue = point.x;
-                    tiltValue = point.y;
+                    const repeatMode = panTiltAutopilot.repeatMode ?? 'loop';
+                    const loopDirection = panTiltAutopilot.loopDirection ?? 'forward';
+                    const point = samplePanTiltPath(panTiltAutopilot.customPath, progress, {
+                      smoothing: panTiltAutopilot.smoothing ?? 0.6,
+                      closed: repeatMode === 'loop' && loopDirection !== 'pingpong',
+                    });
+                    if (point) {
+                      panValue = point.x;
+                      tiltValue = point.y;
+                    }
                   }
                   break;
               }

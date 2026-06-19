@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useStore } from '../../store/store';
 import { HorizontalFader } from '../ui/controls';
 import { EnvelopePlaybackControls } from './EnvelopePlaybackControls';
+import { samplePanTiltPath } from '../../utils/panTiltPath';
 import styles from './CustomPathEditor.module.scss';
 
 interface PathPoint {
@@ -38,6 +39,7 @@ export const CustomPathEditor: React.FC<CustomPathEditorProps> = ({
   const [showGrid, setShowGrid] = useState(true);
   const [showPreview, setShowPreview] = useState(true);
   const [previewPosition, setPreviewPosition] = useState(0);
+  const [pathSmoothing, setPathSmoothing] = useState(panTiltAutopilot.smoothing ?? 0.6);
 
   const canvasWidth = 400;
   const canvasHeight = 400;
@@ -45,6 +47,7 @@ export const CustomPathEditor: React.FC<CustomPathEditorProps> = ({
   // Initialize points from store
   useEffect(() => {
     if (isOpen) {
+      setPathSmoothing(panTiltAutopilot.smoothing ?? 0.6);
       if (mode === 'autopilot' && panTiltAutopilot.customPath) {
         setPoints(panTiltAutopilot.customPath);
       } else if (mode === 'track' && autopilotTrackCustomPoints) {
@@ -61,7 +64,7 @@ export const CustomPathEditor: React.FC<CustomPathEditorProps> = ({
         ]);
       }
     }
-  }, [isOpen, mode, panTiltAutopilot.customPath, autopilotTrackCustomPoints, initialPoints]);
+  }, [isOpen, mode, panTiltAutopilot.customPath, panTiltAutopilot.smoothing, autopilotTrackCustomPoints, initialPoints]);
 
   // Convert DMX values (0-255) to canvas coordinates
   const dmxToCanvas = useCallback((dmxX: number, dmxY: number) => {
@@ -140,18 +143,18 @@ export const CustomPathEditor: React.FC<CustomPathEditorProps> = ({
       ctx.strokeStyle = '#00d4ff';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      
-      const firstPoint = dmxToCanvas(points[0].x, points[0].y);
+
+      const closedPath = (panTiltAutopilot.repeatMode ?? 'loop') === 'loop' && (panTiltAutopilot.loopDirection ?? 'forward') !== 'pingpong';
+      const firstSample = samplePanTiltPath(points, 0, { smoothing: pathSmoothing, closed: closedPath }) ?? points[0];
+      const firstPoint = dmxToCanvas(firstSample.x, firstSample.y);
       ctx.moveTo(firstPoint.x, firstPoint.y);
-      
-      for (let i = 1; i < points.length; i++) {
-        const point = dmxToCanvas(points[i].x, points[i].y);
+
+      const samples = Math.max(24, points.length * 12);
+      for (let i = 1; i <= samples; i++) {
+        const sample = samplePanTiltPath(points, i / samples, { smoothing: pathSmoothing, closed: closedPath });
+        if (!sample) continue;
+        const point = dmxToCanvas(sample.x, sample.y);
         ctx.lineTo(point.x, point.y);
-      }
-      
-      // Close the path if we have more than 2 points
-      if (points.length > 2) {
-        ctx.lineTo(firstPoint.x, firstPoint.y);
       }
       
       ctx.stroke();
@@ -182,17 +185,10 @@ export const CustomPathEditor: React.FC<CustomPathEditorProps> = ({
     // Draw preview position
     if (showPreview && points.length > 1) {
       const progress = previewPosition / 100;
-      const pathIndex = progress * (points.length - 1);
-      const lowerIndex = Math.floor(pathIndex);
-      const upperIndex = Math.min(lowerIndex + 1, points.length - 1);
-      const t = pathIndex - lowerIndex;
-      
-      const lowerPoint = points[lowerIndex];
-      const upperPoint = points[upperIndex];
-      
-      const previewX = lowerPoint.x + (upperPoint.x - lowerPoint.x) * t;
-      const previewY = lowerPoint.y + (upperPoint.y - lowerPoint.y) * t;
-      
+      const closedPath = (panTiltAutopilot.repeatMode ?? 'loop') === 'loop' && (panTiltAutopilot.loopDirection ?? 'forward') !== 'pingpong';
+      const preview = samplePanTiltPath(points, progress, { smoothing: pathSmoothing, closed: closedPath }) ?? points[0];
+      const previewX = preview.x;
+      const previewY = preview.y;
       const { x, y } = dmxToCanvas(previewX, previewY);
       
       // Preview indicator
@@ -210,7 +206,7 @@ export const CustomPathEditor: React.FC<CustomPathEditorProps> = ({
       ctx.arc(x, y, 12, 0, 2 * Math.PI);
       ctx.fill();
     }
-  }, [points, showGrid, showPreview, previewPosition, dragIndex, dmxToCanvas]);
+  }, [points, showGrid, showPreview, previewPosition, dragIndex, dmxToCanvas, panTiltAutopilot.repeatMode, panTiltAutopilot.loopDirection, pathSmoothing]);
 
   // Redraw canvas when points change
   useEffect(() => {
@@ -286,7 +282,7 @@ export const CustomPathEditor: React.FC<CustomPathEditorProps> = ({
 
   const handleSave = () => {
     if (mode === 'autopilot') {
-      setPanTiltAutopilot({ customPath: points });
+      setPanTiltAutopilot({ customPath: points, smoothing: pathSmoothing });
     } else if (mode === 'track') {
       setAutopilotTrackCustomPoints(points);
     }
@@ -433,6 +429,18 @@ export const CustomPathEditor: React.FC<CustomPathEditorProps> = ({
                 <span>{previewPosition}%</span>
               </div>
             )}
+
+            <div className={styles.section}>
+              <h4>Path Smoothing</h4>
+              <HorizontalFader
+                min={0}
+                max={1}
+                step={0.01}
+                value={pathSmoothing}
+                onChange={(v) => setPathSmoothing(v)}
+              />
+              <span>{Math.round(pathSmoothing * 100)}%</span>
+            </div>
             
             <div className={styles.section}>
               <h4>Preset Patterns</h4>

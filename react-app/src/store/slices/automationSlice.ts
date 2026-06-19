@@ -73,6 +73,7 @@ export const createAutomationSlice: StateCreator<any> = (set, get) => ({
     centerX: 128,
     centerY: 128,
     syncToBPM: false,
+    smoothing: 0.6,
     phase: 0,
     repeatMode: 'loop',
     loopDirection: 'forward',
@@ -192,6 +193,12 @@ export const createAutomationSlice: StateCreator<any> = (set, get) => ({
   setPanTiltAutopilot: (config) => {
     const currentConfig = get().panTiltAutopilot;
     const newConfig = { ...currentConfig, ...config };
+    if (newConfig.speed !== undefined) {
+      newConfig.speed = Math.max(0.03, Math.min(2.0, newConfig.speed));
+    }
+    if (newConfig.smoothing !== undefined) {
+      newConfig.smoothing = Math.max(0, Math.min(1, newConfig.smoothing));
+    }
     set({ panTiltAutopilot: newConfig });
     if (newConfig.enabled && !get().autopilotUpdateInterval) {
       get().startAutopilotSystem();

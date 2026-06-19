@@ -79,6 +79,38 @@ describe('actSeedGenerator', () => {
     expect(result.generatedActs.flatMap((act) => act.steps).every((step) => seededScenes.some((candidate) => candidate.name === step.sceneName))).toBe(true);
   });
 
+  it('can seed starter ACTS without strobe acts or strobe scene references', () => {
+    const result = generateSeededActList(seededScenes, [], {
+      packId: 'starter-acts',
+      includeTriggers: false,
+      avoidStrobe: true,
+    });
+    const strobeSceneNames = new Set(
+      seededScenes
+        .filter((candidate) => /strobe/i.test(`${candidate.seed?.templateId} ${candidate.seed?.label}`))
+        .map((candidate) => candidate.name)
+    );
+
+    expect(result.generatedActs).toHaveLength(4);
+    expect(result.generatedActs.some((act) => /strobe/i.test(`${act.name} ${act.seed?.templateId}`))).toBe(false);
+    expect(result.generatedActs.flatMap((act) => act.steps).some((step) => strobeSceneNames.has(step.sceneName))).toBe(false);
+  });
+
+  it('removes previously generated strobe ACTS when reseeding in no-strobe mode', () => {
+    const first = generateSeededActList(seededScenes, [], {
+      packId: 'starter-acts',
+      includeTriggers: false,
+    });
+    const reseeded = generateSeededActList(seededScenes, first.acts, {
+      packId: 'starter-acts',
+      includeTriggers: false,
+      avoidStrobe: true,
+    });
+
+    expect(first.acts.some((act) => /strobe/i.test(`${act.seed?.templateId} ${act.seed?.label}`))).toBe(true);
+    expect(reseeded.acts.some((act) => /strobe/i.test(`${act.seed?.templateId} ${act.seed?.label}`))).toBe(false);
+  });
+
   it('adds optional OSC triggers when requested', () => {
     const withTriggers = generateSeededActList(seededScenes, [], {
       packId: 'starter-acts',
@@ -103,6 +135,24 @@ describe('actSeedGenerator', () => {
     expect(result.generatedActs).toHaveLength(8);
     expect(result.generatedActs[5].name).toBe('ACT Seed 06 - Opening Build');
     expect(result.generatedActs[7].seed?.templateId).toBe('finale-punch');
+  });
+
+  it('keeps mixed performance ACTS but strips strobe-only steps in no-strobe mode', () => {
+    const result = generateSeededActList(seededScenes, [], {
+      packId: 'performance-acts',
+      includeTriggers: false,
+      avoidStrobe: true,
+    });
+    const finale = result.generatedActs.find((act) => act.seed?.templateId === 'finale-punch');
+    const strobeSceneNames = new Set(
+      seededScenes
+        .filter((candidate) => /strobe/i.test(`${candidate.seed?.templateId} ${candidate.seed?.label}`))
+        .map((candidate) => candidate.name)
+    );
+
+    expect(finale).toBeDefined();
+    expect(finale?.steps.some((step) => strobeSceneNames.has(step.sceneName))).toBe(false);
+    expect(result.generatedActs.some((act) => act.seed?.templateId === 'strobe-move-90')).toBe(false);
   });
 
   it('preserves handmade ACT collisions and refreshes generated ACTS only', () => {
