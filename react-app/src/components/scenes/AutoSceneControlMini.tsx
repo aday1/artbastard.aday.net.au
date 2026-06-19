@@ -39,6 +39,10 @@ export const AutoSceneControlMini: React.FC<AutoSceneControlMiniProps> = ({
     abletonLinkPeers,
     abletonLinkAvailable,
     scenes,
+    dmxFrozen,
+    dimmerFadeEnabled,
+    dimmerFadeWaveform,
+    dimmerFadePeriodSeconds,
   } = useStore(state => ({
     autoSceneEnabled: state.autoSceneEnabled,
     autoSceneList: state.autoSceneList,
@@ -55,6 +59,10 @@ export const AutoSceneControlMini: React.FC<AutoSceneControlMiniProps> = ({
     abletonLinkPeers: state.abletonLinkPeers,
     abletonLinkAvailable: state.abletonLinkAvailable,
     scenes: state.scenes,
+    dmxFrozen: state.dmxFrozen,
+    dimmerFadeEnabled: state.dimmerFadeEnabled,
+    dimmerFadeWaveform: state.dimmerFadeWaveform,
+    dimmerFadePeriodSeconds: state.dimmerFadePeriodSeconds,
   }));
   const {
     setAutoSceneEnabled,
@@ -67,6 +75,10 @@ export const AutoSceneControlMini: React.FC<AutoSceneControlMiniProps> = ({
     setNextAutoSceneIndex,
     loadScene,
     triggerAutoSceneFlash,
+    setDmxFrozen,
+    setDimmerFadeEnabled,
+    setDimmerFadeWaveform,
+    setDimmerFadePeriodSeconds,
   } = useStore(state => ({
     setAutoSceneEnabled: state.setAutoSceneEnabled,
     setAutoSceneTempoSource: state.setAutoSceneTempoSource,
@@ -78,6 +90,10 @@ export const AutoSceneControlMini: React.FC<AutoSceneControlMiniProps> = ({
     setNextAutoSceneIndex: state.setNextAutoSceneIndex,
     loadScene: state.loadScene,
     triggerAutoSceneFlash: state.triggerAutoSceneFlash,
+    setDmxFrozen: state.setDmxFrozen,
+    setDimmerFadeEnabled: state.setDimmerFadeEnabled,
+    setDimmerFadeWaveform: state.setDimmerFadeWaveform,
+    setDimmerFadePeriodSeconds: state.setDimmerFadePeriodSeconds,
   }));
 
   // Independent clock management for manual_bpm and tap_tempo modes
@@ -291,6 +307,44 @@ export const AutoSceneControlMini: React.FC<AutoSceneControlMiniProps> = ({
               TAP
             </button>
           )}
+          <button
+            className={`${styles.freezeButton} ${dmxFrozen ? styles.active : ''}`}
+            onClick={() => setDmxFrozen(!dmxFrozen)}
+            title={dmxFrozen ? 'Unfreeze DMX output and flush current values.' : 'Freeze outgoing DMX output while controls keep updating.'}
+          >
+            <LucideIcon name={dmxFrozen ? 'Snowflake' : 'Pause'} size={12} />
+            {dmxFrozen ? 'FROZEN' : 'Freeze'}
+          </button>
+        </div>
+        <div className={styles.fadeControls}>
+          <button
+            className={`${styles.fadeToggle} ${dimmerFadeEnabled ? styles.active : ''}`}
+            onClick={() => setDimmerFadeEnabled(!dimmerFadeEnabled)}
+            title={dimmerFadeEnabled ? 'Stop automatic dimmer fade.' : 'Start automatic dimmer fade on dimmer/intensity/master channels.'}
+          >
+            <LucideIcon name="Waves" size={12} />
+            Fade {dimmerFadeEnabled ? 'ON' : 'OFF'}
+          </button>
+          <select
+            value={dimmerFadeWaveform}
+            onChange={(e) => setDimmerFadeWaveform(e.target.value as 'breath' | 'saw')}
+            className={styles.fadeShapeSelect}
+            title="Breath eases smoothly up and down. Saw fades from on to off, then jumps back on."
+          >
+            <option value="breath">Breath</option>
+            <option value="saw">Saw</option>
+          </select>
+          <label className={styles.fadeSpeed} title="Longer cycles fade more slowly between light on and light off.">
+            <input
+              type="range"
+              min="2"
+              max="60"
+              step="1"
+              value={dimmerFadePeriodSeconds}
+              onChange={(e) => setDimmerFadePeriodSeconds(parseInt(e.target.value, 10))}
+            />
+            <span>{dimmerFadePeriodSeconds}s</span>
+          </label>
         </div>
         {autoSceneList.length > 0 && (
           <div className={styles.currentScene} title="Current position in the automatic scene-loading queue.">

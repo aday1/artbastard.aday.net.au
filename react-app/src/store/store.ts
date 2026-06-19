@@ -63,6 +63,11 @@ import {
   strobeSafetyValueForChannel,
 } from '../utils/strobeSafety'
 import {
+  dimmerFadeLevel,
+  dimmerFadeUpdates,
+  type DimmerFadeWaveform,
+} from '../utils/dimmerFade'
+import {
   APC40_GRID_SLOT_COUNT,
   apc40DeckSceneName,
   channelMatchesRoleAliases,
@@ -681,6 +686,16 @@ interface State extends AutomationState, TransitionTrackerSlice {
   strobeSafetyEnabled: boolean
   applyStrobeSafetyLock: () => void
   setStrobeSafetyEnabled: (enabled: boolean) => void
+  dimmerFadeEnabled: boolean
+  dimmerFadeWaveform: DimmerFadeWaveform
+  dimmerFadePeriodSeconds: number
+  dimmerFadeAnimationId: ReturnType<typeof setInterval> | null
+  dimmerFadeStartedAt: number
+  setDimmerFadeEnabled: (enabled: boolean) => void
+  setDimmerFadeWaveform: (waveform: DimmerFadeWaveform) => void
+  setDimmerFadePeriodSeconds: (seconds: number) => void
+  startDimmerFadeAutomation: () => void
+  stopDimmerFadeAutomation: () => void
   oscAssignments: string[]
   superControlOscAddresses: Record<string, string> // OSC addresses for SuperControl controls
   channelNames: string[]
@@ -1657,6 +1672,81 @@ export const useStore = create<State>()(
             priority: 'normal',
           });
         }
+      },
+      dimmerFadeEnabled: false,
+      dimmerFadeWaveform: 'breath',
+      dimmerFadePeriodSeconds: 8,
+      dimmerFadeAnimationId: null,
+      dimmerFadeStartedAt: Date.now(),
+      setDimmerFadeEnabled: (enabled) => {
+        if (enabled) {
+          get().startDimmerFadeAutomation();
+        } else {
+          get().stopDimmerFadeAutomation();
+        }
+      },
+      setDimmerFadeWaveform: (waveform) => {
+        set({
+          dimmerFadeWaveform: waveform,
+          dimmerFadeStartedAt: Date.now(),
+        });
+      },
+      setDimmerFadePeriodSeconds: (seconds) => {
+        const nextSeconds = Number.isFinite(seconds)
+          ? Math.max(2, Math.min(60, Math.round(seconds)))
+          : 8;
+        set({
+          dimmerFadePeriodSeconds: nextSeconds,
+          dimmerFadeStartedAt: Date.now(),
+        });
+      },
+      startDimmerFadeAutomation: () => {
+        if (get().dimmerFadeAnimationId) {
+          set({ dimmerFadeEnabled: true });
+          return;
+        }
+
+        const tick = () => {
+          const state = get();
+          if (!state.dimmerFadeEnabled) return;
+
+          const periodMs = Math.max(2, state.dimmerFadePeriodSeconds) * 1000;
+          const elapsedMs = Date.now() - state.dimmerFadeStartedAt;
+          const progress = (elapsedMs % periodMs) / periodMs;
+          const level = dimmerFadeLevel(state.dimmerFadeWaveform, progress);
+          const targetUpdates = dimmerFadeUpdates(state.fixtures || [], Math.round(level * 255));
+          const updates: Record<number, number> = {};
+
+          Object.entries(targetUpdates).forEach(([channelKey, value]) => {
+            const channel = Number(channelKey);
+            if (state.dmxChannels[channel] !== value) {
+              updates[channel] = value;
+            }
+          });
+
+          if (Object.keys(updates).length > 0) {
+            state.setMultipleDmxChannels(updates, true);
+          }
+        };
+
+        set({
+          dimmerFadeEnabled: true,
+          dimmerFadeStartedAt: Date.now(),
+        });
+        tick();
+
+        const intervalId = setInterval(tick, 75);
+        set({ dimmerFadeAnimationId: intervalId });
+      },
+      stopDimmerFadeAutomation: () => {
+        const intervalId = get().dimmerFadeAnimationId;
+        if (intervalId) {
+          clearInterval(intervalId);
+        }
+        set({
+          dimmerFadeEnabled: false,
+          dimmerFadeAnimationId: null,
+        });
       },
       oscAssignments: new Array(512).fill('').map((_, i) => `/1/fader${i + 1}`),
       superControlOscAddresses: (() => {
@@ -2898,9 +2988,17 @@ export const useStore = create<State>()(
           zeroUpdates[channel] = 0;
         }
 
+        const dimmerFadeIntervalId = get().dimmerFadeAnimationId;
+        if (dimmerFadeIntervalId) {
+          clearInterval(dimmerFadeIntervalId);
+        }
+
         set({
           dmxChannels: zeroChannels,
           dmxFrozen: false,
+          dimmerFadeEnabled: false,
+          dimmerFadeAnimationId: null,
+          dimmerFadeStartedAt: Date.now(),
         });
 
         if (sendToBackend) {

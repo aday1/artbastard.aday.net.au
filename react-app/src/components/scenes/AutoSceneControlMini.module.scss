@@ -147,6 +147,91 @@
   }
 }
 
+.freezeButton,
+.fadeToggle {
+  background-color: #354152;
+  color: #e5e7eb;
+  border: 1px solid #5b6b7e;
+  padding: 4px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.7em;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 24px;
+
+  &:hover {
+    background-color: #475569;
+  }
+
+  &.active {
+    color: #bfdbfe;
+    border-color: #60a5fa;
+    background-color: rgba(37, 99, 235, 0.28);
+  }
+}
+
+.fadeControls {
+  display: grid;
+  grid-template-columns: minmax(82px, 0.9fr) minmax(70px, 0.7fr);
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid #464f5d;
+  border-radius: 4px;
+  background-color: #20242c;
+}
+
+.fadeToggle {
+  color: #fde68a;
+  border-color: #9a6a1f;
+  background-color: rgba(120, 53, 15, 0.32);
+
+  &.active {
+    color: #fef3c7;
+    border-color: #f59e0b;
+    background-color: rgba(180, 83, 9, 0.42);
+  }
+}
+
+.fadeShapeSelect {
+  min-width: 0;
+  background-color: #333;
+  border: 1px solid #555;
+  border-radius: 3px;
+  color: #eee;
+  padding: 3px 6px;
+  font-size: 0.75em;
+
+  &:focus {
+    outline: none;
+    border-color: #f59e0b;
+  }
+}
+
+.fadeSpeed {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 38px;
+  align-items: center;
+  gap: 6px;
+  color: #fde68a;
+  font-size: 0.72em;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+
+  input {
+    width: 100%;
+    min-width: 0;
+  }
+
+  span {
+    text-align: right;
+  }
+}
+
 .bpmInput {
   background-color: #333;
   border: 1px solid #555;

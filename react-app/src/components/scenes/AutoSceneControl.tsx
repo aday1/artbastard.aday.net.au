@@ -27,6 +27,10 @@ export const AutoSceneControl: React.FC<AutoSceneControlProps> = ({
     midiClockIsPlaying, // Needed for effects
     midiClockCurrentBeat, // Needed for effects
     autoSceneIsFlashing, // Shared flashing state
+    dmxFrozen,
+    dimmerFadeEnabled,
+    dimmerFadeWaveform,
+    dimmerFadePeriodSeconds,
   } = useStore(state => ({
     autoSceneEnabled: state.autoSceneEnabled,
     autoSceneList: state.autoSceneList,
@@ -41,6 +45,10 @@ export const AutoSceneControl: React.FC<AutoSceneControlProps> = ({
     midiClockIsPlaying: state.midiClockIsPlaying, // Added this line
     midiClockCurrentBeat: state.midiClockCurrentBeat, // Added this line
     autoSceneIsFlashing: state.autoSceneIsFlashing, // Shared flashing state
+    dmxFrozen: state.dmxFrozen,
+    dimmerFadeEnabled: state.dimmerFadeEnabled,
+    dimmerFadeWaveform: state.dimmerFadeWaveform,
+    dimmerFadePeriodSeconds: state.dimmerFadePeriodSeconds,
   }));
   // Auto-Scene actions from the store
   const {
@@ -55,6 +63,10 @@ export const AutoSceneControl: React.FC<AutoSceneControlProps> = ({
     setNextAutoSceneIndex, // Needed for effects
     requestToggleMasterClockPlayPause, // Added for PLAY button
     triggerAutoSceneFlash, // Shared flashing trigger
+    setDmxFrozen,
+    setDimmerFadeEnabled,
+    setDimmerFadeWaveform,
+    setDimmerFadePeriodSeconds,
   } = useStore(state => ({
     setAutoSceneEnabled: state.setAutoSceneEnabled,
     setAutoSceneList: state.setAutoSceneList,
@@ -67,6 +79,10 @@ export const AutoSceneControl: React.FC<AutoSceneControlProps> = ({
     setNextAutoSceneIndex: state.setNextAutoSceneIndex, // Added this line
     requestToggleMasterClockPlayPause: state.requestToggleMasterClockPlayPause, // Added for PLAY button
     triggerAutoSceneFlash: state.triggerAutoSceneFlash, // Shared flashing trigger
+    setDmxFrozen: state.setDmxFrozen,
+    setDimmerFadeEnabled: state.setDimmerFadeEnabled,
+    setDimmerFadeWaveform: state.setDimmerFadeWaveform,
+    setDimmerFadePeriodSeconds: state.setDimmerFadePeriodSeconds,
   }));  // Local state for UI, e.g., for multi-select interaction if needed
   const [selectedScenesForList, setSelectedScenesForList] = useState<string[]>(autoSceneList);
   // Local state for beat tracking and refs
@@ -364,6 +380,18 @@ export const AutoSceneControl: React.FC<AutoSceneControlProps> = ({
                   <option value="tap_tempo">Tap tempo</option>
                 </select>
               </div>
+              <div className={styles.controlRow}>
+                <label title="Freeze outgoing DMX while the app keeps tracking playback and control changes.">Freeze</label>
+                <button
+                  type="button"
+                  className={`${styles.freezeButton} ${dmxFrozen ? styles.freezeActive : ''}`}
+                  onClick={() => setDmxFrozen(!dmxFrozen)}
+                  title={dmxFrozen ? 'Unfreeze DMX output and flush the current values to the rig.' : 'Freeze outgoing DMX output while controls keep moving on screen.'}
+                >
+                  <i className={dmxFrozen ? 'fas fa-snowflake' : 'fas fa-pause'} />
+                  {dmxFrozen ? 'FROZEN' : 'Freeze output'}
+                </button>
+              </div>
               {autoSceneTempoSource === 'manual_bpm' && (
                 <div className={styles.controlRow}>
                   <label htmlFor="autoSceneManualBpmInput" title="Manual tempo used when Tempo is Manual BPM.">Manual BPM</label>
@@ -396,6 +424,51 @@ export const AutoSceneControl: React.FC<AutoSceneControlProps> = ({
                   </div>
                 </div>
               )}
+              <div className={styles.fadePanel}>
+                <div className={styles.fadeHeader}>
+                  <div>
+                    <strong>Dimmer fade</strong>
+                    <span>{dimmerFadeEnabled ? `${dimmerFadeWaveform} · ${dimmerFadePeriodSeconds}s cycle` : 'Off'}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className={`${styles.fadeToggle} ${dimmerFadeEnabled ? styles.fadeActive : ''}`}
+                    onClick={() => setDimmerFadeEnabled(!dimmerFadeEnabled)}
+                    title={dimmerFadeEnabled ? 'Stop automatic dimmer fade.' : 'Start automatic dimmer fade on dimmer/intensity/master channels.'}
+                  >
+                    <i className={dimmerFadeEnabled ? 'fas fa-wave-square' : 'fas fa-water'} />
+                    {dimmerFadeEnabled ? 'ON' : 'OFF'}
+                  </button>
+                </div>
+                <div className={styles.controlRow}>
+                  <label htmlFor="autoSceneDimmerFadeWaveform" title="Breath eases smoothly up and down. Saw fades from on to off, then jumps back on.">Shape</label>
+                  <select
+                    id="autoSceneDimmerFadeWaveform"
+                    value={dimmerFadeWaveform}
+                    onChange={(e) => setDimmerFadeWaveform(e.target.value as 'breath' | 'saw')}
+                    title="Choose the automatic light intensity fade shape."
+                  >
+                    <option value="breath">Breath</option>
+                    <option value="saw">Saw tooth</option>
+                  </select>
+                </div>
+                <div className={styles.controlRow}>
+                  <label htmlFor="autoSceneDimmerFadeSpeed" title="Longer cycles fade more slowly between light on and light off.">Fade cycle</label>
+                  <div className={styles.fadeSpeedControl}>
+                    <input
+                      id="autoSceneDimmerFadeSpeed"
+                      type="range"
+                      min="2"
+                      max="60"
+                      step="1"
+                      value={dimmerFadePeriodSeconds}
+                      onChange={(e) => setDimmerFadePeriodSeconds(parseInt(e.target.value, 10))}
+                      title="Adjust how slowly dimmer/intensity channels fade."
+                    />
+                    <span>{dimmerFadePeriodSeconds}s</span>
+                  </div>
+                </div>
+              </div>
               <div className={styles.metaRow}>
                 <span>Source: {selectedMidiClockHostId || '—'}</span>
                 <span>Beat: {localBeatCounter}</span>

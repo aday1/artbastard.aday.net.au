@@ -476,6 +476,11 @@ export const UnifiedSettings: React.FC = () => {
         dmxChannels: new Array(512).fill(0),
         dmxFrozen: false,
         strobeSafetyEnabled: true,
+        dimmerFadeEnabled: false,
+        dimmerFadeAnimationId: null,
+        dimmerFadeWaveform: 'breath',
+        dimmerFadePeriodSeconds: 8,
+        dimmerFadeStartedAt: Date.now(),
         panTiltAutopilot: {
           enabled: false,
           pathType: 'circle',
