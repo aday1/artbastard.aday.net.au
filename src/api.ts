@@ -9,7 +9,10 @@ import { promisify } from 'util';
 import { log } from './logger';
 import { getArtNetPingHistory, getLastArtNetPing } from './artnetMonitor';
 import { connectServerRoli, disconnectServerRoli, getServerRoliStatus, sendServerRoliTestFrame } from './roliServerDriver';
-import { getApc40ServerScreensaverStatus } from './apc40ServerScreensaver';
+import {
+  getApc40ServerScreensaverStatus,
+  setApc40ServerScreensaverBrowserHidden,
+} from './apc40ServerScreensaver';
 
 const execAsync = promisify(exec);
 import {
@@ -261,6 +264,16 @@ apiRouter.get('/screensaver/server/status', (_req, res) => {
     roli: getServerRoliStatus(),
     apc40: getApc40ServerScreensaverStatus(),
   });
+});
+
+apiRouter.post('/screensaver/apc40/browser-hidden', (_req, res) => {
+  setApc40ServerScreensaverBrowserHidden(true);
+  res.json({ ok: true, apc40: getApc40ServerScreensaverStatus() });
+});
+
+apiRouter.post('/screensaver/apc40/browser-visible', (_req, res) => {
+  setApc40ServerScreensaverBrowserHidden(false);
+  res.json({ ok: true, apc40: getApc40ServerScreensaverStatus() });
 });
 
 // Helper functions for fixture templates
@@ -798,14 +811,19 @@ apiRouter.post('/scenes', (req, res) => {
 
 apiRouter.post('/scenes/load', (req, res) => {
   try {
-    const { name } = req.body;
+    const { name, clientTransition } = req.body;
+
+    if (clientTransition) {
+      log('Scene load acknowledged for client-side transition', 'INFO', { name });
+      return res.json({ success: true, clientTransition: true });
+    }
 
     loadScene(global.io, name);
 
-    res.json({ success: true });
+    return res.json({ success: true });
   } catch (error) {
     log('Error loading scene', 'ERROR', { error, body: req.body });
-    res.status(500).json({ error: `Failed to load scene: ${error}` });
+    return res.status(500).json({ error: `Failed to load scene: ${error}` });
   }
 });
 

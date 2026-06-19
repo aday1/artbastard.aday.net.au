@@ -32,6 +32,7 @@ export type Apc40Action =
   | { type: 'tap-tempo'; model: Apc40Model }
   | { type: 'nudge'; model: Apc40Model; direction: 'up' | 'down' }
   | { type: 'freeze-dmx'; model: Apc40Model; pressed: boolean }
+  | { type: 'foot-freeze-dmx'; model: Apc40Model; pressed: boolean }
   | { type: 'toggle-freeze-dmx'; model: Apc40Model }
   | { type: 'toggle-color-auto'; model: Apc40Model; pressed: boolean }
   | { type: 'toggle-pan-tilt-auto'; model: Apc40Model; pressed: boolean }
@@ -140,6 +141,11 @@ export function decodeApc40Message(message: MidiLikeMessage): Apc40Action | null
     }
     if (controller === 0x0f && (message.channel ?? 0) === 0) {
       return { type: 'crossfader', model, value };
+    }
+    // APC40 footswitch input reports as sustain-style CC64. Treat it as
+    // momentary freeze: pedal down freezes output, release resumes/flushed DMX.
+    if (controller === 0x40) {
+      return { type: 'foot-freeze-dmx', model, pressed: value >= 64 };
     }
     return null;
   }

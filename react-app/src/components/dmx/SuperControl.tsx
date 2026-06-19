@@ -32,6 +32,7 @@ import { rangesToTickSteps } from '../../utils/fixtureChannelTicks';
 import { findMovementSpeedTargets, movementSpeedDmxValue } from '../../utils/movementSpeedChannels';
 import { findStrobeSafetyTargets } from '../../utils/strobeSafety';
 import { clearSuperControlFactoryResetStorage } from '../../utils/factoryResetStorage';
+import { readSuperControlValuesFromSelection } from '../../utils/superControlSelectionSync';
 import type { FixtureChannelRange } from '../../store/types';
 import { getFirstFixtureColorWheelSlots } from '../../fixtures/colorWheelSlots';
 import styles from './SuperControl.module.scss';
@@ -589,6 +590,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     superControlExternalUpdate,
     // Scene functions from global store
     scenes,
+    activeSceneName,
     deleteScene,
     loadScene: storeLoadScene,
     addNotification,
@@ -616,13 +618,13 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
   const [selectedCapabilities, setSelectedCapabilities] = useState<string[]>([]);
   const [panelLayout, setPanelLayout] = useState<SuperControlPanelLayoutState>(loadSuperControlPanelLayout);
   const [midiOscNavExpanded, setMidiOscNavExpanded] = useState(true);
-  // Control values state
-  const [dimmer, setDimmer] = useState(255);
+  // Control values state (defaults match a black DMX universe until selection sync)
+  const [dimmer, setDimmer] = useState(0);
   const [panValue, setPanValue] = useState(127);
   const [tiltValue, setTiltValue] = useState(127);
-  const [red, setRed] = useState(255);
-  const [green, setGreen] = useState(255);
-  const [blue, setBlue] = useState(255);
+  const [red, setRed] = useState(0);
+  const [green, setGreen] = useState(0);
+  const [blue, setBlue] = useState(0);
   const [colorWheel, setColorWheel] = useState(0);
   const roliColourStateRef = useRef({ r: 255, g: 255, b: 255, colorWheel: 0 });
   const roliColourAnimationRef = useRef<number | null>(null);
@@ -1500,9 +1502,15 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     if (openedLamp) setLamp(255);
   };
 
-  const turnBeamOn = () => {
+  const turnLightOn = () => {
     setDimmer(255);
     applyControl('dimmer', 255);
+    if (hasControlType('red') || hasControlType('green') || hasControlType('blue')) {
+      setRed(255);
+      setGreen(255);
+      setBlue(255);
+      updateRGB(255, 255, 255);
+    }
     openEmissionGates(true);
   };
 
@@ -2446,13 +2454,13 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     setSelectedGroups([]);
     setSelectedCapabilities([]);
 
-    // Reset control values
-    setDimmer(255);
+    // Reset control values to match the blackout below
+    setDimmer(0);
     setPanValue(127);
     setTiltValue(127);
-    setRed(255);
-    setGreen(255);
-    setBlue(255);
+    setRed(0);
+    setGreen(0);
+    setBlue(0);
     setGobo(0);
     setShutter(255);
     setStrobe(0);
@@ -2579,6 +2587,67 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
       setSelectionMode('fixtures');
     }
   }, [hasChannelSelection, selectionMode]);
+
+  const selectionSyncKey = useMemo(
+    () =>
+      JSON.stringify({
+        selectionMode,
+        selectedFixtures,
+        selectedGroups,
+        selectedCapabilities,
+        selectedChannels,
+        activeSceneName,
+      }),
+    [
+      selectionMode,
+      selectedFixtures,
+      selectedGroups,
+      selectedCapabilities,
+      selectedChannels,
+      activeSceneName,
+    ]
+  );
+
+  useEffect(() => {
+    const affectedFixtures = getAffectedFixtures();
+    if (affectedFixtures.length === 0) return;
+
+    const values = readSuperControlValuesFromSelection(
+      affectedFixtures.map(({ channels }) => channels),
+      resolveControlChannel,
+      getDmxChannelValue
+    );
+
+    if (values.dimmer !== undefined) setDimmer(values.dimmer);
+    if (values.pan !== undefined) {
+      setPanValue(values.pan);
+      setPanTiltXY((prev) => ({ ...prev, x: getControlNormalizedFromValue('pan', values.pan!) * 100 }));
+    }
+    if (values.tilt !== undefined) {
+      setTiltValue(values.tilt);
+      setPanTiltXY((prev) => ({ ...prev, y: (1 - getControlNormalizedFromValue('tilt', values.tilt!)) * 100 }));
+    }
+    if (values.red !== undefined) setRed(values.red);
+    if (values.green !== undefined) setGreen(values.green);
+    if (values.blue !== undefined) setBlue(values.blue);
+    if (values.color_wheel !== undefined) {
+      setColorWheel(values.color_wheel);
+      setColorHue((values.color_wheel / 255) * 360);
+      setColorSaturation(100);
+    }
+    if (values.gobo !== undefined) setGobo(values.gobo);
+    if (values.shutter !== undefined) setShutter(values.shutter);
+    if (values.strobe !== undefined) setStrobe(values.strobe);
+    if (values.lamp !== undefined) setLamp(values.lamp);
+    if (values.reset !== undefined) setReset(values.reset);
+
+    roliColourStateRef.current = {
+      r: values.red ?? roliColourStateRef.current.r,
+      g: values.green ?? roliColourStateRef.current.g,
+      b: values.blue ?? roliColourStateRef.current.b,
+      colorWheel: values.color_wheel ?? roliColourStateRef.current.colorWheel,
+    };
+  }, [selectionSyncKey, fixtures, groups, getDmxChannelValue]);
 
   const availableControls = useMemo(
     () => CONTROL_AVAILABILITY.map((control) => ({
@@ -2709,7 +2778,6 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
 
   const showMidiOscPanel = fixtures.length > 0 || groups.length > 0 || scenes.length > 0;
   const showBasicPanel = hasControlType('dimmer');
-  const hasEmissionGate = hasControlType('shutter') || hasControlType('strobe') || hasControlType('lamp');
   const spanControlPanelIds = visibleSpanPanelIds.filter((panelId) => {
     switch (panelId) {
       case 'midiOsc': return showMidiOscPanel;
@@ -3473,19 +3541,17 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                 }}
                 {...midiPropsFor('dimmer')}
               />
-              {hasEmissionGate && (
-                <SkeuoButton
-                  variant="wide"
-                  accent="green"
-                  compact
-                  disabled={!hasSelection}
-                  onClick={turnBeamOn}
-                  title="Set dimmer full and open shutter/strobe/lamp channels"
-                >
-                  <LucideIcon name="Lightbulb" />
-                  Beam On
-                </SkeuoButton>
-              )}
+              <SkeuoButton
+                variant="wide"
+                accent="green"
+                compact
+                disabled={!hasSelection}
+                onClick={turnLightOn}
+                title="Set dimmer and RGB full, then open shutter/strobe/lamp channels when present"
+              >
+                <LucideIcon name="Lightbulb" />
+                Light On
+              </SkeuoButton>
               </div>
             </div>
           </div>

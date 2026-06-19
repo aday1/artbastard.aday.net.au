@@ -19,9 +19,12 @@ interface Apc40ServerScreensaverState {
   enabled: boolean;
   active: boolean;
   browserClientCount: number;
+  browserHiddenRequest: boolean;
   lastBrowserSeenAt: number | null;
+  sharedOutputs: any[];
+  sharedOutputNames: string[];
+  ownedOutputs: any[];
   outputNames: string[];
-  outputs: any[];
   frame: number;
   frameTimer: NodeJS.Timeout | null;
   monitorTimer: NodeJS.Timeout | null;
@@ -33,9 +36,12 @@ const state: Apc40ServerScreensaverState = {
   enabled: process.env.APC40_SERVER_SCREENSAVER !== '0',
   active: false,
   browserClientCount: 0,
+  browserHiddenRequest: false,
   lastBrowserSeenAt: Date.now(),
+  sharedOutputs: [],
+  sharedOutputNames: [],
+  ownedOutputs: [],
   outputNames: [],
-  outputs: [],
   frame: 0,
   frameTimer: null,
   monitorTimer: null,
@@ -43,8 +49,16 @@ const state: Apc40ServerScreensaverState = {
   nextOpenAttemptAt: null,
 };
 
-function isApc40OutputName(name: string): boolean {
+export function isApc40MidiPortName(name: string): boolean {
   return APC40_NAME_RE.test(name || '');
+}
+
+function activeOutputs(): any[] {
+  return state.sharedOutputs.length > 0 ? state.sharedOutputs : state.ownedOutputs;
+}
+
+function activeOutputNames(): string[] {
+  return state.sharedOutputs.length > 0 ? state.sharedOutputNames : state.outputNames;
 }
 
 function sendNote(out: any, channel: number, note: number, velocity: number): void {
@@ -56,7 +70,7 @@ function sendNote(out: any, channel: number, note: number, velocity: number): vo
 }
 
 function clearGrid(): void {
-  for (const out of state.outputs) {
+  for (const out of activeOutputs()) {
     for (let row = 0; row < APC40_GRID_ROWS; row += 1) {
       for (let column = 0; column < APC40_GRID_COLS; column += 1) {
         sendNote(out, column, APC40_CLIP_ROW_BASE + row, LED_OFF);
@@ -68,13 +82,13 @@ function clearGrid(): void {
   }
 }
 
-function openOutputs(): boolean {
+function openOwnedOutputs(): boolean {
   const now = Date.now();
   if (state.nextOpenAttemptAt && now < state.nextOpenAttemptAt) {
     return false;
   }
 
-  const outputNames = easymidi.getOutputs().filter(isApc40OutputName);
+  const outputNames = easymidi.getOutputs().filter(isApc40MidiPortName);
   if (outputNames.length === 0) {
     state.lastError = 'No APC40 MIDI output found';
     state.nextOpenAttemptAt = now + OPEN_RETRY_MS;
@@ -101,11 +115,24 @@ function openOutputs(): boolean {
     return false;
   }
 
-  state.outputs = opened;
+  state.ownedOutputs = opened;
   state.outputNames = openedNames;
   state.lastError = null;
   state.nextOpenAttemptAt = null;
   return true;
+}
+
+function ensureOutputs(): boolean {
+  if (activeOutputs().length > 0) return true;
+  return openOwnedOutputs();
+}
+
+function releaseOwnedOutputs(): void {
+  for (const out of state.ownedOutputs) {
+    try { out.close(); } catch {}
+  }
+  state.ownedOutputs = [];
+  state.outputNames = [];
 }
 
 function closeOutputs(): void {
@@ -114,16 +141,12 @@ function closeOutputs(): void {
   } catch {
     // Best effort cleanup only.
   }
-  for (const out of state.outputs) {
-    try { out.close(); } catch {}
-  }
-  state.outputs = [];
-  state.outputNames = [];
+  releaseOwnedOutputs();
 }
 
 function paintFrame(): void {
   const frame = state.frame++;
-  for (const out of state.outputs) {
+  for (const out of activeOutputs()) {
     for (let row = 0; row < APC40_GRID_ROWS; row += 1) {
       for (let column = 0; column < APC40_GRID_COLS; column += 1) {
         const wave = (Math.sin((column * 0.9) + frame * 0.22) + Math.cos((row * 1.2) - frame * 0.18) + 2) / 4;
@@ -146,15 +169,33 @@ function paintFrame(): void {
 }
 
 function shouldRun(): boolean {
-  return state.enabled && state.browserClientCount === 0;
+  if (!state.enabled) return false;
+  if (state.browserHiddenRequest) return true;
+  return state.browserClientCount === 0;
+}
+
+export function syncApc40ServerScreensaverSharedOutputs(outputs: any[], outputNames: string[]): void {
+  state.sharedOutputs = outputs;
+  state.sharedOutputNames = outputNames.filter(isApc40MidiPortName);
+  if (state.sharedOutputs.length > 0) {
+    state.lastError = null;
+    state.nextOpenAttemptAt = null;
+  }
+  evaluateApc40ServerScreensaver();
 }
 
 export function startApc40ServerScreensaver(reason = 'no-browser'): boolean {
   if (state.active || !shouldRun()) return state.active;
-  if (!openOutputs()) return false;
+  if (!ensureOutputs()) return false;
   state.active = true;
   state.frame = 0;
-  log('APC40 server screensaver started', 'MIDI', { reason, outputs: state.outputNames, idleMs: IDLE_MS, frameMs: FRAME_MS });
+  log('APC40 server screensaver started', 'MIDI', {
+    reason,
+    outputs: activeOutputNames(),
+    shared: state.sharedOutputs.length > 0,
+    idleMs: IDLE_MS,
+    frameMs: FRAME_MS,
+  });
   paintFrame();
   state.frameTimer = setInterval(() => {
     if (!shouldRun()) {
@@ -177,15 +218,26 @@ export function stopApc40ServerScreensaver(reason = 'manual'): void {
     clearInterval(state.frameTimer);
     state.frameTimer = null;
   }
-  if (!state.active && state.outputs.length === 0) return;
+  if (!state.active && activeOutputs().length === 0) return;
   state.active = false;
-  closeOutputs();
+  if (activeOutputs().length > 0) {
+    try {
+      clearGrid();
+    } catch {
+      // Best effort cleanup only.
+    }
+  }
+  releaseOwnedOutputs();
   log('APC40 server screensaver stopped', 'MIDI', { reason });
 }
 
 function evaluateApc40ServerScreensaver(): void {
   if (!state.enabled || !shouldRun()) {
     stopApc40ServerScreensaver('not-idle');
+    return;
+  }
+  if (state.browserHiddenRequest) {
+    startApc40ServerScreensaver('browser-hidden');
     return;
   }
   const lastSeen = state.lastBrowserSeenAt || Date.now();
@@ -202,11 +254,23 @@ export function initializeApc40ServerScreensaver(): void {
 export function setApc40ServerScreensaverBrowserClientCount(count: number): void {
   const nextCount = Math.max(0, Math.floor(Number(count) || 0));
   state.browserClientCount = nextCount;
-  if (nextCount > 0) {
+  if (nextCount > 0 && !state.browserHiddenRequest) {
     state.lastBrowserSeenAt = Date.now();
     stopApc40ServerScreensaver('browser-connected');
   }
   evaluateApc40ServerScreensaver();
+}
+
+export function setApc40ServerScreensaverBrowserHidden(hidden: boolean): void {
+  state.browserHiddenRequest = hidden === true;
+  if (hidden) {
+    evaluateApc40ServerScreensaver();
+    return;
+  }
+  stopApc40ServerScreensaver('browser-visible');
+  if (state.browserClientCount > 0) {
+    state.lastBrowserSeenAt = Date.now();
+  }
 }
 
 export function getApc40ServerScreensaverStatus() {
@@ -214,7 +278,9 @@ export function getApc40ServerScreensaverStatus() {
     enabled: state.enabled,
     active: state.active,
     browserClientCount: state.browserClientCount,
-    outputNames: [...state.outputNames],
+    browserHiddenRequest: state.browserHiddenRequest,
+    sharedOutputNames: [...state.sharedOutputNames],
+    outputNames: [...activeOutputNames()],
     lastBrowserSeenAt: state.lastBrowserSeenAt,
     lastError: state.lastError,
     nextOpenAttemptAt: state.nextOpenAttemptAt,

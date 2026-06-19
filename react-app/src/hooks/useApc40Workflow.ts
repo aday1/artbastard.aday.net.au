@@ -1194,17 +1194,18 @@ export function useApc40Workflow() {
       return;
     }
 
-    if (action.type === 'freeze-dmx') {
+    if (action.type === 'freeze-dmx' || action.type === 'foot-freeze-dmx') {
       const wasFrozen = state.dmxFrozen;
       if (action.pressed === wasFrozen) {
         publishSurfaceState();
         return;
       }
+      const controlLabel = action.type === 'foot-freeze-dmx' ? 'Footswitch' : 'Detail View';
       state.setDmxFrozen(action.pressed);
       publishSurfaceState({
         lastChange: makeLastChange(
           'transport',
-          'Detail View',
+          controlLabel,
           action.pressed ? 'DMX OUTPUT FROZEN' : 'DMX output released',
           action.pressed
             ? 'Backend send suppressed. GUI keeps reflecting state; rig holds last value until released.'
@@ -1212,7 +1213,9 @@ export function useApc40Workflow() {
         ),
       });
       state.addNotification({
-        message: action.pressed ? 'APC40 DMX output FROZEN — press Detail View OFF to release' : 'APC40 DMX output released',
+        message: action.type === 'foot-freeze-dmx'
+          ? (action.pressed ? 'APC40 footswitch freeze — release pedal to resume DMX' : 'APC40 footswitch released — DMX resumed')
+          : (action.pressed ? 'APC40 DMX output FROZEN — press Detail View OFF to release' : 'APC40 DMX output released'),
         type: action.pressed ? 'warning' : 'info',
         priority: action.pressed ? 'high' : 'normal',
       });

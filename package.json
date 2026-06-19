@@ -55,6 +55,7 @@
     "start": "npm run build-specs && npm run build-backend && node dist/server.js",
     "dev": "powershell -ExecutionPolicy Bypass -File start.ps1",
     "local:backend": "npm run build-backend-fast && node dist/server.js",
+    "local:https": "npm run build-backend-fast && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-local-https.ps1",
     "local:frontend": "npm --prefix react-app run dev",
     "local": "concurrently -n backend,ui -c blue,green \"npm run local:backend\" \"npm run local:frontend\"",
     "local:prod": "npm run build && node dist/server.js",

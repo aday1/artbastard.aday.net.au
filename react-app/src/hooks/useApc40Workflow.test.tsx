@@ -325,6 +325,28 @@ describe('useApc40Workflow', () => {
     });
   });
 
+  it('uses the APC40 footswitch as a momentary DMX FREEZE pedal', async () => {
+    renderHook(() => useApc40Workflow());
+
+    apcMessage({ _type: 'cc', type: 'cc', channel: 0, controller: 0x40, value: 127, timestamp: 1000 });
+
+    await waitFor(() => {
+      const state = useStore.getState();
+      expect(state.dmxFrozen).toBe(true);
+      expect(state.apc40CrossfaderState.lastChange?.controlLabel).toBe('Footswitch');
+      expect(state.apc40CrossfaderState.lastChange?.summary).toContain('FROZEN');
+    });
+
+    apcMessage({ _type: 'cc', type: 'cc', channel: 0, controller: 0x40, value: 0, timestamp: 1500 });
+
+    await waitFor(() => {
+      const state = useStore.getState();
+      expect(state.dmxFrozen).toBe(false);
+      expect(state.apc40CrossfaderState.lastChange?.controlLabel).toBe('Footswitch');
+      expect(state.apc40CrossfaderState.lastChange?.summary).toContain('released');
+    });
+  });
+
   it('toggles DMX FREEZE from the APC40 channel-9 CC burst Master Select emits', async () => {
     renderHook(() => useApc40Workflow());
 

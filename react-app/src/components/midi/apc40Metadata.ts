@@ -14,6 +14,7 @@ export interface Apc40HardwiredSpec {
     | 'soloCue'
     | 'stopAll'
     | 'masterButton'
+    | 'footSwitch'
     | 'transport'
     | 'trackFader'
     | 'masterFader'
@@ -49,6 +50,7 @@ export const APC40_HARDWIRED_SPECS: Apc40HardwiredSpec[] = [
   { key: 'trackStop', label: 'Clip Stop row', description: 'Stop/unselect the active scene in that column for the current deck.', category: 'utility' },
   { key: 'stopAll', label: 'Stop All Clips', description: 'Stop all Deck A/B scenes and ACT playback.', category: 'utility' },
   { key: 'masterButton', label: 'Master Select', description: 'DMX FREEZE latch: LED on means output is frozen; press again to unfreeze and flush current state.', category: 'utility' },
+  { key: 'footSwitch', label: 'Footswitch jack', description: 'Momentary DMX FREEZE: pedal down holds the rig in place, pedal up resumes and flushes the current state.', category: 'utility' },
   { key: 'transport', label: 'Transport REC/STOP', description: 'REC enters/exits clip-grid save mode; SHIFT+REC rolls random DMX for preview.', category: 'scene' },
   { key: 'navFixture', label: 'Up / Down arrows', description: 'Cycle through fixtures: Up = previous, Down = next.', category: 'nav' },
   { key: 'navScene', label: 'Left / Right arrows', description: 'Cycle through scenes: Left = previous, Right = next.', category: 'nav' },

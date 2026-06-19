@@ -258,6 +258,22 @@ describe('APC40 workflow decoder', () => {
     });
   });
 
+  it('decodes the APC40 footswitch jack as momentary DMX freeze on CC64', () => {
+    expect(decodeApc40Message({ _type: 'cc', source: 'Akai APC40', channel: 0, controller: 0x40, value: 127 })).toEqual({
+      type: 'foot-freeze-dmx',
+      model: 'apc40-mk1',
+      pressed: true,
+    });
+
+    expect(decodeApc40Message({ _type: 'cc', source: 'Akai APC40', channel: 0, controller: 0x40, value: 0 })).toEqual({
+      type: 'foot-freeze-dmx',
+      model: 'apc40-mk1',
+      pressed: false,
+    });
+
+    expect(decodeApc40Message({ _type: 'cc', source: 'Browser MIDI', channel: 0, controller: 0x40, value: 127 })).toBeNull();
+  });
+
   it('does not decode standalone APC40 channel-9 CC burst fragments as Master Select', () => {
     expect(decodeApc40Message({ _type: 'cc', source: 'Akai APC40', channel: 8, controller: 0x12, value: 0 })).toBeNull();
     expect(decodeApc40Message({ _type: 'cc', source: 'Akai APC40', channel: 8, controller: 0x13, value: 0 })).toBeNull();

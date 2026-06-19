@@ -64,3 +64,4 @@ face-tracker/target/
 face-tracker/**/*.rs.bk
 
 LOCAL_DEV.txt
+.local-ssl/

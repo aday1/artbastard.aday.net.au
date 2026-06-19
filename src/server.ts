@@ -1,5 +1,6 @@
 import express from 'express';
-import http, { createServer } from 'http';
+import { createServer as createHttpServer } from 'http';
+import https from 'https';
 import { Server } from 'socket.io';
 import path from 'path';
 import fs from 'fs';
@@ -44,7 +45,50 @@ function ensureDirectoriesExist() {
 
 // Create express app with improved error handling
 const app = express();
-const server = createServer(app);
+
+function loadHttpsOptions(): https.ServerOptions | null {
+  const pfxPath = process.env.ARTBASTARD_HTTPS_PFX || process.env.SSL_PFX;
+  const certPath = process.env.ARTBASTARD_HTTPS_CERT || process.env.SSL_CERT;
+  const keyPath = process.env.ARTBASTARD_HTTPS_KEY || process.env.SSL_KEY;
+  const passphrase = process.env.ARTBASTARD_HTTPS_PFX_PASSPHRASE || process.env.SSL_PFX_PASSPHRASE;
+
+  try {
+    if (pfxPath && fs.existsSync(pfxPath)) {
+      return {
+        pfx: fs.readFileSync(pfxPath),
+        passphrase,
+      };
+    }
+
+    if (certPath && keyPath && fs.existsSync(certPath) && fs.existsSync(keyPath)) {
+      return {
+        cert: fs.readFileSync(certPath),
+        key: fs.readFileSync(keyPath),
+      };
+    }
+
+    if (process.env.ARTBASTARD_HTTPS === '1') {
+      log('HTTPS requested but certificate files were not found; falling back to HTTP', 'WARN', {
+        pfxPath,
+        certPath,
+        keyPath,
+      });
+    }
+  } catch (error) {
+    log('Failed to load HTTPS certificate; falling back to HTTP', 'ERROR', {
+      error: error instanceof Error ? error.message : String(error),
+      pfxPath,
+      certPath,
+      keyPath,
+    });
+  }
+
+  return null;
+}
+
+const httpsOptions = loadHttpsOptions();
+const serverProtocol = httpsOptions ? 'https' : 'http';
+const server = httpsOptions ? https.createServer(httpsOptions, app) : createHttpServer(app);
 
 // Configure CORS for all routes with more permissive settings
 app.use(cors({
@@ -616,9 +660,9 @@ try {
 
   function startListening() {
     server.listen(currentPort, '0.0.0.0', () => {
-      log(`Server running at http://0.0.0.0:${currentPort}`, 'SERVER');
-      log(`Server accessible on local network at http://[YOUR_IP]:${currentPort}`, 'SERVER');
-      log(`React app available at http://0.0.0.0:${currentPort}`, 'SERVER');
+      log(`Server running at ${serverProtocol}://0.0.0.0:${currentPort}`, 'SERVER');
+      log(`Server accessible on local network at ${serverProtocol}://[YOUR_IP]:${currentPort}`, 'SERVER');
+      log(`React app available at ${serverProtocol}://0.0.0.0:${currentPort}`, 'SERVER');
     
     // Get and log the actual network IP for convenience
     const networkInterfaces = require('os').networkInterfaces();
@@ -634,7 +678,7 @@ try {
     
     if (networkIPs.length > 0) {
       networkIPs.forEach(ip => {
-        log(`Network access: http://${ip}:${currentPort}`, 'SERVER');
+        log(`Network access: ${serverProtocol}://${ip}:${currentPort}`, 'SERVER');
       });
     }
     

@@ -15,6 +15,10 @@ import { recordArtNetPingSample, getArtNetPingHistory, getLastArtNetPing } from 
 // Import our separate logger to avoid circular dependencies
 import { log } from './logger';
 import {
+  isApc40MidiPortName,
+  syncApc40ServerScreensaverSharedOutputs,
+} from './apc40ServerScreensaver';
+import {
   hasActiveBridge,
   fanOutDmxChannel,
   fanOutFullUniverse,
@@ -640,6 +644,8 @@ async function connectMidiInput(io: Server, inputName: string, isBrowserMidi = f
                 mappingCount: templateResult.mappingCount
             });
         }
+
+        refreshApc40ServerScreensaverSharedOutputs();
         
         // Log a helpful message about testing the connection
         log(`MIDI connection established. Try moving a control on ${inputName} to verify it's working.`, 'MIDI');
@@ -692,6 +698,8 @@ function disconnectMidiInput(io: Server, inputName: string) {
             delete activeMidiOutputs[inputName];
             log(`MIDI output disconnected: ${inputName}`, 'MIDI');
         }
+
+        refreshApc40ServerScreensaverSharedOutputs();
 
         // If this was the default input, set a new default if available
         if (wasDefaultInput) {
@@ -1228,6 +1236,18 @@ const findOutputNameForInput = (inputName: string): string | null => {
         return outputLower.includes(inputLower) || inputLower.includes(outputLower);
     });
     return loose || null;
+};
+
+const refreshApc40ServerScreensaverSharedOutputs = () => {
+    const outputs: Output[] = [];
+    const outputNames: string[] = [];
+    for (const [inputName, output] of Object.entries(activeMidiOutputs)) {
+        const outputName = findOutputNameForInput(inputName) || inputName;
+        if (!isApc40MidiPortName(outputName) && !isApc40MidiPortName(inputName)) continue;
+        outputs.push(output);
+        outputNames.push(outputName);
+    }
+    syncApc40ServerScreensaverSharedOutputs(outputs, outputNames);
 };
 
 const isRoliFamilyInputName = (inputName: string): boolean => {

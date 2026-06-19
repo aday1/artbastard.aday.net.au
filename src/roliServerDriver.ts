@@ -13,6 +13,7 @@ const HOST_DEVICE_INDEX = 0x00;
 const SCREENSAVER_IDLE_MS = Math.max(1000, Math.min(600000, Number(process.env.ROLI_SERVER_SCREENSAVER_IDLE_MS) || 8000));
 const SCREENSAVER_FRAME_MS = Math.max(40, Math.min(1000, Number(process.env.ROLI_SERVER_SCREENSAVER_FRAME_MS) || 140));
 const TOUCH_TRAIL_POINTS = Math.max(8, Math.min(120, Number(process.env.ROLI_SERVER_TOUCH_TRAIL_POINTS) || 56));
+const TOUCH_REPAINT_DELAY_MS = Math.max(40, Math.min(300, Number(process.env.ROLI_SERVER_TOUCH_REPAINT_DELAY_MS) || 85));
 const DEFAULT_SINGLE_ROLI_ROLE = /^colou?r|wheel|strip$/i.test(process.env.ROLI_SERVER_ROLE || '') ? 'colour-wheel' : 'primary';
 const LED_SEND_RETRY_MS = Math.max(1000, Math.min(60000, Number(process.env.ROLI_SERVER_LED_RETRY_MS) || 8000));
 const LOG_TOUCH_MOVES = process.env.ROLI_SERVER_LOG_TOUCH_MOVES === '1';
@@ -101,6 +102,7 @@ interface ServerRoliPadState {
   ackRejecter: ((error: Error) => void) | null;
   ackTimer: NodeJS.Timeout | null;
   pingTimer: NodeJS.Timeout | null;
+  touchRepaintTimer: NodeJS.Timeout | null;
   touchCount: number;
   lastTouch: { x: number; y: number; z: number; phase: string; role: ServerRoliRole; topologyIndex: number } | null;
   lastError: string | null;
@@ -234,6 +236,7 @@ function createPad(topologyIndex: number, role: ServerRoliRole, serial: string |
     ackRejecter: null,
     ackTimer: null,
     pingTimer: null,
+    touchRepaintTimer: null,
     touchCount: 0,
     lastTouch: null,
     lastError: null,
@@ -274,8 +277,10 @@ function findPadForPacket(topologyIndex: number): ServerRoliPadState {
 function clearPadTimers(pad: ServerRoliPadState): void {
   if (pad.ackTimer) clearTimeout(pad.ackTimer);
   if (pad.pingTimer) clearInterval(pad.pingTimer);
+  if (pad.touchRepaintTimer) clearTimeout(pad.touchRepaintTimer);
   pad.ackTimer = null;
   pad.pingTimer = null;
+  pad.touchRepaintTimer = null;
 }
 
 function clearPadLedQueue(pad: ServerRoliPadState): void {
@@ -684,6 +689,16 @@ function createServerTouchFrame(pad: ServerRoliPadState, cursor: { x: number; y:
   return pixels;
 }
 
+function scheduleServerTouchRepaint(pad: ServerRoliPadState): void {
+  const touchCount = pad.touchCount;
+  if (pad.touchRepaintTimer) clearTimeout(pad.touchRepaintTimer);
+  pad.touchRepaintTimer = setTimeout(() => {
+    pad.touchRepaintTimer = null;
+    if (!pad.lastTouch || pad.touchCount !== touchCount) return;
+    sendLedDataForPad(pad, rgbaFrameToLedData(createServerTouchFrame(pad, pad.lastTouch)), true);
+  }, TOUCH_REPAINT_DELAY_MS);
+}
+
 function shouldRunServerScreensaver(): boolean {
   const readyPads = getPads().filter((pad) => pad.handshakeDone);
   if (!state.screensaverEnabled || !state.input || !state.output || readyPads.length === 0 || state.browserClientCount !== 0) return false;
@@ -768,6 +783,7 @@ function emitTouch(pad: ServerRoliPadState, x: number, y: number, z: number, pha
 
   stopServerRoliScreensaver('touch');
   sendLedDataForPad(pad, rgbaFrameToLedData(createServerTouchFrame(pad, pad.lastTouch)), true);
+  scheduleServerTouchRepaint(pad);
 
   state.io?.emit('serverRoliTouch', {
     ...pad.lastTouch,

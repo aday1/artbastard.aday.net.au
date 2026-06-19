@@ -4303,15 +4303,6 @@ export const useStore = create<State>()(
             }
           });
 
-          // Set up transition state for smooth slider movement
-          set({
-            isTransitioning: true,
-            fromDmxValues: [...currentDmxState],
-            toDmxValues: targetDmxValues,
-            transitionStartTime: Date.now(),
-            activeSceneName: sceneName,
-          });
-
           // Check if scene has timeline enabled
           if (scene.timeline && scene.timeline.enabled) {
             // Stop any currently playing timeline
@@ -4326,33 +4317,43 @@ export const useStore = create<State>()(
                 }
               });
             }
-            
-            // Set DMX values immediately (no transition for timeline scenes)
-            targetDmxValues.forEach((value, index) => {
-              if (index < currentDmxState.length) {
-                get().setDmxChannel(index, value);
-              }
+
+            set({
+              isTransitioning: true,
+              fromDmxValues: [...currentDmxState],
+              toDmxValues: targetDmxValues,
+              transitionStartTime: Date.now(),
+              activeSceneName: sceneName,
             });
-            
-            // Trigger timeline playback via custom event (with small delay to ensure values are set)
+
+            const timelineStartDelayMs = transitionDuration > 0
+              ? Math.min(Math.max(transitionDuration, 150), 1200)
+              : 100;
+
+            // Trigger timeline playback after the initial scene look has settled,
+            // so gobo wheels do not race through intermediate slots on load.
             setTimeout(() => {
               window.dispatchEvent(new CustomEvent('startSceneTimeline', { 
                 detail: { sceneName } 
               }));
-            }, 100);
-            
-            set({
-              isTransitioning: false,
-              activeSceneName: sceneName,
-            });
+            }, timelineStartDelayMs);
             
             if (!options.silent) {
               get().addNotification({ 
-                message: `Loading animated scene '${sceneName}' (timeline enabled)`, 
+                message: `Loading animated scene '${sceneName}' (${timelineStartDelayMs}ms settle)`,
                 type: 'info' 
               });
             }
           } else {
+            // Set up transition state for smooth slider movement
+            set({
+              isTransitioning: true,
+              fromDmxValues: [...currentDmxState],
+              toDmxValues: targetDmxValues,
+              transitionStartTime: Date.now(),
+              activeSceneName: sceneName,
+            });
+
             // Static scene - stop any currently playing timeline and use normal transition
             window.dispatchEvent(new CustomEvent('stopSceneTimeline'));
             
@@ -4365,7 +4366,7 @@ export const useStore = create<State>()(
           }
 
           // Also send to backend for consistency
-          axios.post('/api/scenes/load', { name: sceneName })
+          axios.post('/api/scenes/load', { name: sceneName, clientTransition: true })
             .then(() => {
               debugLog.log(`[STORE] Scene "${sceneName}" loaded successfully via backend`);
             })

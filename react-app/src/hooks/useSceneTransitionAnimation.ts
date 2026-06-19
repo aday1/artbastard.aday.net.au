@@ -1,5 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useStore } from '../store';
+import {
+  findGoboSceneTransitionChannels,
+  smoothGoboSceneTransitionValue,
+} from '../utils/goboSceneSmoothing';
 
 // Easing functions for smooth transitions
 const easingFunctions = {
@@ -19,9 +23,14 @@ export const useSceneTransitionAnimation = () => {
   const transitionEasing = useStore((state) => state.transitionEasing);
   const fromDmxValues = useStore((state) => state.fromDmxValues);
   const toDmxValues = useStore((state) => state.toDmxValues);
+  const fixtures = useStore((state) => state.fixtures);
   const setDmxChannelsForTransition = useStore((state) => state.setDmxChannelsForTransition);
   const clearTransitionState = useStore((state) => state.clearTransitionState);
   const frameIdRef = useRef<number | null>(null);
+  const goboTransitionChannels = useMemo(
+    () => findGoboSceneTransitionChannels(fixtures || []),
+    [fixtures]
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -50,7 +59,14 @@ export const useSceneTransitionAnimation = () => {
       for (let i = 0; i < 512; i++) {
         const fromVal = fromDmxValues[i] || 0;
         const toVal = toDmxValues[i] || 0;
-        newDmxValues[i] = Math.round(fromVal + (toVal - fromVal) * easedProgress);
+        newDmxValues[i] = smoothGoboSceneTransitionValue(
+          fromVal,
+          toVal,
+          progress,
+          easedProgress,
+          i,
+          goboTransitionChannels
+        );
       }
 
       if (isMounted) {
@@ -95,6 +111,7 @@ export const useSceneTransitionAnimation = () => {
     fromDmxValues,
     toDmxValues,
     setDmxChannelsForTransition,
-    clearTransitionState
+    clearTransitionState,
+    goboTransitionChannels
   ]);
 };

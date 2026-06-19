@@ -149,7 +149,7 @@ const SMART_TEMPLATES: SceneSeedTemplate[] = [
   { id: 'gobo-open', label: 'Gobo Open', intensity: 230, color: { red: 255, green: 255, blue: 255 }, gobo: 0, focus: 130, zoom: 128, movement: { pan: 127, tilt: 127 }, shutter: 255 },
   { id: 'gobo-texture', label: 'Gobo Texture', intensity: 230, color: { red: 255, green: 220, blue: 120, white: 80 }, colorWheel: COLOR_WHEEL_VALUES.amber, gobo: 96, focus: 150, zoom: 120, movement: { pan: 127, tilt: 127 }, shutter: 255 },
   { id: 'gobo-rotate-slow', label: 'Gobo Rotate Slow', intensity: 230, color: { red: 180, green: 220, blue: 255 }, colorWheel: COLOR_WHEEL_VALUES.cyan, gobo: 128, goboRotation: 80, animation: 'gobo-slow', durationMs: 8000 },
-  { id: 'gobo-rotate-fast', label: 'Gobo Rotate Fast', intensity: 240, color: { red: 255, green: 255, blue: 255 }, gobo: 160, goboRotation: 180, animation: 'gobo-fast', durationMs: 2800 },
+  { id: 'gobo-rotate-fast', label: 'Gobo Rotate Medium', intensity: 235, color: { red: 255, green: 255, blue: 255 }, gobo: 144, goboRotation: 120, animation: 'gobo-fast', durationMs: 5200 },
   { id: 'prism-beam', label: 'Prism Beam', intensity: 235, color: { red: 255, green: 255, blue: 255, white: 140 }, gobo: 128, prism: 190, zoom: 100, focus: 150, shutter: 255 },
   { id: 'narrow-beam', label: 'Narrow Beam', intensity: 230, color: { red: 255, green: 255, blue: 255 }, zoom: 40, iris: 50, focus: 170, movement: { pan: 127, tilt: 120 }, shutter: 255 },
   { id: 'wide-beam', label: 'Wide Beam', intensity: 220, color: { red: 120, green: 180, blue: 255, white: 160 }, zoom: 220, iris: 220, focus: 115, movement: { pan: 127, tilt: 150 }, shutter: 255 },
