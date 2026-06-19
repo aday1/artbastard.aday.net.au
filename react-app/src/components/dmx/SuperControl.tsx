@@ -3613,6 +3613,18 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                     onChange={(speed) => setPanTiltAutopilot({ speed })}
                   />
                 </label>
+                <label className={styles.panTiltBpmRow}>
+                  <span>
+                    <input
+                      type="checkbox"
+                      checked={panTiltAutopilot.syncToBPM ?? false}
+                      disabled={!hasSelection}
+                      onChange={(event) => setPanTiltAutopilot({ syncToBPM: event.target.checked })}
+                    />
+                    Sync pan/tilt to BPM
+                  </span>
+                  <strong>{Math.round(bpm || 0)} BPM</strong>
+                </label>
                 <label className={styles.panTiltTuneRow}>
                   <span>
                     Path smoothing <strong>{Math.round((panTiltAutopilot.smoothing ?? 0.6) * 100)}%</strong>

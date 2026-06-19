@@ -2616,6 +2616,35 @@ $color-wheel-checker: repeating-conic-gradient(
   }
 }
 
+.panTiltBpmRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--text-secondary, #94a3b8);
+  font-size: 0.78rem;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent-cyan, #00d4ff);
+    flex: 0 0 auto;
+  }
+
+  strong {
+    color: var(--text-primary, #f8fafc);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+}
+
 // Removed all react-grid-layout and drag/resize styles - using auto-layout instead
 
 .gridItemHeader {
