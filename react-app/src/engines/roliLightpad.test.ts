@@ -6,6 +6,8 @@ import {
   rgbaFrameToRoliLedData,
   rgbaToBgr565,
   sampleRgbaToLedFrame,
+  shouldRouteGenericRoliMidiTouchSource,
+  shouldRouteRoliTouchSource,
 } from './roliLightpad';
 
 function pixel(frame: Uint8ClampedArray, x: number, y: number): [number, number, number, number] {
@@ -67,5 +69,16 @@ describe('Roli Lightpad LED helpers', () => {
     const frame = sampleRgbaToLedFrame(source, 30, 30);
     expect(pixel(frame, 0, 0)).toEqual([200, 20, 10, 255]);
     expect(pixel(frame, 14, 14)).toEqual([10, 20, 200, 255]);
+  });
+
+  it('suppresses touch routing from hidden joined-topology parent ports', () => {
+    expect(shouldRouteRoliTouchSource({ hidden: false })).toBe(true);
+    expect(shouldRouteRoliTouchSource({ hidden: true })).toBe(false);
+  });
+
+  it('suppresses ambiguous generic MIDI fallback when a parent has logical child blocks', () => {
+    expect(shouldRouteGenericRoliMidiTouchSource({ hidden: false }, false)).toBe(true);
+    expect(shouldRouteGenericRoliMidiTouchSource({ hidden: true }, true)).toBe(false);
+    expect(shouldRouteGenericRoliMidiTouchSource({ hidden: false }, true)).toBe(false);
   });
 });

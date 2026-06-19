@@ -102,6 +102,11 @@ export const ArtbastardXYPad = forwardRef<ArtbastardXYPadHandle, ArtbastardXYPad
   const playbackRef = useRef<number | null>(null);
   const shapeIndexRef = useRef(0);
   const lastShapeRef = useRef<ShapeName | null>(null);
+  const lastAppliedShapeSizeRef = useRef(shapeSize);
+  const onPathSavedRef = useRef(onPathSaved);
+  useEffect(() => {
+    onPathSavedRef.current = onPathSaved;
+  }, [onPathSaved]);
 
   const xy = dmxToPadPercent(pan, tilt);
   const emitPanTilt = useCallback(
@@ -263,11 +268,12 @@ export const ArtbastardXYPad = forwardRef<ArtbastardXYPadHandle, ArtbastardXYPad
       const radius = shapeRadiusPx();
       const newPath = buildShapePath(shape, centerX, centerY, radius);
       lastShapeRef.current = shape;
+      lastAppliedShapeSizeRef.current = shapeSize;
       setIsPredefinedShape(true);
       setPath(newPath);
-      onPathSaved?.(pathToDmxPoints(newPath, padW, padH));
+      onPathSavedRef.current?.(pathToDmxPoints(newPath, padW, padH));
     },
-    [onPathSaved, shapeRadiusPx, stopPlayback]
+    [shapeRadiusPx, shapeSize, stopPlayback]
   );
 
   const applyShape = () => {
@@ -278,6 +284,7 @@ export const ArtbastardXYPad = forwardRef<ArtbastardXYPadHandle, ArtbastardXYPad
 
   useEffect(() => {
     if (!isPredefinedShape || !lastShapeRef.current) return;
+    if (lastAppliedShapeSizeRef.current === shapeSize) return;
     applyShapeByName(lastShapeRef.current);
   }, [shapeSize, isPredefinedShape, applyShapeByName]);
 
@@ -356,10 +363,6 @@ export const ArtbastardXYPad = forwardRef<ArtbastardXYPadHandle, ArtbastardXYPad
 
   // Roli touches mutate the same internal path state pencil drawing uses,
   // so the React canvas renders them and the LED + slot save logic see them.
-  const onPathSavedRef = useRef(onPathSaved);
-  useEffect(() => {
-    onPathSavedRef.current = onPathSaved;
-  }, [onPathSaved]);
   const externalDrawingRef = useRef(false);
   const normToPx = useCallback((nx: number, ny: number) => {
     const pad = padRef.current;

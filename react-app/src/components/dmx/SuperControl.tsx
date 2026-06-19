@@ -1312,11 +1312,9 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
   const xyPadHandleRef = useRef<ArtbastardXYPadHandle>(null);
   // Mirror the pad's internal path so the LED effect sees mouse-drawn paths too.
   const livePathRef = useRef<Array<{ x: number; y: number }>>([]);
-  const [livePathVersion, setLivePathVersion] = useState(0);
   const handleXyPadPathChange = useCallback(
     (points: Array<{ x: number; y: number; timestamp?: number }>) => {
       livePathRef.current = points.map((p) => ({ x: p.x, y: p.y }));
-      setLivePathVersion((v) => (v + 1) & 0xffff);
     },
     []
   );

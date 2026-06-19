@@ -60,6 +60,17 @@ export type RoliTouchCallback = (ev: RoliTouchEvent) => void;
 export type RoliDeviceChangeCallback = (devices: RoliDeviceInfo[]) => void;
 export type RoliHandshakeCallback = (deviceId: string, done: boolean) => void;
 
+export function shouldRouteRoliTouchSource(source: { hidden: boolean }): boolean {
+  return !source.hidden;
+}
+
+export function shouldRouteGenericRoliMidiTouchSource(
+  source: { hidden: boolean },
+  hasTopologyChildrenForSource: boolean,
+): boolean {
+  return shouldRouteRoliTouchSource(source) && !hasTopologyChildrenForSource;
+}
+
 interface DeviceState {
   deviceId: string; // stable id from MIDIPort.id (falls back to port name)
   parentDeviceId: string | null;
@@ -1094,6 +1105,7 @@ function read7BitBits(data: Uint8Array, bitPos: number, numBits: number): number
 }
 
 function emitTouch(dev: DeviceState, x: number, y: number, z: number, phase: TouchPhase): void {
+  if (!shouldRouteRoliTouchSource(dev)) return;
   dev.lastX = x;
   dev.lastY = y;
   dev.lastZ = z;
@@ -1208,6 +1220,10 @@ function makeOnMidiMessage(dev: DeviceState): (e: WebMidi.MIDIMessageEvent) => v
     }
 
     if (d[0] !== 0xf0 && dev.sysexBuf.length === 0) {
+      // Joined Lightpad topologies share one parent MIDI input. Generic MPE
+      // fallback messages on that hidden parent do not identify which child
+      // block moved, so allowing them through makes both logical roles fire.
+      if (!shouldRouteGenericRoliMidiTouchSource(dev, hasTopologyChildren(dev.deviceId))) return;
       const cmd = d[0] >> 4;
       if (cmd === 0x09 && d.length >= 3 && d[2] > 0) {
         emitTouch(dev, dev.lastX, dev.lastY, d[2] / 127, 'start');
