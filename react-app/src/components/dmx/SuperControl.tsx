@@ -31,6 +31,7 @@ import { debugLog } from '../../utils/debugLog';
 import { rangesToTickSteps } from '../../utils/fixtureChannelTicks';
 import { findMovementSpeedTargets, movementSpeedDmxValue } from '../../utils/movementSpeedChannels';
 import { findStrobeSafetyTargets } from '../../utils/strobeSafety';
+import { clearSuperControlFactoryResetStorage } from '../../utils/factoryResetStorage';
 import type { FixtureChannelRange } from '../../store/types';
 import { getFirstFixtureColorWheelSlots } from '../../fixtures/colorWheelSlots';
 import styles from './SuperControl.module.scss';
@@ -2459,9 +2460,20 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
 
     // Layouts are now auto-managed, no need to reset
 
-    // Clear localStorage
-    localStorage.removeItem('artbastard-default-config');
-    localStorage.removeItem('superControlLayouts');
+    setMovementSnapSpeed(MOVEMENT_SNAP_DEFAULT_SPEED);
+    setPanTiltAutopilot({
+      enabled: false,
+      speed: 0.5,
+      smoothing: 0.6,
+      syncToBPM: false,
+      customPath: [],
+      phase: 0,
+    });
+    setStrobeSafetyEnabled(true);
+
+    // Clear local Super Control/browser tweaks, including channel ranges and
+    // strobe override preferences, without deleting backend scenes or fixtures.
+    clearSuperControlFactoryResetStorage();
 
     alert('Factory reset complete! All settings have been restored to defaults.');
   };

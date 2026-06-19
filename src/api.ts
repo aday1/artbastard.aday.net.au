@@ -21,7 +21,7 @@ import {
   updateScene,
   loadConfig,
   saveConfig,
-  clearMidiMappings,
+  resetConfigState,
   loadScenes,
   saveScenes,
   loadActs,
@@ -907,8 +907,7 @@ apiRouter.delete('/config', (req, res) => {
     if (fs.existsSync(configPath)) {
       fs.unlinkSync(configPath);
     }
-    const resetConfig = loadConfig();
-    clearMidiMappings();
+    const resetConfig = resetConfigState();
     writeFactoryResetMarker('config-reset');
     global.io.emit('configUpdated', resetConfig);
 
@@ -1027,10 +1026,9 @@ apiRouter.post('/factory-reset', (_req, res) => {
     // Reset in-memory state so live clients don't keep stale values
     const emptyDmx = new Array(512).fill(0);
     setDmxChannels(emptyDmx);
-    clearMidiMappings();
+    const resetConfig = resetConfigState();
 
     // Reload config + scenes + acts from disk (now empty), then notify clients
-    const resetConfig = loadConfig();
     const resetScenes = loadScenes();
     const resetActs = loadActs();
 

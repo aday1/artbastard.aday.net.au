@@ -22,6 +22,7 @@ import { HorizontalFader } from '../ui/controls'
 import { ThemePresetStrip } from './ThemePresetStrip'
 import { useDebouncedAppearanceSave } from '../../hooks/useDebouncedAppearanceSave'
 import { applyRackChrome, getPresetById } from '../../utils/themeUtils'
+import { clearFactoryResetBrowserStorage, createFactoryDefaultChannelRanges } from '../../utils/factoryResetStorage'
 import styles from './UnifiedSettings.module.scss'
 
 type SuperControlSettingsExport = SuperControlPreferences
@@ -410,8 +411,7 @@ export const UnifiedSettings: React.FC = () => {
       }
 
       // 2. Clear every browser-side storage layer
-      try { localStorage.clear(); } catch (err) { console.warn('localStorage.clear failed', err); }
-      try { sessionStorage.clear(); } catch (err) { console.warn('sessionStorage.clear failed', err); }
+      clearFactoryResetBrowserStorage();
 
       // Drop any Cache Storage (service workers, fetch caches)
       if (typeof caches !== 'undefined' && caches?.keys) {
@@ -463,11 +463,45 @@ export const UnifiedSettings: React.FC = () => {
         superControlLearnTarget: null,
         selectedFixtures: [],
         channelNames: new Array(512).fill('').map((_, i) => `CH ${i + 1}`),
-        channelRanges: new Array(512).fill(null).map(() => ({ min: 0, max: 255 })),
+        channelRanges: createFactoryDefaultChannelRanges(),
+        channelTicksOnlyOverrides: {},
+        channelAuxFullFaderOverrides: {},
         channelColors: new Array(512).fill(''),
         pinnedChannels: [],
         selectedChannels: [],
         dmxChannels: new Array(512).fill(0),
+        strobeSafetyEnabled: true,
+        panTiltAutopilot: {
+          enabled: false,
+          pathType: 'circle',
+          speed: 0.5,
+          size: 50,
+          centerX: 128,
+          centerY: 128,
+          syncToBPM: false,
+          smoothing: 0.6,
+          phase: 0,
+        },
+        colorSliderAutopilot: {
+          enabled: false,
+          type: 'sine',
+          speed: 0.2,
+          range: { min: 0, max: 360 },
+          syncToBPM: false,
+          phase: 0,
+        },
+        channelAutopilots: {},
+        autopilotTrackEnabled: false,
+        autopilotTrackType: 'circle',
+        autopilotTrackPosition: 0,
+        autopilotTrackSize: 50,
+        autopilotTrackSpeed: 50,
+        autopilotTrackCenterX: 127,
+        autopilotTrackCenterY: 127,
+        autopilotTrackAutoPlay: false,
+        autopilotTrackCustomPoints: [],
+        dmxFaderOrientation: 'horizontal',
+        dmxChannelsPerRow: 0,
         oscAssignments: new Array(512).fill('').map((_, i) => `/1/fader${i + 1}`),
         superControlOscAddresses: {},
         theme: 'standard',
@@ -520,8 +554,7 @@ export const UnifiedSettings: React.FC = () => {
       });
 
       setTimeout(() => {
-        try { localStorage.clear(); } catch { /* noop */ }
-        try { sessionStorage.clear(); } catch { /* noop */ }
+        clearFactoryResetBrowserStorage();
         window.location.reload();
       }, 500);
     } catch (error) {

@@ -120,11 +120,61 @@ interface OscConfig {
     sendPort: number;
 }
 
+const createDefaultOscAssignments = (): string[] =>
+    new Array(512).fill('').map((_, i) => `/1/dmx${i + 1}`);
+
+const createDefaultChannelNames = (): string[] =>
+    new Array(512).fill('').map((_, i) => `CH ${i + 1}`);
+
+const createDefaultChannelRanges = (): Array<{ min: number; max: number }> =>
+    new Array(512).fill(null).map(() => ({ min: 0, max: 255 }));
+
+const createDefaultArtNetConfig = (): ArtNetConfig => ({
+    ip: "192.168.1.199",
+    subnet: 0,
+    universe: 0,
+    net: 0,
+    port: 6454,
+    base_refresh_interval: 1000
+});
+
+const createDefaultOscConfig = (): OscConfig => ({
+    host: '127.0.0.1',
+    port: 8000,
+    sendEnabled: true,
+    sendHost: '127.0.0.1',
+    sendPort: 57120
+});
+
+const normalizeChannelRanges = (ranges: unknown): Array<{ min: number; max: number }> => {
+    const defaults = createDefaultChannelRanges();
+    if (!Array.isArray(ranges)) return defaults;
+
+    return defaults.map((defaultRange, index) => {
+        const range = ranges[index] as Partial<{ min: number; max: number }> | undefined;
+        if (!range || typeof range !== 'object') return defaultRange;
+        const min = Math.max(0, Math.min(255, Number.isFinite(range.min) ? Number(range.min) : defaultRange.min));
+        const rawMax = Number.isFinite(range.max) ? Number(range.max) : defaultRange.max;
+        const max = Math.max(min, Math.min(255, rawMax));
+        return { min, max };
+    });
+};
+
+const normalizeOscAssignments = (assignments: unknown): string[] => {
+    const defaults = createDefaultOscAssignments();
+    if (!Array.isArray(assignments)) return defaults;
+    return defaults.map((defaultAddress, index) =>
+        typeof assignments[index] === 'string' && assignments[index].trim()
+            ? assignments[index]
+            : defaultAddress
+    );
+};
+
 // Variable declarations
 let dmxChannels: number[] = new Array(512).fill(0);
-let oscAssignments: string[] = new Array(512).fill('').map((_, i) => `/1/dmx${i + 1}`); // Factory default pattern
-let channelNames: string[] = new Array(512).fill('').map((_, i) => `CH ${i + 1}`);
-let channelRanges: Array<{ min: number; max: number }> = new Array(512).fill(null).map(() => ({ min: 0, max: 255 }));
+let oscAssignments: string[] = createDefaultOscAssignments();
+let channelNames: string[] = createDefaultChannelNames();
+let channelRanges: Array<{ min: number; max: number }> = createDefaultChannelRanges();
 let fixtures: Fixture[] = [];
 let groups: Group[] = [];
 let scenes: Scene[] = [];
@@ -144,14 +194,7 @@ let oscSendPort: any = null;
 const customOscSendPorts: Map<string, any> = new Map();
 
 // OSC Configuration
-let oscConfig: OscConfig = {
-    host: '127.0.0.1',
-    port: 8000,
-    // OSC sending configuration
-    sendEnabled: true,
-    sendHost: '127.0.0.1',
-    sendPort: 57120
-};
+let oscConfig: OscConfig = createDefaultOscConfig();
 
 // Constants and configurations
 const DATA_DIR = path.join(__dirname, '..', 'data');
@@ -166,14 +209,7 @@ let isLoggingEnabled = true;
 let isConsoleLoggingEnabled = true;
 
 // Default ArtNet configuration
-let artNetConfig: ArtNetConfig = {
-    ip: "192.168.1.199",
-    subnet: 0,
-    universe: 0,
-    net: 0,
-    port: 6454,
-    base_refresh_interval: 1000
-};
+let artNetConfig: ArtNetConfig = createDefaultArtNetConfig();
 
 // ArtNet sender
 let artnetSender: any;
@@ -189,18 +225,11 @@ function loadConfig() {
     if (fs.existsSync(CONFIG_FILE)) {
         const data = fs.readFileSync(CONFIG_FILE, 'utf-8');
         const parsedConfig = JSON.parse(data);
-        artNetConfig = { ...artNetConfig, ...parsedConfig.artNetConfig };
+        artNetConfig = { ...createDefaultArtNetConfig(), ...parsedConfig.artNetConfig };
         midiMappings = parsedConfig.midiMappings || {};
-        oscAssignments = parsedConfig.oscAssignments || new Array(512).fill('').map((_, i) => `/1/dmx${i + 1}`); // Load OSC assignments or use default
-        oscConfig = { ...oscConfig, ...parsedConfig.oscConfig }; // Load OSC config or use default
-        // Load channel ranges
-        if (parsedConfig.channelRanges && Array.isArray(parsedConfig.channelRanges)) {
-            channelRanges = parsedConfig.channelRanges;
-            // Ensure array is 512 elements
-            while (channelRanges.length < 512) {
-                channelRanges.push({ min: 0, max: 255 });
-            }
-        }
+        oscAssignments = normalizeOscAssignments(parsedConfig.oscAssignments);
+        oscConfig = { ...createDefaultOscConfig(), ...parsedConfig.oscConfig };
+        channelRanges = normalizeChannelRanges(parsedConfig.channelRanges);
         log('Config loaded', 'INFO', { artNetConfig });
         log('MIDI mappings loaded', 'MIDI', { midiMappings });
         log('OSC assignments loaded', 'OSC', { oscAssignmentsCount: oscAssignments.length });
@@ -213,13 +242,7 @@ function loadConfig() {
             oscConfig // Return loaded OSC config
         };
     } else {
-        saveConfig(); // This will save defaults including the new oscAssignments default
-        return {
-            artNetConfig,
-            midiMappings,
-            oscAssignments,
-            oscConfig
-        };
+        return resetConfigState();
     }
 }
 
@@ -240,6 +263,23 @@ function saveConfig() {
     };
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(configToSave, null, 2));
     log('Config saved', 'INFO', { config: configToSave });
+}
+
+function resetConfigState() {
+    artNetConfig = createDefaultArtNetConfig();
+    midiMappings = {};
+    oscAssignments = createDefaultOscAssignments();
+    oscConfig = createDefaultOscConfig();
+    channelNames = createDefaultChannelNames();
+    channelRanges = createDefaultChannelRanges();
+    saveConfig();
+    return {
+        artNetConfig,
+        midiMappings,
+        oscAssignments,
+        oscConfig,
+        channelRanges
+    };
 }
 
 export function getDmxChannels(sessionId: string = DEFAULT_SESSION_ID): number[] {
@@ -2561,6 +2601,7 @@ export {
     saveScenes,
     loadActs,
     saveActs,
+    resetConfigState,
     loadFixtures,
     saveFixtures,
     loadGroups,

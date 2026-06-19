@@ -8,6 +8,8 @@
  * so a second consecutive marker hit is treated as already-handled.
  */
 
+import { clearFactoryResetBrowserStorage } from './factoryResetStorage'
+
 const RELOAD_GUARD_KEY = '__ab_factory_reset_reloaded__'
 
 let factoryResetChecked = false
@@ -39,8 +41,7 @@ export async function checkFactoryReset(): Promise<boolean> {
     const data = await response.json()
 
     if (data.factoryReset && !alreadyReloaded) {
-      localStorage.clear()
-      sessionStorage.clear()
+      clearFactoryResetBrowserStorage()
       sessionStorage.setItem(RELOAD_GUARD_KEY, '1')
       factoryResetPerformed = true
     } else if (alreadyReloaded) {
