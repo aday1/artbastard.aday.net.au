@@ -85,11 +85,15 @@
 }
 
 .canvas {
+  width: 400px;
+  height: 400px;
+  max-width: 100%;
   border: 2px solid rgba(0, 212, 255, 0.3);
   border-radius: 8px;
   cursor: crosshair;
   background: #1a1a2e;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  touch-action: none;
   
   &:hover {
     border-color: rgba(0, 212, 255, 0.5);

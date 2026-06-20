@@ -34,8 +34,8 @@ export const CustomPathEditor: React.FC<CustomPathEditorProps> = ({
   } = useStore();
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const dragIndexRef = useRef(-1);
   const [points, setPoints] = useState<PathPoint[]>(initialPoints);
-  const [isDragging, setIsDragging] = useState(false);
   const [dragIndex, setDragIndex] = useState<number>(-1);
   const [showGrid, setShowGrid] = useState(true);
   const [showPreview, setShowPreview] = useState(true);
@@ -45,26 +45,48 @@ export const CustomPathEditor: React.FC<CustomPathEditorProps> = ({
   const canvasWidth = 400;
   const canvasHeight = 400;
 
-  // Initialize points from store
+  const clientToCanvas = useCallback((clientX: number, clientY: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return { x: 0, y: 0 };
+    const x = ((clientX - rect.left) / rect.width) * canvasWidth;
+    const y = ((clientY - rect.top) / rect.height) * canvasHeight;
+    return {
+      x: Math.max(0, Math.min(canvasWidth, x)),
+      y: Math.max(0, Math.min(canvasHeight, y)),
+    };
+  }, [canvasWidth, canvasHeight]);
+
+  const hitRadiusCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return 12;
+    const rect = canvas.getBoundingClientRect();
+    const scale = canvasWidth / Math.max(rect.width, 1);
+    return 12 * scale;
+  }, [canvasWidth]);
+
+  // Initialize points once each time the editor opens
   useEffect(() => {
-    if (isOpen) {
-      setPathSmoothing(panTiltAutopilot.smoothing ?? 0.6);
-      if (initialPoints.length >= 2) {
-        setPoints(initialPoints);
-      } else if (mode === 'autopilot' && panTiltAutopilot.customPath) {
-        setPoints(panTiltAutopilot.customPath);
-      } else if (mode === 'track' && autopilotTrackCustomPoints) {
-        setPoints(autopilotTrackCustomPoints);
-      } else {
-        setPoints([
-          { x: 127, y: 64 },
-          { x: 191, y: 127 },
-          { x: 127, y: 191 },
-          { x: 64, y: 127 },
-        ]);
-      }
+    if (!isOpen) return;
+    setPathSmoothing(panTiltAutopilot.smoothing ?? 0.6);
+    if (initialPoints.length >= 2) {
+      setPoints(initialPoints);
+    } else if (mode === 'autopilot' && panTiltAutopilot.customPath?.length) {
+      setPoints(panTiltAutopilot.customPath);
+    } else if (mode === 'track' && autopilotTrackCustomPoints?.length) {
+      setPoints(autopilotTrackCustomPoints);
+    } else {
+      setPoints([
+        { x: 127, y: 64 },
+        { x: 191, y: 127 },
+        { x: 127, y: 191 },
+        { x: 64, y: 127 },
+      ]);
     }
-  }, [isOpen, mode, panTiltAutopilot.customPath, panTiltAutopilot.smoothing, autopilotTrackCustomPoints, initialPoints]);
+    dragIndexRef.current = -1;
+    setDragIndex(-1);
+  }, [isOpen]);
 
   // Convert DMX values (0-255) to canvas coordinates
   const dmxToCanvas = useCallback((dmxX: number, dmxY: number) => {
@@ -213,73 +235,67 @@ export const CustomPathEditor: React.FC<CustomPathEditorProps> = ({
     drawCanvas();
   }, [drawCanvas]);
 
-  // Handle mouse events
-  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  // Handle pointer events (mouse + touch), with capture so drag works off-canvas
+  const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (e.button !== 0) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
+    e.preventDefault();
 
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const { x, y } = clientToCanvas(e.clientX, e.clientY);
+    const hitRadius = hitRadiusCanvas();
 
-    // Check if clicking on existing point
     for (let i = 0; i < points.length; i++) {
       const point = dmxToCanvas(points[i].x, points[i].y);
-      const distance = Math.sqrt((x - point.x) ** 2 + (y - point.y) ** 2);
-      
-      if (distance <= 10) {
-        setIsDragging(true);
+      const distance = Math.hypot(x - point.x, y - point.y);
+      if (distance <= hitRadius) {
+        canvas.setPointerCapture(e.pointerId);
+        dragIndexRef.current = i;
         setDragIndex(i);
         return;
       }
     }
 
-    // Add new point if not clicking on existing one (skip if too close to last)
     const dmxCoords = canvasToDmx(x, y);
     setPoints((prev) => {
-      if (prev.length === 0) return [dmxCoords];
-      const last = prev[prev.length - 1];
-      if (Math.hypot(dmxCoords.x - last.x, dmxCoords.y - last.y) < 6) return prev;
+      const duplicate = prev.some(
+        (p) => Math.hypot(dmxCoords.x - p.x, dmxCoords.y - p.y) < 3
+      );
+      if (duplicate) return prev;
       return [...prev, dmxCoords];
     });
   };
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDragging || dragIndex === -1) return;
+  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const activeIndex = dragIndexRef.current;
+    if (activeIndex === -1) return;
 
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const { x, y } = clientToCanvas(e.clientX, e.clientY);
     const dmxCoords = canvasToDmx(x, y);
 
-    setPoints(prev => prev.map((point, index) => 
-      index === dragIndex ? dmxCoords : point
-    ));
+    setPoints((prev) =>
+      prev.map((point, index) => (index === activeIndex ? dmxCoords : point))
+    );
   };
 
-  const handleMouseUp = () => {
-    setIsDragging(false);
+  const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (canvas?.hasPointerCapture(e.pointerId)) {
+      canvas.releasePointerCapture(e.pointerId);
+    }
+    dragIndexRef.current = -1;
     setDragIndex(-1);
   };
 
-  // Handle double-click to remove point
   const handleDoubleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const { x, y } = clientToCanvas(e.clientX, e.clientY);
+    const hitRadius = hitRadiusCanvas();
 
     for (let i = 0; i < points.length; i++) {
       const point = dmxToCanvas(points[i].x, points[i].y);
-      const distance = Math.sqrt((x - point.x) ** 2 + (y - point.y) ** 2);
-      
-      if (distance <= 10 && points.length > 2) {
-        setPoints(prev => prev.filter((_, index) => index !== i));
+      const distance = Math.hypot(x - point.x, y - point.y);
+      if (distance <= hitRadius && points.length > 2) {
+        setPoints((prev) => prev.filter((_, index) => index !== i));
         return;
       }
     }
@@ -380,9 +396,10 @@ export const CustomPathEditor: React.FC<CustomPathEditorProps> = ({
               width={canvasWidth}
               height={canvasHeight}
               className={styles.canvas}
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerUp}
               onDoubleClick={handleDoubleClick}
             />
             
