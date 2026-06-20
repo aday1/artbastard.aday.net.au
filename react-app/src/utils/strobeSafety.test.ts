@@ -52,6 +52,27 @@ describe('strobeSafety', () => {
     expect(targets).toHaveLength(0);
   });
 
+  it('does not lock combined dimmer/shutter channels that mention strobe in sub-ranges', () => {
+    const targets = findStrobeSafetyTargets([{
+      name: 'Mini Wash',
+      startAddress: 5,
+      channels: [
+        {
+          name: 'Master Dimmer and Shutter',
+          type: 'dimmer',
+          ranges: [
+            { min: 0, max: 7, description: 'Blackout / closed' },
+            { min: 8, max: 134, description: 'Master dimmer' },
+            { min: 135, max: 239, description: 'Strobe, slow to fast' },
+            { min: 240, max: 255, description: 'Open' },
+          ],
+        },
+      ],
+    }]);
+
+    expect(targets).toHaveLength(0);
+  });
+
   it('creates update maps and clamps full DMX arrays', () => {
     const fixtures = [{
       name: 'Fixture',

@@ -34,7 +34,11 @@ function isStrobeChannel(channel: StrobeSafetyChannelLike): boolean {
   const type = normalize(channel.type);
   const name = normalize(channel.name);
   if (type === 'strobe') return true;
-  if (type === 'shutter') return false;
+  // Combined dimmer/shutter/intensity channels mention "strobe" in sub-ranges but are not
+  // dedicated strobe channels — locking them breaks full-open dimmer (e.g. DMX 255).
+  if (type === 'shutter' || type === 'dimmer' || type === 'intensity' || type === 'master') {
+    return false;
+  }
   return /\bstrobe\b/.test(channelText(channel)) || name.includes('strobe');
 }
 
