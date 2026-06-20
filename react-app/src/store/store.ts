@@ -350,7 +350,7 @@ export interface Scene {
   seed?: {
     generatedBy: 'artbastard-scene-seeder';
     generatorVersion: number;
-    packId: 'compact-starter' | 'smart-starter-40' | 'smart-ab-80' | 'essential-ab-28';
+    packId: 'compact-starter' | 'smart-starter-40' | 'smart-ab-80' | 'essential-ab-28' | 'operator-rows-ab-48';
     templateId: string;
     deck: 'A' | 'B';
     slot: number;

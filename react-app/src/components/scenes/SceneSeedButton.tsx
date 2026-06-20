@@ -129,7 +129,7 @@ export const SceneSeedButton: React.FC<SceneSeedButtonProps> = ({ className, com
           </div>
 
           <p className={styles.seedIntro}>
-            Build APC clip scenes from templates or from your live rig. Default is 14 looks on Deck A and 14 on Deck B; use one-slot or capture to fill the rest yourself.
+            Build APC clip scenes from templates or from your live rig. Default is 14 looks on Deck A and 14 on Deck B. Use Operator rows 3-5 to layer pan/tilt and color on slots 17-40 while you keep dimmers manual.
           </p>
 
           <label>
@@ -254,6 +254,17 @@ export const SceneSeedButton: React.FC<SceneSeedButtonProps> = ({ className, com
                 onChange={(event) => setIncludeAutomation(event.target.checked)}
               />
               Include animated timeline on this slot
+            </label>
+          )}
+
+          {mode === 'pack' && (
+            <label className={styles.checkRow}>
+              <input
+                type="checkbox"
+                checked={includeAutomation}
+                onChange={(event) => setIncludeAutomation(event.target.checked)}
+              />
+              Include automation (sweeps, color cycles) where the pack supports it
             </label>
           )}
 

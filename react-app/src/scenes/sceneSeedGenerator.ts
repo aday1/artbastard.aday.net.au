@@ -6,7 +6,12 @@ import { MD_SCENE_SEED_PACKS, MD_SCENE_PACK_TEMPLATE_IDS } from './generated/see
 export const SCENE_SEED_GENERATOR_ID = 'artbastard-scene-seeder';
 export const SCENE_SEED_GENERATOR_VERSION = 1;
 
-export type SceneSeedPackId = 'essential-ab-28' | 'compact-starter' | 'smart-starter-40' | 'smart-ab-80';
+export type SceneSeedPackId =
+  | 'essential-ab-28'
+  | 'operator-rows-ab-48'
+  | 'compact-starter'
+  | 'smart-starter-40'
+  | 'smart-ab-80';
 export type SceneSeedTarget = 'deck-a' | 'deck-b' | 'decks-a-b';
 export type SceneSeedMode = 'pack' | 'single-slot' | 'capture-selection';
 export type SceneSeedFixtureScope = 'all' | 'movers' | 'washes';
@@ -88,6 +93,8 @@ interface SceneSeedTemplate {
   animation?: AnimationKind;
   durationMs?: number;
   fixtureScope?: SceneSeedFixtureScope;
+  /** When set, only writes the listed channel roles (leaves dimmer/shutter/gobo/strobe untouched). */
+  writeMode?: 'full' | 'panTiltOnly' | 'colorOnly' | 'colorPanTilt';
 }
 
 export interface CaptureSelectionToSlotOptions {
@@ -105,7 +112,11 @@ const DEFAULT_OPTIONS: SceneSeedOptions = {
   avoidStrobe: false,
 };
 
-export const SCENE_BOTH_DECK_PACK_IDS: SceneSeedPackId[] = ['essential-ab-28', 'smart-ab-80'];
+export const SCENE_BOTH_DECK_PACK_IDS: SceneSeedPackId[] = [
+  'essential-ab-28',
+  'operator-rows-ab-48',
+  'smart-ab-80',
+];
 
 export const SCENE_SEED_PACKS: Array<{ id: SceneSeedPackId; label: string; description: string }> =
   MD_SCENE_SEED_PACKS.length
@@ -188,6 +199,34 @@ const SMART_TEMPLATES: SceneSeedTemplate[] = [
   { id: 'finale-full', label: 'Finale Full', intensity: 255, color: { red: 255, green: 255, blue: 255, white: 255, amber: 255, uv: 120 }, movement: { pan: 127, tilt: 127, spread: 70 }, gobo: 128, prism: 200, zoom: 180, shutter: 255 },
 ];
 
+/** Row 3-5 operator pack: pan/tilt, color, and color+pan/tilt only (slots 17-40). */
+const OPERATOR_TEMPLATES: SceneSeedTemplate[] = [
+  { id: 'pt-center', label: 'PT Center', writeMode: 'panTiltOnly', movement: { pan: 127, tilt: 127 }, fixtureScope: 'movers' },
+  { id: 'pt-left', label: 'PT Left', writeMode: 'panTiltOnly', movement: { pan: 64, tilt: 127 }, fixtureScope: 'movers' },
+  { id: 'pt-right', label: 'PT Right', writeMode: 'panTiltOnly', movement: { pan: 192, tilt: 127 }, fixtureScope: 'movers' },
+  { id: 'pt-up', label: 'PT Up', writeMode: 'panTiltOnly', movement: { pan: 127, tilt: 80 }, fixtureScope: 'movers' },
+  { id: 'pt-down', label: 'PT Down', writeMode: 'panTiltOnly', movement: { pan: 127, tilt: 190 }, fixtureScope: 'movers' },
+  { id: 'pt-fan', label: 'PT Fan', writeMode: 'panTiltOnly', movement: { pan: 127, tilt: 130, spread: 56 }, fixtureScope: 'movers' },
+  { id: 'pt-sweep-slow', label: 'PT Sweep Slow', writeMode: 'panTiltOnly', movement: { pan: 96, tilt: 150 }, animation: 'movement-slow', durationMs: 8000, fixtureScope: 'movers' },
+  { id: 'pt-corner-90', label: 'PT Corner 90', writeMode: 'panTiltOnly', movement: { pan: 192, tilt: 127 }, animation: 'movement-90', durationMs: 4800, fixtureScope: 'movers' },
+  { id: 'col-red', label: 'Color Red', writeMode: 'colorOnly', color: { red: 255, green: 0, blue: 0 }, colorWheel: COLOR_WHEEL_VALUES.red },
+  { id: 'col-blue', label: 'Color Blue', writeMode: 'colorOnly', color: { red: 0, green: 20, blue: 255 }, colorWheel: COLOR_WHEEL_VALUES.blue },
+  { id: 'col-green', label: 'Color Green', writeMode: 'colorOnly', color: { red: 0, green: 255, blue: 0 }, colorWheel: COLOR_WHEEL_VALUES.green },
+  { id: 'col-amber', label: 'Color Amber', writeMode: 'colorOnly', color: { red: 255, green: 120, blue: 0, amber: 255 }, colorWheel: COLOR_WHEEL_VALUES.amber },
+  { id: 'col-cyan', label: 'Color Cyan', writeMode: 'colorOnly', color: { red: 0, green: 255, blue: 255 }, colorWheel: COLOR_WHEEL_VALUES.cyan },
+  { id: 'col-magenta', label: 'Color Magenta', writeMode: 'colorOnly', color: { red: 255, green: 0, blue: 255 }, colorWheel: COLOR_WHEEL_VALUES.magenta },
+  { id: 'col-white', label: 'Color White', writeMode: 'colorOnly', color: { red: 255, green: 255, blue: 255, white: 255 }, colorWheel: COLOR_WHEEL_VALUES.open },
+  { id: 'col-cycle', label: 'Color Cycle', writeMode: 'colorOnly', color: { red: 255, green: 0, blue: 0 }, colorWheel: COLOR_WHEEL_VALUES.red, animation: 'color-fast', durationMs: 3600 },
+  { id: 'mix-red-center', label: 'Mix Red Center', writeMode: 'colorPanTilt', color: { red: 255, green: 0, blue: 0 }, colorWheel: COLOR_WHEEL_VALUES.red, movement: { pan: 127, tilt: 127 } },
+  { id: 'mix-blue-left', label: 'Mix Blue Left', writeMode: 'colorPanTilt', color: { red: 0, green: 20, blue: 255 }, colorWheel: COLOR_WHEEL_VALUES.blue, movement: { pan: 64, tilt: 127 } },
+  { id: 'mix-green-right', label: 'Mix Green Right', writeMode: 'colorPanTilt', color: { red: 0, green: 255, blue: 0 }, colorWheel: COLOR_WHEEL_VALUES.green, movement: { pan: 192, tilt: 127 } },
+  { id: 'mix-amber-up', label: 'Mix Amber Up', writeMode: 'colorPanTilt', color: { red: 255, green: 120, blue: 0, amber: 255 }, colorWheel: COLOR_WHEEL_VALUES.amber, movement: { pan: 127, tilt: 80 } },
+  { id: 'mix-cyan-down', label: 'Mix Cyan Down', writeMode: 'colorPanTilt', color: { red: 0, green: 255, blue: 255 }, colorWheel: COLOR_WHEEL_VALUES.cyan, movement: { pan: 127, tilt: 190 } },
+  { id: 'mix-warm-sweep', label: 'Mix Warm Sweep', writeMode: 'colorPanTilt', color: { red: 255, green: 140, blue: 40, amber: 255 }, colorWheel: COLOR_WHEEL_VALUES.orange, movement: { pan: 96, tilt: 150 }, animation: 'movement-slow', durationMs: 9000 },
+  { id: 'mix-cool-90', label: 'Mix Cool 90', writeMode: 'colorPanTilt', color: { red: 60, green: 150, blue: 255 }, colorWheel: COLOR_WHEEL_VALUES.cyan, movement: { pan: 192, tilt: 127 }, animation: 'movement-90', durationMs: 4800 },
+  { id: 'mix-fan-cycle', label: 'Mix Fan Cycle', writeMode: 'colorPanTilt', color: { red: 255, green: 255, blue: 255, white: 120 }, colorWheel: COLOR_WHEEL_VALUES.open, movement: { pan: 127, tilt: 130, spread: 56 }, animation: 'color-slow', durationMs: 7200 },
+];
+
 const PICK_ONLY_TEMPLATES: SceneSeedTemplate[] = [
   { id: 'full-red', label: 'Full Red', intensity: 255, color: { red: 255, green: 0, blue: 0 }, colorWheel: COLOR_WHEEL_VALUES.red, shutter: 255 },
   { id: 'full-blue', label: 'Full Blue', intensity: 255, color: { red: 0, green: 20, blue: 255 }, colorWheel: COLOR_WHEEL_VALUES.blue, shutter: 255 },
@@ -223,7 +262,13 @@ export const SCENE_SEED_PICK_TEMPLATE_IDS = [
   'full-open',
 ] as const;
 
-const ALL_SCENE_TEMPLATES: SceneSeedTemplate[] = [...SMART_TEMPLATES, ...PICK_ONLY_TEMPLATES];
+const ALL_SCENE_TEMPLATES: SceneSeedTemplate[] = [
+  ...SMART_TEMPLATES,
+  ...OPERATOR_TEMPLATES,
+  ...PICK_ONLY_TEMPLATES,
+];
+
+const PACK_TEMPLATE_LOOKUP: SceneSeedTemplate[] = [...SMART_TEMPLATES, ...OPERATOR_TEMPLATES];
 
 const COMPACT_TEMPLATE_IDS = new Set([
   'blackout',
@@ -447,6 +492,30 @@ function writeMovement(
   });
 }
 
+function animationAllowedForWriteMode(
+  animation: AnimationKind,
+  writeMode: SceneSeedTemplate['writeMode']
+): boolean {
+  const mode = writeMode ?? 'full';
+  if (mode === 'full') return true;
+  if (mode === 'panTiltOnly') {
+    return animation === 'movement-slow' || animation === 'movement-fast' || animation === 'movement-90';
+  }
+  if (mode === 'colorOnly') {
+    return animation === 'color-slow' || animation === 'color-fast';
+  }
+  if (mode === 'colorPanTilt') {
+    return (
+      animation === 'movement-slow' ||
+      animation === 'movement-fast' ||
+      animation === 'movement-90' ||
+      animation === 'color-slow' ||
+      animation === 'color-fast'
+    );
+  }
+  return false;
+}
+
 function createTimeline(
   template: SceneSeedTemplate,
   values: number[],
@@ -455,6 +524,7 @@ function createTimeline(
   avoidStrobe: boolean
 ): SceneTimeline | undefined {
   if (!includeAutomation || !template.animation || template.animation === 'none') return undefined;
+  if (!animationAllowedForWriteMode(template.animation, template.writeMode)) return undefined;
   if (avoidStrobe && (template.animation === 'strobe' || template.animation === 'strobe-move')) return undefined;
 
   const duration = template.durationMs ?? 4000;
@@ -582,39 +652,50 @@ function applyTemplate(
   const shutter = targetsForRole(scopedTargets, 'shutter');
   const macro = targetsForRole(scopedTargets, 'macro');
   const speed = targetsForRole(scopedTargets, 'speed');
+  const writeMode = template.writeMode ?? 'full';
 
-  if ((template.intensity ?? 0) > 0) {
-    writeTargets(values, dimmer, template.intensity ?? 220);
-    writeRangeAware(values, shutter, template.shutter ?? 255, avoidStrobe ? ['open', 'on', 'no strobe'] : ['open', 'on']);
-  } else {
-    writeTargets(values, dimmer, 0);
-    writeTargets(values, shutter, template.shutter ?? 0);
+  if (writeMode === 'full') {
+    if ((template.intensity ?? 0) > 0) {
+      writeTargets(values, dimmer, template.intensity ?? 220);
+      writeRangeAware(values, shutter, template.shutter ?? 255, avoidStrobe ? ['open', 'on', 'no strobe'] : ['open', 'on']);
+    } else {
+      writeTargets(values, dimmer, 0);
+      writeTargets(values, shutter, template.shutter ?? 0);
+    }
   }
 
-  if (template.color) {
-    writeTargets(values, red, template.color.red ?? 0);
-    writeTargets(values, green, template.color.green ?? 0);
-    writeTargets(values, blue, template.color.blue ?? 0);
-    writeTargets(values, white, template.color.white ?? 0);
-    writeTargets(values, amber, template.color.amber ?? 0);
-    writeTargets(values, uv, template.color.uv ?? 0);
+  if (writeMode === 'full' || writeMode === 'colorOnly' || writeMode === 'colorPanTilt') {
+    if (template.color) {
+      writeTargets(values, red, template.color.red ?? 0);
+      writeTargets(values, green, template.color.green ?? 0);
+      writeTargets(values, blue, template.color.blue ?? 0);
+      writeTargets(values, white, template.color.white ?? 0);
+      writeTargets(values, amber, template.color.amber ?? 0);
+      writeTargets(values, uv, template.color.uv ?? 0);
+    }
+
+    if (template.colorWheel !== undefined) writeRangeAware(values, colorWheel, template.colorWheel);
   }
 
-  if (template.colorWheel !== undefined) writeRangeAware(values, colorWheel, template.colorWheel);
-  writeMovement(values, pan, tilt, template.movement);
-  if (template.gobo !== undefined) writeRangeAware(values, gobo, template.gobo);
-  if (template.goboRotation !== undefined) writeRangeAware(values, goboRotation, template.goboRotation);
-  if (template.prism !== undefined) writeRangeAware(values, prism, template.prism);
-  if (template.iris !== undefined) writeRangeAware(values, iris, template.iris);
-  if (template.focus !== undefined) writeTargets(values, focus, template.focus);
-  if (template.zoom !== undefined) writeTargets(values, zoom, template.zoom);
-  if (avoidStrobe) {
-    writeNoStrobe(values, strobe);
-  } else if (template.strobe !== undefined) {
-    writeRangeAware(values, strobe, template.strobe, ['strobe', 'flash']);
+  if (writeMode === 'full' || writeMode === 'panTiltOnly' || writeMode === 'colorPanTilt') {
+    writeMovement(values, pan, tilt, template.movement);
   }
-  if (template.macro !== undefined) writeRangeAware(values, macro, template.macro);
-  if (template.speed !== undefined) writeTargets(values, speed, template.speed);
+
+  if (writeMode === 'full') {
+    if (template.gobo !== undefined) writeRangeAware(values, gobo, template.gobo);
+    if (template.goboRotation !== undefined) writeRangeAware(values, goboRotation, template.goboRotation);
+    if (template.prism !== undefined) writeRangeAware(values, prism, template.prism);
+    if (template.iris !== undefined) writeRangeAware(values, iris, template.iris);
+    if (template.focus !== undefined) writeTargets(values, focus, template.focus);
+    if (template.zoom !== undefined) writeTargets(values, zoom, template.zoom);
+    if (avoidStrobe) {
+      writeNoStrobe(values, strobe);
+    } else if (template.strobe !== undefined) {
+      writeRangeAware(values, strobe, template.strobe, ['strobe', 'flash']);
+    }
+    if (template.macro !== undefined) writeRangeAware(values, macro, template.macro);
+    if (template.speed !== undefined) writeTargets(values, speed, template.speed);
+  }
 
   const timelineTargets = avoidStrobe
     ? scopedTargets.filter((target) => !matchesRole(target, ROLE_ALIASES.strobe))
@@ -630,12 +711,20 @@ function compactTemplates(): SceneSeedTemplate[] {
 function selectedTemplates(packId: SceneSeedPackId): SceneSeedTemplate[] {
   const ids = MD_SCENE_PACK_TEMPLATE_IDS[packId];
   if (ids && ids.length) {
-    const byId = new Map(SMART_TEMPLATES.map((t) => [t.id, t] as const));
+    const byId = new Map(PACK_TEMPLATE_LOOKUP.map((t) => [t.id, t] as const));
     const picked = ids.map((id) => byId.get(id)).filter((t): t is SceneSeedTemplate => Boolean(t));
     if (picked.length) return picked;
   }
+  if (packId === 'operator-rows-ab-48') return OPERATOR_TEMPLATES;
   if (packId === 'compact-starter') return compactTemplates();
   return SMART_TEMPLATES;
+}
+
+function slotIndexForPackTemplate(packId: SceneSeedPackId, templateIndex: number): number {
+  if (packId === 'operator-rows-ab-48') {
+    return 16 + templateIndex;
+  }
+  return templateIndex;
 }
 
 function isStrobeTemplate(template: SceneSeedTemplate): boolean {
@@ -668,7 +757,8 @@ function decksForOptions(options: SceneSeedOptions): Apc40Deck[] {
 }
 
 function deckBVariant(template: SceneSeedTemplate): SceneSeedTemplate {
-  const color = template.color
+  const writeMode = template.writeMode ?? 'full';
+  const color = template.color && writeMode !== 'panTiltOnly'
     ? {
         red: template.color.blue ?? template.color.red ?? 0,
         green: template.color.red ?? template.color.green ?? 0,
@@ -679,7 +769,7 @@ function deckBVariant(template: SceneSeedTemplate): SceneSeedTemplate {
       }
     : undefined;
 
-  const movement = template.movement
+  const movement = template.movement && writeMode !== 'colorOnly'
     ? { ...template.movement, pan: 255 - template.movement.pan, tilt: Math.max(40, Math.min(220, template.movement.tilt + 24)) }
     : undefined;
 
@@ -688,9 +778,16 @@ function deckBVariant(template: SceneSeedTemplate): SceneSeedTemplate {
     id: `${template.id}-b`,
     label: `${template.label} B`,
     color,
-    colorWheel: template.colorWheel !== undefined ? (template.colorWheel + 96) % 256 : undefined,
+    colorWheel: template.colorWheel !== undefined && writeMode !== 'panTiltOnly'
+      ? (template.colorWheel + 96) % 256
+      : undefined,
     movement,
-    intensity: template.intensity === 0 ? 0 : Math.max(120, Math.min(255, (template.intensity ?? 220) - 25)),
+    intensity:
+      writeMode === 'full' && template.intensity !== undefined
+        ? template.intensity === 0
+          ? 0
+          : Math.max(120, Math.min(255, (template.intensity ?? 220) - 25))
+        : template.intensity,
   };
 }
 
@@ -731,7 +828,16 @@ function buildScene(
   };
 }
 
-function capabilityLabels(targets: FixtureChannelTarget[], avoidStrobe: boolean): string[] {
+function capabilityLabels(targets: FixtureChannelTarget[], avoidStrobe: boolean, packId?: SceneSeedPackId): string[] {
+  if (packId === 'operator-rows-ab-48') {
+    return [
+      'Row 3 (slots 17-24): pan/tilt only on movers',
+      'Row 4 (slots 25-32): color only — layer with Deck A/B rows 1-2',
+      'Row 5 (slots 33-40): color + pan/tilt — no gobo or strobe',
+      'Dimmers, shutter, and strobe are never written — dial those yourself',
+    ];
+  }
+
   const labels = [
     ['Dimmer', targetsForRole(targets, 'dimmer')],
     ['RGB', [...targetsForRole(targets, 'red'), ...targetsForRole(targets, 'green'), ...targetsForRole(targets, 'blue')]],
@@ -909,16 +1015,17 @@ export function generateSeededSceneList(
   const generatedScenes: Scene[] = [];
   const templates = templatesForOptions(options);
   decksForOptions(options).forEach((deck) => {
-    templates.forEach((template, slot) => {
+    templates.forEach((template, index) => {
+      const slotIndex = slotIndexForPackTemplate(options.packId, index);
       const deckTemplate = deck === 'B' ? deckBVariant(template) : template;
-      generatedScenes.push(buildScene(deckTemplate, fixtureTargets, options, deck, slot));
+      generatedScenes.push(buildScene(deckTemplate, fixtureTargets, options, deck, slotIndex));
     });
   });
 
   const merged = mergeGeneratedScenes(existingScenes, generatedScenes, options);
   return {
     ...merged,
-    capabilities: capabilityLabels(fixtureTargets, options.avoidStrobe),
+    capabilities: capabilityLabels(fixtureTargets, options.avoidStrobe, options.packId),
   };
 }
 

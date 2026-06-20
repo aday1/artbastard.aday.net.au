@@ -1366,14 +1366,51 @@
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 
   h5 {
-    margin: 0 0 12px 0;
+    margin: 0 0 8px 0;
     color: #00d4ff;
-    font-size: 1rem;
+    font-size: 0.92rem;
     text-align: center;
     border-bottom: 1px solid rgba(0, 212, 255, 0.2);
     padding-bottom: 6px;
+    flex: 0 0 auto;
+  }
+
+  .scenesGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: clamp(220px, 38vh, 520px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(216, 180, 254, 0.45) transparent;
+
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background-color: rgba(216, 180, 254, 0.45);
+      border-radius: 3px;
+    }
+  }
+
+  .sceneItem {
+    padding: 10px;
+  }
+
+  .loadSceneBtn {
+    min-height: 38px;
   }
 }
 

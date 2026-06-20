@@ -54,6 +54,19 @@ export const SCENE_SEED_PACK_UI: Record<SceneSeedPackId, SceneSeedPackUi> = {
     leavesOpen: 'Slots 15-40 on both decks stay empty for your own captures and single-slot seeds.',
     bestFor: 'Default starting point. Enough to play and crossfade without filling the whole 40x40 bank.',
   },
+  'operator-rows-ab-48': {
+    id: 'operator-rows-ab-48',
+    label: 'Operator rows 3-5 (A and B)',
+    creates: '48 scenes: APC40 slots 17-40 on Deck A and Deck B (24 looks per deck).',
+    includes: [
+      'Row 3 (17-24): pan/tilt only — center, left, right, up, down, fan, sweep, corner 90',
+      'Row 4 (25-32): color only — red, blue, green, amber, cyan, magenta, white, color cycle',
+      'Row 5 (33-40): color + pan/tilt — mix looks, warm sweep, cool 90, fan cycle',
+      'Never writes dimmer, shutter, gobo, or strobe',
+    ],
+    leavesOpen: 'Slots 01-16 stay for Essential 14+14 or your own row 1-2 looks.',
+    bestFor: 'Layer rows 3-5 over Essential on rows 1-2. You dial dimmers and strobe yourself. Check Include automation for sweeps and color cycles.',
+  },
   'compact-starter': {
     id: 'compact-starter',
     label: 'Basics 16 (one deck)',
@@ -92,7 +105,11 @@ export const SCENE_SEED_PACK_UI: Record<SceneSeedPackId, SceneSeedPackUi> = {
   },
 };
 
-export const SCENE_BOTH_DECK_PACKS: SceneSeedPackId[] = ['essential-ab-28', 'smart-ab-80'];
+export const SCENE_BOTH_DECK_PACKS: SceneSeedPackId[] = [
+  'essential-ab-28',
+  'operator-rows-ab-48',
+  'smart-ab-80',
+];
 
 export function sceneSeedPackUi(packId: SceneSeedPackId): SceneSeedPackUi {
   return SCENE_SEED_PACK_UI[packId] ?? SCENE_SEED_PACK_UI['essential-ab-28'];

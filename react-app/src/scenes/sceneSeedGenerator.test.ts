@@ -87,6 +87,58 @@ describe('sceneSeedGenerator', () => {
     expect(result.generatedScenes.every((scene) => scene.seed?.packId === 'essential-ab-28')).toBe(true);
   });
 
+  it('fills operator rows 3-5 on both decks without dimmer or gobo writes', () => {
+    const result = generateSeededSceneList([rgbPar, mover], [], {
+      packId: 'operator-rows-ab-48',
+      target: 'decks-a-b',
+      includeAutomation: false,
+    });
+
+    expect(result.generatedScenes).toHaveLength(48);
+    expect(result.generatedScenes[0].name).toBe('APC40 Deck A 17');
+    expect(result.generatedScenes[7].name).toBe('APC40 Deck A 24');
+    expect(result.generatedScenes[8].name).toBe('APC40 Deck A 25');
+    expect(result.generatedScenes[15].name).toBe('APC40 Deck A 32');
+    expect(result.generatedScenes[16].name).toBe('APC40 Deck A 33');
+    expect(result.generatedScenes[23].name).toBe('APC40 Deck A 40');
+    expect(result.generatedScenes[24].name).toBe('APC40 Deck B 17');
+    expect(result.generatedScenes[47].name).toBe('APC40 Deck B 40');
+
+    const ptCenter = result.generatedScenes.find((scene) => scene.seed?.templateId === 'pt-center');
+    const colRed = result.generatedScenes.find((scene) => scene.seed?.templateId === 'col-red');
+    const mixRed = result.generatedScenes.find((scene) => scene.seed?.templateId === 'mix-red-center');
+
+    expect(ptCenter?.channelValues[19]).toBe(127);
+    expect(ptCenter?.channelValues[20]).toBe(127);
+    expect(ptCenter?.channelValues[0]).toBe(0);
+    expect(ptCenter?.channelValues[3]).toBe(0);
+    expect(ptCenter?.channelValues[22]).toBe(0);
+
+    expect(colRed?.channelValues[0]).toBe(255);
+    expect(colRed?.channelValues[19]).toBe(0);
+    expect(colRed?.channelValues[3]).toBe(0);
+
+    expect(mixRed?.channelValues[0]).toBe(255);
+    expect(mixRed?.channelValues[19]).toBe(127);
+    expect(mixRed?.channelValues[22]).toBe(0);
+  });
+
+  it('adds operator row automation only when requested', () => {
+    const automated = generateSeededSceneList([rgbPar, mover], [], {
+      packId: 'operator-rows-ab-48',
+      target: 'decks-a-b',
+      includeAutomation: true,
+    });
+    const staticOnly = generateSeededSceneList([rgbPar, mover], [], {
+      packId: 'operator-rows-ab-48',
+      target: 'decks-a-b',
+      includeAutomation: false,
+    });
+
+    expect(automated.generatedScenes.some((scene) => scene.timeline?.enabled)).toBe(true);
+    expect(staticOnly.generatedScenes.some((scene) => scene.timeline?.enabled)).toBe(false);
+  });
+
   it('fills smart A+B packs across both decks', () => {
     const result = generateSeededSceneList([rgbPar, mover], [], {
       packId: 'smart-ab-80',

@@ -4,6 +4,19 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [5.2.15.0] - 2026-06-20 - Operator rows 3-5 layered scene seeds
+
+### Added
+
+- Scene seed pack **Operator rows 3-5 (A and B)**: 48 APC clips on slots 17-40 (24 per deck on A and B). Row 3 pan/tilt only, row 4 color only, row 5 color + pan/tilt. Never writes dimmer, gobo, or strobe.
+- Template `writeMode` in scene seeder: `panTiltOnly`, `colorOnly`, `colorPanTilt` leave operator-controlled channels untouched.
+- Pack-mode **Include automation** checkbox for sweeps and color cycles.
+
+### Changed
+
+- SuperControl saved scenes list scrolls in a compact column instead of stretching the page.
+- Scene seed intro copy mentions layering operator rows over Essential 14+14.
+
 ## [5.2.14.0] - 2026-06-20 - Essential 14+14 seeds and scene desk polish
 
 ### Added

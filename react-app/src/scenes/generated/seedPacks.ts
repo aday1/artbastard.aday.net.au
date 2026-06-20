@@ -19,6 +19,11 @@ export const MD_SCENE_SEED_PACKS: SceneSeedPackMeta[] = [
     "description": "Fills APC40 slots 01-14 on Deck A and Deck B with core looks. Slots 15-40 stay empty for your own scenes."
   },
   {
+    "id": "operator-rows-ab-48",
+    "label": "Operator rows 3-5 (A and B)",
+    "description": "Fills APC40 slots 17-40 on Deck A and Deck B with pan/tilt-only, color-only, and color+pan/tilt layers. Never writes dimmer, gobo, or strobe."
+  },
+  {
     "id": "smart-ab-80",
     "label": "Extended 40+40 (both decks)",
     "description": "Fills all 40 slots on Deck A and again on Deck B (80 scenes). Same extended library as Extended 40, with crossfader-friendly B variants."
@@ -64,6 +69,32 @@ export const MD_SCENE_PACK_TEMPLATE_IDS: Record<string, string[]> = {
     "left-sweep",
     "right-sweep",
     "gobo-texture"
+  ],
+  "operator-rows-ab-48": [
+    "pt-center",
+    "pt-left",
+    "pt-right",
+    "pt-up",
+    "pt-down",
+    "pt-fan",
+    "pt-sweep-slow",
+    "pt-corner-90",
+    "col-red",
+    "col-blue",
+    "col-green",
+    "col-amber",
+    "col-cyan",
+    "col-magenta",
+    "col-white",
+    "col-cycle",
+    "mix-red-center",
+    "mix-blue-left",
+    "mix-green-right",
+    "mix-amber-up",
+    "mix-cyan-down",
+    "mix-warm-sweep",
+    "mix-cool-90",
+    "mix-fan-cycle"
   ],
   "smart-ab-80": [
     "blackout",

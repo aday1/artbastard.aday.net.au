@@ -4,14 +4,15 @@ How the public showcase page is built, recorded, and deployed. Useful if you
 want to rebuild it locally, change the operator videos, or audit the deploy
 path.
 
-Last content refresh: 2026-06-14 (v5.2.13.0: server-owned joined ROLI
-Lightpad topology, deterministic XY/colour pad roles, per-pad LED ACK queues,
-clean crosshair and colour-strip drawing, plus the v5.2.12.0 APC40 ON/OFF
-state semantics, BPM header dashboard, SuperControl layout remaster,
-cream/synthwave light theme, footer monitor controls, canvas-first stage
-fixture setup, fixture-aware scene and ACT seed templates, REC then Clip scene
-saves, Device Control gobo roles, mobile showcase layout, and six-clip
-operator how-to tour).
+Last content refresh: 2026-06-20 (v5.2.15.0: Operator rows 3-5 layered APC scene seeds —
+pan/tilt-only, color-only, and color+pan/tilt write modes that leave dimmer, gobo,
+and strobe untouched; pack-mode automation checkbox; SuperControl scene list scroll;
+plus v5.2.14.0 Essential 14+14 defaults, scene load automation hold, seed UI clarity,
+APC pane collapse, auto scene queue, mobile log cap, joined ROLI pads, stateful APC40
+ON/OFF semantics, BPM header dashboard, SuperControl layout remaster, cream/synthwave
+light theme, footer monitor controls, canvas-first stage fixture setup,
+fixture-aware scene and ACT seed templates, REC then Clip scene saves, Device Control
+gobo roles, mobile showcase layout, and six-clip operator how-to tour).
 Website feature grid mentions the stage canvas, seed workflow, and LAN / Pi
 bridge for cloud-hosted Art-Net on home LANs.
 
