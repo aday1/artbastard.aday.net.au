@@ -30,7 +30,7 @@ import { StageMapDashboard } from '../fixtures/StageMapDashboard';
 import { debugLog } from '../../utils/debugLog';
 import { rangesToTickSteps } from '../../utils/fixtureChannelTicks';
 import { findMovementSpeedTargets, movementSpeedDmxValue } from '../../utils/movementSpeedChannels';
-import { findStrobeSafetyTargets } from '../../utils/strobeSafety';
+import { countStrobeSafetyAffectedChannels, findStrobeSafetyTargets } from '../../utils/strobeSafety';
 import { clearSuperControlFactoryResetStorage } from '../../utils/factoryResetStorage';
 import { readSuperControlValuesFromSelection } from '../../utils/superControlSelectionSync';
 import {
@@ -169,7 +169,7 @@ const SUPER_CONTROL_PANEL_LABELS: Record<SuperControlPanelId, string> = {
   basic: 'Basic',
   panTilt: 'Pan/Tilt',
   rgb: 'RGB',
-  effects: 'Effects',
+  effects: 'Output & Effects',
   envelopes: 'Envelopes',
   directDmx: 'Direct DMX',
 };
@@ -669,6 +669,27 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     }
     return defaultGoboSteps;
   }, [selectedFixtures, fixtures, defaultGoboSteps]);
+  const goboImageByValue = useMemo(
+    () => Object.fromEntries(defaultGoboSteps.map((step) => [step.value, step.image])),
+    [defaultGoboSteps]
+  );
+
+  const openPanTiltPathEditor = () => {
+    const fromPad = xyPadHandleRef.current?.getPathDmxPoints() ?? [];
+    const fromStore = panTiltAutopilot.customPath ?? [];
+    setPathEditorInitialPoints(fromPad.length >= 2 ? fromPad : fromStore);
+    setShowPanTiltPathEditor(true);
+  };
+
+  const applyPathToXyPad = (points: Array<{ x: number; y: number }>) => {
+    setPanTiltAutopilot({ customPath: points, pathType: 'custom', smoothing: panTiltAutopilot.smoothing ?? 0.6 });
+    xyPadHandleRef.current?.loadPathFromDmx(points);
+    addNotification({
+      message: `Custom path loaded (${points.length} points) — press Play on the XY pad or enable pan/tilt autopilot`,
+      type: 'success',
+      priority: 'normal',
+    });
+  };
   const [shutter, setShutter] = useState(255);
   const [strobe, setStrobe] = useState(0);
   const [lamp, setLamp] = useState(255);
@@ -1144,6 +1165,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
 
   // Custom path editor state
   const [showPanTiltPathEditor, setShowPanTiltPathEditor] = useState(false);
+  const [pathEditorInitialPoints, setPathEditorInitialPoints] = useState<Array<{ x: number; y: number }>>([]);
 
   // Color wheel state
   const [colorHue, setColorHue] = useState(0);
@@ -2561,8 +2583,10 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
       : `${Math.round(movementSnapSpeed * 100)}%`;
   const strobeSafetyTargets = findStrobeSafetyTargets(fixtures);
   const selectedStrobeSafetyTargets = findStrobeSafetyTargets(getAffectedFixtures().map(({ fixture }) => fixture));
-  const strobeSafetyChannelCount = strobeSafetyTargets.length;
-  const selectedStrobeSafetyChannelCount = selectedStrobeSafetyTargets.length;
+  const strobeSafetyChannelCount = countStrobeSafetyAffectedChannels(fixtures);
+  const selectedStrobeSafetyChannelCount = countStrobeSafetyAffectedChannels(
+    getAffectedFixtures().map(({ fixture }) => fixture)
+  );
   const strobeSafetySignature = strobeSafetyTargets
     .map((target) => `${target.dmxAddress}:${target.safeValue}`)
     .join('|');
@@ -2789,14 +2813,21 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
   };
 
   const showMidiOscPanel = fixtures.length > 0 || groups.length > 0 || scenes.length > 0;
-  const showBasicPanel = hasControlType('dimmer');
+  const showBasicPanel = false;
+  const showEffectsPanel =
+    hasControlType('dimmer') ||
+    hasControlType('gobo') ||
+    hasControlType('shutter') ||
+    hasControlType('strobe') ||
+    hasControlType('lamp') ||
+    hasControlType('reset');
   const spanControlPanelIds = visibleSpanPanelIds.filter((panelId) => {
     switch (panelId) {
       case 'midiOsc': return showMidiOscPanel;
       case 'basic': return showBasicPanel;
       case 'panTilt': return hasControlType('pan') || hasControlType('tilt');
       case 'rgb': return hasControlType('red') || hasControlType('green') || hasControlType('blue') || hasControlType('color_wheel');
-      case 'effects': return hasControlType('gobo') || hasControlType('shutter') || hasControlType('strobe') || hasControlType('lamp') || hasControlType('reset');
+      case 'effects': return showEffectsPanel;
       case 'envelopes': return selectionMode === 'channels' && selectedChannels.length > 0;
       case 'directDmx': return selectionMode === 'channels' && selectedChannels.length > 0 && !touchLayout;
       default: return false;
@@ -2943,12 +2974,16 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                   <div>
                     <LucideIcon name={strobeSafetyEnabled ? 'ShieldCheck' : 'ShieldAlert'} size={20} />
                     <span>
-                      <strong>{strobeSafetyEnabled ? 'STROBE LOCKED OFF' : 'STROBES ENABLED'}</strong>
-                      <small>{strobeSafetyChannelCount} patched strobe channel(s)</small>
+                      <strong>{strobeSafetyEnabled ? 'STROBE SAFETY ON' : 'STROBE SAFETY OFF'}</strong>
+                      <small>
+                        {strobeSafetyEnabled
+                          ? `${strobeSafetyChannelCount} channel(s) locked to safe profile ranges`
+                          : `${strobeSafetyChannelCount} strobe / strobe-speed channel(s) — click to lock safe ranges`}
+                      </small>
                     </span>
                   </div>
                   <button type="button" onClick={() => toggleStrobeSafety(!strobeSafetyEnabled)}>
-                    {strobeSafetyEnabled ? 'ENABLE STROBE' : 'DISABLE STROBE'}
+                    {strobeSafetyEnabled ? 'DISABLE STROBE SAFETY' : 'ENABLE STROBE SAFETY'}
                   </button>
                 </div>
               )}
@@ -3535,41 +3570,6 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         </div>
         )}
 
-        {showBasicPanel && (
-        <div {...panelProps('basic')}>
-          {renderPanelHeader('basic', <LucideIcon name="SlidersHorizontal" />, 'Basic Controls')}
-          <div className={styles.gridItemContent}>
-            <div className={styles.section}>
-              <div className={styles.faderStack}>
-                <DmxFaderRow
-                label="Dimmer"
-                value={dimmer}
-                disabled={!hasSelection}
-                oscAddress="/dimmer"
-                onChange={(val) => {
-                  setDimmer(val);
-                  applyControl('dimmer', val);
-                  if (val > 0) openEmissionGates(false);
-                }}
-                {...midiPropsFor('dimmer')}
-              />
-              <SkeuoButton
-                variant="wide"
-                accent="green"
-                compact
-                disabled={!hasSelection}
-                onClick={turnLightOn}
-                title="Set dimmer and RGB full, then open shutter/strobe/lamp channels when present"
-              >
-                <LucideIcon name="Lightbulb" />
-                Light On
-              </SkeuoButton>
-              </div>
-            </div>
-          </div>
-        </div>
-        )}
-
         {(hasControlType('pan') || hasControlType('tilt')) && (
           <div {...panelProps('panTilt')}>
             {renderPanelHeader(
@@ -3646,7 +3646,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                   setPanTiltAutopilot({ customPath: points, pathType: 'custom' });
                 }}
                 onPathChange={handleXyPadPathChange}
-                onOpenPathEditor={() => setShowPanTiltPathEditor(true)}
+                onOpenPathEditor={openPanTiltPathEditor}
                 slots={slotSummaries}
                 activeSlotId={pathSlots.activeSlotId}
                 onSaveToSlot={saveSlotPath}
@@ -4005,9 +4005,9 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         </div>
         )}
 
-        {(hasControlType('gobo') || hasControlType('shutter') || hasControlType('strobe') || hasControlType('lamp') || hasControlType('reset')) && (
+        {(hasControlType('gobo') || hasControlType('shutter') || hasControlType('strobe') || hasControlType('lamp') || hasControlType('reset') || hasControlType('dimmer')) && (
           <div {...panelProps('effects')}>
-            {renderPanelHeader('effects', <LucideIcon name="Zap" />, 'Effects')}
+            {renderPanelHeader('effects', <LucideIcon name="Zap" />, 'Output & Effects')}
             <div className={styles.gridItemContent}>
               <div className={styles.section}>
                 {strobeSafetyChannelCount > 0 && (
@@ -4015,11 +4015,11 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                     <div className={styles.strobeSafetyHeader}>
                       <LucideIcon name={strobeSafetyEnabled ? 'ShieldCheck' : 'ShieldAlert'} size={28} />
                       <div>
-                        <strong>STROBE SAFETY LOCK</strong>
+                        <strong>STROBE SAFETY</strong>
                         <span>
                           {strobeSafetyEnabled
-                            ? `${strobeSafetyChannelCount} patched strobe channel(s) held safe.`
-                            : `${strobeSafetyChannelCount} patched strobe channel(s) can respond to playback and manual control.`}
+                            ? `${strobeSafetyChannelCount} channel(s) held to safe fixture ranges on the DMX page.`
+                            : `${strobeSafetyChannelCount} channel(s) with strobe or strobe-speed ranges can run freely until safety is enabled.`}
                         </span>
                       </div>
                     </div>
@@ -4028,77 +4028,46 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                       className={styles.strobeSafetyButton}
                       onClick={() => toggleStrobeSafety(!strobeSafetyEnabled)}
                     >
-                      <LucideIcon name={strobeSafetyEnabled ? 'Unlock' : 'Ban'} size={18} />
-                      {strobeSafetyEnabled ? 'ENABLE STROBE' : 'DISABLE STROBE'}
+                      <LucideIcon name={strobeSafetyEnabled ? 'Unlock' : 'ShieldCheck'} size={18} />
+                      {strobeSafetyEnabled ? 'DISABLE STROBE SAFETY' : 'ENABLE STROBE SAFETY'}
                     </button>
                     <small>
                       {strobeSafetyEnabled
-                        ? 'Hard lock is active across Super Control, scenes, ACT playback, automation, and DMX batches.'
+                        ? 'Dedicated strobe channels get their channel window narrowed to the safe range from the fixture profile. Strobe-speed bands on combined channels are blocked.'
                         : selectedStrobeSafetyChannelCount > 0
-                          ? `${selectedStrobeSafetyChannelCount} selected strobe channel(s) will lock immediately.`
-                          : 'Select fixtures to see which strobe channels are affected.'}
+                          ? `${selectedStrobeSafetyChannelCount} selected channel(s) will lock when safety is enabled.`
+                          : 'Opt in when you want strobe and strobe-speed ranges restricted to safe values only.'}
                     </small>
                   </div>
                 )}
-                {hasControlType('gobo') && (
-                  <>
-                    <label className={styles.goboSectionLabel}>GOBO Wheel</label>
-              <SteppedGoboSlider
-                value={gobo}
-                disabled={!hasSelection}
-                steps={goboSteps}
-                onChange={(val) => {
-                  setGobo(val);
-                  applyControl('gobo', val);
-                }}
-              />
-              <div className={styles.goboVisualSection}>
-                <label>GOBO quick pick</label>
-                <div className={styles.goboGrid}>
-                  {[
-                    { value: 0, name: 'Open', image: '/gobos/open.svg' },
-                    { value: 32, name: 'Gobo 1', image: '/gobos/gobo1.svg' },
-                    { value: 64, name: 'Gobo 2', image: '/gobos/gobo2.svg' },
-                    { value: 96, name: 'Gobo 3', image: '/gobos/gobo3.svg' },
-                    { value: 128, name: 'Gobo 4', image: '/gobos/gobo4.svg' },
-                    { value: 160, name: 'Gobo 5', image: '/gobos/gobo5.svg' },
-                    { value: 192, name: 'Gobo 6', image: '/gobos/gobo6.svg' },
-                    { value: 224, name: 'Gobo 7', image: '/gobos/gobo7.svg' }
-                  ].map((goboOption) => (<div
-                    key={goboOption.value}
-                    className={`${styles.goboOption} ${Math.abs(gobo - goboOption.value) <= 16 ? styles.active : ''} ${!hasSelection ? styles.disabled : ''}`}
-                    onClick={() => {
-                      if (hasSelection) {
-                        setGobo(goboOption.value);
-                        applyControl('gobo', goboOption.value);
-                      }
-                    }}
-                  >
-                    <div className={styles.goboImage}>
-                      <img
-                        src={goboOption.image}
-                        alt={goboOption.name}
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                          const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                          if (fallback) {
-                            fallback.style.display = 'flex';
-                          }
-                        }}
-                      />
-                      <div className={styles.goboFallback} style={{ display: 'none' }}>
-                        <LucideIcon name="Circle" />
-                      </div>
-                    </div>
-                    <span className={styles.goboName}>{goboOption.name}</span>
-                    <span className={styles.goboValue}>{goboOption.value}</span>
-                  </div>
-                  ))}
-                </div>
-              </div>
-              </>
-                )}
                 <div className={styles.faderStack}>
+                {hasControlType('dimmer') && (
+                  <>
+                    <DmxFaderRow
+                      label="Dimmer"
+                      value={dimmer}
+                      disabled={!hasSelection}
+                      oscAddress="/dimmer"
+                      onChange={(val) => {
+                        setDimmer(val);
+                        applyControl('dimmer', val);
+                        if (val > 0) openEmissionGates(false);
+                      }}
+                      {...midiPropsFor('dimmer')}
+                    />
+                    <SkeuoButton
+                      variant="wide"
+                      accent="green"
+                      compact
+                      disabled={!hasSelection}
+                      onClick={turnLightOn}
+                      title="Set dimmer and RGB full, then open shutter/strobe/lamp channels when present"
+                    >
+                      <LucideIcon name="Lightbulb" />
+                      Light On
+                    </SkeuoButton>
+                  </>
+                )}
                 {hasControlType('shutter') && (
                   <DmxFaderRow
                     label="Shutter"
@@ -4140,6 +4109,62 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                   />
                 )}
                 </div>
+                {hasControlType('gobo') && (
+                  <>
+                    <label className={styles.goboSectionLabel}>GOBO Wheel</label>
+              <SteppedGoboSlider
+                value={gobo}
+                disabled={!hasSelection}
+                steps={goboSteps}
+                onChange={(val) => {
+                  setGobo(val);
+                  applyControl('gobo', val);
+                }}
+              />
+              <div className={styles.goboVisualSection}>
+                <label>Quick pick</label>
+                <div className={styles.goboGrid}>
+                  {goboSteps.map((goboOption) => {
+                    const halfSpan = Math.max(8, Math.round(((goboOption.max ?? goboOption.value) - (goboOption.min ?? goboOption.value)) / 2));
+                    const image = (goboOption as { image?: string }).image ?? goboImageByValue[goboOption.value];
+                    return (
+                  <div
+                    key={`${goboOption.value}-${goboOption.label}`}
+                    className={`${styles.goboOption} ${Math.abs(gobo - goboOption.value) <= halfSpan ? styles.active : ''} ${!hasSelection ? styles.disabled : ''}`}
+                    onClick={() => {
+                      if (hasSelection) {
+                        setGobo(goboOption.value);
+                        applyControl('gobo', goboOption.value);
+                      }
+                    }}
+                  >
+                    <div className={styles.goboImage}>
+                      {image ? (
+                        <img
+                          src={image}
+                          alt={goboOption.label}
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (fallback) {
+                              fallback.style.display = 'flex';
+                            }
+                          }}
+                        />
+                      ) : null}
+                      <div className={styles.goboFallback} style={{ display: image ? 'none' : 'flex' }}>
+                        <LucideIcon name="Circle" />
+                      </div>
+                    </div>
+                    <span className={styles.goboName}>{goboOption.label}</span>
+                    <span className={styles.goboValue}>{goboOption.value}</span>
+                  </div>
+                    );
+                  })}
+                </div>
+              </div>
+              </>
+                )}
                 {hasControlType('reset') && (
                   <div className={styles.controlRow}>
                     <label>Reset</label>
@@ -4241,7 +4266,8 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
         isOpen={showPanTiltPathEditor}
         onClose={() => setShowPanTiltPathEditor(false)}
         mode="autopilot"
-        initialPoints={panTiltAutopilot.customPath || []}
+        initialPoints={pathEditorInitialPoints}
+        onSave={applyPathToXyPad}
       />
     </div>
   );

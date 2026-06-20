@@ -475,7 +475,7 @@ export const UnifiedSettings: React.FC = () => {
         selectedChannels: [],
         dmxChannels: new Array(512).fill(0),
         dmxFrozen: false,
-        strobeSafetyEnabled: true,
+        strobeSafetyEnabled: false,
         dimmerFadeEnabled: false,
         dimmerFadeAnimationId: null,
         dimmerFadeWaveform: 'breath',

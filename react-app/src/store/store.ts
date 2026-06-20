@@ -66,7 +66,9 @@ import {
 import {
   applyStrobeSafetyToDmxValues,
   strobeSafetyUpdates,
-  strobeSafetyValueForChannel,
+  resolveStrobeSafetyValue,
+  strobeSafetyRangeUpdates,
+  findStrobeSafetyTargets,
 } from '../utils/strobeSafety'
 import {
   dimmerFadeLevel,
@@ -590,7 +592,7 @@ interface UiSettings {
 // Helper functions for localStorage persistence
 const AUTO_SCENE_STORAGE_KEY = 'artbastard-auto-scene-settings';
 const SUPER_CONTROL_MIDI_MAPPINGS_STORAGE_KEY = 'artbastard-supercontrol-midi-mappings-v1';
-const STROBE_SAFETY_STORAGE_KEY = 'artbastard-strobe-safety-enabled-v2';
+const STROBE_SAFETY_STORAGE_KEY = 'artbastard-strobe-safety-enabled-v3';
 
 const saveAutoSceneSettings = (settings: AutoSceneSettings) => {
   try {
@@ -638,9 +640,13 @@ const saveSuperControlMidiMappings = (mappings: SuperControlBinding[]) => {
 const loadStrobeSafetyEnabled = (): boolean => {
   try {
     const stored = localStorage.getItem(STROBE_SAFETY_STORAGE_KEY);
-    return stored === null ? true : stored !== 'false';
+    if (stored !== null) return stored === 'true';
+    // Legacy key: previous builds defaulted safety ON — do not carry that forward.
+    const legacy = localStorage.getItem('artbastard-strobe-safety-enabled-v2');
+    if (legacy === 'false') return false;
+    return false;
   } catch {
-    return true;
+    return false;
   }
 };
 
@@ -690,7 +696,9 @@ interface State extends AutomationState, TransitionTrackerSlice {
   dmxFrozen: boolean
   setDmxFrozen: (frozen: boolean) => void
   strobeSafetyEnabled: boolean
+  strobeSafetySavedRanges: Record<number, ChannelRange>
   applyStrobeSafetyLock: () => void
+  releaseStrobeSafetyChannelRanges: () => void
   setStrobeSafetyEnabled: (enabled: boolean) => void
   dimmerFadeEnabled: boolean
   dimmerFadeWaveform: DimmerFadeWaveform
@@ -1095,7 +1103,7 @@ interface State extends AutomationState, TransitionTrackerSlice {
   deselectAllChannels: () => void
   invertChannelSelection: () => void
   setChannelName: (channel: number, name: string) => void
-  setChannelRange: (channel: number, min: number, max: number) => void
+  setChannelRange: (channel: number, min: number, max: number, options?: { fromStrobeSafety?: boolean }) => void
   getChannelRange: (channel: number) => ChannelRange
   setChannelColor: (channel: number, color: string) => void
   setRandomChannelColor: (channel: number) => void
@@ -1655,11 +1663,37 @@ export const useStore = create<State>()(
         }
       },
       strobeSafetyEnabled: loadStrobeSafetyEnabled(),
+      strobeSafetySavedRanges: {},
       applyStrobeSafetyLock: () => {
-        const updates = strobeSafetyUpdates(get().fixtures || []);
-        if (Object.keys(updates).length > 0) {
-          get().setMultipleDmxChannels(updates, true);
+        const fixtures = get().fixtures || [];
+        const rangeUpdates = strobeSafetyRangeUpdates(fixtures);
+        const savedRanges = { ...get().strobeSafetySavedRanges };
+        Object.entries(rangeUpdates).forEach(([channelKey, safeRange]) => {
+          const channel = Number(channelKey);
+          if (savedRanges[channel] === undefined) {
+            savedRanges[channel] = get().getChannelRange(channel);
+          }
+          get().setChannelRange(channel, safeRange.min, safeRange.max, { fromStrobeSafety: true });
+        });
+        set({ strobeSafetySavedRanges: savedRanges });
+
+        const valueUpdates: Record<number, number> = {};
+        get().dmxChannels.forEach((currentValue, channel) => {
+          const nextValue = resolveStrobeSafetyValue(fixtures, channel, currentValue);
+          if (nextValue !== currentValue) valueUpdates[channel] = nextValue;
+        });
+        if (Object.keys(valueUpdates).length > 0) {
+          get().setMultipleDmxChannels(valueUpdates, true);
         }
+      },
+      releaseStrobeSafetyChannelRanges: () => {
+        const savedRanges = get().strobeSafetySavedRanges;
+        Object.entries(savedRanges).forEach(([channelKey, range]) => {
+          const channel = Number(channelKey);
+          const saved = range as ChannelRange;
+          get().setChannelRange(channel, saved.min, saved.max, { fromStrobeSafety: true });
+        });
+        set({ strobeSafetySavedRanges: {} });
       },
       setStrobeSafetyEnabled: (enabled) => {
         set({ strobeSafetyEnabled: enabled });
@@ -1668,13 +1702,14 @@ export const useStore = create<State>()(
         if (enabled) {
           get().applyStrobeSafetyLock();
           get().addNotification({
-            message: 'Strobe safety lock enabled',
+            message: 'Strobe safety enabled — strobe channels locked to safe profile ranges',
             type: 'success',
             priority: 'normal',
           });
         } else {
+          get().releaseStrobeSafetyChannelRanges();
           get().addNotification({
-            message: 'Strobe control enabled',
+            message: 'Strobe safety disabled — full fixture ranges restored',
             type: 'info',
             priority: 'normal',
           });
@@ -2924,7 +2959,7 @@ export const useStore = create<State>()(
         debugLog.log(`[STORE] setDmxChannel called: channel=${channel}, value=${value}, sendToBackend=${sendToBackend}`);
 
         const guardedValue = get().strobeSafetyEnabled
-          ? strobeSafetyValueForChannel(get().fixtures || [], channel) ?? value
+          ? resolveStrobeSafetyValue(get().fixtures || [], channel, value)
           : value;
 
         // Get channel range and clamp value
@@ -2957,10 +2992,9 @@ export const useStore = create<State>()(
           const channel = parseInt(channelStr, 10);
           if (channel >= 0 && channel < newDmxChannels.length) {
             const requestedValue = updates[channel];
-            const safeValue = get().strobeSafetyEnabled
-              ? strobeSafetyValueForChannel(get().fixtures || [], channel)
-              : undefined;
-            const nextValue = safeValue ?? requestedValue;
+            const nextValue = get().strobeSafetyEnabled
+              ? resolveStrobeSafetyValue(get().fixtures || [], channel, requestedValue)
+              : requestedValue;
             guardedUpdates[channel] = nextValue;
             if (newDmxChannels[channel] !== nextValue) { // Check if value actually changes
               newDmxChannels[channel] = nextValue;
@@ -3329,15 +3363,25 @@ export const useStore = create<State>()(
         }
       },
 
-      setChannelRange: (channel, min, max) => {
+      setChannelRange: (channel, min, max, options) => {
+        let nextMin = min;
+        let nextMax = max;
+        if (get().strobeSafetyEnabled && !options?.fromStrobeSafety) {
+          const lock = strobeSafetyRangeUpdates(get().fixtures || [])[channel];
+          if (lock) {
+            nextMin = lock.min;
+            nextMax = lock.max;
+          }
+        }
+
         const channelRanges = [...get().channelRanges];
         // Ensure array is long enough
         while (channelRanges.length <= channel) {
           channelRanges.push({ min: 0, max: 255 });
         }
         // Ensure min <= max and values are valid
-        const validMin = Math.max(0, Math.min(255, min));
-        const validMax = Math.max(0, Math.min(255, max));
+        const validMin = Math.max(0, Math.min(255, nextMin));
+        const validMax = Math.max(0, Math.min(255, nextMax));
         channelRanges[channel] = { min: validMin, max: Math.max(validMin, validMax) };
         set({ channelRanges });
 

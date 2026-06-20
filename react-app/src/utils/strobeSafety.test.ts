@@ -1,10 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import {
   applyStrobeSafetyToDmxValues,
+  countStrobeSafetyAffectedChannels,
   findStrobeSafetyTargets,
+  resolveStrobeSafetyValue,
   strobeSafetyUpdates,
   strobeSafeValue,
 } from './strobeSafety';
+
+const miniWashDimmer = {
+  name: 'Master Dimmer and Shutter',
+  type: 'dimmer',
+  ranges: [
+    { min: 0, max: 7, description: 'Blackout / closed' },
+    { min: 8, max: 134, description: 'Master dimmer' },
+    { min: 135, max: 239, description: 'Strobe, slow to fast' },
+    { min: 240, max: 255, description: 'Open' },
+  ],
+};
 
 describe('strobeSafety', () => {
   it('prefers explicit no-strobe ranges', () => {
@@ -38,6 +51,7 @@ describe('strobeSafety', () => {
 
     expect(target.dmxAddress).toBe(10);
     expect(target.safeValue).toBe(48);
+    expect(target.safeRange).toEqual({ min: 32, max: 63 });
   });
 
   it('does not grab plain shutter channels', () => {
@@ -52,25 +66,36 @@ describe('strobeSafety', () => {
     expect(targets).toHaveLength(0);
   });
 
-  it('does not lock combined dimmer/shutter channels that mention strobe in sub-ranges', () => {
+  it('does not range-lock combined dimmer/shutter channels that mention strobe in sub-ranges', () => {
     const targets = findStrobeSafetyTargets([{
       name: 'Mini Wash',
       startAddress: 5,
-      channels: [
-        {
-          name: 'Master Dimmer and Shutter',
-          type: 'dimmer',
-          ranges: [
-            { min: 0, max: 7, description: 'Blackout / closed' },
-            { min: 8, max: 134, description: 'Master dimmer' },
-            { min: 135, max: 239, description: 'Strobe, slow to fast' },
-            { min: 240, max: 255, description: 'Open' },
-          ],
-        },
-      ],
+      channels: [miniWashDimmer],
     }]);
 
     expect(targets).toHaveLength(0);
+  });
+
+  it('counts strobe-speed bands on combined dimmer channels', () => {
+    const fixtures = [{
+      name: 'Mini Wash',
+      startAddress: 5,
+      channels: [miniWashDimmer],
+    }];
+
+    expect(countStrobeSafetyAffectedChannels(fixtures)).toBe(1);
+  });
+
+  it('blocks strobe-speed values on combined channels when safety resolves values', () => {
+    const fixtures = [{
+      name: 'Mini Wash',
+      startAddress: 5,
+      channels: [miniWashDimmer],
+    }];
+
+    expect(resolveStrobeSafetyValue(fixtures, 4, 200)).toBe(248);
+    expect(resolveStrobeSafetyValue(fixtures, 4, 100)).toBe(100);
+    expect(resolveStrobeSafetyValue(fixtures, 4, 255)).toBe(255);
   });
 
   it('creates update maps and clamps full DMX arrays', () => {

@@ -7,6 +7,7 @@ import {
   dmxToPadPercent,
   interpolatePath,
   pathToDmxPoints,
+  dmxPathToPadPath,
   smoothUserPath,
 } from './xyPadPathUtils';
 
@@ -56,9 +57,15 @@ export interface ArtbastardXYPadHandle {
   endExternalPath: () => void;
   /** Returns the path-drawing canvas so the Roli engine can sample it for LED feedback. */
   getCanvas: () => HTMLCanvasElement | null;
+  /** Current drawn path as DMX pan/tilt points (simplified). */
+  getPathDmxPoints: () => Array<{ x: number; y: number }>;
+  /** Load a saved autopilot path back onto the pad canvas. */
+  loadPathFromDmx: (points: Array<{ x: number; y: number }>) => void;
 }
 
 type ToolMode = 'live' | 'pencil';
+
+const MIN_DRAW_PX = 10;
 
 const SHAPES = ['circle', 'triangle', 'square', 'star'] as const;
 type ShapeName = (typeof SHAPES)[number];
@@ -205,7 +212,12 @@ export const ArtbastardXYPad = forwardRef<ArtbastardXYPadHandle, ArtbastardXYPad
     const y = Math.max(0, Math.min(rect.height, clientY - rect.top));
     emitPanTilt(x, y);
     if (tool === 'pencil' || isDrawing) {
-      setPath((prev) => [...prev, { x, y, timestamp: performance.now() }]);
+      setPath((prev) => {
+        if (prev.length === 0) return [{ x, y, timestamp: performance.now() }];
+        const last = prev[prev.length - 1];
+        if (Math.hypot(x - last.x, y - last.y) < MIN_DRAW_PX) return prev;
+        return [...prev, { x, y, timestamp: performance.now() }];
+      });
       setIsPredefinedShape(false);
     }
   };
@@ -408,8 +420,24 @@ export const ArtbastardXYPad = forwardRef<ArtbastardXYPadHandle, ArtbastardXYPad
       getCanvas() {
         return canvasRef.current;
       },
+      getPathDmxPoints() {
+        const pad = padRef.current;
+        if (!pad || path.length < 2) return [];
+        return pathToDmxPoints(path, pad.clientWidth, pad.clientHeight, 0);
+      },
+      loadPathFromDmx(points) {
+        const pad = padRef.current;
+        const w = pad?.clientWidth ?? 320;
+        const h = pad?.clientHeight ?? 320;
+        if (!points.length) {
+          setPath([]);
+          return;
+        }
+        setPath(dmxPathToPadPath(points, w, h));
+        setIsPredefinedShape(false);
+      },
     }),
-    [normToPx, pathSmoothing, stopPlayback]
+    [normToPx, pathSmoothing, stopPlayback, path]
   );
 
   return (

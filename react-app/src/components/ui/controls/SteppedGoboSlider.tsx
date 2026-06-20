@@ -82,7 +82,9 @@ export const SteppedGoboSlider: React.FC<SteppedGoboSliderProps> = ({
   }, [value, tickmarks, syncVars]);
 
   const applyValue = (raw: number) => {
-    const next = snapToNearestTick(tickmarks, raw);
+    const next = fine
+      ? Math.max(0, Math.min(DMX_MAX, Math.round(raw)))
+      : snapToNearestTick(tickmarks, raw);
     if (inputRef.current) inputRef.current.value = String(next);
     syncVars(next);
     onChange(next);
@@ -125,7 +127,7 @@ export const SteppedGoboSlider: React.FC<SteppedGoboSliderProps> = ({
         <button type="button" className={styles.nudge} disabled={disabled || activeIndex <= 0} onClick={() => nudge(-1)}>
           Prev
         </button>
-        <label className={styles.fineToggle}>
+        <label className={styles.fineToggle} title="Fine: continuous DMX 0-255 between gobo slots. Off: snap to each wheel position.">
           <input type="checkbox" checked={fine} onChange={(e) => setFine(e.target.checked)} disabled={disabled} />
           Fine
         </label>
@@ -181,6 +183,9 @@ export const SteppedGoboSlider: React.FC<SteppedGoboSliderProps> = ({
         <span className={styles.dmxValue}>
           DMX {activeStep?.min ?? '-'} - {activeStep?.max ?? '-'} ({snapped})
         </span>
+        {fine ? (
+          <span className={styles.fineHint}>Fine mode: sliding between slot centers without snapping.</span>
+        ) : null}
       </div>
     </div>
   );

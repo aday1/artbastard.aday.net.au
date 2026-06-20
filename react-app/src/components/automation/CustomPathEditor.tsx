@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useStore } from '../../store/store';
+import { simplifyPath } from '../ui/controls/xyPadPathUtils';
 import { HorizontalFader } from '../ui/controls';
 import { EnvelopePlaybackControls } from './EnvelopePlaybackControls';
 import { samplePanTiltPath } from '../../utils/panTiltPath';
@@ -48,19 +49,18 @@ export const CustomPathEditor: React.FC<CustomPathEditorProps> = ({
   useEffect(() => {
     if (isOpen) {
       setPathSmoothing(panTiltAutopilot.smoothing ?? 0.6);
-      if (mode === 'autopilot' && panTiltAutopilot.customPath) {
+      if (initialPoints.length >= 2) {
+        setPoints(initialPoints);
+      } else if (mode === 'autopilot' && panTiltAutopilot.customPath) {
         setPoints(panTiltAutopilot.customPath);
       } else if (mode === 'track' && autopilotTrackCustomPoints) {
         setPoints(autopilotTrackCustomPoints);
-      } else if (initialPoints.length > 0) {
-        setPoints(initialPoints);
       } else {
-        // Start with a simple default path
         setPoints([
-          { x: 127, y: 64 },   // Top center
-          { x: 191, y: 127 },  // Right center
-          { x: 127, y: 191 },  // Bottom center
-          { x: 64, y: 127 },   // Left center
+          { x: 127, y: 64 },
+          { x: 191, y: 127 },
+          { x: 127, y: 191 },
+          { x: 64, y: 127 },
         ]);
       }
     }
@@ -234,9 +234,14 @@ export const CustomPathEditor: React.FC<CustomPathEditorProps> = ({
       }
     }
 
-    // Add new point if not clicking on existing one
+    // Add new point if not clicking on existing one (skip if too close to last)
     const dmxCoords = canvasToDmx(x, y);
-    setPoints(prev => [...prev, dmxCoords]);
+    setPoints((prev) => {
+      if (prev.length === 0) return [dmxCoords];
+      const last = prev[prev.length - 1];
+      if (Math.hypot(dmxCoords.x - last.x, dmxCoords.y - last.y) < 6) return prev;
+      return [...prev, dmxCoords];
+    });
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -281,13 +286,14 @@ export const CustomPathEditor: React.FC<CustomPathEditorProps> = ({
   };
 
   const handleSave = () => {
+    const simplified = simplifyPath(points, 4);
     if (mode === 'autopilot') {
-      setPanTiltAutopilot({ customPath: points, smoothing: pathSmoothing });
+      setPanTiltAutopilot({ customPath: simplified, pathType: 'custom', smoothing: pathSmoothing });
     } else if (mode === 'track') {
-      setAutopilotTrackCustomPoints(points);
+      setAutopilotTrackCustomPoints(simplified);
     }
-    
-    onSave?.(points);
+
+    onSave?.(simplified);
     onClose();
   };
 
@@ -439,7 +445,8 @@ export const CustomPathEditor: React.FC<CustomPathEditorProps> = ({
                 value={pathSmoothing}
                 onChange={(v) => setPathSmoothing(v)}
               />
-              <span>{Math.round(pathSmoothing * 100)}%</span>
+              <span>{Math.round(pathSmoothing * 100)}% playback curve</span>
+              <small>Saving always reduces points to the smallest path that keeps the shape. Smoothing affects autopilot playback only.</small>
             </div>
             
             <div className={styles.section}>
@@ -492,7 +499,7 @@ export const CustomPathEditor: React.FC<CustomPathEditorProps> = ({
               onClick={handleSave}
               disabled={points.length < 2}
             >
-              Save Path ({points.length} points)
+              Use on XY Pad ({simplifyPath(points, 4).length} pts from {points.length})
             </button>
           </div>
         </div>
