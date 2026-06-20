@@ -13,3 +13,35 @@ export function sceneTimelineStartDelayMs(transitionDuration: number): number {
   if (transitionDuration <= 0) return 100;
   return transitionDuration + 50;
 }
+
+type ModularAutomationModule = 'color' | 'dimmer' | 'panTilt' | 'effects';
+
+export function disableModularAutomationFlags<
+  T extends {
+    color: { enabled: boolean };
+    dimmer: { enabled: boolean };
+    panTilt: { enabled: boolean };
+    effects: { enabled: boolean };
+  },
+>(modularAutomation: T): T {
+  return {
+    ...modularAutomation,
+    color: { ...modularAutomation.color, enabled: false },
+    dimmer: { ...modularAutomation.dimmer, enabled: false },
+    panTilt: { ...modularAutomation.panTilt, enabled: false },
+    effects: { ...modularAutomation.effects, enabled: false },
+  };
+}
+
+export function modularAutomationModulesToStart(
+  modularAutomation: {
+    color: { enabled: boolean };
+    dimmer: { enabled: boolean };
+    panTilt: { enabled: boolean };
+    effects: { enabled: boolean };
+  }
+): ModularAutomationModule[] {
+  return (['color', 'dimmer', 'panTilt', 'effects'] as const).filter(
+    (type) => modularAutomation[type].enabled
+  );
+}

@@ -933,7 +933,10 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
 
   const resetPanelLayout = useCallback(() => {
     setPanelLayout(normalizeSuperControlPanelLayout(null));
-  }, []);
+    if (embeddedWorkbench && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('artbastard:stageApcPaneReset'));
+    }
+  }, [embeddedWorkbench]);
 
   const hiddenPanelCount = useMemo(
     () => Object.values(panelLayout.hidden).filter(Boolean).length,
@@ -1180,10 +1183,14 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
     fixtureNext: '/supercontrol/fixture/next',
     groupPrev: '/supercontrol/group/prev',
     groupNext: '/supercontrol/group/next',
+    sceneSave: '/supercontrol/scene/save',
+    scenePrev: '/supercontrol/scene/prev',
+    sceneNext: '/supercontrol/scene/next',
   });
   const [oscEnabled, setOscEnabled] = useState<Record<string, boolean>>({
     fixtureNav: true,
     groupNav: true,
+    sceneNav: true,
   });
   // Enhanced MIDI Learn state with range support
   const [midiMappings, setMidiMappings] = useState<Record<string, LocalMidiMapping>>(loadLocalMidiMappings);
@@ -2910,7 +2917,7 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
             {hiddenPanelCount > 1 && (
               <button type="button" onClick={showAllPanels}>Show all</button>
             )}
-            <button type="button" onClick={resetPanelLayout} title="Reset order, hidden cards, columns, widths, and heights">
+            <button type="button" onClick={resetPanelLayout} title="Reset order, hidden cards, columns, widths, heights, and APC/stage split">
               Reset layout
             </button>
           </div>
@@ -3435,66 +3442,99 @@ const SuperControl: React.FC<SuperControlProps> = ({ isDockable = false, preferT
                   </>
                 )}
               </div>
-              <div className={styles.sceneControlsDock}>
+              <div className={styles.navigationGroup}>
                 <h5>Scene Controls</h5>
-                <div className={styles.sceneControls}>
-                  <div className={styles.sceneButtonRow}>
-                    <SkeuoButton compact accent="purple" className={styles.sceneBtn} onClick={() => captureCurrentScene()}>
-                      <LucideIcon name="Camera" />
-                      Save Scene
-                    </SkeuoButton>
-                    <SkeuoButton compact accent="purple" className={styles.sceneBtn} onClick={selectPreviousScene} disabled={scenes.length === 0}>
-                      <LucideIcon name="ChevronLeft" />
-                      Previous
-                    </SkeuoButton>
-                    <SkeuoButton compact accent="purple" className={styles.sceneBtn} onClick={selectNextScene} disabled={scenes.length === 0}>
-                      Next
-                      <LucideIcon name="ChevronRight" />
-                    </SkeuoButton>
+                <div className={styles.sceneSaveRow}>
+                  <SkeuoButton compact accent="purple" className={styles.navBtn} onClick={() => captureCurrentScene()}>
+                    <LucideIcon name="Camera" />
+                    Save
+                  </SkeuoButton>
+                </div>
+                <div className={styles.navigationControls}>
+                  <SkeuoButton compact accent="purple" className={styles.navBtn} onClick={selectPreviousScene} disabled={scenes.length === 0}>
+                    <LucideIcon name="ChevronLeft" />
+                    Prev
+                  </SkeuoButton>
+                  <div className={styles.currentSelection}>
+                    {scenes.length > 0 ? scenes[currentSceneIndex]?.name || 'No scene' : 'No scenes'}
+                    <span className={styles.indexInfo}>
+                      ({scenes.length > 0 ? currentSceneIndex + 1 : 0}/{scenes.length || 0} saved)
+                    </span>
                   </div>
-                  <div className={styles.sceneInfo}>
-                    <span className={styles.currentScene}>{scenes.length > 0 ? scenes[currentSceneIndex]?.name || 'No scene' : 'No scenes'}</span>
-                    <span className={styles.sceneCount}>({scenes.length} saved)</span>
-                  </div>
-                  <div className={styles.sceneOptions}>
-                    <label className={styles.checkboxLabel} title={SCENE_AUTO_SAVE_TOOLTIP}>
-                      <input type="checkbox" checked={false} disabled readOnly title={SCENE_AUTO_SAVE_TOOLTIP} />
-                      Auto-save scenes (inactive)
-                    </label>
-                  </div>
+                  <SkeuoButton compact accent="purple" className={styles.navBtn} onClick={selectNextScene} disabled={scenes.length === 0}>
+                    Next
+                    <LucideIcon name="ChevronRight" />
+                  </SkeuoButton>
+                </div>
+                <div className={styles.sceneOptions}>
+                  <label className={styles.checkboxLabel} title={SCENE_AUTO_SAVE_TOOLTIP}>
+                    <input type="checkbox" checked={false} disabled readOnly title={SCENE_AUTO_SAVE_TOOLTIP} />
+                    Auto-save scenes (inactive)
+                  </label>
                 </div>
                 <div className={styles.midiLearnRow}>
                   <button
                     type="button"
-                    className={`${styles.midiLearnBtn} ${midiLearnTarget === 'scene_save' ? styles.learning : ''} ${midiMappings.scene_save ? styles.mapped : ''}`}
+                    className={`${styles.navMidiBtn} ${midiLearnTarget === 'scene_save' ? styles.learning : ''} ${midiMappings.scene_save ? styles.mapped : ''}`}
                     onClick={() => midiLearnTarget === 'scene_save' ? stopMidiLearn() : startMidiLearn('scene_save')}
                     title={midiMappings.scene_save ? `Remap ${midiMappingLabel(midiMappings.scene_save)}` : 'Learn MIDI for Save Scene'}
                     aria-pressed={midiLearnTarget === 'scene_save'}
                   >
-                    <LucideIcon name={midiLearnTarget === 'scene_save' ? 'Radio' : 'Music'} />
-                    {midiButtonLabel('scene_save', 'MIDI Save')}
+                    <LucideIcon name={midiLearnTarget === 'scene_save' ? 'Radio' : 'Music'} size={14} />
+                    Save
                   </button>
                   <button
                     type="button"
-                    className={`${styles.midiLearnBtn} ${midiLearnTarget === 'scene_previous' ? styles.learning : ''} ${midiMappings.scene_previous ? styles.mapped : ''}`}
+                    className={`${styles.navMidiBtn} ${midiLearnTarget === 'scene_previous' ? styles.learning : ''} ${midiMappings.scene_previous ? styles.mapped : ''}`}
                     onClick={() => midiLearnTarget === 'scene_previous' ? stopMidiLearn() : startMidiLearn('scene_previous')}
                     title={midiMappings.scene_previous ? `Remap ${midiMappingLabel(midiMappings.scene_previous)}` : 'Learn MIDI for Previous Scene'}
                     aria-pressed={midiLearnTarget === 'scene_previous'}
                   >
-                    <LucideIcon name={midiLearnTarget === 'scene_previous' ? 'Radio' : 'Music'} />
-                    {midiButtonLabel('scene_previous', 'MIDI Prev')}
+                    <LucideIcon name="ChevronLeft" size={14} />
+                    Prev
                   </button>
                   <button
                     type="button"
-                    className={`${styles.midiLearnBtn} ${midiLearnTarget === 'scene_next' ? styles.learning : ''} ${midiMappings.scene_next ? styles.mapped : ''}`}
+                    className={`${styles.navMidiBtn} ${midiLearnTarget === 'scene_next' ? styles.learning : ''} ${midiMappings.scene_next ? styles.mapped : ''}`}
                     onClick={() => midiLearnTarget === 'scene_next' ? stopMidiLearn() : startMidiLearn('scene_next')}
                     title={midiMappings.scene_next ? `Remap ${midiMappingLabel(midiMappings.scene_next)}` : 'Learn MIDI for Next Scene'}
                     aria-pressed={midiLearnTarget === 'scene_next'}
                   >
-                    <LucideIcon name={midiLearnTarget === 'scene_next' ? 'Radio' : 'Music'} />
-                    {midiButtonLabel('scene_next', 'MIDI Next')}
+                    Next
+                    <LucideIcon name="ChevronRight" size={14} />
                   </button>
-                  <input type="text" placeholder="OSC: /scene/control" className={styles.oscInput} defaultValue="/scene/control" />
+                  <div className={styles.oscControlGroup}>
+                    <input
+                      type="text"
+                      placeholder="OSC: /scene/save"
+                      className={styles.oscInput}
+                      value={oscAddresses.sceneSave || ''}
+                      onChange={(e) => setOscAddresses((prev) => ({ ...prev, sceneSave: e.target.value }))}
+                    />
+                    <input
+                      type="text"
+                      placeholder="OSC: /scene/prev"
+                      className={styles.oscInput}
+                      value={oscAddresses.scenePrev || ''}
+                      onChange={(e) => setOscAddresses((prev) => ({ ...prev, scenePrev: e.target.value }))}
+                    />
+                    <input
+                      type="text"
+                      placeholder="OSC: /scene/next"
+                      className={styles.oscInput}
+                      value={oscAddresses.sceneNext || ''}
+                      onChange={(e) => setOscAddresses((prev) => ({ ...prev, sceneNext: e.target.value }))}
+                    />
+                    <button
+                      type="button"
+                      className={`${styles.oscToggleBtn} ${oscEnabled.sceneNav ? styles.active : ''}`}
+                      onClick={() => setOscEnabled((prev) => ({ ...prev, sceneNav: !prev.sceneNav }))}
+                      title={oscEnabled.sceneNav ? 'OSC scene controls enabled' : 'OSC scene controls disabled'}
+                    >
+                      <LucideIcon name={oscEnabled.sceneNav ? 'CheckCircle' : 'Circle'} size={14} />
+                      OSC
+                    </button>
+                  </div>
                 </div>
                 {scenes.length > 0 && (
                   <div className={styles.scenesList}>

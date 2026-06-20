@@ -6,7 +6,7 @@ import { MD_SCENE_SEED_PACKS, MD_SCENE_PACK_TEMPLATE_IDS } from './generated/see
 export const SCENE_SEED_GENERATOR_ID = 'artbastard-scene-seeder';
 export const SCENE_SEED_GENERATOR_VERSION = 1;
 
-export type SceneSeedPackId = 'compact-starter' | 'smart-starter-40' | 'smart-ab-80';
+export type SceneSeedPackId = 'essential-ab-28' | 'compact-starter' | 'smart-starter-40' | 'smart-ab-80';
 export type SceneSeedTarget = 'deck-a' | 'deck-b' | 'decks-a-b';
 export type SceneSeedMode = 'pack' | 'single-slot' | 'capture-selection';
 export type SceneSeedFixtureScope = 'all' | 'movers' | 'washes';
@@ -99,30 +99,37 @@ export interface CaptureSelectionToSlotOptions {
 }
 
 const DEFAULT_OPTIONS: SceneSeedOptions = {
-  packId: 'smart-starter-40',
-  target: 'deck-a',
+  packId: 'essential-ab-28',
+  target: 'decks-a-b',
   includeAutomation: false,
   avoidStrobe: false,
 };
+
+export const SCENE_BOTH_DECK_PACK_IDS: SceneSeedPackId[] = ['essential-ab-28', 'smart-ab-80'];
 
 export const SCENE_SEED_PACKS: Array<{ id: SceneSeedPackId; label: string; description: string }> =
   MD_SCENE_SEED_PACKS.length
     ? (MD_SCENE_SEED_PACKS as Array<{ id: SceneSeedPackId; label: string; description: string }>)
     : [
         {
+          id: 'essential-ab-28',
+          label: 'Essential 14+14 (A and B)',
+          description: 'Fills APC40 slots 01-14 on Deck A and Deck B with core looks. Slots 15-40 stay empty for your own scenes.',
+        },
+        {
           id: 'smart-starter-40',
-          label: 'Smart Starter 40',
-          description: 'Fills one APC40 deck with color, wash, movement, gobo, strobe, and combo scenes.',
+          label: 'Extended 40 (one deck)',
+          description: 'Fills all 40 slots on Deck A OR Deck B. Full library of slow/fast color, movement, gobo, beam, wash, and strobe templates.',
         },
         {
           id: 'smart-ab-80',
-          label: 'Smart A+B 80',
-          description: 'Fills Deck A and Deck B with crossfader-friendly scene variants.',
+          label: 'Extended 40+40 (both decks)',
+          description: 'Fills all 40 slots on Deck A and again on Deck B with crossfader-friendly scene variants.',
         },
         {
           id: 'compact-starter',
-          label: 'Compact Starter 16',
-          description: 'Creates the first 16 APC40 slots with essential starter looks.',
+          label: 'Basics 16 (one deck)',
+          description: 'First 16 slots on one deck only. Core blackout, washes, slow RGB, spot, sweeps, gobo, plus one strobe-move look.',
         },
       ];
 
@@ -654,7 +661,9 @@ function templatesForOptions(options: SceneSeedOptions): SceneSeedTemplate[] {
 }
 
 function decksForOptions(options: SceneSeedOptions): Apc40Deck[] {
-  if (options.packId === 'smart-ab-80' || options.target === 'decks-a-b') return ['A', 'B'];
+  if (SCENE_BOTH_DECK_PACK_IDS.includes(options.packId) || options.target === 'decks-a-b') {
+    return ['A', 'B'];
+  }
   return [options.target === 'deck-b' ? 'B' : 'A'];
 }
 

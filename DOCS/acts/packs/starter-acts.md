@@ -1,8 +1,8 @@
 ---
 spec: act-pack
 id: starter-acts
-label: Starter ACTS 5
-description: Creates five optional ACTS for the APC40 scene-launch buttons - color, wash, movement, gobo, and strobe.
+label: Quick audition 5
+description: Five short ACT macros for APC Scene Launch buttons 1-5. Good for testing scene chains before building a full show.
 templates:
   - color-warmup
   - red-slow

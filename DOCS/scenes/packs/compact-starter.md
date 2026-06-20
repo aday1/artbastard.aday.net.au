@@ -2,7 +2,7 @@
 spec: scene-pack
 id: compact-starter
 label: Compact Starter 16
-description: Creates the first 16 APC40 slots with essential starter looks.
+description: First 16 slots on one deck only. Core blackout, washes, slow RGB, spot, sweeps, gobo, plus one strobe-move look.
 templates:
   - blackout
   - full-open

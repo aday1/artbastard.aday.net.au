@@ -1,8 +1,8 @@
 ---
 spec: act-pack
 id: performance-acts
-label: Performance ACTS 8
-description: Creates eight optional show-section ACTS with longer builds, loops, gobo passes, strobe breaks, and finale looks.
+label: Show sections 8
+description: Eight longer ACT sequences with builds, loops, movement sweeps, strobe hits, and finale punches. Includes the quick audition 5 plus three show-length macros.
 templates:
   - color-warmup
   - red-slow

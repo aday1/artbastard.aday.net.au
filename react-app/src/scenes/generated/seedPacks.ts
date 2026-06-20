@@ -11,17 +11,22 @@ export const MD_SCENE_SEED_PACKS: SceneSeedPackMeta[] = [
   {
     "id": "compact-starter",
     "label": "Compact Starter 16",
-    "description": "Creates the first 16 APC40 slots with essential starter looks."
+    "description": "First 16 slots on one deck only. Core blackout, washes, slow RGB, spot, sweeps, gobo, plus one strobe-move look."
+  },
+  {
+    "id": "essential-ab-28",
+    "label": "Essential 14+14 (A and B)",
+    "description": "Fills APC40 slots 01-14 on Deck A and Deck B with core looks. Slots 15-40 stay empty for your own scenes."
   },
   {
     "id": "smart-ab-80",
-    "label": "Smart A+B 80",
-    "description": "Fills Deck A and Deck B with crossfader-friendly scene variants."
+    "label": "Extended 40+40 (both decks)",
+    "description": "Fills all 40 slots on Deck A and again on Deck B (80 scenes). Same extended library as Extended 40, with crossfader-friendly B variants."
   },
   {
     "id": "smart-starter-40",
-    "label": "Smart Starter 40",
-    "description": "Fills one APC40 deck with color, wash, movement, gobo, strobe, and combo scenes."
+    "label": "Extended 40 (one deck)",
+    "description": "Fills all 40 slots on Deck A OR Deck B. Full library of slow/fast color, movement, gobo, beam, wash, and strobe templates."
   }
 ];
 
@@ -43,6 +48,22 @@ export const MD_SCENE_PACK_TEMPLATE_IDS: Record<string, string[]> = {
     "right-sweep",
     "gobo-texture",
     "strobe-move-90"
+  ],
+  "essential-ab-28": [
+    "blackout",
+    "full-open",
+    "warm-wash",
+    "cool-wash",
+    "red-slow",
+    "green-slow",
+    "blue-slow",
+    "cyan-wash",
+    "magenta-wash",
+    "amber-glow",
+    "center-spot",
+    "left-sweep",
+    "right-sweep",
+    "gobo-texture"
   ],
   "smart-ab-80": [
     "blackout",

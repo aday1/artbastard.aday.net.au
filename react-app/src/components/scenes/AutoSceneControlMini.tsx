@@ -16,8 +16,9 @@ export const AutoSceneControlMini: React.FC<AutoSceneControlMiniProps> = ({
   isDockable = true,
 }) => {// Local state for scene management
   const [showSceneManagement, setShowSceneManagement] = useState(false);
-  const [newSceneName, setNewSceneName] = useState('');
   const [showDirectionControls, setShowDirectionControls] = useState(false);
+  const [randomPickCount, setRandomPickCount] = useState(4);
+  const [pickerSceneName, setPickerSceneName] = useState('');
 
   // Local state for manual/tap tempo clock management
   const [localBeatCounter, setLocalBeatCounter] = useState(0);
@@ -243,13 +244,44 @@ export const AutoSceneControlMini: React.FC<AutoSceneControlMiniProps> = ({
   };
 
   const addAllScenesToAutoList = () => {
-    const allSceneNames = scenes.map(scene => scene.name);
+    const allSceneNames = scenes.map((scene) => scene.name);
     setAutoSceneList(allSceneNames);
+  };
+
+  const addRandomScenesToAutoList = (count: number) => {
+    const pickCount = Math.max(1, Math.min(count, scenes.length));
+    if (scenes.length === 0) return;
+
+    const notQueued = scenes
+      .map((scene) => scene.name)
+      .filter((name) => !autoSceneList.includes(name));
+    const pool = notQueued.length > 0 ? notQueued : scenes.map((scene) => scene.name);
+    const shuffled = [...pool].sort(() => Math.random() - 0.5);
+    const picked = shuffled.slice(0, Math.min(pickCount, shuffled.length));
+
+    setAutoSceneList([...autoSceneList, ...picked.filter((name) => !autoSceneList.includes(name))]);
+    if (autoSceneList.length === 0 && picked.length > 0) {
+      setAutoSceneMode('random');
+    }
+  };
+
+  const addPickedSceneToAutoList = () => {
+    if (!pickerSceneName || autoSceneList.includes(pickerSceneName)) return;
+    setAutoSceneList([...autoSceneList, pickerSceneName]);
+  };
+
+  const removeSceneFromAutoList = (sceneName: string) => {
+    setAutoSceneList(autoSceneList.filter((name) => name !== sceneName));
   };
 
   const clearAutoSceneList = () => {
     setAutoSceneList([]);
   };
+
+  useEffect(() => {
+    if (pickerSceneName && scenes.some((scene) => scene.name === pickerSceneName)) return;
+    setPickerSceneName(scenes[0]?.name ?? '');
+  }, [scenes, pickerSceneName]);
 
   const renderContent = () => {
     if (isCollapsed) return null;
@@ -351,6 +383,98 @@ export const AutoSceneControlMini: React.FC<AutoSceneControlMiniProps> = ({
             Scene: {autoSceneCurrentIndex + 1}/{autoSceneList.length}
           </div>
         )}
+
+        <div className={styles.queueBuilder}>
+          <div className={styles.queueBuilderTitle}>Fill cycle queue</div>
+          <div className={styles.queueBuilderActions}>
+            <button
+              type="button"
+              className={styles.actionButton}
+              onClick={addAllScenesToAutoList}
+              disabled={scenes.length === 0}
+              title="Add every saved scene to the auto cycle queue."
+            >
+              <LucideIcon name="ListPlus" size={10} />
+              All
+            </button>
+            <label className={styles.randomPickControl} title="How many random scenes to add from saved scenes.">
+              <span>Random</span>
+              <input
+                type="number"
+                min={1}
+                max={Math.max(1, scenes.length)}
+                value={randomPickCount}
+                onChange={(e) => setRandomPickCount(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                className={styles.randomPickInput}
+              />
+            </label>
+            <button
+              type="button"
+              className={styles.actionButton}
+              onClick={() => addRandomScenesToAutoList(randomPickCount)}
+              disabled={scenes.length === 0}
+              title="Add random saved scenes to the queue. Sets playback order to random when starting from empty."
+            >
+              <LucideIcon name="Shuffle" size={10} />
+              Add
+            </button>
+            <button
+              type="button"
+              className={styles.actionButton}
+              onClick={clearAutoSceneList}
+              disabled={autoSceneList.length === 0}
+              title="Clear the auto cycle queue."
+            >
+              <LucideIcon name="X" size={10} />
+              Clear
+            </button>
+          </div>
+
+          {scenes.length > 0 && (
+            <div className={styles.scenePickerRow}>
+              <select
+                value={pickerSceneName}
+                onChange={(e) => setPickerSceneName(e.target.value)}
+                className={styles.scenePickerSelect}
+                title="Pick a saved scene to add to the cycle queue."
+              >
+                {scenes.map((scene) => (
+                  <option key={scene.name} value={scene.name}>
+                    {scene.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className={styles.actionButton}
+                onClick={addPickedSceneToAutoList}
+                disabled={!pickerSceneName || autoSceneList.includes(pickerSceneName)}
+                title="Add the selected scene to the cycle queue."
+              >
+                <LucideIcon name="Plus" size={10} />
+                Drop in
+              </button>
+            </div>
+          )}
+
+          {autoSceneList.length > 0 && (
+            <div className={styles.queueChips}>
+              {autoSceneList.map((sceneName, index) => (
+                <button
+                  key={sceneName}
+                  type="button"
+                  className={styles.queueChip}
+                  onClick={() => removeSceneFromAutoList(sceneName)}
+                  title={`Remove ${sceneName} from the cycle queue.`}
+                >
+                  <span className={styles.queueChipIndex}>{index + 1}</span>
+                  <span className={styles.queueChipName}>{sceneName}</span>
+                  <LucideIcon name="X" size={9} />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Direction Controls */}
         <div className={styles.directionSection}>

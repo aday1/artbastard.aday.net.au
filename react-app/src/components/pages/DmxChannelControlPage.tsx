@@ -651,7 +651,7 @@ export const DmxChannelControlPage: React.FC<DmxChannelControlPageProps> = ({
 
           {/* Embedded MIDI Monitor section removed */}
 
-          <ServerLogPanels />
+          <ServerLogPanels compact={embedded || isMobile} />
 
           {/* Pinned Channels Section */}
           <DmxPinnedChannels

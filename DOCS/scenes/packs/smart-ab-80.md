@@ -1,8 +1,8 @@
 ---
 spec: scene-pack
 id: smart-ab-80
-label: Smart A+B 80
-description: Fills Deck A and Deck B with crossfader-friendly scene variants.
+label: Extended 40+40 (both decks)
+description: Fills all 40 slots on Deck A and again on Deck B (80 scenes). Same extended library as Extended 40, with crossfader-friendly B variants.
 templates:
   - blackout
   - full-open

@@ -61,7 +61,11 @@ const formatEntry = (entry: ServerLogEntry): string => {
   return `${time} [${type}] ${entry.message || ''}${payload}`;
 };
 
-export const ServerLogPanels: React.FC = () => {
+interface ServerLogPanelsProps {
+  compact?: boolean;
+}
+
+export const ServerLogPanels: React.FC<ServerLogPanelsProps> = ({ compact = false }) => {
   const [lines, setLines] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [roliStatus, setRoliStatus] = useState<ServerRoliStatus>(emptyRoliStatus);
@@ -137,7 +141,10 @@ export const ServerLogPanels: React.FC = () => {
   }, []);
 
   return (
-    <section className={styles.logConsole} aria-label="Server log panels">
+    <section
+      className={`${styles.logConsole} ${compact ? styles.logConsoleCompact : ''}`}
+      aria-label="Server log panels"
+    >
       <div className={styles.header}>
         <div className={styles.titleBlock}>
           <h2 className={styles.title}>Server Console Panels</h2>

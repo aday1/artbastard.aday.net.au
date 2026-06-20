@@ -1,8 +1,8 @@
 ---
 spec: scene-pack
 id: smart-starter-40
-label: Smart Starter 40
-description: Fills one APC40 deck with color, wash, movement, gobo, strobe, and combo scenes.
+label: Extended 40 (one deck)
+description: Fills all 40 slots on Deck A OR Deck B. Full library of slow/fast color, movement, gobo, beam, wash, and strobe templates.
 templates:
   - blackout
   - full-open

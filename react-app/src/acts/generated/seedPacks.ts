@@ -10,13 +10,13 @@ export interface ActSeedPackMeta {
 export const MD_ACT_SEED_PACKS: ActSeedPackMeta[] = [
   {
     "id": "performance-acts",
-    "label": "Performance ACTS 8",
-    "description": "Creates eight optional show-section ACTS with longer builds, loops, gobo passes, strobe breaks, and finale looks."
+    "label": "Show sections 8",
+    "description": "Eight longer ACT sequences with builds, loops, movement sweeps, strobe hits, and finale punches. Includes the quick audition 5 plus three show-length macros."
   },
   {
     "id": "starter-acts",
-    "label": "Starter ACTS 5",
-    "description": "Creates five optional ACTS for the APC40 scene-launch buttons - color, wash, movement, gobo, and strobe."
+    "label": "Quick audition 5",
+    "description": "Five short ACT macros for APC Scene Launch buttons 1-5. Good for testing scene chains before building a full show."
   }
 ];
 

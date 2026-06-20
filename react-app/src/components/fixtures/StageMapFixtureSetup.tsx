@@ -64,28 +64,37 @@ const makeGroup = (name: string, fixtureIndices: number[]): Group => ({
 
 const fixtureEndAddress = (fixture: Fixture) => fixture.startAddress + fixture.channels.length - 1;
 const CHANNEL_PREVIEW_LIMIT = 8;
-const STAGE_MAP_LAYOUT_KEY = 'artbastard.stageMap.layout.v1';
+const STAGE_MAP_LAYOUT_KEY = 'artbastard.stageMap.layout.v2';
+export const STAGE_APC_PANE_RESET_EVENT = 'artbastard:stageApcPaneReset';
 const MIN_APC_WORKBENCH_HEIGHT = 460;
 const MAX_APC_WORKBENCH_HEIGHT = 720;
 
 interface StagePaneLayoutState {
   apcWorkbenchHeight: number;
+  apcWorkbenchCollapsed: boolean;
+  stageMapCollapsed: boolean;
 }
 
 const DEFAULT_STAGE_PANE_LAYOUT: StagePaneLayoutState = {
   apcWorkbenchHeight: 460,
+  apcWorkbenchCollapsed: false,
+  stageMapCollapsed: false,
 };
 
 const clampNumber = (value: number, min: number, max: number) => Math.max(min, Math.min(max, Math.round(value)));
 
 function normalizeStagePaneLayout(raw: unknown): StagePaneLayoutState {
   const parsed = raw && typeof raw === 'object' ? raw as Partial<StagePaneLayoutState> : {};
+  const apcWorkbenchCollapsed = parsed.apcWorkbenchCollapsed === true;
+  const stageMapCollapsed = parsed.stageMapCollapsed === true;
   return {
     apcWorkbenchHeight: clampNumber(
       typeof parsed.apcWorkbenchHeight === 'number' ? parsed.apcWorkbenchHeight : DEFAULT_STAGE_PANE_LAYOUT.apcWorkbenchHeight,
       MIN_APC_WORKBENCH_HEIGHT,
       MAX_APC_WORKBENCH_HEIGHT
     ),
+    apcWorkbenchCollapsed,
+    stageMapCollapsed: apcWorkbenchCollapsed && stageMapCollapsed ? false : stageMapCollapsed,
   };
 }
 
@@ -177,6 +186,17 @@ export const StageMapFixtureSetup: React.FC = () => {
     if (typeof window === 'undefined') return;
     window.localStorage.setItem(STAGE_MAP_LAYOUT_KEY, JSON.stringify(paneLayout));
   }, [paneLayout]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const restorePaneLayout = () => setPaneLayout({ ...DEFAULT_STAGE_PANE_LAYOUT });
+    window.addEventListener('resetLayout', restorePaneLayout);
+    window.addEventListener(STAGE_APC_PANE_RESET_EVENT, restorePaneLayout);
+    return () => {
+      window.removeEventListener('resetLayout', restorePaneLayout);
+      window.removeEventListener(STAGE_APC_PANE_RESET_EVENT, restorePaneLayout);
+    };
+  }, []);
 
   useEffect(() => {
     const applyResizeDrag = (clientY: number) => {
@@ -891,6 +911,7 @@ export const StageMapFixtureSetup: React.FC = () => {
     apcDriveMode ? styles.workspaceMapOnly : '',
   ].filter(Boolean).join(' ');
   const startPaneResize = (target: 'apcWorkbench' | 'workspace', event: React.PointerEvent) => {
+    if (paneLayout.apcWorkbenchCollapsed || paneLayout.stageMapCollapsed) return;
     event.preventDefault();
     paneResizeRef.current = {
       target,
@@ -903,6 +924,7 @@ export const StageMapFixtureSetup: React.FC = () => {
   };
   const startPaneMouseResize = (target: 'apcWorkbench' | 'workspace', event: React.MouseEvent) => {
     if (paneResizeRef.current) return;
+    if (paneLayout.apcWorkbenchCollapsed || paneLayout.stageMapCollapsed) return;
     event.preventDefault();
     paneResizeRef.current = {
       target,
@@ -912,8 +934,31 @@ export const StageMapFixtureSetup: React.FC = () => {
     document.body.style.cursor = 'row-resize';
     document.body.style.userSelect = 'none';
   };
+
+  const setApcWorkbenchCollapsed = (collapsed: boolean) => {
+    setPaneLayout((prev) => ({
+      ...prev,
+      apcWorkbenchCollapsed: collapsed,
+      stageMapCollapsed: collapsed ? false : prev.stageMapCollapsed,
+    }));
+  };
+
+  const setStageMapCollapsed = (collapsed: boolean) => {
+    setPaneLayout((prev) => ({
+      ...prev,
+      stageMapCollapsed: collapsed,
+      apcWorkbenchCollapsed: collapsed ? false : prev.apcWorkbenchCollapsed,
+    }));
+  };
+
+  const paneSplitLocked = paneLayout.apcWorkbenchCollapsed || paneLayout.stageMapCollapsed;
   return (
-    <section className={`${styles.stageMapSetup} ${apcDriveMode ? styles.apcDriveSetup : ''}`} style={stageSetupStyle}>
+    <section
+      className={`${styles.stageMapSetup} ${apcDriveMode ? styles.apcDriveSetup : ''}`}
+      style={stageSetupStyle}
+      data-apc-workbench-collapsed={apcDriveMode && paneLayout.apcWorkbenchCollapsed ? 'true' : undefined}
+      data-stage-map-collapsed={apcDriveMode && paneLayout.stageMapCollapsed ? 'true' : undefined}
+    >
       <header className={styles.toolbar}>
         <div className={styles.toolbarGroup}>
           <button type="button" className={viewMode === 'top' ? styles.active : ''} onClick={() => setViewMode('top')}>
@@ -1025,7 +1070,9 @@ export const StageMapFixtureSetup: React.FC = () => {
         )}
       </header>
 
-      <div className={styles.drawerStack}>
+      <div
+        className={`${styles.drawerStack} ${apcDriveMode && paneLayout.apcWorkbenchCollapsed ? styles.drawerStackCollapsed : ''}`}
+      >
         <UnifiedStageWorkbench mode={workbenchMode} onModeChange={setWorkbenchMode} />
       </div>
       {apcDriveMode && (
@@ -1034,15 +1081,67 @@ export const StageMapFixtureSetup: React.FC = () => {
           role="separator"
           aria-label="Resize APC visualizer and stage map split"
           aria-orientation="horizontal"
-          onPointerDown={(event) => startPaneResize('apcWorkbench', event)}
-          onMouseDown={(event) => startPaneMouseResize('apcWorkbench', event)}
         >
-          <LucideIcon name="GripHorizontal" size={16} />
-          <span>Drag to resize APC visualizer / stage split</span>
+          {paneLayout.apcWorkbenchCollapsed ? (
+            <button
+              type="button"
+              className={styles.paneCollapseButton}
+              onClick={() => setApcWorkbenchCollapsed(false)}
+              title="Show APC panel above the split"
+            >
+              <LucideIcon name="ChevronDown" size={14} />
+              Show APC panel
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={styles.paneCollapseButton}
+              onClick={() => setApcWorkbenchCollapsed(true)}
+              title="Hide APC panel above the split"
+            >
+              <LucideIcon name="ChevronUp" size={14} />
+              Hide APC
+            </button>
+          )}
+          <div
+            className={`${styles.paneResizeGrip} ${paneSplitLocked ? styles.paneResizeGripLocked : ''}`}
+            onPointerDown={(event) => {
+              if (paneSplitLocked) return;
+              startPaneResize('apcWorkbench', event);
+            }}
+            onMouseDown={(event) => startPaneMouseResize('apcWorkbench', event)}
+          >
+            <LucideIcon name="GripHorizontal" size={16} />
+            {!paneSplitLocked && <span>Drag to resize APC / stage split</span>}
+          </div>
+          {paneLayout.stageMapCollapsed ? (
+            <button
+              type="button"
+              className={styles.paneCollapseButton}
+              onClick={() => setStageMapCollapsed(false)}
+              title="Show stage map below the split"
+            >
+              <LucideIcon name="ChevronUp" size={14} />
+              Show stage map
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={styles.paneCollapseButton}
+              onClick={() => setStageMapCollapsed(true)}
+              title="Hide stage map below the split"
+            >
+              <LucideIcon name="ChevronDown" size={14} />
+              Hide map
+            </button>
+          )}
         </div>
       )}
 
-      <div className={workspaceClassName} data-apc-drive-mode={apcDriveMode ? 'true' : undefined}>
+      <div
+        className={`${workspaceClassName} ${apcDriveMode && paneLayout.stageMapCollapsed ? styles.workspaceCollapsed : ''}`}
+        data-apc-drive-mode={apcDriveMode ? 'true' : undefined}
+      >
         {!apcDriveMode && <aside className={styles.libraryPane} aria-label="Fixture library">
           <div className={styles.paneHeader}>
             <div>

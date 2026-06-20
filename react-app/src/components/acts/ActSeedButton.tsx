@@ -6,18 +6,16 @@ import {
   type ActSeedMode,
   type ActSeedPackId,
 } from '../../acts/actSeedGenerator';
+import {
+  actSeedModeUi,
+  actSeedPackUi,
+} from '../../acts/actSeedUi';
 import { LucideIcon } from '../ui/LucideIcon';
 import styles from './ActSeedButton.module.scss';
 
 interface ActSeedButtonProps {
   className?: string;
 }
-
-const MODES: Array<{ id: ActSeedMode; label: string }> = [
-  { id: 'pack', label: 'Full pack' },
-  { id: 'single-template', label: 'One ACT template' },
-  { id: 'from-scenes', label: 'From selected scenes' },
-];
 
 export const ActSeedButton: React.FC<ActSeedButtonProps> = ({ className }) => {
   const scenes = useStore((state) => state.scenes);
@@ -38,10 +36,8 @@ export const ActSeedButton: React.FC<ActSeedButtonProps> = ({ className }) => {
     [avoidStrobe]
   );
 
-  const selectedPack = useMemo(
-    () => ACT_SEED_PACKS.find((pack) => pack.id === packId) ?? ACT_SEED_PACKS[0],
-    [packId]
-  );
+  const modeDetails = actSeedModeUi(mode);
+  const packDetails = actSeedPackUi(packId);
   const disabled = scenes.length === 0 || isSeeding;
   const sceneSelectionMissing = mode === 'from-scenes' && selectedSceneNames.length === 0;
 
@@ -83,7 +79,7 @@ export const ActSeedButton: React.FC<ActSeedButtonProps> = ({ className }) => {
         className={styles.seedButton}
         onClick={() => setOpen((value) => !value)}
         disabled={scenes.length === 0}
-        title={scenes.length === 0 ? 'Create or seed scenes before seeding ACTS' : selectedPack.description}
+        title={scenes.length === 0 ? 'Create or seed scenes before seeding ACTS' : packDetails.bestFor}
       >
         <LucideIcon name="Sparkles" size={16} />
         Seed ACTS
@@ -92,43 +88,70 @@ export const ActSeedButton: React.FC<ActSeedButtonProps> = ({ className }) => {
       {open && (
         <div className={styles.seedPanel}>
           <div className={styles.seedHeader}>
-            <strong>Optional ACT seed</strong>
+            <strong>ACT seed (optional)</strong>
             <button type="button" onClick={() => setOpen(false)} aria-label="Close ACT seed options">
               <LucideIcon name="X" size={15} />
             </button>
           </div>
 
+          <p className={styles.seedIntro}>
+            ACT macros chain APC clip scenes on the Scene Launch row. Seed scenes first, then pick a pack or build one ACT from scenes you select.
+          </p>
+
           <label>
-            Mode
+            What to do
             <select value={mode} onChange={(event) => setMode(event.target.value as ActSeedMode)}>
-              {MODES.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
+              {['pack', 'single-template', 'from-scenes'].map((optionId) => {
+                const option = actSeedModeUi(optionId as ActSeedMode);
+                return (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                );
+              })}
             </select>
           </label>
 
+          <div className={styles.seedDetailBox}>
+            <strong>{modeDetails.summary}</strong>
+            <p>{modeDetails.detail}</p>
+          </div>
+
           {mode === 'pack' && (
-            <label>
-              Pack
-              <select value={packId} onChange={(event) => setPackId(event.target.value as ActSeedPackId)}>
-                {ACT_SEED_PACKS.map((pack) => (
-                  <option key={pack.id} value={pack.id}>
-                    {pack.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <>
+              <label>
+                ACT pack
+                <select value={packId} onChange={(event) => setPackId(event.target.value as ActSeedPackId)}>
+                  {ACT_SEED_PACKS.map((pack) => (
+                    <option key={pack.id} value={pack.id}>
+                      {actSeedPackUi(pack.id as ActSeedPackId).label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div className={styles.seedDetailBox}>
+                <strong>{packDetails.creates}</strong>
+                <ul className={styles.seedDetailList}>
+                  {packDetails.includes.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+                <p className={styles.seedDetailHint}>{packDetails.bestFor}</p>
+                {avoidStrobe && (
+                  <p className={styles.seedDetailHint}>Strobe ACTS and strobe scene steps are skipped while NO STROBE is on.</p>
+                )}
+              </div>
+            </>
           )}
 
           {mode !== 'pack' && (
             <label>
-              ACT slot
+              Scene Launch button
               <select value={actSlot} onChange={(event) => setActSlot(Number(event.target.value))}>
                 {Array.from({ length: 5 }, (_, index) => index + 1).map((slotNumber) => (
                   <option key={slotNumber} value={slotNumber}>
-                    Scene Launch {slotNumber}
+                    Button {slotNumber}
                   </option>
                 ))}
               </select>
@@ -150,7 +173,7 @@ export const ActSeedButton: React.FC<ActSeedButtonProps> = ({ className }) => {
 
           {mode === 'from-scenes' && (
             <div className={styles.scenePickList}>
-              <strong>Scenes in this ACT</strong>
+              <strong>Scenes in this ACT (order matters)</strong>
               <div className={styles.scenePickScroll}>
                 {scenes.map((scene) => (
                   <label key={scene.name} className={styles.checkRow}>
@@ -172,7 +195,7 @@ export const ActSeedButton: React.FC<ActSeedButtonProps> = ({ className }) => {
               checked={includeTriggers}
               onChange={(event) => setIncludeTriggers(event.target.checked)}
             />
-            Add OSC play/stop triggers
+            Add OSC play/stop triggers on each ACT
           </label>
 
           <label className={`${styles.checkRow} ${styles.noStrobeRow}`}>
@@ -188,12 +211,7 @@ export const ActSeedButton: React.FC<ActSeedButtonProps> = ({ className }) => {
             </span>
           </label>
 
-          <p>
-            {mode === 'pack' && (avoidStrobe ? `${selectedPack.description} Strobe ACTS and strobe scene references will be skipped.` : selectedPack.description)}
-            {mode === 'single-template' && 'Seed one ACT template into a single Scene Launch button so you can audition it before filling the whole row.'}
-            {mode === 'from-scenes' && 'Build one ACT from the scenes you tick below, in order, so you can judge the sequence before committing to a full pack.'}
-          </p>
-          <p className={styles.seedNote}>Seeds never run automatically. Handmade ACTS are preserved; generated ACTS can be edited, deleted, or ignored.</p>
+          <p className={styles.seedNote}>Seeds never run automatically. Handmade ACTS are kept; generated ACTS can be edited or deleted.</p>
 
           <button type="button" className={styles.applyButton} onClick={runSeed} disabled={disabled || sceneSelectionMissing}>
             <LucideIcon name="Wand2" size={16} />

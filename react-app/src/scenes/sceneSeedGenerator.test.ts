@@ -72,6 +72,21 @@ describe('sceneSeedGenerator', () => {
     expect(result.generatedScenes.flatMap((scene) => scene.channelValues).every((value) => Number.isInteger(value) && value >= 0 && value <= 255)).toBe(true);
   });
 
+  it('fills essential A+B packs with 14 slots per deck', () => {
+    const result = generateSeededSceneList([rgbPar, mover], [], {
+      packId: 'essential-ab-28',
+      target: 'decks-a-b',
+      includeAutomation: false,
+    });
+
+    expect(result.generatedScenes).toHaveLength(28);
+    expect(result.generatedScenes[0].name).toBe('APC40 Deck A 01');
+    expect(result.generatedScenes[13].name).toBe('APC40 Deck A 14');
+    expect(result.generatedScenes[14].name).toBe('APC40 Deck B 01');
+    expect(result.generatedScenes[27].name).toBe('APC40 Deck B 14');
+    expect(result.generatedScenes.every((scene) => scene.seed?.packId === 'essential-ab-28')).toBe(true);
+  });
+
   it('fills smart A+B packs across both decks', () => {
     const result = generateSeededSceneList([rgbPar, mover], [], {
       packId: 'smart-ab-80',

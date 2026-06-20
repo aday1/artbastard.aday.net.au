@@ -40,7 +40,9 @@ import { sceneNameToOscPath } from '../utils/sceneCapture'
 import { debugLog } from '../utils/debugLog'
 import {
   dispatchSceneTransitionComplete,
+  disableModularAutomationFlags,
   isClientSceneTransitionActive,
+  modularAutomationModulesToStart,
   sceneTimelineStartDelayMs,
 } from '../utils/sceneTransitionGuard'
 import { shouldUseTouchOptimizedChrome } from '../utils/deviceSurface'
@@ -348,7 +350,7 @@ export interface Scene {
   seed?: {
     generatedBy: 'artbastard-scene-seeder';
     generatorVersion: number;
-    packId: 'compact-starter' | 'smart-starter-40' | 'smart-ab-80';
+    packId: 'compact-starter' | 'smart-starter-40' | 'smart-ab-80' | 'essential-ab-28';
     templateId: string;
     deck: 'A' | 'B';
     slot: number;
@@ -1094,6 +1096,8 @@ interface State extends AutomationState, TransitionTrackerSlice {
   setDmxChannelsForTransition: (values: number[]) => void;
   setCurrentTransitionFrameId: (frameId: number | null) => void;
   clearTransitionState: () => void;
+  suspendLiveAutomationForSceneLoad: () => void;
+  applyActiveSceneAutomationAfterLoad: () => void;
   setTransitionDuration: (duration: number) => void;
   setTransitionEasing: (easing: 'linear' | 'easeInOut' | 'easeIn' | 'easeOut' | 'easeInOutCubic' | 'easeInOutQuart' | 'easeInOutSine') => void;
   selectChannel: (channel: number) => void
@@ -3148,6 +3152,100 @@ export const useStore = create<State>()(
           lastTransitionDmxValues: null,
         });
         dispatchSceneTransitionComplete();
+        get().applyActiveSceneAutomationAfterLoad();
+      },
+
+      suspendLiveAutomationForSceneLoad: () => {
+        get().stopAllModularAnimations();
+        get().stopDimmerFadeAutomation();
+        get().stopAutopilotTrackAnimation();
+        get().stopEnvelopeAnimation();
+        const autopilotInterval = get().autopilotUpdateInterval;
+        if (autopilotInterval) {
+          clearInterval(autopilotInterval);
+        }
+        set((state) => ({
+          autopilotUpdateInterval: null,
+          channelAutopilots: {},
+          panTiltAutopilot: { ...state.panTiltAutopilot, enabled: false },
+          colorSliderAutopilot: { ...state.colorSliderAutopilot, enabled: false },
+          autopilotTrackEnabled: false,
+          autopilotTrackAnimationId: null,
+          envelopeAutomation: {
+            ...state.envelopeAutomation,
+            globalEnabled: false,
+            animationId: null,
+          },
+          modularAutomation: {
+            ...disableModularAutomationFlags(state.modularAutomation),
+            animationIds: {
+              color: null,
+              dimmer: null,
+              panTilt: null,
+              effects: null,
+            },
+          },
+        }));
+        window.dispatchEvent(new CustomEvent('stopSceneTimeline'));
+      },
+
+      applyActiveSceneAutomationAfterLoad: () => {
+        const { activeSceneName, scenes } = get();
+        if (!activeSceneName) return;
+
+        const scene = scenes.find((entry) => entry.name === activeSceneName);
+        if (!scene) return;
+
+        if (scene.timeline?.enabled) {
+          return;
+        }
+
+        if (scene.autopilots && Object.keys(scene.autopilots).length > 0) {
+          const enabledAutopilots: { [channelIndex: number]: AutopilotConfig } = {};
+          Object.entries(scene.autopilots).forEach(([channelStr, configUnknown]) => {
+            const config = configUnknown as AutopilotConfig;
+            if (config.enabled) {
+              enabledAutopilots[Number(channelStr)] = config;
+            }
+          });
+          if (Object.keys(enabledAutopilots).length > 0) {
+            set({ channelAutopilots: enabledAutopilots });
+            if (!get().autopilotUpdateInterval) {
+              const interval = setInterval(() => {
+                get().updateAutopilotValues();
+              }, 50);
+              set({ autopilotUpdateInterval: interval });
+            }
+          }
+        }
+
+        if (scene.panTiltAutopilot?.enabled) {
+          set({ panTiltAutopilot: { ...scene.panTiltAutopilot } });
+        }
+
+        if (scene.modularAutomation) {
+          const modulesToStart = modularAutomationModulesToStart(scene.modularAutomation);
+          if (modulesToStart.length > 0) {
+            set((state) => ({
+              modularAutomation: {
+                ...state.modularAutomation,
+                color: { ...scene.modularAutomation!.color },
+                dimmer: { ...scene.modularAutomation!.dimmer },
+                panTilt: { ...scene.modularAutomation!.panTilt },
+                effects: { ...scene.modularAutomation!.effects },
+                animationIds: {
+                  color: null,
+                  dimmer: null,
+                  panTilt: null,
+                  effects: null,
+                },
+              },
+            }));
+            modulesToStart.forEach((type) => {
+              get().startModularAnimation(type);
+            });
+          }
+        }
       },
 
       setTransitionDuration: (duration) => {
@@ -4345,6 +4443,8 @@ export const useStore = create<State>()(
             return;
           }
 
+          get().suspendLiveAutomationForSceneLoad();
+
           debugLog.log(`[STORE] Loading scene "${sceneName}" with transition`);
 
           // Cancel any ongoing transition
@@ -4426,11 +4526,11 @@ export const useStore = create<State>()(
 
             // Static scene - stop any currently playing timeline and use normal transition
             window.dispatchEvent(new CustomEvent('stopSceneTimeline'));
-            
+
             if (!options.silent) {
-              get().addNotification({ 
-                message: `Loading scene '${sceneName}' (${transitionDuration}ms transition)`, 
-                type: 'info' 
+              get().addNotification({
+                message: `Loading scene '${sceneName}' (${transitionDuration}ms transition)`,
+                type: 'info',
               });
             }
           }
@@ -5862,6 +5962,12 @@ export const useStore = create<State>()(
             return;
           }
 
+          if (isClientSceneTransitionActive(state)) {
+            const frameId = requestAnimationFrame(animate);
+            set({ autopilotTrackAnimationId: frameId });
+            return;
+          }
+
           const deltaTime = (currentTime - lastTime) / 1000; // Convert to seconds
           lastTime = currentTime;
 
@@ -6034,6 +6140,19 @@ export const useStore = create<State>()(
         let lastUpdate = startTime;
 
         const animate = (currentTime: number) => {
+          const state = get();
+
+          if (isClientSceneTransitionActive(state)) {
+            const frameId = requestAnimationFrame(animate);
+            set((current) => ({
+              modularAutomation: {
+                ...current.modularAutomation,
+                animationIds: { ...current.modularAutomation.animationIds, [type]: frameId },
+              },
+            }));
+            return;
+          }
+
           const elapsed = currentTime - lastUpdate;
 
           // Throttle to reasonable frame rate
@@ -6261,6 +6380,10 @@ export const useStore = create<State>()(
 
           // Only process envelopes if globally enabled
           if (!envelopeAutomation.globalEnabled) {
+            return;
+          }
+
+          if (isClientSceneTransitionActive(get())) {
             return;
           }
 

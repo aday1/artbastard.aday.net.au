@@ -2,11 +2,16 @@ import React, { useMemo, useState } from 'react';
 import { useStore } from '../../store';
 import {
   SCENE_SEED_PACKS,
+  SCENE_BOTH_DECK_PACK_IDS,
   listSceneSeedPickTemplates,
   type SceneSeedMode,
   type SceneSeedPackId,
   type SceneSeedTarget,
 } from '../../scenes/sceneSeedGenerator';
+import {
+  sceneSeedModeUi,
+  sceneSeedPackUi,
+} from '../../scenes/sceneSeedUi';
 import type { Apc40Deck } from '../../midi/apc40WorkflowHelpers';
 import { LucideIcon } from '../ui/LucideIcon';
 import styles from './SceneSeedButton.module.scss';
@@ -17,15 +22,9 @@ interface SceneSeedButtonProps {
 }
 
 const TARGETS: Array<{ id: SceneSeedTarget; label: string }> = [
-  { id: 'deck-a', label: 'Deck A' },
-  { id: 'deck-b', label: 'Deck B' },
-  { id: 'decks-a-b', label: 'Deck A + B' },
-];
-
-const MODES: Array<{ id: SceneSeedMode; label: string }> = [
-  { id: 'pack', label: 'Full pack' },
-  { id: 'single-slot', label: 'One slot look' },
-  { id: 'capture-selection', label: 'Capture selection' },
+  { id: 'deck-a', label: 'Deck A only' },
+  { id: 'deck-b', label: 'Deck B only' },
+  { id: 'decks-a-b', label: 'Deck A and B' },
 ];
 
 const DECKS: Array<{ id: Apc40Deck; label: string }> = [
@@ -40,8 +39,8 @@ export const SceneSeedButton: React.FC<SceneSeedButtonProps> = ({ className, com
   const captureSelectionToApcSlot = useStore((state) => state.captureSelectionToApcSlot);
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<SceneSeedMode>('pack');
-  const [packId, setPackId] = useState<SceneSeedPackId>('smart-starter-40');
-  const [target, setTarget] = useState<SceneSeedTarget>('deck-a');
+  const [packId, setPackId] = useState<SceneSeedPackId>('essential-ab-28');
+  const [target, setTarget] = useState<SceneSeedTarget>('decks-a-b');
   const [deck, setDeck] = useState<Apc40Deck>('A');
   const [slot, setSlot] = useState(1);
   const [templateId, setTemplateId] = useState('full-red');
@@ -57,7 +56,10 @@ export const SceneSeedButton: React.FC<SceneSeedButtonProps> = ({ className, com
   );
 
   const disabled = fixtures.length === 0 || isSeeding;
-  const effectiveTarget = packId === 'smart-ab-80' ? 'decks-a-b' : target;
+  const bothDeckPack = SCENE_BOTH_DECK_PACK_IDS.includes(packId);
+  const effectiveTarget = bothDeckPack ? 'decks-a-b' : target;
+  const modeDetails = sceneSeedModeUi(mode);
+  const packDetails = sceneSeedPackUi(packId);
   const selectedPack = useMemo(
     () => SCENE_SEED_PACKS.find((pack) => pack.id === packId) ?? SCENE_SEED_PACKS[0],
     [packId]
@@ -78,7 +80,7 @@ export const SceneSeedButton: React.FC<SceneSeedButtonProps> = ({ className, com
         setLastSummary(
           result.disabledReason
             ? result.disabledReason
-            : `Captured to Deck ${deck} slot ${slot}`
+            : `Captured to Deck ${deck} slot ${String(slot).padStart(2, '0')}`
         );
         return;
       }
@@ -111,7 +113,7 @@ export const SceneSeedButton: React.FC<SceneSeedButtonProps> = ({ className, com
         className={styles.seedButton}
         onClick={() => setOpen((value) => !value)}
         disabled={fixtures.length === 0}
-        title={fixtures.length === 0 ? 'Add fixtures before seeding scenes' : selectedPack.description}
+        title={fixtures.length === 0 ? 'Add fixtures before seeding scenes' : packDetails.bestFor}
       >
         <LucideIcon name="Sparkles" size={16} />
         {compact ? 'Seed' : 'Seed Scenes'}
@@ -126,44 +128,71 @@ export const SceneSeedButton: React.FC<SceneSeedButtonProps> = ({ className, com
             </button>
           </div>
 
+          <p className={styles.seedIntro}>
+            Build APC clip scenes from templates or from your live rig. Default is 14 looks on Deck A and 14 on Deck B; use one-slot or capture to fill the rest yourself.
+          </p>
+
           <label>
-            Mode
+            What to do
             <select value={mode} onChange={(event) => setMode(event.target.value as SceneSeedMode)}>
-              {MODES.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
+              {['pack', 'single-slot', 'capture-selection'].map((optionId) => {
+                const option = sceneSeedModeUi(optionId as SceneSeedMode);
+                return (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                );
+              })}
             </select>
           </label>
+
+          <div className={styles.seedDetailBox}>
+            <strong>{modeDetails.summary}</strong>
+            <p>{modeDetails.detail}</p>
+          </div>
 
           {mode === 'pack' && (
             <>
               <label>
-                Pack
+                Scene pack
                 <select value={packId} onChange={(event) => setPackId(event.target.value as SceneSeedPackId)}>
                   {SCENE_SEED_PACKS.map((pack) => (
                     <option key={pack.id} value={pack.id}>
-                      {pack.label}
+                      {sceneSeedPackUi(pack.id as SceneSeedPackId).label}
                     </option>
                   ))}
                 </select>
               </label>
 
-              <label>
-                Target
-                <select
-                  value={effectiveTarget}
-                  onChange={(event) => setTarget(event.target.value as SceneSeedTarget)}
-                  disabled={packId === 'smart-ab-80'}
-                >
-                  {TARGETS.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.label}
-                    </option>
+              {!bothDeckPack && (
+                <label>
+                  Which deck
+                  <select
+                    value={effectiveTarget}
+                    onChange={(event) => setTarget(event.target.value as SceneSeedTarget)}
+                  >
+                    {TARGETS.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+
+              <div className={styles.seedDetailBox}>
+                <strong>{packDetails.creates}</strong>
+                <ul className={styles.seedDetailList}>
+                  {packDetails.includes.map((line) => (
+                    <li key={line}>{line}</li>
                   ))}
-                </select>
-              </label>
+                </ul>
+                <p>{packDetails.leavesOpen}</p>
+                <p className={styles.seedDetailHint}>{packDetails.bestFor}</p>
+                {avoidStrobe && selectedPack.description && (
+                  <p className={styles.seedDetailHint}>Strobe templates in this pack are skipped while NO STROBE is on.</p>
+                )}
+              </div>
             </>
           )}
 
@@ -181,7 +210,7 @@ export const SceneSeedButton: React.FC<SceneSeedButtonProps> = ({ className, com
               </label>
 
               <label>
-                Slot
+                Slot (01-40)
                 <select value={slot} onChange={(event) => setSlot(Number(event.target.value))}>
                   {Array.from({ length: 40 }, (_, index) => index + 1).map((slotNumber) => (
                     <option key={slotNumber} value={slotNumber}>
@@ -195,7 +224,7 @@ export const SceneSeedButton: React.FC<SceneSeedButtonProps> = ({ className, com
 
           {mode === 'single-slot' && (
             <label>
-              Look
+              Look template
               <select value={templateId} onChange={(event) => setTemplateId(event.target.value)}>
                 {pickTemplates.map((template) => (
                   <option key={template.id} value={template.id}>
@@ -224,7 +253,7 @@ export const SceneSeedButton: React.FC<SceneSeedButtonProps> = ({ className, com
                 checked={includeAutomation}
                 onChange={(event) => setIncludeAutomation(event.target.checked)}
               />
-              Include animated timeline
+              Include animated timeline on this slot
             </label>
           )}
 
@@ -237,15 +266,9 @@ export const SceneSeedButton: React.FC<SceneSeedButtonProps> = ({ className, com
             <LucideIcon name="ShieldOff" size={16} />
             <span>
               <strong>NO STROBE SAFETY MODE</strong>
-              <small>Skip strobe looks and hold strobe channels safe</small>
+              <small>Skip strobe looks and hold strobe channels at zero</small>
             </span>
           </label>
-
-          <p>
-            {mode === 'pack' && (avoidStrobe ? `${selectedPack.description} Strobe looks will be skipped.` : selectedPack.description)}
-            {mode === 'single-slot' && 'Generate one refined look into a single APC clip slot. Use selected fixtures to audition washes or heads without touching the whole rig.'}
-            {mode === 'capture-selection' && 'Save the current live DMX from your selected fixtures into one APC clip slot so you can load it and decide if the look is keep or toss.'}
-          </p>
 
           <button
             type="button"
@@ -257,7 +280,7 @@ export const SceneSeedButton: React.FC<SceneSeedButtonProps> = ({ className, com
             {isSeeding
               ? 'Working...'
               : mode === 'pack'
-                ? 'Generate slots'
+                ? 'Generate scenes'
                 : mode === 'capture-selection'
                   ? 'Capture to slot'
                   : 'Seed this slot'}

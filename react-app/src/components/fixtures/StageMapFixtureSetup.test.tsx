@@ -11,6 +11,23 @@ vi.mock('axios', () => ({
   },
 }));
 
+vi.mock('./UnifiedStageWorkbench', () => ({
+  UnifiedStageWorkbench: ({
+    mode,
+    onModeChange,
+  }: {
+    mode?: string;
+    onModeChange?: (mode: string) => void;
+  }) => (
+    <div aria-label="Unified stage workbench mock">
+      <button type="button" role="tab" onClick={() => onModeChange?.('apc')}>
+        APC40
+      </button>
+      {mode === 'apc' ? <div>Stage view</div> : null}
+    </div>
+  ),
+}));
+
 const fixture = {
   id: 'fixture-wash-1',
   name: 'Wash 1',
@@ -111,6 +128,29 @@ describe('StageMapFixtureSetup', () => {
     expect(screen.getByRole('application', { name: /canvas-first fixture stage map/i })).toBeDefined();
     expect(screen.queryByText('Fixture Library')).toBeNull();
     expect(screen.queryByText('Inspector')).toBeNull();
+  });
+
+  it('collapses APC and stage map panes and restores them on reset layout', () => {
+    const { container } = render(<StageMapFixtureSetup />);
+    fireEvent.click(screen.getByRole('tab', { name: /APC40/i }));
+
+    expect(screen.getByText('Stage view')).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: /Hide APC/i }));
+    expect(container.querySelector('[class*="drawerStackCollapsed"]')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: /Show APC panel/i }));
+    expect(container.querySelector('[class*="drawerStackCollapsed"]')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /Hide map/i }));
+    expect(container.querySelector('[class*="workspaceCollapsed"]')).toBeTruthy();
+
+    act(() => {
+      window.dispatchEvent(new Event('resetLayout'));
+    });
+    expect(container.querySelector('[class*="workspaceCollapsed"]')).toBeNull();
+    expect(container.querySelector('[class*="drawerStackCollapsed"]')).toBeNull();
+    expect(screen.getByRole('application', { name: /canvas-first fixture stage map/i })).toBeDefined();
+    expect(screen.getByText('Stage view')).toBeDefined();
   });
 
   it('does not start fixture dragging from a right-click', () => {

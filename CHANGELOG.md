@@ -4,6 +4,28 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [5.2.14.0] - 2026-06-20 - Essential 14+14 seeds and scene desk polish
+
+### Added
+
+- Default scene seed pack **Essential 14+14**: 28 APC clips (Deck A 01-14 and Deck B 01-14), leaving slots 15-40 empty for captures and single-slot seeds.
+- Scene and ACT seed panels now explain each pack, mode, and what gets created (counts, look types, empty slots).
+- Auto scene cycle queue controls in Auto Scene Control (fill all, random add, drop-in from list, clear).
+- APC workbench / stage map pane collapse with restore and layout reset.
+
+### Changed
+
+- Scene Controls navigation matches Fixture/Group rows (centered Prev/Next, readable OSC/MIDI row).
+- Scene load suspends global automation during crossfade, then restores only automation explicitly saved on the scene.
+- Mobile DMX monitor caps server log panels to half viewport height.
+- Renamed seed packs for clarity: Extended 40, Extended 40+40, Basics 16, Quick audition 5, Show sections 8.
+
+### Fixed
+
+- Custom Path Editor point add/drag after canvas scaling and store refresh regressions.
+- Scene reload no longer stops automation when clicking the already-active scene.
+- Stale dimmer fade, envelope, modular, and autopilot motion after static scene load.
+
 ## [5.2.13.0] - 2026-06-14 - Joined ROLI server topology and console release
 
 ### Added
