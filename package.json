@@ -1,7 +1,7 @@
 {
   "name": "artbastard-dmx512",
   "version": "5.2.15.0",
-  "description": "ArtBastard DMX512 Controller - Photonic Supremacy Edition. Élite Illumination Control for the Discerning Luminaire Artist.",
+  "description": "ArtBastard DMX512 Controller - Photonic Supremacy Edition. \u00c9lite Illumination Control for the Discerning Luminaire Artist.",
   "main": "dist/server.js",
   "bin": {
     "artbastard": "./dist/server.js"
@@ -20,7 +20,7 @@
     "lighting-design",
     "theatrical-lighting"
   ],
-  "author": "Le Créateur des Lumières",
+  "author": "Le Cr\u00e9ateur des Lumi\u00e8res",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -71,7 +71,11 @@
     "demo:capture-videos": "node scripts/capture-demo-media.mjs videos",
     "demo:evidence": "npm run test:api-contract && npm run demo:capture-screenshots",
     "demo:evidence-full": "npm run demo:evidence && npm run demo:capture-videos",
-    "test:coverage": "cd react-app && npm run test:coverage"
+    "test:coverage": "cd react-app && npm run test:coverage",
+    "v6": "npm --prefix app run serve",
+    "v6:build": "npm --prefix app run build",
+    "v6:dev": "npm --prefix app run dev",
+    "v6:install": "npm --prefix app install"
   },
   "dependencies": {
     "@julusian/midi": "^3.6.1",

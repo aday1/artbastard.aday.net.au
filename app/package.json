@@ -1,0 +1,41 @@
+{
+  "name": "artbastard-v6",
+  "version": "6.0.0",
+  "description": "ArtBastard DMX512 v6 - clean operator console. One install, one command, zero native deps.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "build": "npm run build:server && npm run build:ui",
+    "build:server": "esbuild server/server.ts --bundle --platform=node --format=esm --packages=external --outfile=dist/server.js",
+    "build:ui": "vite build ui",
+    "start": "npm run build && node dist/server.js",
+    "serve": "node dist/server.js",
+    "dev": "concurrently -n server,ui -c cyan,magenta \"tsx watch server/server.ts\" \"vite ui\"",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p ui",
+    "test": "node --test --import tsx server/engine.test.ts",
+    "test:e2e": "npm run build:server && node --test --import tsx server/e2e.test.ts"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.17.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.0",
+    "esbuild": "^0.24.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "socket.io-client": "^4.8.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.7",
+    "zustand": "^5.0.2"
+  }
+}

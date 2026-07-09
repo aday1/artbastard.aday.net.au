@@ -1,5 +1,18 @@
 # ArtBastard DMX512
 
+> **v6 rewrite — this is what the DEV lane now runs.** The `app/` folder is a
+> ground-up rewrite: one clean operator console (channels, fixtures, scenes,
+> acts, MIDI learn + APC40, OSC), server-side playback and fades, zero native
+> dependencies. Run locally with:
+>
+> ```bash
+> cd app && npm install && npm start   # http://localhost:3030
+> ```
+>
+> See [app/README.md](app/README.md). The Docker image on this branch builds
+> v6; the legacy v5 app below is untouched and still runs on the live lane.
+
+
 ArtBastard is a TypeScript-based DMX lighting controller with a React
 frontend and Node / Socket.IO backend.
 
