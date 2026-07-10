@@ -26,8 +26,22 @@ controller.attachHttp(app)
 io.on('connection', (socket) => controller.attachSocket(socket))
 
 if (fs.existsSync(UI_DIST)) {
-  app.use(express.static(UI_DIST))
-  app.get(/^\/(?!api|socket\.io).*/, (_req, res) => res.sendFile(path.join(UI_DIST, 'index.html')))
+  // Hashed assets are immutable; index.html must always revalidate so a new
+  // deploy is picked up without a hard refresh (stale index -> dead asset hashes -> blank page).
+  app.use(express.static(UI_DIST, {
+    index: false,
+    setHeaders: (res, filePath) => {
+      if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+      } else {
+        res.setHeader('Cache-Control', 'no-cache')
+      }
+    },
+  }))
+  app.get(/^\/(?!api|socket\.io).*/, (_req, res) => {
+    res.setHeader('Cache-Control', 'no-cache')
+    res.sendFile(path.join(UI_DIST, 'index.html'))
+  })
 } else {
   app.get('/', (_req, res) =>
     res.status(200).send('ArtBastard v6 API is running. UI not built yet - run: npm run build:ui'))
