@@ -7,6 +7,7 @@ declare module 'easymidi' {
     export class Input {
         constructor(name: string, virtual?: boolean);
         on(event: string, callback: (msg: any) => void): void;
+        isPortOpen(): boolean;
         close(): void;
     }
 

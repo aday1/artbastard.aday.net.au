@@ -18,21 +18,28 @@ and the installed checkout is `~/Work/artbastard` on Kefka.
 | OSC input | Kefka's address, UDP 8000 |
 | DOREMiDi ATD-1024 | `192.168.1.199:6454`, Art-Net net/subnet/universe 0/0/0 |
 
-The normal Ethernet device `enp4s0f3u1u4` keeps DHCP on the home LAN.
-The dedicated ASIX USB Ethernet adapter `enp4s0f3u1u2u3`
+The shared Realtek Ethernet device `enp4s0f3u1u4` keeps DHCP on the home LAN
+and also carries `192.168.1.20/24`. The alias is saved in NetworkManager's
+`Wired connection 1`, UUID `c7daf2f9-8cd1-3281-9b72-febca050784e`.
+The DOREMiDi is on this same wired segment. DHCP still provides the ordinary
+default gateway and DNS; the lighting subnet needs no separate gateway.
+
+The previously used dedicated ASIX USB Ethernet adapter `enp4s0f3u1u2u3`
 (MAC `00:0e:c6:xx:xx:xx`) has `192.168.1.20/24`, saved in NetworkManager's
 `Artbastard DMX` profile, UUID `6800f591-57de-3d62-9eee-cf345078039c`.
 It has no gateway, `ipv4.never-default=yes`, route metric 50, and IPv6 disabled.
-The DOREMiDi connects directly to this adapter. The original lighting alias
-was removed from `Wired connection 1`.
+That adapter is currently unplugged, and its profile has autoconnect disabled
+to avoid activating the same address on two interfaces.
 
-To return this USB adapter to ordinary DHCP:
+To remove the shared lighting alias while keeping home-LAN DHCP:
 
 ```sh
-sudo nmcli connection modify "Artbastard DMX" ipv4.method auto ipv4.addresses "" \
-  ipv4.never-default no ipv4.route-metric -1 ipv6.method auto
-sudo nmcli connection up "Artbastard DMX"
+sudo nmcli connection modify "Wired connection 1" -ipv4.addresses 192.168.1.20/24
+sudo nmcli device reapply enp4s0f3u1u4
 ```
+
+If returning to a direct DOREMiDi-to-ASIX cable, first remove the shared alias,
+then re-enable `connection.autoconnect yes` and activate `Artbastard DMX`.
 
 ## Runtime and services
 
@@ -104,6 +111,8 @@ curl -fsS http://127.0.0.1:3030/api/midi/active
 curl -fsS http://127.0.0.1:3030/api/kefka/surfaces
 curl -fsS -H 'Origin: http://127.0.0.1:3030' http://127.0.0.1:18782/health
 node scripts/dmx-osc-integration-smoke.js
+node scripts/midi-hotplug.test.js
+node scripts/midi-hotplug-integration-smoke.js
 node scripts/kefka/test-controller.mjs
 python3 scripts/kefka/test-input.py
 node scripts/kefka/test-surface.mjs
@@ -132,8 +141,18 @@ packet capture confirmed the same zeroed 512-channel ArtDMX on
 
 ## APC40
 
-The attached APC40 is detected as `Akai APC40:Akai APC40 MIDI 1 24:0`.
-Use `/api/midi/active` to check the backend's open input list.
+The APC40 was initially detected as `Akai APC40:Akai APC40 MIDI 1 24:0`.
+It is currently absent after the hub wiring changes. Use `/api/midi/active`
+to check inputs that are both enumerated and open, rather than retained handles.
+The backend checks for hardware changes every two seconds, removes stale input
+and output handles, and reconnects saved or previously connected inputs.
+Recognized controllers such as the APC40 also connect when attached after startup
+if no explicit device list is configured. On Linux, a changed ALSA client/port
+suffix is accepted only when the remaining device/port name has one exact match.
+Manual disconnect suppresses reconnection for the current process; an explicit
+connection opts the device back in. Forget also removes saved aliases with old
+ALSA suffixes. Existing startup smart defaults remain in effect after a restart.
+
 Its existing Artbastard integration uses the full React console's fixture
 selection and SuperControl logic. Use **ArtBastard Console** or
 `~/.local/bin/artbastard-console-open` to open
@@ -167,11 +186,32 @@ Deck-service restart removed the previous instance and left exactly one Deck
 window, one full console, and the existing Yggdrasil Deck window. Repeated
 launcher calls also retained one window per surface.
 
-During webcam attachment the external USB hub disconnected, removing the
-APC40 and both Ethernet adapters together. The kernel briefly identified a
-Microsoft LifeCam Studio (`045e:0811`) before disconnecting it. This is a live
-cabling state, not a change to the saved DMX network profile; recheck USB
-enumeration and the dedicated route before resuming physical tests.
+During webcam attachment the external USB hub disconnected. After the user
+repaired its power and changed the wiring, the LifeCam Studio (`045e:0811`)
+and Realtek Ethernet returned. The user requested sharing the wired link:
+ARP confirmed the DOREMiDi's known MAC there, and duplicate-address detection
+found `192.168.1.20` unused. The alias was restored to `Wired connection 1`
+without cycling the home-LAN connection. A new capture verified three outgoing
+512-channel ArtDMX packets from `192.168.1.20` to `192.168.1.199:6454`, universe
+0, all zero, on `enp4s0f3u1u4`.
+
+Live snapshots from Kefka's LifeCam and the existing private R1/Reolink
+preview were obtained in RAM. The LifeCam shows the projection screen and
+stage; its current framing does not resolve the MiniBeam menu text.
+
+A brief MiniBeam test set shutter channel 2 to 104 and dimmer channel 3 to 16,
+then restored the previous all-zero values in a `finally` block. API readback
+confirmed both the test values and restoration. The camera angle did not show
+a verifiable light response, so this does not establish physical DMX operation.
+No pan, tilt, reset or lamp-control values were sent.
+
+The MIDI reconnect change was built and tested on Kefka: all 12 unit cases,
+the isolated fake-hardware integration and DMX/OSC integration passed. The
+fake-hardware test covers unplugged health, throwing stale-handle cleanup,
+ALSA rename recovery, incoming MIDI forwarding and persistent Forget.
+After restarting the live server, health was `ok`, the absent APC40 correctly
+reported zero connected inputs, Art-Net was alive, and all 512 DMX values were
+zero. A real APC40 unplug/replug and physical fader test remain unverified.
 
 ## Rollback of the control windows
 

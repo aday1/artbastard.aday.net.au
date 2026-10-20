@@ -11,6 +11,7 @@ import EffectsEngine from './effects';
 import ping from 'ping';
 import { loadFixturesData, saveFixturesData } from './fixturesPersistence';
 import { recordArtNetPingSample, getArtNetPingHistory, getLastArtNetPing } from './artnetMonitor';
+import { MidiHotplugMonitor, forgetMidiInputIdentity } from './midiHotplug';
 
 // Import our separate logger to avoid circular dependencies
 import { log } from './logger';
@@ -313,6 +314,8 @@ export function setChannelRange(channel: number, min: number, max: number): bool
 
 // Store active MIDI inputs
 let activeMidiInputs: { [name: string]: Input } = {};
+let midiHotplugMonitor: MidiHotplugMonitor | null = null;
+let midiHotplugTimer: NodeJS.Timeout | null = null;
 
 // Helper function to check if running in WSL
 function isRunningInWsl(): boolean {
@@ -448,7 +451,7 @@ function initializeMidi(io: Server) {
     }
 }
 
-async function connectMidiInput(io: Server, inputName: string, isBrowserMidi = false): Promise<boolean> {
+async function connectMidiInput(io: Server, inputName: string, isBrowserMidi = false, isAutomatic = false): Promise<boolean> {
     try {
         // Skip hardware MIDI connection if using browser MIDI
         if (isBrowserMidi) {
@@ -470,40 +473,23 @@ async function connectMidiInput(io: Server, inputName: string, isBrowserMidi = f
             throw new Error('Hardware MIDI not available in WSL');
         }
 
-        // Check if we're already connected to this input
+        // A retained RtMidi handle can outlive an unplugged USB device.
+        // Verify hardware presence before reporting an existing connection.
+        const availableInputs = easymidi.getInputs();
         if (activeMidiInputs[inputName]) {
-            log(`Already connected to MIDI input: ${inputName}`, 'MIDI');
-            return true;
-        }
-
-        // Windows-specific: Verify the input exists before connecting
-        if (process.platform === 'win32') {
-            const availableInputs = easymidi.getInputs();
-            if (!availableInputs.includes(inputName)) {
-                const errorMsg = `MIDI input "${inputName}" not found. Available: ${availableInputs.join(', ') || 'none'}`;
-                log(errorMsg, 'ERROR');
-                io.emit('midiInterfaceError', errorMsg);
-                throw new Error(errorMsg);
-            }
-            
-            // On Windows, try to close any existing connections to this device first
-            // This can help if the device is "stuck" from a previous connection
+            let isOpen = false;
             try {
-                // Check if we have a stale connection
-                if (activeMidiInputs[inputName]) {
-                    log(`Closing existing connection to ${inputName} before reconnecting`, 'MIDI');
-                    try {
-                        activeMidiInputs[inputName].close();
-                    } catch (closeError) {
-                        log(`Error closing existing connection: ${closeError}`, 'WARN');
-                    }
-                    delete activeMidiInputs[inputName];
-                    // Give Windows a moment to release the port
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                }
-            } catch (cleanupError) {
-                log(`Error during connection cleanup: ${cleanupError}`, 'WARN');
+                isOpen = activeMidiInputs[inputName].isPortOpen();
+            } catch {}
+            if (availableInputs.includes(inputName) && isOpen) {
+                if (!isAutomatic) midiHotplugMonitor?.rememberConnection(inputName);
+                log(`Already connected to MIDI input: ${inputName}`, 'MIDI');
+                return true;
             }
+            disconnectMidiInput(io, inputName, true);
+        }
+        if (!availableInputs.includes(inputName)) {
+            throw new Error(`MIDI input "${inputName}" not found. Available: ${availableInputs.join(', ') || 'none'}`);
         }
 
         // Connect to the selected MIDI input
@@ -597,6 +583,7 @@ async function connectMidiInput(io: Server, inputName: string, isBrowserMidi = f
         // Store this input in our active inputs
         activeMidiInputs[inputName] = newInput;
         midiInput = newInput; // Keep the last one as default for backward compatibility
+        if (!isAutomatic) midiHotplugMonitor?.rememberConnection(inputName);
 
         const outputName = findOutputNameForInput(inputName);
         if (outputName) {
@@ -683,32 +670,37 @@ async function connectMidiInput(io: Server, inputName: string, isBrowserMidi = f
     }
 }
 
-function disconnectMidiInput(io: Server, inputName: string) {
-    if (activeMidiInputs[inputName]) {
-        const wasDefaultInput = midiInput === activeMidiInputs[inputName];
-        activeMidiInputs[inputName].close();
-        delete activeMidiInputs[inputName];
-        log(`MIDI input disconnected: ${inputName}`, 'MIDI');
-        io.emit('midiInputsActive', Object.keys(activeMidiInputs));
-        io.emit('activeMidiInterfaces', Object.keys(activeMidiInputs));
-        io.emit('midiInterfaceDisconnected', inputName);
-
-        if (activeMidiOutputs[inputName]) {
-            activeMidiOutputs[inputName].close();
-            delete activeMidiOutputs[inputName];
-            log(`MIDI output disconnected: ${inputName}`, 'MIDI');
+function disconnectMidiInput(io: Server, inputName: string, preserveReconnectIntent = false) {
+    if (!preserveReconnectIntent) midiHotplugMonitor?.suppressConnection(inputName);
+    const input = activeMidiInputs[inputName];
+    const output = activeMidiOutputs[inputName];
+    const wasDefaultInput = midiInput === input;
+    // Remove stale entries even if the native driver throws while closing.
+    delete activeMidiInputs[inputName];
+    delete activeMidiOutputs[inputName];
+    if (input) {
+        try { input.close(); } catch (error) {
+            log('Failed to close disconnected MIDI input', 'WARN', { inputName, error });
         }
-
-        refreshApc40ServerScreensaverSharedOutputs();
-
-        // If this was the default input, set a new default if available
-        if (wasDefaultInput) {
-            const activeInputNames = Object.keys(activeMidiInputs);
-            if (activeInputNames.length > 0) {
-                midiInput = activeMidiInputs[activeInputNames[0]];
-            } else {
-                midiInput = null;
-            }
+        log(`MIDI input disconnected: ${inputName}`, 'MIDI');
+    }
+    if (output) {
+        try { output.close(); } catch (error) {
+            log('Failed to close disconnected MIDI output', 'WARN', { inputName, error });
+        }
+        log(`MIDI output disconnected: ${inputName}`, 'MIDI');
+    }
+    if (wasDefaultInput) {
+        midiInput = activeMidiInputs[Object.keys(activeMidiInputs)[0]] || null;
+    }
+    if (input || output) {
+        io.emit('midiInputsActive', getActiveMidiInputNames());
+        io.emit('activeMidiInterfaces', getActiveMidiInputNames());
+        io.emit('midiInterfaceDisconnected', inputName);
+        try {
+            refreshApc40ServerScreensaverSharedOutputs();
+        } catch (error) {
+            log('Failed to refresh MIDI screensaver outputs after disconnect', 'WARN', { inputName, error });
         }
     }
 }
@@ -1258,20 +1250,23 @@ const isRoliFamilyInputName = (inputName: string): boolean => {
     return /\b(roli|lightpad|seaboard|block)\b/i.test(inputName) || normalized.includes('holybell');
 };
 
-const getDefaultServerAutoConnectMidiDevices = (): string[] => {
-    try {
-        return easymidi.getInputs().filter((inputName) => {
-            if (isRoliFamilyInputName(inputName)) return false;
-            return Boolean(detectControllerTemplateFromDeviceName(inputName));
-        });
-    } catch (error) {
-        log('Failed to detect default server MIDI auto-connect devices', 'WARN', { error });
-        return [];
-    }
+const getDefaultServerAutoConnectMidiDevices = (available: string[]): string[] => {
+    return available.filter((inputName) => {
+        if (isRoliFamilyInputName(inputName)) return false;
+        return Boolean(detectControllerTemplateFromDeviceName(inputName));
+    });
 };
 
 export function getActiveMidiInputNames(): string[] {
-    return Object.keys(activeMidiInputs);
+    if (midiHotplugMonitor) return midiHotplugMonitor.observedActiveInputs();
+    try {
+        const available = new Set(easymidi.getInputs());
+        return Object.keys(activeMidiInputs).filter((name) =>
+            available.has(name) && activeMidiInputs[name].isPortOpen()
+        );
+    } catch {
+        return [];
+    }
 }
 
 export const rememberMidiAutoConnectDevice = (deviceName: string) => {
@@ -1289,12 +1284,15 @@ export const rememberMidiAutoConnectDevice = (deviceName: string) => {
 };
 
 export const forgetMidiAutoConnectDevice = (deviceName: string) => {
+    midiHotplugMonitor?.suppressConnection(deviceName);
     try {
         const config = fs.existsSync(CONFIG_FILE)
             ? JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'))
             : {};
-        const devices = Array.isArray(config.autoConnectMidiDevices) ? config.autoConnectMidiDevices : [];
-        config.autoConnectMidiDevices = devices.filter((name: unknown) => name !== deviceName);
+        const devices = Array.isArray(config.autoConnectMidiDevices)
+            ? config.autoConnectMidiDevices.filter((name: unknown): name is string => typeof name === 'string')
+            : [];
+        config.autoConnectMidiDevices = forgetMidiInputIdentity(devices, deviceName, process.platform);
         fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
     } catch (error) {
         log('Failed to remove auto-connect MIDI device', 'WARN', { deviceName, error });
@@ -1302,6 +1300,7 @@ export const forgetMidiAutoConnectDevice = (deviceName: string) => {
 };
 
 export const clearMidiAutoConnectDevices = () => {
+    midiHotplugMonitor?.clearAutoConnect();
     try {
         const config = fs.existsSync(CONFIG_FILE)
             ? JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'))
@@ -2161,43 +2160,33 @@ async function startLaserTime(io: Server) {
 
     initializeMidi(io);
     
-    // Auto-connect MIDI devices from config
-    const config = loadConfig();
-    const configuredAutoConnectDevices = (config as any).autoConnectMidiDevices || [];
-    const hasConfiguredAutoConnect = Array.isArray(configuredAutoConnectDevices) && configuredAutoConnectDevices.length > 0;
-    const autoConnectDevices = hasConfiguredAutoConnect
-        ? configuredAutoConnectDevices
-        : getDefaultServerAutoConnectMidiDevices();
-    if (Array.isArray(autoConnectDevices) && autoConnectDevices.length > 0) {
-        const sourceLabel = hasConfiguredAutoConnect ? 'config' : 'smart defaults';
-        console.log(`\n🎹 Auto-connecting ${autoConnectDevices.length} MIDI device(s) from ${sourceLabel}:`);
-        autoConnectDevices.forEach((device, idx) => {
-            console.log(`   ${idx + 1}. ${device}`);
-        });
-        log(`Auto-connecting ${autoConnectDevices.length} MIDI device(s) from ${sourceLabel}`, 'MIDI', { devices: autoConnectDevices });
-        // Wait a moment for MIDI to initialize, then connect devices
-        setTimeout(async () => {
-            for (const deviceName of autoConnectDevices) {
-                try {
-                    console.log(`   Connecting to: ${deviceName}...`);
-                    const connected = await connectMidiInput(io, deviceName);
-                    if (connected && activeMidiInputs[deviceName]) {
-                        console.log(`   ✅ Successfully connected to: ${deviceName}`);
-                        log(`Auto-connected MIDI device: ${deviceName}`, 'MIDI');
-                    } else {
-                        console.log(`   ❌ Failed to connect to: ${deviceName}`);
-                        log(`Failed to auto-connect MIDI device "${deviceName}"`, 'WARN');
-                    }
-                } catch (error: any) {
-                    console.log(`   ❌ Failed to connect to: ${deviceName} - ${error?.message || String(error)}`);
-                    log(`Failed to auto-connect MIDI device "${deviceName}": ${error?.message || String(error)}`, 'WARN');
-                }
-            }
-            console.log(`\n🎹 MIDI devices ready! Move a knob to see console output.\n`);
-        }, 500); // Small delay to ensure MIDI is initialized
-    } else {
-        console.log(`\n🎹 No server MIDI auto-connect devices found. Use the startup MIDI menu or Settings > MIDI & OSC to configure.\n`);
-    }
+    // Reconcile USB removals and saved/default connections throughout the run.
+    // Read only the MIDI preferences here: loadConfig() also mutates live DMX/OSC
+    // configuration and must not be called by a periodic hardware monitor.
+    midiHotplugMonitor = new MidiHotplugMonitor({
+        platform: process.platform,
+        listInputs: () => isRunningInWsl() ? [] : easymidi.getInputs(),
+        activeInputs: () => Object.keys(activeMidiInputs),
+        isInputOpen: (name) => Boolean(activeMidiInputs[name]?.isPortOpen()),
+        configuredInputs: () => {
+            const config = fs.existsSync(CONFIG_FILE)
+                ? JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8')) : {};
+            return Array.isArray(config.autoConnectMidiDevices)
+                ? config.autoConnectMidiDevices.filter((name: unknown): name is string =>
+                    typeof name === 'string' && name.length > 0 && !isRoliFamilyInputName(name))
+                : [];
+        },
+        defaultInputs: getDefaultServerAutoConnectMidiDevices,
+        connect: (name) => connectMidiInput(io, name, false, true),
+        disconnect: (name) => disconnectMidiInput(io, name, true),
+        interfacesChanged: (available) => { io.emit('midiInterfaces', available); },
+        reportError: (error) => { log('MIDI hotplug reconciliation failed', 'WARN', { error }); },
+    });
+    Object.keys(activeMidiInputs).forEach((name) => midiHotplugMonitor!.rememberConnection(name));
+    if (midiHotplugTimer) clearInterval(midiHotplugTimer);
+    midiHotplugTimer = setInterval(() => { void midiHotplugMonitor?.reconcile(); }, 2000);
+    midiHotplugTimer.unref();
+    setTimeout(() => { void midiHotplugMonitor?.reconcile(); }, 500).unref();
     
     initOsc(io);
     initializeArtNet();
