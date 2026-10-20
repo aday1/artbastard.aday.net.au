@@ -186,9 +186,9 @@ APC40 MIDI. Separate window launchers preserve a running console; they do not
 add operator-owner election. Fixture selection is not automatically restored
 after closing or relaunching the console. A hidden console can also activate the
 existing APC40 screensaver, so this setup is not an unattended headless APC40
-driver. Real APC40 input, mapped first-fader dimmer control and native Deck
-blackout have been verified. Selection persistence after physical button
-release and visible MiniBeam output remain unverified.
+driver. Real APC40 input, mapped first-fader dimmer control, selection persistence
+after physical button release and native Deck blackout have been verified.
+Visible MiniBeam output remains unverified.
 
 The user subsequently identified the connected fixture as the MiniBeam at
 DMX address 1. Its existing documented 18-channel profile was patched as
@@ -227,8 +227,8 @@ packet capture verified three matching test frames from source UDP 6454 to
 zeroed frame. The measured interval was 2.004 seconds. API readback confirmed
 restoration, but the user reported **no light**. This proves transmission to
 the gateway, not physical fixture receipt or lamp operation. No pan, tilt,
-reset or lamp-control values were sent. The manual's channel 16 lamp-on command
-is separate from shutter/dimmer and has not yet been tested.
+reset or lamp-control values were sent by that test. The manual's channel 16
+lamp-on command is separate from shutter/dimmer and was not exercised by it.
 
 The MIDI reconnect change was built and tested on Kefka: all 12 unit cases,
 the isolated fake-hardware integration and DMX/OSC integration passed. The
@@ -311,7 +311,21 @@ DMX 3 to zero using the direct-map batch API and verified all 512 channels
 zero. Its metadata is `/tmp/kefka-physical-fader-v3-result.json` on Kefka.
 The preceding physical input sequence is preserved as timestamped metadata in
 `/tmp/kefka-apc40-postdeploy-journal.json` on Kefka.
-The requested tap/release, fader-up, fader-down check remains pending.
+Later physical activity established release persistence. Solo/Cue 1 released
+at 22:06:27.276926; the first fader then sent channel-1 CC7 value 33 at
+22:06:27.977599. DMX 3 changed from 68 to 66 at 22:06:28.019893, 42 ms later,
+matching the expected scaling. There was no intervening Solo/Cue 1 press.
+Other controls were also being operated, so this was not an isolated
+dimmer-only test.
+
+Subsequent live commands included shutter/dimmer, pan and lamp-channel changes
+(DMX 16 changed from 200 to 0 at 22:06:28.068506). Their issuing client and
+lamp-on duration are not established. The log does not attribute each batch
+to a request source. One local full console and one Deck window were present,
+alongside remote connections. A newly created `kefka-bench.html` was outside
+this agent's changes and was left untouched. Further lighting writes were
+paused pending coordination with the user; no blanket blackout or runtime
+restart was issued over the concurrent controls.
 
 Server shutdown also overwrote the fixture catalogue using an unhydrated legacy
 cache. Fixture/group API writes already persist immediately, so shutdown now
