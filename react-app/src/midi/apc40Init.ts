@@ -1,25 +1,6 @@
-// APC40 device-inquiry + Generic Mode (Mode 1) SysEx initialization.
-//
-// Why this matters: pressing Track Select on an APC40 in Ableton Live Mode
-// emits CC messages that route to our device/track-control handlers and
-// silently rewrite DMX — see useApc40Workflow.ts:516/541 ("Changed <role>
-// on no selected fixtures"). Forcing Mode 1 makes the Track Select buttons
-// emit Note 0x33 as our handler expects.
-
+// Keep browser-only and server-connected APC40s in the same unbanked mode.
 import { safeMidiSend } from './midiOutputGuard';
-
-// Universal Device Inquiry (non-realtime, broadcast).
-// F0 7E <device-id=7F> 06 01 F7
-const DEVICE_INQUIRY: number[] = [0xf0, 0x7e, 0x7f, 0x06, 0x01, 0xf7];
-
-// Akai APC40 mode-change SysEx.
-// F0 47 <id=7F> 73 60 00 04 <mode> <vmaj> <vmin> <vbug> F7
-// mode byte: 0x40 = Generic Mode (host owns LEDs, surface sends raw MIDI),
-// 0x41 = Ableton Live Mode, 0x42 = Ableton Live Alternate Mode.
-// We want Generic Mode so Track Select buttons reliably emit Note 0x33.
-const SET_MODE_GENERIC: number[] = [
-  0xf0, 0x47, 0x7f, 0x73, 0x60, 0x00, 0x04, 0x40, 0x09, 0x04, 0x01, 0xf7,
-];
+import { APC40_DEVICE_INQUIRY, APC40_MODE_2_SYSEX } from '../../../src/apc40Protocol';
 
 const APC40_NAME_RX = /\bapc\s*40\b/i;
 
@@ -33,8 +14,8 @@ export interface Apc40InitResult {
 }
 
 export function initApc40(out: WebMidi.MIDIOutput): Apc40InitResult {
-  const inquirySent = safeMidiSend(out, DEVICE_INQUIRY, 'device-inquiry');
-  const modeSent = safeMidiSend(out, SET_MODE_GENERIC, 'set-generic-mode');
+  const inquirySent = safeMidiSend(out, [...APC40_DEVICE_INQUIRY], 'device-inquiry');
+  const modeSent = safeMidiSend(out, [...APC40_MODE_2_SYSEX], 'set-unbanked-mode-2');
   return { inquirySent, modeSent };
 }
 

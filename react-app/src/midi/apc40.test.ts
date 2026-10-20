@@ -144,12 +144,15 @@ describe('APC40 workflow decoder', () => {
       model: 'apc40-mk1',
     });
 
-    // Master Select (note 0x33, channel 8) toggles the DMX FREEZE latch.
+    expect(decodeApc40Message({
+      _type: 'noteon', source: 'Akai APC40', channel: 8, note: 0x33, velocity: 127,
+    })).toBeNull();
+    // Master Select (note 0x50) toggles the DMX FREEZE latch.
     expect(decodeApc40Message({
       _type: 'noteon',
       source: 'Akai APC40',
-      channel: 8,
-      note: 0x33,
+      channel: 0,
+      note: 0x50,
       velocity: 127,
     })).toEqual({
       type: 'toggle-freeze-dmx',
@@ -159,8 +162,8 @@ describe('APC40 workflow decoder', () => {
     expect(decodeApc40Message({
       _type: 'noteon',
       source: 'Akai APC40',
-      channel: 8,
-      note: 0x33,
+      channel: 0,
+      note: 0x50,
       velocity: 0,
     })).toEqual({
       type: 'toggle-freeze-dmx',
@@ -250,10 +253,10 @@ describe('APC40 workflow decoder', () => {
     expect(decodeApc40Message({ _type: 'noteon', source: 'Akai APC40', channel: 0, note: 0x41, velocity: 127 })).toEqual({
       type: 'tap-tempo', model: 'apc40-mk1',
     });
-    expect(decodeApc40Message({ _type: 'noteon', source: 'Akai APC40', channel: 8, note: 0x33, velocity: 127 })).toEqual({
+    expect(decodeApc40Message({ _type: 'noteon', source: 'Akai APC40', channel: 0, note: 0x50, velocity: 127 })).toEqual({
       type: 'toggle-freeze-dmx', model: 'apc40-mk1',
     });
-    expect(decodeApc40Message({ _type: 'noteon', source: 'Akai APC40', channel: 8, note: 0x33, velocity: 0 })).toEqual({
+    expect(decodeApc40Message({ _type: 'noteon', source: 'Akai APC40', channel: 0, note: 0x50, velocity: 0 })).toEqual({
       type: 'toggle-freeze-dmx', model: 'apc40-mk1',
     });
   });

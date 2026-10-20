@@ -60,20 +60,26 @@ channel name changes (rename, fixture template apply, scene capture).
 > template below remains available
 > for backwards-compatible SuperControl mappings.
 
-The APC40 template assumes the device is in mode 0 (factory). Live APC40 mode
-intercepts the surface first; template mappings are fallback SuperControl
-bindings:
+The live MK1 integration initializes Alternate Ableton Live Mode 2 (`0x42`)
+through browser or server MIDI, including after reconnect. Latch buttons
+toggle on each press and keep their state on release; SHIFT and CC64 remain
+momentary. Live APC40 handling intercepts the surface first; template mappings
+are fallback SuperControl bindings. MK2 retains its existing handling and
+does not use this MK1 initialization command.
 
 - Track faders 1-8: CC7 on MIDI channels 1-8 -> SuperControl dimmer for
   selected fixture slot 1-8.
 - Master fader: CC14 on channel 1 -> SuperControl `masterDimmer`.
 - Device Control knobs CC16-23: fallback roles for gobo, gobo rotation,
   color wheel, prism, iris, focus, zoom, and strobe/shutter.
-- Cue Level CC47 is reserved by live APC40 mode to page Device Control role
-  banks; it is not bound to gobo or fine pan.
+- Cue Level CC47 sets automation direction. Device Left/Right page through
+  Device Control role banks.
 - Crossfader CC15 is reserved by live APC40 mode to blend Deck A and Deck B
   scenes; it is not a SuperControl trim.
 - Scene Launch buttons are ACT launchers in live mode.
+- MK1 Master Select uses note `0x50` for input and LED feedback; it toggles
+  FREEZE. Generic Mode bank snapshots are not Master presses. See the
+  [protocol and snapshot-guard reference](midi/apc40.md#mk1-initialization-and-button-state).
 
 When the live integration is active (default since v5.2.x), it intercepts
 the same notes/CCs **before** the template-mapped behavior runs, so the

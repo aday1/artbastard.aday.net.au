@@ -1,5 +1,5 @@
 // Owns SysEx-enabled MIDIAccess for the APC40 lifecycle.
-// On output appearance (or first call), sends device inquiry + Mode 1 SysEx
+// On output appearance (or first call), sends device inquiry + Mode 2 SysEx
 // and listens for inquiry replies to confirm the controller is an APC40.
 
 import { useEffect, useRef } from 'react';
@@ -11,29 +11,35 @@ import {
   isApc40InquiryReply,
 } from '../midi/apc40Init';
 import { debugLog } from '../utils/debugLog';
+import { resetPortHealth } from '../midi/midiOutputGuard';
+import { notifyApc40LedDirty } from '../midi/apc40LedRuntime';
 
 export function useApc40Health() {
   const addNotification = useStore((s) => s.addNotification);
   const accessRef = useRef<WebMidi.MIDIAccess | null>(null);
-  const initedRef = useRef<Set<string>>(new Set());
-  const inquiredRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
     const cleanups: Array<() => void> = [];
+    const initialized = new Map<string, WebMidi.MIDIOutput>();
+    const observedOutputs = new Map<string, WebMidi.MIDIOutput>();
+    const wired = new Map<WebMidi.MIDIInput, () => void>();
+    const inquired = new Set<WebMidi.MIDIInput>();
 
-    const handleSysex = (ev: WebMidi.MIDIMessageEvent, portName: string) => {
+    const handleSysex = (ev: WebMidi.MIDIMessageEvent, input: WebMidi.MIDIInput) => {
       const reply = parseDeviceInquiryReply(ev.data);
       if (!reply) return;
       if (!isApc40InquiryReply(reply)) return;
-      if (inquiredRef.current.has(portName)) return;
-      inquiredRef.current.add(portName);
+      if (inquired.has(input)) return;
+      inquired.add(input);
+      const portName = input.name ?? 'apc40';
       debugLog.log(
         `[APC40-HEALTH] inquiry reply from "${portName}": family=0x${reply.familyLsb.toString(16)} model=0x${reply.modelLsb.toString(16)}`,
       );
       try {
         addNotification({
-          message: `APC40 ready (Generic Mode) — ${portName}`,
+          // Inquiry establishes identity, not acknowledgement of a mode change.
+          message: `APC40 identified — ${portName}`,
           type: 'success',
           priority: 'normal',
         });
@@ -41,24 +47,41 @@ export function useApc40Health() {
     };
 
     const wireInputs = (access: WebMidi.MIDIAccess) => {
+      for (const [input, cleanup] of wired) {
+        if (input.state === 'disconnected' || access.inputs.get(input.id) !== input) {
+          cleanup();
+          wired.delete(input);
+          inquired.delete(input);
+        }
+      }
       access.inputs.forEach((input) => {
-        if (!isApc40Port(input)) return;
-        const name = input.name ?? 'apc40';
-        const listener = (ev: WebMidi.MIDIMessageEvent) => handleSysex(ev, name);
+        if (!isApc40Port(input) || input.state === 'disconnected' || wired.has(input)) return;
+        const listener = (ev: WebMidi.MIDIMessageEvent) => handleSysex(ev, input);
         input.addEventListener('midimessage', listener as EventListener);
-        cleanups.push(() =>
+        wired.set(input, () =>
           input.removeEventListener('midimessage', listener as EventListener),
         );
       });
     };
 
     const initOutputs = (access: WebMidi.MIDIAccess) => {
+      for (const [id, out] of observedOutputs) {
+        if (out.state === 'disconnected' || access.outputs.get(id) !== out) {
+          initialized.delete(id);
+          observedOutputs.delete(id);
+          resetPortHealth(out);
+        }
+      }
       access.outputs.forEach((out) => {
-        if (!isApc40Port(out)) return;
+        if (!isApc40Port(out) || out.state === 'disconnected') return;
+        observedOutputs.set(out.id, out);
         const name = out.name ?? 'apc40';
-        if (initedRef.current.has(name)) return;
-        initedRef.current.add(name);
+        if (initialized.get(out.id) === out) return;
         const result = initApc40(out);
+        if (result.modeSent) {
+          initialized.set(out.id, out);
+          notifyApc40LedDirty('port-refresh');
+        }
         debugLog.log(
           `[APC40-HEALTH] init "${name}": inquiry=${result.inquirySent} mode=${result.modeSent}`,
         );
@@ -84,7 +107,7 @@ export function useApc40Health() {
         debugLog.log('[APC40-HEALTH] SysEx MIDI access failed:', err);
         try {
           addNotification({
-            message: 'APC40 SysEx access denied — controller may stay in Ableton Mode.',
+            message: 'APC40 browser SysEx unavailable — browser-only controllers may remain in banked Generic Mode.',
             type: 'warning',
             priority: 'normal',
           });
@@ -99,8 +122,11 @@ export function useApc40Health() {
           fn();
         } catch {}
       });
-      initedRef.current.clear();
-      inquiredRef.current.clear();
+      wired.forEach((cleanup) => cleanup());
+      wired.clear();
+      initialized.clear();
+      observedOutputs.clear();
+      inquired.clear();
     };
   }, [addNotification]);
 }

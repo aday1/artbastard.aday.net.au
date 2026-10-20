@@ -33,6 +33,21 @@ const fixtureB: Fixture = {
   ],
 };
 
+const miniBeam: Fixture = {
+  id: 'minibeam', name: 'MINIBEAM 1', type: 'Moving Head', startAddress: 1,
+  channels: [
+    { name: 'Colour Wheel', type: 'color_wheel' }, { name: 'Strobe', type: 'strobe' },
+    { name: 'Dimmer', type: 'dimmer' }, { name: 'Gobo', type: 'gobo' },
+    { name: 'Prism', type: 'prism' }, { name: 'Prism Rotation', type: 'other' },
+    { name: 'Effect', type: 'other' }, { name: 'Frost', type: 'other' },
+    { name: 'Focus', type: 'focus' }, { name: 'Pan', type: 'pan' },
+    { name: 'Pan Fine', type: 'pan_fine' }, { name: 'Tilt', type: 'tilt' },
+    { name: 'Tilt Fine', type: 'tilt_fine' }, { name: 'Macro', type: 'macro' },
+    { name: 'Reset', type: 'reset' }, { name: 'Lamp', type: 'lamp' },
+    { name: 'Pan/Tilt Speed', type: 'speed' }, { name: 'Effect Speed', type: 'speed' },
+  ],
+};
+
 const groupA: Group = {
   id: 'group-a',
   name: 'Front Wash',
@@ -119,210 +134,67 @@ describe('useApc40Workflow', () => {
     });
   });
 
-  it('treats delayed APC40 note-on velocity 0 as a toggle-off press, not an ignored release', async () => {
+  it.each([
+    ['Solo/Cue fixture', 0x31, (s: any) => s.selectedFixtures.includes('fixture-a')],
+    ['Activator group', 0x32, (s: any) => s.selectedFixtures.length === 2],
+    ['Record Arm solo', 0x30, (s: any) => s.apc40CrossfaderState.soloedGroups.includes(0)],
+    ['PAN all fixtures', 0x57, (s: any) => s.selectedFixtures.length === 2],
+    ['SEND A', 0x58, (s: any) => s.modularAutomation.color.enabled],
+    ['SEND B', 0x59, (s: any) => s.modularAutomation.panTilt.enabled],
+    ['SEND C', 0x5a, (s: any) => s.modularAutomation.effects.enabled],
+    ['FULL ON', 0x3a, (s: any) => s.apc40CrossfaderState.fullOn],
+    ['BLACKOUT', 0x3b, (s: any) => s.apc40CrossfaderState.blackout],
+    ['Detail FREEZE', 0x3e, (s: any) => s.dmxFrozen],
+    ['Master FREEZE', 0x50, (s: any) => s.dmxFrozen],
+  ])('latches %s once per physical press, retaining state after long release', (_label, note, enabled) => {
     renderHook(() => useApc40Workflow());
-
-    apcMessage({ channel: 0, note: 0x31, velocity: 127, timestamp: 1000 });
-
-    await waitFor(() => {
-      expect(useStore.getState().selectedFixtures).toEqual(['fixture-a']);
-    });
-
-    apcMessage({ channel: 0, note: 0x31, velocity: 0, timestamp: 1010 });
-
-    await waitFor(() => {
-      expect(useStore.getState().selectedFixtures).toEqual(['fixture-a']);
-    });
-
-    apcMessage({ channel: 0, note: 0x31, velocity: 127, timestamp: 1500 });
-
-    await waitFor(() => {
-      expect(useStore.getState().selectedFixtures).toEqual(['fixture-a']);
-    });
-
-    apcMessage({ channel: 0, note: 0x31, velocity: 0, timestamp: 2000 });
-
-    await waitFor(() => {
-      expect(useStore.getState().selectedFixtures).toEqual([]);
-      expect(useStore.getState().apc40CrossfaderState.lastChange?.summary).toContain('Deselected fixture');
-    });
+    apcMessage({ channel: 0, note, timestamp: 1000 });
+    expect(enabled(useStore.getState())).toBe(true);
+    apcMessage({ channel: 0, note, timestamp: 1500 }); // repeated positive while held
+    expect(enabled(useStore.getState())).toBe(true);
+    apcMessage({ _type: 'noteoff', channel: 0, note, velocity: 127, timestamp: 3094 });
+    expect(enabled(useStore.getState())).toBe(true);
+    apcMessage({ channel: 0, note, timestamp: 3816 });
+    expect(enabled(useStore.getState())).toBe(false);
+    apcMessage({ channel: 0, note, velocity: 0, timestamp: 6500 });
+    expect(enabled(useStore.getState())).toBe(false);
   });
 
-  it('uses APC40 activator OFF state to remove a group without double toggling', async () => {
+  it('derives latch changes from current UI state and preserves SHIFT+SEND pattern cycling', () => {
     renderHook(() => useApc40Workflow());
-
-    apcMessage({ channel: 0, note: 0x32, velocity: 127, timestamp: 1000 });
-
-    await waitFor(() => {
-      expect(useStore.getState().selectedFixtures).toEqual(['fixture-a', 'fixture-b']);
-    });
-
-    apcMessage({ channel: 0, note: 0x32, velocity: 127, timestamp: 1500 });
-
-    await waitFor(() => {
-      expect(useStore.getState().selectedFixtures).toEqual(['fixture-a', 'fixture-b']);
-    });
-
-    apcMessage({ channel: 0, note: 0x32, velocity: 0, timestamp: 2000 });
-
-    await waitFor(() => {
-      expect(useStore.getState().selectedFixtures).toEqual([]);
-      expect(useStore.getState().apc40CrossfaderState.lastChange?.summary).toContain('Removed group');
-    });
+    apcMessage({ channel: 0, note: 0x31, timestamp: 1000 });
+    apcMessage({ _type: 'noteoff', channel: 0, note: 0x31, timestamp: 3000 });
+    act(() => useStore.getState().setSelectedFixtures([]));
+    apcMessage({ channel: 0, note: 0x31, timestamp: 4000 });
+    expect(useStore.getState().selectedFixtures).toEqual(['fixture-a']);
+    const pattern = useStore.getState().modularAutomation.color.type;
+    apcMessage({ channel: 0, note: 0x62, timestamp: 5000 });
+    apcMessage({ channel: 0, note: 0x58, timestamp: 5010 });
+    expect(useStore.getState().modularAutomation.color.type).not.toBe(pattern);
+    expect(useStore.getState().modularAutomation.color.enabled).toBe(false);
+    const nextPattern = useStore.getState().modularAutomation.color.type;
+    apcMessage({ _type: 'noteoff', channel: 0, note: 0x58, timestamp: 9000 });
+    expect(useStore.getState().modularAutomation.color.type).toBe(nextPattern);
+    apcMessage({ _type: 'noteoff', channel: 0, note: 0x62, timestamp: 9010 });
+    expect(useStore.getState().apc40CrossfaderState.shiftLatched).toBe(false);
   });
 
-  it('uses APC40 record-arm OFF state to release solo group without double toggling', async () => {
+  it('preserves the existing MK2 explicit OFF semantics', () => {
     renderHook(() => useApc40Workflow());
-
-    apcMessage({ channel: 0, note: 0x30, velocity: 127, timestamp: 1000 });
-
-    await waitFor(() => {
-      expect(useStore.getState().apc40CrossfaderState.soloedGroups).toEqual([0]);
-    });
-
-    apcMessage({ channel: 0, note: 0x30, velocity: 127, timestamp: 1500 });
-
-    await waitFor(() => {
-      expect(useStore.getState().apc40CrossfaderState.soloedGroups).toEqual([0]);
-    });
-
-    apcMessage({ channel: 0, note: 0x30, velocity: 0, timestamp: 2000 });
-
-    await waitFor(() => {
-      expect(useStore.getState().apc40CrossfaderState.soloedGroups).toEqual([]);
-      expect(useStore.getState().apc40CrossfaderState.lastChange?.summary).toContain('Released solo');
-    });
+    apcMessage({ source: 'Akai APC40 MK2', channel: 0, note: 0x31, timestamp: 1000 });
+    apcMessage({ source: 'Akai APC40 MK2', channel: 0, note: 0x31, timestamp: 1500 });
+    expect(useStore.getState().selectedFixtures).toEqual(['fixture-a']);
+    apcMessage({ source: 'Akai APC40 MK2', channel: 0, note: 0x31, velocity: 0, timestamp: 3000 });
+    expect(useStore.getState().selectedFixtures).toEqual([]);
   });
 
-  it('uses APC40 PAN ON/OFF state to select and clear all fixtures', async () => {
+  it('allows a second distinct Master press to release freeze immediately', () => {
     renderHook(() => useApc40Workflow());
-
-    apcMessage({ channel: 0, note: 0x57, velocity: 127, timestamp: 1000 });
-
-    await waitFor(() => {
-      expect(useStore.getState().selectedFixtures).toEqual(['fixture-a', 'fixture-b']);
-    });
-
-    apcMessage({ channel: 0, note: 0x57, velocity: 127, timestamp: 1500 });
-
-    await waitFor(() => {
-      expect(useStore.getState().selectedFixtures).toEqual(['fixture-a', 'fixture-b']);
-    });
-
-    apcMessage({ channel: 0, note: 0x57, velocity: 0, timestamp: 2000 });
-
-    await waitFor(() => {
-      expect(useStore.getState().selectedFixtures).toEqual([]);
-      expect(useStore.getState().apc40CrossfaderState.lastChange?.summary).toContain('Deselected all fixtures');
-    });
-  });
-
-  it('uses APC40 SEND A/B/C ON/OFF state for modular automation engines', async () => {
-    renderHook(() => useApc40Workflow());
-
-    apcMessage({ channel: 0, note: 0x58, velocity: 127, timestamp: 1000 });
-    apcMessage({ channel: 0, note: 0x59, velocity: 127, timestamp: 1100 });
-    apcMessage({ channel: 0, note: 0x5a, velocity: 127, timestamp: 1200 });
-
-    await waitFor(() => {
-      const { modularAutomation } = useStore.getState();
-      expect(modularAutomation.color.enabled).toBe(true);
-      expect(modularAutomation.panTilt.enabled).toBe(true);
-      expect(modularAutomation.effects.enabled).toBe(true);
-    });
-
-    apcMessage({ channel: 0, note: 0x58, velocity: 127, timestamp: 1300 });
-    apcMessage({ channel: 0, note: 0x59, velocity: 127, timestamp: 1400 });
-    apcMessage({ channel: 0, note: 0x5a, velocity: 127, timestamp: 1500 });
-
-    await waitFor(() => {
-      const { modularAutomation } = useStore.getState();
-      expect(modularAutomation.color.enabled).toBe(true);
-      expect(modularAutomation.panTilt.enabled).toBe(true);
-      expect(modularAutomation.effects.enabled).toBe(true);
-    });
-
-    apcMessage({ channel: 0, note: 0x58, velocity: 0, timestamp: 2000 });
-    apcMessage({ channel: 0, note: 0x59, velocity: 0, timestamp: 2100 });
-    apcMessage({ channel: 0, note: 0x5a, velocity: 0, timestamp: 2200 });
-
-    await waitFor(() => {
-      const { modularAutomation } = useStore.getState();
-      expect(modularAutomation.color.enabled).toBe(false);
-      expect(modularAutomation.panTilt.enabled).toBe(false);
-      expect(modularAutomation.effects.enabled).toBe(false);
-    });
-  });
-
-  it('uses APC40 utility ON/OFF state for FULL ON, BLACKOUT, and FREEZE', async () => {
-    renderHook(() => useApc40Workflow());
-
-    apcMessage({ channel: 0, note: 0x3a, velocity: 127, timestamp: 1000 });
-    apcMessage({ channel: 0, note: 0x3b, velocity: 127, timestamp: 1100 });
-    apcMessage({ channel: 0, note: 0x3e, velocity: 127, timestamp: 1200 });
-
-    await waitFor(() => {
-      const state = useStore.getState();
-      expect(state.apc40CrossfaderState.fullOn).toBe(true);
-      expect(state.apc40CrossfaderState.blackout).toBe(true);
-      expect(state.dmxFrozen).toBe(true);
-    });
-
-    apcMessage({ channel: 0, note: 0x3a, velocity: 127, timestamp: 1300 });
-    apcMessage({ channel: 0, note: 0x3b, velocity: 127, timestamp: 1400 });
-    apcMessage({ channel: 0, note: 0x3e, velocity: 127, timestamp: 1500 });
-
-    await waitFor(() => {
-      const state = useStore.getState();
-      expect(state.apc40CrossfaderState.fullOn).toBe(true);
-      expect(state.apc40CrossfaderState.blackout).toBe(true);
-      expect(state.dmxFrozen).toBe(true);
-    });
-
-    apcMessage({ channel: 0, note: 0x3a, velocity: 0, timestamp: 2000 });
-    apcMessage({ channel: 0, note: 0x3b, velocity: 0, timestamp: 2100 });
-    apcMessage({ channel: 0, note: 0x3e, velocity: 0, timestamp: 2200 });
-
-    await waitFor(() => {
-      const state = useStore.getState();
-      expect(state.apc40CrossfaderState.fullOn).toBe(false);
-      expect(state.apc40CrossfaderState.blackout).toBe(false);
-      expect(state.dmxFrozen).toBe(false);
-    });
-  });
-
-  it('toggles DMX FREEZE from the APC40 Master Select button', async () => {
-    renderHook(() => useApc40Workflow());
-
-    apcMessage({ channel: 8, note: 0x33, velocity: 127, timestamp: 1000 });
-
-    await waitFor(() => {
-      const state = useStore.getState();
-      expect(state.dmxFrozen).toBe(true);
-      expect(state.apc40CrossfaderState.lastChange?.controlLabel).toBe('Master Select');
-      expect(state.apc40CrossfaderState.lastChange?.summary).toContain('FROZEN');
-    });
-
-    apcMessage({ channel: 8, note: 0x33, velocity: 0, timestamp: 1010 });
-
-    await waitFor(() => {
-      expect(useStore.getState().dmxFrozen).toBe(true);
-    });
-
-    apcMessage({ channel: 8, note: 0x33, velocity: 0, timestamp: 2000 });
-
-    await waitFor(() => {
-      const state = useStore.getState();
-      expect(state.dmxFrozen).toBe(false);
-      expect(state.apc40CrossfaderState.lastChange?.controlLabel).toBe('Master Select');
-      expect(state.apc40CrossfaderState.lastChange?.summary).toContain('released');
-    });
-
-    apcMessage({ channel: 8, note: 0x33, velocity: 127, timestamp: 2500 });
-
-    await waitFor(() => {
-      expect(useStore.getState().dmxFrozen).toBe(true);
-    });
+    apcMessage({ channel: 0, note: 0x50, timestamp: 1000 });
+    expect(useStore.getState().dmxFrozen).toBe(true);
+    apcMessage({ _type: 'noteoff', channel: 0, note: 0x50, timestamp: 1050 });
+    apcMessage({ channel: 0, note: 0x50, timestamp: 1100 });
+    expect(useStore.getState().dmxFrozen).toBe(false);
   });
 
   it('uses the APC40 footswitch as a momentary DMX FREEZE pedal', async () => {
@@ -347,39 +219,72 @@ describe('useApc40Workflow', () => {
     });
   });
 
-  it('toggles DMX FREEZE from the APC40 channel-9 CC burst Master Select emits', async () => {
+  it('keeps the legacy CC64 note-field alias momentary too', () => {
     renderHook(() => useApc40Workflow());
+    apcMessage({ _type: 'cc', channel: 0, note: 0x40, value: 127, timestamp: 1000 });
+    expect(useStore.getState().dmxFrozen).toBe(true);
+    apcMessage({ _type: 'cc', channel: 0, note: 0x40, value: 0, timestamp: 4000 });
+    expect(useStore.getState().dmxFrozen).toBe(false);
+  });
 
-    apcMessage({ _type: 'cc', type: 'cc', channel: 8, controller: 0x12, value: 0, timestamp: 1000 });
-    apcMessage({ _type: 'cc', type: 'cc', channel: 8, controller: 0x13, value: 0, timestamp: 1010 });
-    apcMessage({ _type: 'cc', type: 'cc', channel: 8, controller: 0x14, value: 4, timestamp: 1020 });
-    apcMessage({ _type: 'cc', type: 'cc', channel: 8, controller: 0x15, value: 0, timestamp: 1030 });
-    apcMessage({ _type: 'cc', type: 'cc', channel: 8, controller: 0x16, value: 1, timestamp: 1040 });
-    apcMessage({ _type: 'cc', type: 'cc', channel: 8, controller: 0x17, value: 0, timestamp: 1050 });
-
-    await waitFor(() => {
-      const state = useStore.getState();
-      expect(state.dmxFrozen).toBe(true);
-      expect(state.apc40CrossfaderState.lastChange?.controlLabel).toBe('Master Select');
-      expect(state.apc40CrossfaderState.lastChange?.summary).toContain('FROZEN');
+  it('does not mistake the old Generic Mode Master bank snapshot for a FREEZE press', () => {
+    renderHook(() => useApc40Workflow());
+    [0, 0, 0, 0, 4, 0, 1, 0].forEach((value, index) => {
+      apcMessage({ _type: 'cc', channel: 8, controller: 16 + index, value, timestamp: 1000 + index });
     });
+    expect(useStore.getState().dmxFrozen).toBe(false);
+  });
 
-    apcMessage({ _type: 'cc', type: 'cc', channel: 8, controller: 0x14, value: 4, timestamp: 1080 });
+  it('rejects each captured complete bank frame even with a fixture already selected', () => {
+    vi.useFakeTimers();
+    try {
+      useStore.setState({ fixtures: [miniBeam], selectedFixtures: ['minibeam'], groups: [], dmxChannels: new Array(512).fill(0) });
+      renderHook(() => useApc40Workflow());
+      for (const gap of [3378, 1317, 1473]) {
+        act(() => vi.advanceTimersByTime(gap));
+        [0, 0, 1, 0, 0, 7, 0, 0].forEach((value, index) => {
+          apcMessage({ _type: 'cc', channel: 0, controller: 16 + index, value });
+          expect(useStore.getState().dmxChannels).toEqual(new Array(512).fill(0));
+        });
+      }
+      act(() => vi.advanceTimersByTime(30));
+      expect(useStore.getState().dmxChannels).toEqual(new Array(512).fill(0));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 
-    await waitFor(() => {
-      expect(useStore.getState().dmxFrozen).toBe(true);
-    });
-
-    apcMessage({ _type: 'cc', type: 'cc', channel: 8, controller: 0x12, value: 0, timestamp: 1700 });
-    apcMessage({ _type: 'cc', type: 'cc', channel: 8, controller: 0x13, value: 0, timestamp: 1710 });
-    apcMessage({ _type: 'cc', type: 'cc', channel: 8, controller: 0x14, value: 4, timestamp: 1720 });
-    apcMessage({ _type: 'cc', type: 'cc', channel: 8, controller: 0x15, value: 0, timestamp: 1730 });
-    apcMessage({ _type: 'cc', type: 'cc', channel: 8, controller: 0x16, value: 1, timestamp: 1740 });
-    apcMessage({ _type: 'cc', type: 'cc', channel: 8, controller: 0x17, value: 0, timestamp: 1750 });
-
-    await waitFor(() => {
-      expect(useStore.getState().dmxFrozen).toBe(false);
-    });
+  it('replays recorded MiniBeam bank snapshots without changing any DMX, while the real CC7 ramp affects only dimmer', () => {
+    vi.useFakeTimers();
+    try {
+      useStore.setState({ fixtures: [miniBeam], groups: [], dmxChannels: new Array(512).fill(0) });
+      renderHook(() => useApc40Workflow());
+      apcMessage({ channel: 0, note: 49, timestamp: 1000 });
+      apcMessage({ _type: 'noteoff', channel: 0, note: 49, velocity: 127, timestamp: 3094 });
+      expect(useStore.getState().selectedFixtures).toEqual(['minibeam']);
+      // Three real frames captured at 10:21:26.256, 27.573, 29.046 UTC.
+      for (const gap of [3378, 1317, 1473]) {
+        act(() => vi.advanceTimersByTime(gap));
+        [0, 0, 1, 0, 0, 7, 0, 0].forEach((value, index) => {
+          apcMessage({ _type: 'cc', channel: 0, controller: 16 + index, value });
+          expect(useStore.getState().dmxChannels).toEqual(new Array(512).fill(0));
+        });
+      }
+      act(() => vi.advanceTimersByTime(30));
+      for (const value of [1, 5, 8, 11, 16, 19, 22, 26, 35, 0]) {
+        apcMessage({ _type: 'cc', channel: 0, controller: 7, value });
+        const expected = new Array(512).fill(0);
+        expected[2] = Math.round(value * 255 / 127);
+        expect(useStore.getState().dmxChannels).toEqual(expected);
+      }
+      // Genuine Device knob 1 movement is still delivered after the bounded gate.
+      apcMessage({ _type: 'cc', channel: 0, controller: 16, value: 12 });
+      act(() => vi.advanceTimersByTime(20));
+      expect(useStore.getState().dmxChannels[3]).toBe(24);
+      expect(useStore.getState().dmxChannels[1]).toBe(0); // shutter remains closed
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('does not toggle DMX FREEZE from standalone Device Control knob 5 CC20', async () => {

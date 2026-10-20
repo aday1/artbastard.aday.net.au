@@ -156,7 +156,7 @@ class Output {
     outputs.set(name, this); record({ type: 'open-output', name });
     restoreLink('output');
   }
-  send() {}
+  send(type, data) { record({ type: 'send-output', name: this.name, messageType: type, data }); }
   close() {
     outputs.delete(this.name);
     record({ type: 'close-output', name: this.name });
@@ -229,6 +229,12 @@ Module._load = function(request, parent, isMain) {
       }, `same-address ${direction} subscription recovery`);
     }
     const healthyEvents = await events();
+    const outputOpens = healthyEvents.filter((event) => event.type === 'open-output');
+    const initializations = healthyEvents.filter((event) => event.type === 'send-output' && event.messageType === 'sysex');
+    assert.equal(initializations.length, outputOpens.length, 'each initial and recovered APC40 output gets exactly one mode initialization');
+    for (const event of initializations) {
+      assert.deepEqual(event.data, [0xf0, 0x47, 0x7f, 0x73, 0x60, 0, 4, 0x42, 9, 4, 1, 0xf7]);
+    }
     const opensAfterRecovery = healthyEvents.filter((event) => event.type === 'open-input' && event.name === NEW).length;
     const snapshotsAfterRecovery = healthyEvents.filter((event) => event.type === 'alsa-owner-snapshot').length;
     await sleep(2300);

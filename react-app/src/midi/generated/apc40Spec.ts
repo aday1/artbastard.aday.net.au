@@ -44,7 +44,7 @@ export const APC40_MODELS: Apc40Model[] = [
 ];
 export const APC40_INIT = {
   "sendDeviceInquiry": true,
-  "modeInitSysExHex": "F0 47 7F 73 60 00 04 40 09 04 01 F7"
+  "modeInitSysExHex": "F0 47 7F 73 60 00 04 42 09 04 01 F7"
 } as const;
 export const APC40_GRID = {
   "rows": 5,
@@ -74,7 +74,7 @@ export const APC40_TRANSPORT_NOTES = {
   "navSceneNext": 97,
   "selectAll": 87,
   "stopAll": 81,
-  "masterButton": 51
+  "masterButton": 80
 } as const;
 export const APC40_MASTER_CC = {
   "master": 14,
@@ -309,6 +309,13 @@ export const APC40_NOTE_BINDINGS: Apc40NoteBinding[] = [
     },
     "note": 86,
     "action": "scene-launch",
+    "velocityCheck": "gt0"
+  },
+  {
+    "controlKey": "masterButton",
+    "channels": "any",
+    "note": 80,
+    "action": "toggle-freeze-dmx",
     "velocityCheck": "gt0"
   },
   {
@@ -890,7 +897,7 @@ export const APC40_CATALOG: Apc40CatalogEntry[] = [
     "key": "masterButton",
     "category": "utility",
     "label": "Master Select \\u2014 FREEZE DMX",
-    "description": "Press once to freeze DMX output and light the Master LED; press again to unfreeze and flush current store state. APC40 MK1 may emit this as Ch 9 CC20 instead of Note 0x33."
+    "description": "Press once to freeze DMX output and light the Master LED; press again to unfreeze and flush current store state. MK1 sends Note 0x50; Generic Mode CC bank snapshots are not button presses."
   },
   {
     "key": "fullOn",

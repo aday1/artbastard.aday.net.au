@@ -1,8 +1,19 @@
 # APC40 MK1 Cheatsheet
 
 The APC40 live integration runs through `react-app/src/hooks/useApc40Workflow.ts`
-and `react-app/src/hooks/useApc40LedFeedback.ts`. It is designed for the AKAI
-APC40 MK1 factory MIDI mode and works without applying a MIDI template.
+and `react-app/src/hooks/useApc40LedFeedback.ts`. Browser MIDI and the server
+initialize the AKAI APC40 MK1 to **Alternate Ableton Live Mode 2 (`0x42`)**.
+The dedicated integration works without manually applying a MIDI template.
+
+**Tap to toggle:** Solo/Cue, Activator, Record Arm, PAN, SEND A/B/C, FULL ON,
+BLACKOUT, Master Select, and Detail View keep their state after release.
+Press again to toggle them back; holding a button longer does not change this.
+SHIFT and the CC64 footswitch remain momentary.
+
+This guide describes MK1 behavior. MK2 keeps its existing decoding and
+explicit ON/OFF handling; the MK1 mode command does not initialize MK2.
+The [MIDI protocol reference](midi/apc40.md#mk1-initialization-and-button-state)
+explains initialization and the bounded bank-snapshot guard.
 
 ## Surface map
 
@@ -15,7 +26,7 @@ APC40 MK1 factory MIDI mode and works without applying a MIDI template.
   RECORD ARM   [solo grp1] ... [solo grp8]   latched Solo-Group blackout of non-soloed fixtures
   SOLO/CUE     [fixture 1] ... [fixture 8]   select fixture N (positional)
   ACTIVATOR    [group 1]   ... [group 8]     select fixture group N (positional)
-  TRACK SELECT [UNMAPPED ] ... [UNMAPPED ]   hardware CC bleed — selection lives on Solo/Cue + Activator
+  TRACK SELECT [colour 1] ... [colour 8]    fixed colour-wheel slots
   CLIP STOP    [stop col1] ... [stop col8]   release current deck scene
 
   FADERS       [slot 1] ... [slot 8]         SuperControl dimmer per selected slot
@@ -34,12 +45,12 @@ APC40 MK1 factory MIDI mode and works without applying a MIDI template.
   STOP               disable Auto Scene playback       (LED red while running)
   REC                enter clip-grid save mode         (LED red-blink while save mode active)
                      SHIFT+REC = roll fresh random look across all fixtures (preview only)
-  SEND A             Color automation ON/OFF           (SHIFT+SEND A cycles color pattern)
-  SEND B             Pan/Tilt automation ON/OFF        (SHIFT+SEND B cycles pan/tilt path)
-  SEND C             Effects automation ON/OFF         (SHIFT+SEND C cycles effect type)
+  SEND A             tap to toggle Color automation    (SHIFT+SEND A cycles color pattern)
+  SEND B             tap to toggle Pan/Tilt automation (SHIFT+SEND B cycles pan/tilt path)
+  SEND C             tap to toggle Effects automation  (SHIFT+SEND C cycles effect type)
   TAP TEMPO          tap to set Auto Scene BPM
   NUDGE -/+          decrement/increment manual BPM by 1
-  CLIP/TRACK         FULL ON latch (raise all patched channels to 255)
+  CLIP/TRACK         FULL ON latch (excludes reset/lamp/function channels)
   DEVICE ON/OFF      BLACKOUT latch (snapshot + zero all channels)
   DEVICE LEFT/RIGHT  cycle Device Control role bank
   DETAIL VIEW        FREEZE DMX latch
@@ -55,33 +66,34 @@ APC40 MK1 factory MIDI mode and works without applying a MIDI template.
 | **Clip Launch / Session View 8x5** | Launch Deck A scene slots `APC40 Deck A 01` through `APC40 Deck A 40` | green = saved, orange-blink = active deck scene, off = empty |
 | **SHIFT + Clip Grid** | Hold SHIFT to use Deck B scene slots `APC40 Deck B 01` through `APC40 Deck B 40` | SHIFT orange while held; grid repaints for Deck B |
 | **REC (transport)** | Enter/exit save mode for the clip grid. Next clip-grid pad saves current DMX into that deck slot; hold SHIFT only for the pad press to save Deck B. SHIFT+REC rolls a fresh random look across all fixtures (preview only, does not save). | red-blink on REC and every save-mode clip pad |
-| **Record Arm 1-8 (top row)** | **SOLO GROUP N** latch. Snapshots DMX on first solo, blacks out fixtures not in soloed groups, restores snapshot when last solo released. | red-blink while soloed, off otherwise (MK1: single-color amber row) |
+| **Record Arm 1-8 (top row)** | **SOLO GROUP N** latch. First solo snapshots DMX and dims other fixtures to zero. Tap again to remove that group; removing the last solo restores the snapshot. Release keeps the solo active. | lit while soloed, off otherwise (MK1: single-color row) |
 | **Scene Launch 1-5** | Launch ACT 1-5 | green = ACT exists, orange-blink = playing ACT |
 | **Clip Stop row** | Stop/unselect the active scene for that column in the current deck | red while a deck scene is active |
 | **Stop All Clips** | Stop Deck A scene, Deck B scene, scene timeline playback, and ACT playback | red while a deck scene or ACT is active |
-| **Track Select 1-8** | **UNMAPPED** — APC40 hardware emits unreliable CCs in some modes (CC bleed). Selection lives on Solo/Cue + Activator. | LEDs always off |
-| **Master Track Select** | **FREEZE DMX latch** — press once to freeze rig output, press again to unfreeze and flush current store state. APC40 MK1 may report this as Ch 9 CC20. | red while frozen, off while live |
+| **Track Select 1-8** | Choose fixed colour-wheel slots. Targets selected colour-wheel fixtures, or all patched colour-wheel fixtures when the selection contains none. | available slots lit; MK1 single-color LEDs do not distinguish current from other available slots |
+| **Master Track Select** | **FREEZE DMX latch** — tap to freeze rig output; tap again to unfreeze and flush current store state. MK1 input and LED use note `0x50`. Release keeps the state. | lit while frozen, off while live |
 | **Faders 1-8** | SuperControl dimmer for selected fixture slot 1-8 | n/a |
 | **Master fader** | SuperControl `masterDimmer`/DIMMER for current selection | n/a |
 | **Device Control knobs 1-8** | Dynamic fixture role controls, prioritizing gobo/effects roles for the selected fixture/group | in-app APC40 manual labels current roles |
 | **Cue Level** | **AUTOMATION DIRECTION** — endless rotary encoder. CW = forward, CCW = reverse. Inverts step direction in AutoScene index advance and pan/tilt autopilot track. Modular color/dimmer/effects phases run on wall-clock and are not affected. | n/a |
-| **Solo/Cue 1-8** | ON selects fixture N, OFF removes it from multi-selection. | lit when fixture is selected, off otherwise (MK1: single-color amber row) |
-| **Activator 1-8** | ON adds fixture group N, OFF removes it from multi-selection. | lit when every fixture in the group is selected, off otherwise (MK1: single-color amber row) |
+| **Solo/Cue 1-8** | Tap to add fixture N to multi-selection; tap again to remove it. Release keeps the selection. | lit when fixture is selected, off otherwise (MK1: single-color row) |
+| **Activator 1-8** | Tap to add fixture group N; tap again to remove it. Release keeps the selection. | lit when every fixture in the group is selected, off otherwise (MK1: single-color row) |
 | **Crossfader** | Linear DMX blend between active Deck A and active Deck B scenes | n/a |
 | **Nav up/down** | Previous/next fixture | n/a |
 | **Nav left/right** | Previous/next ArtBastard scene | n/a |
-| **Pan** | ON selects all fixtures, OFF clears fixture selection | green while all fixtures are selected |
+| **Pan** | Tap to select all fixtures; tap again to clear selection | lit while all fixtures are selected |
 | **PLAY** | Enable Auto Scene playback | green-blink while Auto Scene running |
 | **STOP (transport)** | Disable Auto Scene playback | red while Auto Scene running |
-| **SEND A** | ON enables Color modular automation, OFF disables it. SHIFT+SEND A cycles color pattern. | orange-blink while engine enabled |
-| **SEND B** | ON enables Pan/Tilt modular automation, OFF disables it. SHIFT+SEND B cycles pan/tilt path. | orange-blink while engine enabled |
-| **SEND C** | ON enables Effects modular automation, OFF disables it. SHIFT+SEND C cycles effect type. | orange-blink while engine enabled |
+| **SEND A** | Tap to toggle Color automation. SHIFT+SEND A cycles its pattern without changing enabled state. | lit while engine enabled |
+| **SEND B** | Tap to toggle Pan/Tilt automation. SHIFT+SEND B cycles its path without changing enabled state. | lit while engine enabled |
+| **SEND C** | Tap to toggle Effects automation. SHIFT+SEND C cycles its effect type without changing enabled state. | lit while engine enabled |
 | **Tap Tempo** | Tap to set Auto Scene BPM | n/a |
 | **Nudge -/+** | Decrement/increment manual BPM by 1 (switches tempo source to manual) | n/a |
-| **Clip/Track (DEVICE CONTROL block)** | FULL ON latch — ON raises patched channels to 255 and snapshots prior DMX; OFF restores | red while latched |
-| **Device On/Off** | BLACKOUT latch — ON snapshots DMX and zeros all channels; OFF restores | red while latched |
+| **Clip/Track (DEVICE CONTROL block)** | Tap to latch FULL ON: snapshot DMX and raise patched channels to 255, excluding reset/lamp/function channels. Tap again to restore. Release does not restore. | lit while latched |
+| **Device On/Off** | Tap to latch BLACKOUT: snapshot DMX and zero all channels. Tap again to restore. Release does not restore. | lit while latched |
 | **Device Left/Right** | Cycle Device Control role banks | n/a |
-| **Detail View** | Alternate FREEZE DMX ON/OFF control. Master Select is the main latch button. | red while frozen |
+| **Detail View** | Tap to toggle the same FREEZE state as Master Select. Release does not unfreeze. | lit while frozen |
+| **Footswitch 1 (CC64)** | Hold to freeze DMX; release to resume and flush current store state. | FREEZE indicators follow state |
 | **Rec Quantization** | REC/save-mode alias | red-blink while save mode active |
 | **MIDI Overdub** | Stop All Clips / panic stop alias | red while deck scene or ACT active |
 | **Metronome** | Tap Tempo alias | n/a |
@@ -134,10 +146,12 @@ delete scenes.
 
 ### Selection first
 
-Use **Solo/Cue 1-8** to select an individual fixture, or **Activator 1-8** to
-select a fixture group. The top Track Control encoder push/ring buttons no
-longer act as select aliases (Track Select row is unmapped because of APC40
-hardware CC bleed).
+Tap **Solo/Cue 1-8** to add an individual fixture, or **Activator 1-8** to add
+a fixture group. Release the button before moving a fader; selection stays
+latched. Tap the same button again to remove its fixture or group.
+**Track Select 1-8** chooses colour-wheel slots, not fixture selection.
+Track Control ring CCs are LED feedback, not selection-button aliases.
+Faders and role knobs require a fixture/group selection.
 
 ### Faders
 
@@ -166,7 +180,7 @@ Priority order begins with:
 `gobo`, `gobo_rotation`, `color_wheel`, `prism`, `iris`, `focus`, `zoom`,
 `strobe`, `macro`, `speed`, then fine pan/tilt and color channels.
 
-Turn the **Device Left/Right** buttons (DEVICE CONTROL block) to page through
+Press the **Device Left/Right** buttons (DEVICE CONTROL block) to page through
 additional roles if the selected fixture has more than eight useful DMX roles.
 
 ## Automation row
@@ -212,20 +226,20 @@ If you don't, roll again (SHIFT+REC) or launch any saved scene to clear it.
 
 Press **Master Select** to freeze rig output at its current value. The Master
 LED turns on while output is frozen; press **Master Select** again to unfreeze
-and flush the current store state. **Detail View** remains an alternate
-explicit ON/OFF freeze control.
-The store keeps updating (so UI and automations still respond) but no bytes
-ship to the DMX backend. Switch Detail View OFF to release the latch —
-the hook flushes the current store state to the backend so the rig catches
-up to whatever you changed during the freeze.
+and flush the current store state. **Detail View** toggles the same freeze
+state. Releasing either button leaves the latch unchanged.
+The store keeps updating (so UI and automations still respond) but DMX writes
+are held from the backend. The next tap on either button resumes output and
+flushes the current store state, including changes made during the freeze.
+The CC64 footswitch is different: press/hold freezes, release resumes.
 
 ## Solo Group latch
 
 Press a **Record Arm** button (top row) to solo that group. The first press
 in an empty solo set snapshots DMX and blacks out all fixtures that are not
 in any soloed group. Additional presses add groups to the solo set. Pressing
-a soloed group again removes it; releasing the last solo restores the
-snapshot.
+a soloed group again removes it; removing the last solo restores the
+snapshot. Releasing a Record Arm button does not remove its group.
 
 ## Stop behavior
 
@@ -264,7 +278,7 @@ tests and overlay preferences:
 | 2 | green-blink | PLAY while Auto Scene running |
 | 3 | red | STOP active / FULL ON latched / Detail View frozen / active deck scene present (MK1 single-color rows display this as plain amber-on) |
 | 4 | red-blink | REC save mode / armed clip pads **or** Solo Group latched |
-| 5 | orange | SHIFT latched |
+| 5 | orange | SHIFT held |
 | 6 | orange-blink | active deck scene, playing ACT, SEND-row engine enabled |
 
 > **MK1 palette caveat:** only the 8×5 clip grid renders all three colors. The Solo/Cue, Activator, Record Arm, and Track Select rows are single-color amber pads — any non-zero velocity reads as "amber on", so this table's `green` vs `red` distinction only matters on the clip grid.
@@ -274,3 +288,12 @@ tests and overlay preferences:
 Open the in-app Help overlay and choose the APC40 visual reference. It shows
 the live deck, Deck A/B scene names, save-mode targets, Device Control role labels,
 ACT state, and the last MIDI messages received.
+
+The factory Generic Mode sends eight stored Device knob values on a Track
+Select bank change. These are not knob gestures or Master FREEZE presses.
+ArtBastard selects Mode 2 on connection/reconnection and additionally drops
+only a complete, ordered CC16–23 frame from one MK1 source/channel within
+20 ms. Incomplete or slower input passes; a lone CC16 can wait 20 ms.
+See the [protocol reference](midi/apc40.md#mk1-initialization-and-button-state)
+and [Akai's official protocol](https://cdn.inmusicbrands.com/akai/apc40/APC40_Communications_Protocol_rev_1.pdf_1db97c1fdba23bacf47df0f9bf64e913.pdf).
+An “APC40 identified” notification confirms identity, not mode acknowledgement.

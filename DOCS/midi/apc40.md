@@ -8,7 +8,7 @@ models:
     detect: ['apc40 mkii', 'apc40 mk2', 'apc40ii']
 init:
   sendDeviceInquiry: true
-  modeInitSysExHex: 'F0 47 7F 73 60 00 04 40 09 04 01 F7'
+  modeInitSysExHex: 'F0 47 7F 73 60 00 04 42 09 04 01 F7'
 grid:
   rows: 5
   cols: 8
@@ -32,7 +32,7 @@ transport:
   navSceneNext: 0x61
   selectAll: 0x57
   stopAll: 0x51
-  masterButton: 0x33 # channel 8 note fallback; Ch 9 CC20 burst toggles DMX FREEZE in some modes
+  masterButton: 0x50 # MK1 Master Select, channel ignored
 master:
   master: 0x0e
   crossfader: 0x0f
@@ -48,6 +48,25 @@ addressing, and message decoding. Edits regenerate
 The control surface, deck behavior, and recovery procedures for operators
 live in `DOCS/APC40_CHEATSHEET.md` and `DOCS/APC40_GOLD_STANDARD.md`. This
 file describes *what the bytes mean*; those describe *what the operator sees*.
+
+## MK1 initialization and button state
+
+Both server MIDI and Web MIDI initialize the MK1 to Alternate Ableton Live
+Mode 2 (`0x42`): unbanked Device controls, momentary buttons, host LED feedback.
+The software latches Solo/Cue, Activator, Record Arm, PAN/SEND and utility
+buttons on each positive press. Releasing a button never unlatches it, even
+after a long hold. SHIFT and the CC64 footswitch remain momentary. MK2 handling
+retains its prior behavior; this MK1 introduction uses product ID `0x73`.
+
+Generic Mode 0 (`0x40`) sends all eight Device knob values when Track Select
+changes bank, without sending a Track Select note. The input gate discards
+only a complete ordered CC16–23 frame from one MK1 source/channel within
+20 ms. Incomplete, interrupted, or slower sequences pass unchanged; a lone
+CC16 waits at most 20 ms. This protects against bank snapshots during startup
+or failed mode initialization, while faders are delivered immediately. Device
+inquiry establishes identity, not acknowledgement of the selected mode.
+
+Source: [Akai APC40 Communications Protocol, rev 1, pages 6–8 and 16–17](https://cdn.inmusicbrands.com/akai/apc40/APC40_Communications_Protocol_rev_1.pdf_1db97c1fdba23bacf47df0f9bf64e913.pdf).
 
 ## Note bindings
 
@@ -79,6 +98,7 @@ must match a variant of `Apc40Action` (see `react-app/src/midi/apc40.ts`).
 | scene-launch    | 0        | 0x54   | scene-launch    | gt0           |
 | scene-launch    | 0        | 0x55   | scene-launch    | gt0           |
 | scene-launch    | 0        | 0x56   | scene-launch    | gt0           |
+| masterButton    | any      | 0x50   | toggle-freeze-dmx | gt0           |
 | stop-all-clips  | 0        | 0x51   | stop-all-clips  | gt0           |
 | shift           | any      | 0x62   | shift           | press-release |
 | play            | any      | 0x5b   | play            | gt0           |
@@ -185,7 +205,7 @@ is in effect. `controlName` must be a SuperControl role name from
 | trackSelect    | effect     | Track Select (1-8) \u2014 Color Wheel slots | Select fixed color-wheel slots for the selected MiniBeam / color-wheel fixture. Buttons spread across the fixture's available fixed wheel colours.    |
 | trackStop      | utility    | Clip Stop row                        | Stop/unselect the active scene in that column for the current deck.                                                                                  |
 | stopAll        | utility    | Stop All Clips                       | Stop all Deck A/B scenes and ACT playback.                                                                                                           |
-| masterButton   | utility    | Master Select \u2014 FREEZE DMX           | Press once to freeze DMX output and light the Master LED; press again to unfreeze and flush current store state. APC40 MK1 may emit this as Ch 9 CC20 instead of Note 0x33. |
+| masterButton   | utility    | Master Select \u2014 FREEZE DMX           | Press once to freeze DMX output and light the Master LED; press again to unfreeze and flush current store state. MK1 sends Note 0x50; Generic Mode CC bank snapshots are not button presses. |
 | fullOn         | effect     | Clip/Track \u2014 FULL ON                | ON raises patched fixture channels to 255 and snapshots prior DMX; OFF restores the snapshot.                                                        |
 | blackout       | effect     | Device On/Off \u2014 BLACKOUT             | ON snapshots DMX and zeros all channels; OFF restores. LED on the device lights while latched.                                                       |
 | freezeDmx      | utility    | Detail View \u2014 FREEZE DMX             | ON freezes DMX output while UI/store continues; OFF releases and flushes current state to backend.                                                   |

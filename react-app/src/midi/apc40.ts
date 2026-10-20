@@ -168,11 +168,11 @@ export function decodeApc40Message(message: MidiLikeMessage): Apc40Action | null
   // Device Control block stateful buttons.
   if (note === 0x3a && (message.channel ?? 0) === 0 && (pressed || released)) return { type: 'full-on', model, pressed };
   if (note === 0x3b && (message.channel ?? 0) === 0 && (pressed || released)) return { type: 'blackout', model, pressed };
-  // Detail View remains an explicit ON/OFF freeze control.
+  // Physical button state; the workflow latches on positive press edges.
   if (note === 0x3e && (message.channel ?? 0) === 0 && (pressed || released)) return { type: 'freeze-dmx', model, pressed };
-  // Master Select is a latch-style FREEZE toggle: press once to freeze, press again to release.
-  // In APC40 toggle modes, the second physical press may arrive as delayed velocity 0.
-  if (note === 0x33 && (message.channel ?? 0) === 8 && (pressed || released)) return { type: 'toggle-freeze-dmx', model };
+  // MK1 protocol Master Select is note 0x50 (not Track Select on channel 8).
+  if (model === 'apc40-mk1' && note === 0x50 && (pressed || released)) return { type: 'toggle-freeze-dmx', model };
+  if (model === 'apc40-mk2' && note === 0x33 && (message.channel ?? 0) === 8 && (pressed || released)) return { type: 'toggle-freeze-dmx', model };
   if (note === 0x57 && (pressed || released)) return { type: 'select-all', model, pressed };
   if (note === 0x58 && (pressed || released)) return { type: 'toggle-color-auto', model, pressed };
   if (note === 0x59 && (pressed || released)) return { type: 'toggle-pan-tilt-auto', model, pressed };
@@ -183,7 +183,7 @@ export function decodeApc40Message(message: MidiLikeMessage): Apc40Action | null
   const scene = sceneLaunch(model, note);
   if (scene) return scene;
 
-  if (note === 0x33 && trackIndex >= 0 && trackIndex <= 7) return { type: 'color-wheel-slot', model, trackIndex };
+  if (note === 0x33 && (message.channel ?? 0) >= 0 && (message.channel ?? 0) <= 7) return { type: 'color-wheel-slot', model, trackIndex };
   if (note === 0x34) return { type: 'track-stop', model, trackIndex };
   // Device Control cluster (right side of APC40, channel 0):
   // 0x3A = Clip/Track toggle  → Full On latch

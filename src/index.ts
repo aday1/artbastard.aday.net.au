@@ -14,6 +14,7 @@ import { recordArtNetPingSample, getArtNetPingHistory, getLastArtNetPing } from 
 import { MidiHotplugMonitor, forgetMidiInputIdentity } from './midiHotplug';
 import { MidiAlsaSubscriptions } from './midiAlsaSubscriptions';
 import { ArtNetOutput } from './artnetOutput';
+import { APC40_MODE_2_SYSEX } from './apc40Protocol';
 
 // Import our separate logger to avoid circular dependencies
 import { log } from './logger';
@@ -607,6 +608,11 @@ async function connectMidiInput(io: Server, inputName: string, isBrowserMidi = f
                 const ownershipBefore = midiAlsaSubscriptions.captureOwnership();
                 activeMidiOutputs[inputName] = new easymidi.Output(outputName);
                 midiAlsaSubscriptions.remember(inputName, 'output', outputName, ownershipBefore);
+                if (isApc40MidiPortName(outputName)) {
+                    // Reapply on every connection, including same-name USB resets.
+                    activeMidiOutputs[inputName].send('sysex', [...APC40_MODE_2_SYSEX]);
+                    log('APC40 unbanked Mode 2 initialization sent', 'MIDI', { outputName });
+                }
                 log(`MIDI output connected: ${outputName}`, 'MIDI');
             } catch (error) {
                 log('Failed to connect paired MIDI output', 'WARN', { inputName, outputName, error });

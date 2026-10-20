@@ -134,7 +134,7 @@ describe('useApc40LedFeedback', () => {
     expect(messages).toContainEqual([0x90, 0x3a, 3]);
     expect(messages).toContainEqual([0x90, 0x3b, 3]);
     expect(messages).toContainEqual([0x90, 0x3e, 3]);
-    expect(messages).toContainEqual([0x98, 0x33, 3]);
+    expect(messages).toContainEqual([0x90, 0x50, 3]);
   });
 
   it('paints device bank arrows as momentary movement and boundary indicators', async () => {

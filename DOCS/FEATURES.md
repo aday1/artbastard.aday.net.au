@@ -25,22 +25,24 @@ notable shipped features.
 - Experimental DMX Tracker is feature-flagged; stable envelopes and channel
   controls stay the production default.
 
-## APC40 MK1 stateful live surface (v5.2.12.0)
+## APC40 MK1 stateful live surface
 
-- APC40 hardware buttons now use explicit ON/OFF semantics instead of blind
-  toggles. Immediate note-off / velocity-zero releases are ignored; delayed
-  velocity-zero events are treated as the hardware OFF state.
-- Record Arm 1-8 is Solo Group: ON snapshots DMX and blacks out non-soloed
-  fixtures, OFF releases the group and restores when the last solo ends.
-- Solo/Cue 1-8 selects fixture N on ON and removes it on OFF. Activator 1-8
-  adds/removes fixture group N the same way.
-- PAN ON selects all fixtures; PAN OFF clears fixture selection. SEND A/B/C
-  ON enables Color, Pan/Tilt, and Effects automation; OFF disables each engine.
+- Browser and server MIDI initialize MK1 to unbanked Mode 2 (`0x42`).
+  Latch controls toggle on each distinct press; releases never unlatch them,
+  even after a long hold. SHIFT and the CC64 footswitch remain momentary.
+  Existing MK2 handling is preserved separately.
+- Record Arm 1-8 toggles Solo Group: first solo snapshots DMX and dims
+  non-soloed fixtures to zero; removing the last solo restores the snapshot.
+- Solo/Cue 1-8 taps add/remove fixture N. Activator 1-8 taps add/remove
+  fixture group N. Selection remains after release.
+- PAN taps select all/clear selection. SEND A/B/C taps toggle Color,
+  Pan/Tilt, and Effects automation; SHIFT+SEND cycles patterns.
 - Clip/Track is FULL ON, Device On/Off is BLACKOUT, Master Select is FREEZE DMX,
   Rec Quantization aliases REC, MIDI Overdub aliases Stop All Clips, and
   Metronome aliases Tap Tempo.
-- Track Select is the remaining unmapped button row; its LEDs stay off by design
-  because APC40 hardware can emit unreliable CC bleed in some modes.
+- MK1 Master Select input and LED use note `0x50`. Track Select 1-8 chooses
+  fixed colour-wheel slots. A bounded guard discards only complete MK1 bank
+  snapshots; see [APC40 protocol details](midi/apc40.md#mk1-initialization-and-button-state).
 - APC40 LEDs mirror selected fixtures/groups, Solo Group, PAN, SEND A/B/C,
   FULL ON, BLACKOUT, FREEZE, REC/save mode, PLAY/STOP, Deck A/B clip state,
   ACT launch state, and Stop All Clips.

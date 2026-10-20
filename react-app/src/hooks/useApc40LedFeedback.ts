@@ -60,7 +60,8 @@ const DEVICE_LEFT_NOTE = 0x3c;
 const DEVICE_RIGHT_NOTE = 0x3d;
 const FREEZE_NOTE = 0x3e;
 const CLIP_ROW_BASE = 0x35;
-const MASTER_CHANNEL = 8;
+const MASTER_NOTE = 0x50;
+
 const GRID_ROWS = APC40_GRID.rows;
 const GRID_COLS = APC40_GRID.cols;
 const DEVICE_BANK_FLASH_MS = 450;
@@ -138,6 +139,12 @@ export function useApc40LedFeedback() {
 
     sendNoteOn(out, channel, note, velocity);
     outputState.set(key, velocity);
+  };
+
+  const sendMasterLed = (out: WebMidi.MIDIOutput, velocity: number) => {
+    // The protocol correction is for MK1; preserve the existing MK2 address.
+    const mk2 = /\b(mk2|mkii|mk\s?ii|apc40ii)\b/i.test(out.name || '');
+    sendLed(out, mk2 ? 8 : 0, mk2 ? TRACK_SELECT_NOTE : MASTER_NOTE, velocity);
   };
 
   const sendRing = (out: WebMidi.MIDIOutput, controller: number, value: number) => {
@@ -247,7 +254,7 @@ export function useApc40LedFeedback() {
     }
 
     // Master Select mirrors DMX FREEZE state: red on = frozen, off = live output.
-    sendLed(out, MASTER_CHANNEL, TRACK_SELECT_NOTE, dmxFrozen ? LED_RED : LED_OFF);
+    sendMasterLed(out, dmxFrozen ? LED_RED : LED_OFF);
     sendLed(out, 0, STOP_ALL_CLIPS_NOTE, (crossfaderState.sceneAName || crossfaderState.sceneBName || currentActId) ? LED_RED : LED_OFF);
     sendLed(out, 0, SHIFT_NOTE, crossfaderState.shiftLatched ? LED_ORANGE : LED_OFF);
     sendLed(out, 0, REC_NOTE, armedColumns.size > 0 ? LED_RED_BLINK : LED_OFF);
@@ -341,7 +348,7 @@ export function useApc40LedFeedback() {
           sendLed(out, column, TRACK_SELECT_NOTE, LED_OFF);
           sendLed(out, column, TRACK_STOP_NOTE, LED_OFF);
         }
-        sendLed(out, MASTER_CHANNEL, TRACK_SELECT_NOTE, LED_OFF);
+        sendMasterLed(out, LED_OFF);
         sendLed(out, 0, STOP_ALL_CLIPS_NOTE, LED_OFF);
         sendLed(out, 0, SHIFT_NOTE, LED_OFF);
         sendLed(out, 0, REC_NOTE, LED_OFF);

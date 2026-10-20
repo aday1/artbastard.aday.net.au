@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { isClientSceneTransitionActive } from '../utils/sceneTransitionGuard';
 import { useStore, type Apc40LastChange } from '../store';
 import { decodeApc40Message, isApc40Source } from '../midi/apc40';
+import { createApc40InputGate } from '../midi/apc40InputGate';
 import {
   apc40DeckSceneName,
   APC40_TRACK_CONTROL_ROLES,
@@ -41,9 +42,8 @@ function nextInCycle<T extends string>(values: readonly T[], current: T): T {
 }
 
 const TRACK_SELECT_ENCODER_SUPPRESSION_MS = 250;
-const APC40_NOTE_RELEASE_WINDOW_MS = 350;
+const LEGACY_MK2_RELEASE_WINDOW_MS = 350;
 const APC40_FREEZE_TOGGLE_DEBOUNCE_MS = 450;
-const APC40_MASTER_CC_BURST_WINDOW_MS = 180;
 
 function sortedColumns(columns: Set<number>): number[] {
   return Array.from(columns).sort((a, b) => a - b);
@@ -132,8 +132,8 @@ export function useApc40Workflow() {
   const lastSignature = useRef('');
   const lastSignatureAtRef = useRef(0);
   const lastFreezeToggleAtRef = useRef(0);
-  const masterCcBurstRef = useRef<Map<number, { value: number; at: number }>>(new Map());
-  const recentPositiveNoteRef = useRef<Map<string, number>>(new Map());
+  const heldLatchButtonsRef = useRef<Set<string>>(new Set());
+  const mk2PositiveNotesRef = useRef<Map<string, number>>(new Map());
   const handleApc40MessageRef = useRef<(message: any) => void>(() => {});
   const shiftHeldRef = useRef(false);
   const sceneRefs = useRef<Record<Apc40Deck, string | null>>({ A: null, B: null });
@@ -206,8 +206,8 @@ export function useApc40Workflow() {
     });
   };
 
-  const toggleMasterFreeze = (state: StoreState, now: number) => {
-    if (now - lastFreezeToggleAtRef.current <= APC40_FREEZE_TOGGLE_DEBOUNCE_MS) {
+  const toggleMasterFreeze = (state: StoreState, now: number, legacyDebounce = false) => {
+    if (legacyDebounce && now - lastFreezeToggleAtRef.current <= APC40_FREEZE_TOGGLE_DEBOUNCE_MS) {
       publishSurfaceState();
       return true;
     }
@@ -230,40 +230,6 @@ export function useApc40Workflow() {
       priority: nextFrozen ? 'high' : 'normal',
     });
     return true;
-  };
-
-  const consumeMasterCcBurst = (message: any, now: number): boolean => {
-    const type = message.type || message._type;
-    const channel = typeof message.channel === 'number' ? message.channel : 0;
-    if (type !== 'cc' && type !== 'controlchange') return false;
-    if (channel !== 8 || typeof message.controller !== 'number') return false;
-    if (message.controller < 0x12 || message.controller > 0x17) return false;
-
-    const value = message.value ?? message.velocity ?? 0;
-    masterCcBurstRef.current.set(message.controller, { value, at: now });
-    for (const [controller, entry] of masterCcBurstRef.current.entries()) {
-      if (now - entry.at > APC40_MASTER_CC_BURST_WINDOW_MS) {
-        masterCcBurstRef.current.delete(controller);
-      }
-    }
-
-    // Observed APC40 MK1 Master Select burst:
-    // Ch 9 CC18=0, CC19=0, CC20=4, CC21=0, CC22=1, CC23=0.
-    // Device Control knob 5 can also emit CC20, so CC20 alone must never toggle.
-    if (message.controller !== 0x16 || value <= 0) return false;
-    const hasRecent = (controller: number, expectedValue: number) => {
-      const entry = masterCcBurstRef.current.get(controller);
-      return Boolean(entry && entry.value === expectedValue && now - entry.at <= APC40_MASTER_CC_BURST_WINDOW_MS);
-    };
-    const matchesMasterBurst =
-      hasRecent(0x12, 0) &&
-      hasRecent(0x13, 0) &&
-      hasRecent(0x14, 4) &&
-      hasRecent(0x15, 0);
-    if (!matchesMasterBurst) return false;
-
-    masterCcBurstRef.current.clear();
-    return toggleMasterFreeze(useStore.getState(), now);
   };
 
   const setDeckScene = (deck: Apc40Deck, slotIndex: number | null, sceneName: string | null) => {
@@ -344,12 +310,17 @@ export function useApc40Workflow() {
   }, [fixturesForRoles, selectedForRoles]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    const inputGate = createApc40InputGate((message) => handleApc40MessageRef.current(message));
     const listener = (event: Event) => {
       const message = (event as CustomEvent).detail;
-      handleApc40MessageRef.current(message);
+      if (message) inputGate.push(message);
     };
     window.addEventListener('midiMessage', listener);
-    return () => window.removeEventListener('midiMessage', listener);
+    return () => {
+      window.removeEventListener('midiMessage', listener);
+      inputGate.dispose();
+      heldLatchButtonsRef.current.clear();
+    };
   }, []);
 
   handleApc40MessageRef.current = (latestMessage: any) => {
@@ -361,28 +332,28 @@ export function useApc40Workflow() {
     const channel = typeof message.channel === 'number' ? message.channel : 0;
     const velocity = message.velocity ?? message.value ?? 0;
     const now = typeof message.timestamp === 'number' ? message.timestamp : Date.now();
+    let action = decodeApc40Message(message);
+    if (!action) return;
 
     const noteOffLike = note !== undefined && (
       type === 'noteoff' ||
       (type === 'noteon' && velocity === 0)
     );
 
-    if (type === 'noteon' && note !== undefined && velocity > 0) {
-      const noteKey = `${message.source || ''}:${channel}:${note}`;
-      recentPositiveNoteRef.current.set(noteKey, now);
-    } else if (noteOffLike && note !== 0x62) {
-      const noteKey = `${message.source || ''}:${channel}:${note}`;
-      const previousPositiveAt = recentPositiveNoteRef.current.get(noteKey);
-      const isImmediateRelease =
-        previousPositiveAt !== undefined &&
-        now >= previousPositiveAt &&
-        now - previousPositiveAt <= APC40_NOTE_RELEASE_WINDOW_MS;
-
-      if (isImmediateRelease) return;
-
-      // Some APC40 modes emit separate physical button presses as
-      // NOTE ON velocity 127 and later NOTE ON velocity 0. Let delayed
-      // velocity-0 / note-off events through as explicit OFF state.
+    const noteKey = `${message.source || ''}:${channel}:${note}`;
+    if (action.model === 'apc40-mk1' && noteOffLike) {
+      heldLatchButtonsRef.current.delete(noteKey);
+      // Mode 2 buttons are momentary. Hold duration never changes latch state.
+      // SHIFT retains its physical press/release semantics.
+      if (note !== 0x62) return;
+    } else if (action.model === 'apc40-mk2') {
+      // This fix introduces MK1 Mode 2 only. Preserve existing MK2 semantics.
+      if (type === 'noteon' && note !== undefined && velocity > 0) {
+        mk2PositiveNotesRef.current.set(noteKey, now);
+      } else if (noteOffLike && note !== 0x62) {
+        const previous = mk2PositiveNotesRef.current.get(noteKey);
+        if (previous !== undefined && now >= previous && now - previous <= LEGACY_MK2_RELEASE_WINDOW_MS) return;
+      }
     }
 
     const signature = JSON.stringify(message);
@@ -390,13 +361,52 @@ export function useApc40Workflow() {
     lastSignature.current = signature;
     lastSignatureAtRef.current = now;
 
-    if (consumeMasterCcBurst(message, now)) return;
-
-    const action = decodeApc40Message(message);
-    if (!action) return;
-
     const state = useStore.getState();
     const deck: Apc40Deck = shiftHeldRef.current ? 'B' : 'A';
+
+    if (action.model === 'apc40-mk1' && type === 'noteon' && velocity > 0
+      && note !== undefined && action.type !== 'shift'
+      && ('pressed' in action || action.type === 'toggle-freeze-dmx')) {
+      if (heldLatchButtonsRef.current.has(noteKey)) return;
+      heldLatchButtonsRef.current.add(noteKey);
+      // Convert a physical press into the desired software latch state.
+      // Releases were handled above; the footswitch is a CC and stays momentary.
+      switch (action.type) {
+        case 'select-fixture':
+          action = { ...action, pressed: !state.selectedFixtures.includes(state.fixtures[action.trackIndex]?.id) };
+          break;
+        case 'select-group': {
+          const ids = state.groups[action.trackIndex]?.fixtureIndices
+            .map((index) => state.fixtures[index]?.id).filter(Boolean) || [];
+          action = { ...action, pressed: !(ids.length > 0 && ids.every((id) => state.selectedFixtures.includes(id))) };
+          break;
+        }
+        case 'solo-group':
+          action = { ...action, pressed: !soloedGroupsRef.current.has(action.trackIndex) };
+          break;
+        case 'full-on':
+          action = { ...action, pressed: fullOnSnapshotRef.current === null };
+          break;
+        case 'blackout':
+          action = { ...action, pressed: blackoutSnapshotRef.current === null };
+          break;
+        case 'freeze-dmx':
+          action = { ...action, pressed: !state.dmxFrozen };
+          break;
+        case 'select-all':
+          action = { ...action, pressed: !state.fixtures.every((fixture) => state.selectedFixtures.includes(fixture.id)) };
+          break;
+        case 'toggle-color-auto':
+          action = { ...action, pressed: shiftHeldRef.current || !state.modularAutomation.color.enabled };
+          break;
+        case 'toggle-pan-tilt-auto':
+          action = { ...action, pressed: shiftHeldRef.current || !state.modularAutomation.panTilt.enabled };
+          break;
+        case 'toggle-effect-auto':
+          action = { ...action, pressed: shiftHeldRef.current || !state.modularAutomation.effects.enabled };
+          break;
+      }
+    }
 
     if (action.type === 'shift') {
       shiftHeldRef.current = action.pressed;
@@ -1016,7 +1026,7 @@ export function useApc40Workflow() {
     }
 
     if (action.type === 'select-fixture') {
-      // Solo/Cue row (note 0x31): ON selects fixture, OFF removes it.
+      // Solo/Cue presses toggle selection; release never removes the fixture.
       suppressTrackControlUntilRef.current = Date.now() + TRACK_SELECT_ENCODER_SUPPRESSION_MS;
       const fixture = state.fixtures[action.trackIndex];
       if (fixture) {
@@ -1040,7 +1050,7 @@ export function useApc40Workflow() {
             action.pressed
               ? `Added fixture "${fixture.name}" to selection (${nextSelection.length} now selected)`
               : `Deselected fixture "${fixture.name}" (${nextSelection.length} now selected)`,
-            'Solo/Cue row ON selects individual fixtures; OFF removes them from the live selection.',
+            'Press Solo/Cue to add or remove a fixture. Selection persists after release.',
             { fixtureNames: [fixture.name] }
           ),
         });
@@ -1066,7 +1076,7 @@ export function useApc40Workflow() {
     }
 
     if (action.type === 'select-group') {
-      // Activator row (note 0x32): ON adds the group, OFF removes it.
+      // Activator presses toggle membership of the entire group.
       suppressTrackControlUntilRef.current = Date.now() + TRACK_SELECT_ENCODER_SUPPRESSION_MS;
       activeGroupIndexRef.current = action.trackIndex;
       const group = state.groups[action.trackIndex];
@@ -1216,7 +1226,7 @@ export function useApc40Workflow() {
       state.addNotification({
         message: action.type === 'foot-freeze-dmx'
           ? (action.pressed ? 'APC40 footswitch freeze — release pedal to resume DMX' : 'APC40 footswitch released — DMX resumed')
-          : (action.pressed ? 'APC40 DMX output FROZEN — press Detail View OFF to release' : 'APC40 DMX output released'),
+          : (action.pressed ? 'APC40 DMX output FROZEN — press Detail View again to release' : 'APC40 DMX output released'),
         type: action.pressed ? 'warning' : 'info',
         priority: action.pressed ? 'high' : 'normal',
       });
@@ -1224,7 +1234,7 @@ export function useApc40Workflow() {
     }
 
     if (action.type === 'toggle-freeze-dmx') {
-      toggleMasterFreeze(state, now);
+      toggleMasterFreeze(state, now, action.model === 'apc40-mk2');
       return;
     }
 
@@ -1380,7 +1390,7 @@ export function useApc40Workflow() {
           action.pressed
             ? `Selected all fixtures (${nextState.selectedFixtures.length})`
             : 'Deselected all fixtures',
-          'PAN ON selects all fixtures; PAN OFF clears fixture selection.',
+          'Press PAN to select all fixtures; press again to clear selection.',
           { fixtureNames: selectedFixtureNames(nextState) }
         ),
         ...apcTargetPatch(null, null, [...nextState.selectedFixtures], `All fixtures (${nextState.selectedFixtures.length})`),
