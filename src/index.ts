@@ -12,6 +12,7 @@ import ping from 'ping';
 import { loadFixturesData, saveFixturesData } from './fixturesPersistence';
 import { recordArtNetPingSample, getArtNetPingHistory, getLastArtNetPing } from './artnetMonitor';
 import { MidiHotplugMonitor, forgetMidiInputIdentity } from './midiHotplug';
+import { MidiAlsaSubscriptions } from './midiAlsaSubscriptions';
 import { ArtNetOutput } from './artnetOutput';
 
 // Import our separate logger to avoid circular dependencies
@@ -312,6 +313,21 @@ export function setChannelRange(channel: number, min: number, max: number): bool
 
 // Store active MIDI inputs
 let activeMidiInputs: { [name: string]: Input } = {};
+const midiAlsaSubscriptions = new MidiAlsaSubscriptions({
+    platform: process.platform,
+    pid: process.pid,
+    reportUnavailable: (message) => log(message, 'WARN'),
+});
+
+function midiConnectionIsOpen(inputName: string): boolean {
+    try {
+        if (!activeMidiInputs[inputName]?.isPortOpen()) return false;
+        const subscriptions = midiAlsaSubscriptions.status(inputName);
+        return subscriptions.input !== false && subscriptions.output !== false;
+    } catch {
+        return false;
+    }
+}
 let midiHotplugMonitor: MidiHotplugMonitor | null = null;
 let midiHotplugTimer: NodeJS.Timeout | null = null;
 
@@ -475,11 +491,7 @@ async function connectMidiInput(io: Server, inputName: string, isBrowserMidi = f
         // Verify hardware presence before reporting an existing connection.
         const availableInputs = easymidi.getInputs();
         if (activeMidiInputs[inputName]) {
-            let isOpen = false;
-            try {
-                isOpen = activeMidiInputs[inputName].isPortOpen();
-            } catch {}
-            if (availableInputs.includes(inputName) && isOpen) {
+            if (availableInputs.includes(inputName) && midiConnectionIsOpen(inputName)) {
                 if (!isAutomatic) midiHotplugMonitor?.rememberConnection(inputName);
                 log(`Already connected to MIDI input: ${inputName}`, 'MIDI');
                 return true;
@@ -494,7 +506,9 @@ async function connectMidiInput(io: Server, inputName: string, isBrowserMidi = f
         // On Windows, this can fail silently or throw an error
         let newInput: Input;
         try {
+            const ownershipBefore = midiAlsaSubscriptions.captureOwnership();
             newInput = new easymidi.Input(inputName);
+            midiAlsaSubscriptions.remember(inputName, 'input', inputName, ownershipBefore);
             log(`Successfully created MIDI input object for ${inputName}`, 'MIDI');
         } catch (createError: any) {
             const createErrorMsg = createError?.message || String(createError);
@@ -590,7 +604,9 @@ async function connectMidiInput(io: Server, inputName: string, isBrowserMidi = f
                     activeMidiOutputs[inputName].close();
                     delete activeMidiOutputs[inputName];
                 }
+                const ownershipBefore = midiAlsaSubscriptions.captureOwnership();
                 activeMidiOutputs[inputName] = new easymidi.Output(outputName);
+                midiAlsaSubscriptions.remember(inputName, 'output', outputName, ownershipBefore);
                 log(`MIDI output connected: ${outputName}`, 'MIDI');
             } catch (error) {
                 log('Failed to connect paired MIDI output', 'WARN', { inputName, outputName, error });
@@ -670,6 +686,7 @@ async function connectMidiInput(io: Server, inputName: string, isBrowserMidi = f
 
 function disconnectMidiInput(io: Server, inputName: string, preserveReconnectIntent = false) {
     if (!preserveReconnectIntent) midiHotplugMonitor?.suppressConnection(inputName);
+    midiAlsaSubscriptions.forget(inputName);
     const input = activeMidiInputs[inputName];
     const output = activeMidiOutputs[inputName];
     const wasDefaultInput = midiInput === input;
@@ -1234,7 +1251,7 @@ export function getActiveMidiInputNames(): string[] {
     try {
         const available = new Set(easymidi.getInputs());
         return Object.keys(activeMidiInputs).filter((name) =>
-            available.has(name) && activeMidiInputs[name].isPortOpen()
+            available.has(name) && midiConnectionIsOpen(name)
         );
     } catch {
         return [];
@@ -2139,7 +2156,7 @@ async function startLaserTime(io: Server) {
         platform: process.platform,
         listInputs: () => isRunningInWsl() ? [] : easymidi.getInputs(),
         activeInputs: () => Object.keys(activeMidiInputs),
-        isInputOpen: (name) => Boolean(activeMidiInputs[name]?.isPortOpen()),
+        isInputOpen: midiConnectionIsOpen,
         configuredInputs: () => {
             const config = fs.existsSync(CONFIG_FILE)
                 ? JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8')) : {};

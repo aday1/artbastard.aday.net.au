@@ -59,6 +59,8 @@ async function main() {
     }));
     const portsPath = path.join(scratch, 'fake-ports.json');
     const eventsPath = path.join(scratch, 'fake-events.jsonl');
+    const linksPath = path.join(scratch, 'fake-links.json');
+    await fs.writeFile(linksPath, JSON.stringify({ input: true, output: true }));
     const setPorts = async (ports) => {
       await fs.writeFile(portsPath + '.tmp', JSON.stringify(ports));
       await fs.rename(portsPath + '.tmp', portsPath);
@@ -85,14 +87,60 @@ dgram.createSocket = function(...args) {
   return socket;
 };
 const inputs = new Map();
+const outputs = new Map();
+let nextClient = 128;
 const available = () => JSON.parse(fs.readFileSync(${JSON.stringify(portsPath)}, 'utf8'));
 const record = (event) => fs.appendFileSync(${JSON.stringify(eventsPath)}, JSON.stringify(event) + '\\n');
+const links = () => JSON.parse(fs.readFileSync(${JSON.stringify(linksPath)}, 'utf8'));
+const restoreLink = (kind) => fs.writeFileSync(${JSON.stringify(linksPath)}, JSON.stringify({ ...links(), [kind]: true }));
+function alsaListing(format) {
+  const devicePorts = available().map((name) => {
+    const match = /^(.*?):(.*) (\\d+):(\\d+)$/.exec(name);
+    return { name, address: match[3] + ':' + match[4], clientName: match[1], portName: match[2], to: [], from: [] };
+  });
+  const ports = [...devicePorts];
+  for (const [kind, handles] of [['input', inputs], ['output', outputs]]) {
+    for (const handle of handles.values()) {
+      const device = devicePorts.find((port) => port.name === handle.name);
+      const linked = device && links()[kind];
+      const own = { address: handle.alsaClient + ':0', pid: process.pid,
+        clientName: 'RtMidi ' + (kind === 'input' ? 'Input' : 'Output') + ' Client',
+        portName: 'RtMidi ' + (kind === 'input' ? 'Input' : 'Output'), to: [], from: [] };
+      if (linked && kind === 'input') { own.from.push(device.address); device.to.push(own.address); }
+      if (linked && kind === 'output') { own.to.push(device.address); device.from.push(own.address); }
+      ports.push(own);
+    }
+  }
+  return ports.map((port) => {
+    const [client, number] = port.address.split(':');
+    const header = format === 'aconnect'
+      ? "client " + client + ": '" + port.clientName + "' [" + (port.pid ? 'type=user,pid=' + port.pid : 'type=kernel,card=3') + "]\\n    " + number + " '" + port.portName + "'\\n"
+      : 'Client ' + client + ' : "' + port.clientName + '" [User Legacy]\\n  Port ' + number + ' : "' + port.portName + '" (RWeX) [In/Out]\\n';
+    return header + '    Connecting To: ' + port.to.join(', ') + '\\n    Connected From: ' + port.from.join(', ') + '\\n';
+  }).join('');
+}
+const originalReadFile = fs.readFileSync;
+fs.readFileSync = function(filename, ...args) {
+  if (filename === '/proc/asound/seq/clients') return alsaListing('proc');
+  return originalReadFile.call(this, filename, ...args);
+};
+const childProcess = require('node:child_process');
+const originalExecFileSync = childProcess.execFileSync;
+childProcess.execFileSync = function(filename, args, ...rest) {
+  if (filename === 'aconnect') {
+    if (args.join(' ') !== '-l') throw new Error('Unexpected ALSA command');
+    record({ type: 'alsa-owner-snapshot' });
+    return alsaListing('aconnect');
+  }
+  return originalExecFileSync.call(this, filename, args, ...rest);
+};
 class Input extends EventEmitter {
   constructor(name) {
     super();
     if (!available().includes(name)) throw new Error('Fake port not present');
-    this.name = name; this.open = true;
+    this.name = name; this.open = true; this.alsaClient = nextClient++;
     inputs.set(name, this); record({ type: 'open-input', name });
+    restoreLink('input');
   }
   isPortOpen() { return this.open; } // Intentionally stays true across USB removal.
   close() {
@@ -104,10 +152,13 @@ class Input extends EventEmitter {
 class Output {
   constructor(name) {
     if (!available().includes(name)) throw new Error('Fake output not present');
-    this.name = name; record({ type: 'open-output', name });
+    this.name = name; this.alsaClient = nextClient++;
+    outputs.set(name, this); record({ type: 'open-output', name });
+    restoreLink('output');
   }
   send() {}
   close() {
+    outputs.delete(this.name);
     record({ type: 'close-output', name: this.name });
     if (!available().includes(this.name)) throw new Error('Simulated stale native output close failure');
   }
@@ -168,6 +219,23 @@ Module._load = function(request, parent, isMain) {
       message.source === NEW && message.controller === 7 && message.value === 43
     ), 'MIDI event forwarding from the reopened input');
 
+    for (const direction of ['input', 'output']) {
+      const opensBefore = (await events()).filter((event) => event.type === 'open-input' && event.name === NEW).length;
+      await fs.writeFile(linksPath, JSON.stringify({ input: true, output: true, [direction]: false }));
+      assert.equal((await request('/api/health')).midiDevicesConnected, 0, `${direction} subscription loss invalidates health despite native open flag`);
+      await waitFor(async () => {
+        const opened = (await events()).filter((event) => event.type === 'open-input' && event.name === NEW).length;
+        return opened === opensBefore + 1 && (await request('/api/health')).midiDevicesConnected === 1;
+      }, `same-address ${direction} subscription recovery`);
+    }
+    const healthyEvents = await events();
+    const opensAfterRecovery = healthyEvents.filter((event) => event.type === 'open-input' && event.name === NEW).length;
+    const snapshotsAfterRecovery = healthyEvents.filter((event) => event.type === 'alsa-owner-snapshot').length;
+    await sleep(2300);
+    for (let i = 0; i < 5; i++) assert.equal((await request('/api/health')).midiDevicesConnected, 1);
+    assert.equal((await events()).filter((event) => event.type === 'open-input' && event.name === NEW).length, opensAfterRecovery);
+    assert.equal((await events()).filter((event) => event.type === 'alsa-owner-snapshot').length, snapshotsAfterRecovery, 'health and healthy polling must not spawn aconnect');
+
     await request('/api/midi/server/disconnect', 'POST', { inputName: NEW, forget: true });
     assert.deepEqual(JSON.parse(await fs.readFile(configPath, 'utf8')).autoConnectMidiDevices, []);
     await setPorts([]);
@@ -176,9 +244,9 @@ Module._load = function(request, parent, isMain) {
     await sleep(2200);
     assert.deepEqual((await request('/api/midi/active')).inputs, [], 'manual Forget must not auto-reopen');
     assert.equal((await request('/api/health')).midiDevicesConnected, 0);
-    assert.equal((await events()).filter((event) => event.type === 'open-input' && event.name === NEW).length, 1);
+    assert.equal((await events()).filter((event) => event.type === 'open-input' && event.name === NEW).length, opensAfterRecovery);
     assert.ok((await request('/api/state')).dmxChannels.every((value) => value === 0));
-    console.log('PASS: fake MIDI unplug health, stale input/output cleanup, ALSA rename recovery, message forwarding, and persistent Forget; DMX stays zero.');
+    console.log('PASS: fake MIDI unplug, ALSA rename and same-address input/output subscription recovery, healthy retention, message forwarding, and persistent Forget; DMX stays zero.');
   } catch (error) {
     console.error(output);
     throw error;
