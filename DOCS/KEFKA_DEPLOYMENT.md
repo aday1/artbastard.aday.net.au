@@ -97,7 +97,7 @@ starting one.
 
 The local **Full console** / **Deck Controls** links switch between these
 windows without unloading the console's APC40 workflow state. The console's
-different app URL gives it a different window class, so it keeps ordinary
+explicit `artbastard-console` window class keeps ordinary
 `deckhypr` desktop buttons. Of the two ArtBastard windows, only the exact Deck
 control app class enters GAME mode. The read-only, loopback input helper starts
 with the Deck window and permits native controls only while the live mapper is
@@ -123,6 +123,9 @@ node scripts/dmx-osc-integration-smoke.js
 ARTBASTARD_TEST_SOURCE_PORT=0 node scripts/artnet-output.test.js
 node scripts/midi-hotplug.test.js
 node scripts/midi-hotplug-integration-smoke.js
+node --test scripts/midi-alsa-subscriptions.test.js scripts/fixture-shutdown.test.js
+npm run test:midi-lifecycle
+npm run test:midi-native-lifecycle
 node scripts/kefka/test-controller.mjs
 python3 scripts/kefka/test-input.py
 node scripts/kefka/test-surface.mjs
@@ -155,7 +158,9 @@ packet capture confirmed the same zeroed 512-channel ArtDMX on
 ## APC40
 
 The APC40 was initially detected as `Akai APC40:Akai APC40 MIDI 1 24:0`.
-It is currently absent after the hub wiring changes. Use `/api/midi/active`
+After the hub wiring changes it returned as
+`Akai APC40:Akai APC40 MIDI 1 28:0` (USB `09e8:0073`).
+Use `/api/midi/active`
 to check inputs that are both enumerated and open, rather than retained handles.
 The backend checks for hardware changes every two seconds, removes stale input
 and output handles, and reconnects saved or previously connected inputs.
@@ -181,18 +186,20 @@ APC40 MIDI. Separate window launchers preserve a running console; they do not
 add operator-owner election. Fixture selection is not automatically restored
 after closing or relaunching the console. A hidden console can also activate the
 existing APC40 screensaver, so this setup is not an unattended headless APC40
-driver. Physical controller operation and light response have not yet been
-verified.
+driver. Real APC40 input and native Deck blackout have been verified; mapped
+APC40 fader control and visible MiniBeam output remain unverified.
 
 The user subsequently identified the connected fixture as the MiniBeam at
 DMX address 1. Its existing documented 18-channel profile was patched as
 `fixture-kefka-minibeam-1` / `MINIBEAM 1` on channels 1–18. Readback confirmed
 the fixture metadata and unchanged all-zero output. The 18-channel mode is
 inferred from the project's user-supplied manual and remains to be checked
-against the fixture display. Physical button and light response are pending.
+against the fixture display. The user confirmed the DMX cable uses DOREMiDi
+OUT 1. Native Deck blackout is confirmed below; visible light remains pending.
 
 The local surface-launch routes were exercised on Kefka: the dedicated console
-class is `chrome-127.0.0.1__kefka-console-Default`. Native input health changed
+initially used the Wayland class `chrome-127.0.0.1__kefka-console-Default`.
+Native input health changed
 from allowed in the focused Deck window to denied in the console and back.
 After installing persistent Flatpak profiles and instance tracking, a real
 Deck-service restart removed the previous instance and left exactly one Deck
@@ -212,11 +219,15 @@ Live snapshots from Kefka's LifeCam and the existing private R1/Reolink
 preview were obtained in RAM. The LifeCam shows the projection screen and
 stage; its current framing does not resolve the MiniBeam menu text.
 
-A brief MiniBeam test set shutter channel 2 to 104 and dimmer channel 3 to 16,
-then restored the previous all-zero values in a `finally` block. API readback
-confirmed both the test values and restoration. The camera angle did not show
-a verifiable light response, so this does not establish physical DMX operation.
-No pan, tilt, reset or lamp-control values were sent.
+A two-second MiniBeam test set shutter channel 2 to 104 and dimmer channel 3
+to 16, then restored the previous all-zero values in a `finally` block. Passive
+packet capture verified three matching test frames from source UDP 6454 to
+`192.168.1.199:6454`, universe 0, with all other channels zero, followed by a
+zeroed frame. The measured interval was 2.004 seconds. API readback confirmed
+restoration, but the user reported **no light**. This proves transmission to
+the gateway, not physical fixture receipt or lamp operation. No pan, tilt,
+reset or lamp-control values were sent. The manual's channel 16 lamp-on command
+is separate from shutter/dimmer and has not yet been tested.
 
 The MIDI reconnect change was built and tested on Kefka: all 12 unit cases,
 the isolated fake-hardware integration and DMX/OSC integration passed. The
@@ -224,7 +235,62 @@ fake-hardware test covers unplugged health, throwing stale-handle cleanup,
 ALSA rename recovery, incoming MIDI forwarding and persistent Forget.
 After restarting the live server, health was `ok`, the absent APC40 correctly
 reported zero connected inputs, Art-Net was alive, and all 512 DMX values were
-zero. A real APC40 unplug/replug and physical fader test remain unverified.
+zero. Later physical reconnections and real CC input were observed, as recorded
+below; a mapped physical fader test remains unverified.
+
+Live checks subsequently found EasyMIDI retaining native ALSA clients after
+enumeration. `closePort()` disconnects the port; `destroy()` releases the
+client. Frequent scans had exhausted all available user clients. The tracked
+`scripts/patch-easymidi-lifecycle.js` fixes enumeration, failed construction,
+close and closed-status handling in the locked dependency. `npm ci`/`npm install`
+run it through `postinstall`, and the Kefka server installer also invokes it.
+It validates EasyMIDI 3.2.0, native MIDI 3.6.1 and source hashes; dependency
+upgrades require reviewing the patch rather than silently applying it.
+
+All 12 lifecycle regressions passed. A real 4,000-enumeration stress on Kefka
+retained zero sequencer descriptors without forcing garbage collection.
+Following the user's APC40 reconnection, the live backend retained exactly
+two descriptors for its input/output pair; global client counts remained
+stable. Real CC21 input was recorded. Two rapid USB resets reused ALSA `28:0`
+and left open-but-unsubscribed handles; an explicit disconnect/connect restored
+`28:0 → 128:0` and `129:0 → 28:0` without changing any DMX values.
+
+The follow-up Linux recovery check tracks the exact backend-owned ALSA ports
+and both subscriptions. Ownership is resolved around connection creation using
+bounded `aconnect -l` reads; normal monitoring reads `/proc/asound/seq/clients`.
+Loss of either subscription triggers the existing reconnect path even if the
+hardware name and client number were reused. Unsupported or ambiguous ownership
+falls back to the native status check with a warning. Eleven subscription unit
+cases and the extended isolated integration passed before deployment.
+Live acceptance then removed each exact subscription separately. Input loss
+recovered automatically in 819 ms; output loss recovered in 1,948 ms. Each loss
+reported zero connected inputs until its single reconnect completed. Six
+subsequent healthy seconds showed no extra reconnects and exactly two retained
+sequencer descriptors. All 512 DMX values and catalogue hashes stayed unchanged;
+final health was OK with one MIDI input, Art-Net alive and OSC bound on 8000.
+The probe sent no MIDI messages or DMX writes.
+
+Server shutdown also overwrote the fixture catalogue using an unhydrated legacy
+cache. Fixture/group API writes already persist immediately, so shutdown now
+leaves that authoritative store intact. Three regression cases cover cold
+restarts, edits/deletions and intentional empty catalogues. Deployment backed up
+the catalogue before stopping the old process, restored it after that old
+shutdown, and verified the new process twice, including a second restart.
+Both fixture JSON and metadata hashes remained identical, the MiniBeam remained
+patched at 1–18, and all 512 DMX channels remained zero. The migration backup
+is `/tmp/artbastard-catalog-upgrade-1792491120378863789` on Kefka.
+
+After HDMI attachment, focusing Chrome's Wayland Deck window caused SIGTRAP
+with `Custom primaries aren't supported`. The two Artbastard browser units now
+use the same XWayland approach as NYX, with exact classes `artbastard-deck` and
+`artbastard-console`. The input gate, launcher lookup and Deck-only game rule
+were migrated together; unrelated game classes were preserved. Eight input
+checks, four lifecycle checks and service/shell validation passed.
+The user then physically pressed X: the native reader observed the press and
+release, and the real Deck page displayed
+`Blackout sent — all 512 channels set to zero. Controls disarmed.`
+API readback remained zero. This confirms the physical native blackout path;
+the confirmation appears below the channel panel at the bottom left.
 
 ## Art-Net source port
 
