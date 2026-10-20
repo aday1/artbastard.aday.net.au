@@ -3619,17 +3619,14 @@ export const useStore = create<State>()(
       },
 
       reportOscActivity: (channelIndex, value) => {
-        // Store OSC activity
+        // The backend applies OSC and publishes the resulting DMX value through
+        // dmxUpdate. Activity is display-only, so each browser cannot resend it.
         set(state => ({
           oscActivity: {
             ...state.oscActivity,
             [channelIndex]: { value, timestamp: Date.now() }
           }
         }));
-
-        // Convert normalized value (0.0-1.0) to DMX value (0-255) and update DMX channel
-        const dmxValue = Math.round(value * 255);
-        get().setDmxChannel(channelIndex, dmxValue);
       },
 
       addOscMessage: (message) => { // Implemented addOscMessage

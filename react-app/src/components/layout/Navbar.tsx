@@ -172,6 +172,15 @@ export const Navbar: React.FC<NavbarProps> = ({ variant = 'sidebar', onItemSelec
         </ul>
 
         <div className={styles.drawerNavSection}>
+          <a href="/deck-control.html" className={styles.drawerNavItem}>
+            <span className={styles.drawerNavIcon} aria-hidden="true">
+              <LucideIcon name="Gamepad2" size={20} />
+            </span>
+            <span className={styles.drawerNavText}>
+              <span className={styles.drawerNavTitle}>Deck Controls</span>
+              <span className={styles.drawerNavDesc}>Controller channels, scenes and blackout.</span>
+            </span>
+          </a>
           <button
             type="button"
             onClick={() => {
@@ -296,6 +305,16 @@ export const Navbar: React.FC<NavbarProps> = ({ variant = 'sidebar', onItemSelec
               )}
             </div>
           ))}
+          <div className={styles.navItemContainer}>
+            <a
+              href="/deck-control.html"
+              className={styles.navButton}
+              title="Steam Deck and gamepad controls for channels, scenes and blackout"
+            >
+              <LucideIcon name="Gamepad2" />
+              <span>Deck Controls</span>
+            </a>
+          </div>
         </div>
         
       </div>

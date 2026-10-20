@@ -185,6 +185,7 @@
 
 .navButton {
   @extend .touch-target !optional;
+  text-decoration: none;
   pointer-events: auto;
   display: flex;
   align-items: center;
@@ -806,6 +807,7 @@
 
 .drawerNavItem {
   display: flex;
+  text-decoration: none;
   align-items: center;
   gap: 12px;
   width: 100%;

@@ -758,7 +758,7 @@ function initOsc(io: Server) {
                 source: sourceHost // Add source host for filtering
             });
 
-            // Process for DMX channel activity
+            // Apply assigned channels on the server, even when no UI is connected.
             oscAssignments.forEach((assignedAddress, channelIndex) => {
                 if (oscMsg.address === assignedAddress && oscMsg.args.length > 0) {
                     log(`OSC address match found: ${oscMsg.address} -> DMX channel ${channelIndex + 1}`, 'OSC');
@@ -784,7 +784,9 @@ function initOsc(io: Server) {
                     }
 
                     value = Math.max(0.0, Math.min(1.0, value)); // Clamp to 0.0-1.0
-                    const dmxValue = Math.floor(value * 255);
+                    // Preserve the rounding previously used by the browser's
+                    // reportOscActivity handler for assigned OSC addresses.
+                    const dmxValue = Math.round(value * 255);
 
                     log('OSC address activity', 'OSC', {
                         address: assignedAddress,
@@ -793,6 +795,7 @@ function initOsc(io: Server) {
                         dmxValue,
                         source: sourceHost
                     });
+                    updateDmxChannel(channelIndex, dmxValue, io);
                     io.emit('oscChannelActivity', { channelIndex, value });
                 }
             });

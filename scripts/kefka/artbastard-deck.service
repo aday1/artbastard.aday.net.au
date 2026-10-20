@@ -1,0 +1,12 @@
+[Unit]
+Description=ArtBastard Deck control surface
+PartOf=graphical-session.target
+After=graphical-session.target artbastard.service artbastard-input.service
+Wants=artbastard.service artbastard-input.service
+
+[Service]
+Type=simple
+ExecCondition=/usr/bin/pgrep -u %U -x Hyprland
+ExecStart=/usr/bin/flatpak run --filesystem=/run/udev:ro com.google.Chrome --app=http://127.0.0.1:3030/deck-control.html --start-fullscreen --ozone-platform=wayland --class=artbastard-deck --user-data-dir=%h/.local/share/artbastard-browser --no-first-run --noerrdialogs --disable-session-crashed-bubble --disable-features=TranslateUI
+Restart=no
+Environment=GDK_BACKEND=wayland

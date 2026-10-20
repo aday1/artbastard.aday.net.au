@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#101118">
+  <title>ArtBastard · Deck Controls</title>
+  <link rel="stylesheet" href="/deck-control.css">
+</head>
+<body>
+  <header>
+    <a href="/" class="brand">ARTBASTARD <span>DECK CONTROLS</span></a>
+    <div id="network" role="status">Connecting to server…</div>
+    <a href="/">Full console ↗</a>
+  </header>
+  <main>
+    <section class="statusbar" aria-label="Controller status">
+      <span id="controller">Touch controls ready · looking for controller</span>
+      <button id="arm" type="button" aria-pressed="false">Y · Arm controls</button>
+      <button id="blackout" class="danger" type="button">X · Blackout</button>
+    </section>
+    <section class="grid">
+      <article class="channel">
+        <div class="eyebrow">DMX CHANNEL <span>← D-PAD →</span></div>
+        <div class="channel-pick">
+          <button id="previous" type="button" aria-label="Previous channel">−</button>
+          <label><span class="sr-only">Channel number</span><input id="channel" type="number" min="1" max="512" value="1" inputmode="numeric"></label>
+          <button id="next" type="button" aria-label="Next channel">+</button>
+        </div>
+        <div id="channel-name">Channel 1</div>
+        <div class="value-line"><output id="value">0</output><span>/ 255</span><span id="percent">0%</span></div>
+        <div class="meter" aria-hidden="true"><div id="meter"></div></div>
+        <div class="adjust">
+          <button data-adjust="-10" type="button">−10</button>
+          <button data-adjust="-1" type="button">−1</button>
+          <button data-adjust="1" type="button">+1</button>
+          <button data-adjust="10" type="button">+10</button>
+        </div>
+        <p>Hold <kbd>LT</kbd> + <kbd>↑ / ↓</kbd> to adjust. Add <kbd>RT</kbd> for steps of 10.</p>
+      </article>
+      <article class="scenes">
+        <div class="eyebrow">SAVED SCENES <span>LB / RB</span></div>
+        <div class="scene-pick">
+          <button id="scene-previous" type="button" aria-label="Previous scene">←</button>
+          <select id="scene" aria-label="Saved scene"><option value="0">No saved scenes</option></select>
+          <button id="scene-next" type="button" aria-label="Next scene">→</button>
+        </div>
+        <p id="scene-detail">Create and save scenes in the full console.</p>
+        <button id="recall" type="button">LT + A · Recall selected scene</button>
+        <div class="guide">
+          <p><kbd>Y</kbd> Arm / disarm</p><p><kbd>B</kbd> Disarm</p>
+          <p><kbd>X</kbd> Set all 512 channels to zero, then disarm</p>
+          <p>Controls disarm when this window loses focus, the server disconnects, or the controller changes. Release all buttons before rearming.</p>
+          <p>Blackout is a one-time zero command. Pause effects and other controllers in the full console if they are driving the same channels.</p>
+        </div>
+      </article>
+    </section>
+    <p id="notice" role="status" aria-live="polite">Controls start disarmed. Select a channel, then arm when ready.</p>
+  </main>
+  <script type="module" src="/deck-control.mjs"></script>
+</body>
+</html>

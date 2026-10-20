@@ -169,7 +169,7 @@ apiRouter.get('/health', (req, res) => {
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
     memoryUsage: process.memoryUsage(),
-    midiDevicesConnected: Object.keys(global.activeMidiInputs || {}).length,
+    midiDevicesConnected: getActiveMidiInputNames().length,
     artnetStatus: (global as any).artNetPingStatus || 'unknown',
     artnetLastPing: getLastArtNetPing(),
     artnetPingHistory: getArtNetPingHistory()
@@ -1150,12 +1150,9 @@ apiRouter.delete('/state', (req, res) => {
 // ArtNet configuration
 apiRouter.post('/config/artnet', (req, res) => {
   try {
-    const artNetConfig = req.body;
-
-    // Update ArtNet configuration
-    const config = loadConfig();
-    config.artNetConfig = { ...config.artNetConfig, ...artNetConfig };
-    saveConfig();
+    // Use the shared updater so persistence and the active sender both change.
+    // Mutating the object returned by loadConfig() does not update core state.
+    updateArtNetConfig(req.body, resolveSessionIdFromRequest(req));
 
     res.json({ success: true });
   } catch (error) {
