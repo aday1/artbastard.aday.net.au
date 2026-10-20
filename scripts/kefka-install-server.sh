@@ -43,6 +43,7 @@ Type=simple
 WorkingDirectory=$repo
 Environment=NODE_ENV=production
 Environment=PORT=3030
+Environment=ARTBASTARD_KEFKA=1
 Environment=PATH=$(dirname "$node_bin"):/usr/local/bin:/usr/bin:/bin
 ExecStart=$node_bin $repo/dist/server.js
 Restart=on-failure

@@ -20,7 +20,12 @@ const server = createServer(async (request, response) => {
   try {
     if (request.url.startsWith('/api/')) {
       response.setHeader('Content-Type', 'application/json');
+      if (request.url === '/api/kefka/surfaces' && request.method === 'GET') {
+        response.end('{"enabled":false}');
+        return;
+      }
       if (request.method === 'GET') {
+        assert.equal(request.url, '/api/state', 'Unexpected fake API GET');
         // Capture at request time to reproduce an old state response arriving
         // after a successful POST. Tests explicitly release these responses.
         const snapshot = JSON.stringify({ dmxChannels: channels, scenes: [{ name: 'Test scene', channelValues: [12] }], channelNames: {}, artNetConfig: { ip: 'TEST ONLY' } });
@@ -116,13 +121,16 @@ try {
   await cdp('Emulation.setFocusEmulationEnabled', { enabled: true });
   await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `
     window.EventSource = class { constructor() { window.testNativeStream = this; } };
-    window.testNative = buttons => window.testNativeStream.onmessage({data: JSON.stringify({
-      pad: {connection: 1, buttons: Array.from({length: 16}, (_, i) => buttons.includes(i) ? 1 : 0)}
+    window.testNative = (buttons, overrides = {}) => window.testNativeStream.onmessage({data: JSON.stringify({
+      connected: true, nativeAllowed: true, nativeReason: null,
+      pad: {connection: '1:1', buttons: Array.from({length: 16}, (_, i) => buttons.includes(i) ? 1 : 0)},
+      ...overrides
     })});
     window.testButtons = [3]; // Held Y on connection must never arm.
     window.testPadConnected = true;
+    window.testPadId = 'Isolated test pad';
     Object.defineProperty(navigator, 'getGamepads', { value: () => window.testPadConnected ? [{
-      connected: true, mapping: 'standard', id: 'Isolated test pad', index: 0,
+      connected: true, mapping: 'standard', id: window.testPadId, index: 0,
       buttons: Array.from({length: 16}, (_, i) => ({value: window.testButtons.includes(i) ? 1 : 0}))
     }] : [] });
   ` });
@@ -185,10 +193,39 @@ try {
   await until(`document.getElementById('value').textContent === '2'`, 'Native LT+up did not write');
   await evaluate('window.testNative([])');
   assert.deepEqual(mutations.at(-1), { path: '/api/dmx', data: { channel: 0, value: 2 } });
+  // A focused browser page must not bypass desktop ownership through either
+  // the SSE payload or a browser copy of the built-in Steam Deck gamepad.
+  const beforeDenied = mutations.length;
+  await evaluate(`window.testPadConnected = true; window.testPadId = 'Steam Deck (Vendor: 28de Product: 1205)'`);
+  for (const reason of ['Deck desktop mode', 'Deck mapper is not running', 'Focus the ArtBastard Deck launcher window']) {
+    await evaluate(`window.testNative([3], {nativeAllowed: false, nativeReason: ${JSON.stringify(reason)}}); window.testButtons = [3]`);
+    await wait(80);
+    assert.equal(await evaluate(`document.getElementById('arm').getAttribute('aria-pressed')`), 'false');
+    await evaluate(`window.testNative([6,12], {nativeAllowed: false}); window.testButtons = [6,12]`);
+    await wait(80);
+    assert.equal(mutations.length, beforeDenied, `${reason} must suppress native and built-in Gamepad output`);
+  }
+  await evaluate(`window.testNativeStream.onerror(); window.testButtons = [3]`);
+  await wait(80);
+  assert.equal(await evaluate(`document.getElementById('arm').getAttribute('aria-pressed')`), 'false',
+    'Missing helper must not fall back to built-in browser Gamepad');
+  // A genuine external pad remains usable after native mode is denied.
+  await evaluate(`window.testPadId = 'External USB gamepad'; window.testButtons = []`);
+  await wait(80);
+  await evaluate(`window.testButtons = [3]`);
+  await until(`document.getElementById('arm').getAttribute('aria-pressed') === 'true'`, 'External gamepad was incorrectly blocked');
+  await evaluate(`window.testPadConnected = false; window.testButtons = []; window.testNative([3])`);
+  await wait(80);
+  assert.equal(await evaluate(`document.getElementById('arm').getAttribute('aria-pressed')`), 'false',
+    'Re-entering native mode with held Y must require neutral');
+  assert.equal(mutations.length, beforeDenied, 'Mode handoffs must not write DMX');
   // Regression: a pre-write poll returning late must not leave the channel at
   // zero or enable edits before an authoritative post-write read finishes.
   await evaluate(`window.testNativeStream.onmessage({data:'{"pad":null}'})`);
-  await wait(80);
+  // Source changes are consumed in requestAnimationFrame, which may be delayed
+  // under build/browser load. Await the handoff before attempting touch arming.
+  await until(`document.getElementById('controller').textContent.startsWith('Touch controls') &&
+    !document.getElementById('arm').disabled`, 'Native controller detach was not processed');
   await evaluate(`document.getElementById('next').click(); document.getElementById('arm').click()`);
   await until(`document.getElementById('arm').getAttribute('aria-pressed') === 'true'`, 'Could not arm for delayed-state regression');
   const beforeDelayed = mutations.length;

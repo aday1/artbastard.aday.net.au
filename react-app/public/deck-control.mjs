@@ -4,6 +4,9 @@ const $ = id => document.getElementById(id);
 const engine = new DeckControlEngine();
 let channels = Array(512).fill(0), names = {}, scenes = [], selected = 0, sceneIndex = 0;
 let online = false, lastStateAt = 0, lastBridgeAt = 0, bridge = null;
+let bridgeStatus = null;
+const localDeck = ['127.0.0.1', 'localhost'].includes(location.hostname);
+const isBuiltInDeck = gamepad => /steam.*(deck|controller)|valve|28de/i.test(gamepad.id);
 let refreshing = null;
 let busy = false, pendingWrites = 0, epoch = 0, writes = Promise.resolve(), revision = 0, lastSource = null;
 const focused = () => !document.hidden && document.hasFocus();
@@ -167,16 +170,17 @@ window.addEventListener('keydown', event => {
   if (['F2', 'F4', 'r', 'R', 'l', 'L'].includes(event.key) && !event.ctrlKey && !event.metaKey && !event.altKey &&
       !['INPUT', 'SELECT', 'TEXTAREA'].includes(event.target.tagName)) event.preventDefault();
 });
-if (['127.0.0.1', 'localhost'].includes(location.hostname)) {
+if (localDeck) {
   const stream = new EventSource('http://127.0.0.1:18782/events');
   stream.onmessage = event => {
     try {
       const state = JSON.parse(event.data);
-      bridge = state.pad;
+      bridge = state.nativeAllowed === true ? state.pad : null;
+      bridgeStatus = state;
       lastBridgeAt = performance.now();
-    } catch { bridge = null; }
+    } catch { bridge = null; bridgeStatus = null; }
   };
-  stream.onerror = () => { bridge = null; lastBridgeAt = 0; };
+  stream.onerror = () => { bridge = null; bridgeStatus = null; lastBridgeAt = 0; };
 }
 function tick(now) {
   let pad = null, source = null, description = 'Touch controls · no controller detected';
@@ -185,11 +189,19 @@ function tick(now) {
     source = `kefka:${bridge.connection}`;
     description = 'Kefka Steam Deck · native buttons';
   } else {
-    const gamepad = Array.from(navigator.getGamepads?.() || []).find(item => item?.connected && item.mapping === 'standard');
+    // On Kefka the built-in pad belongs to deckhypr. Taking it through the
+    // browser when the native gate closes would reintroduce desktop clicks and
+    // lighting actions from one press. Real external gamepads remain usable.
+    const gamepad = Array.from(navigator.getGamepads?.() || []).find(item =>
+      item?.connected && item.mapping === 'standard' && !(localDeck && isBuiltInDeck(item)));
     if (gamepad) {
       pad = gamepad;
       source = `gamepad:${gamepad.index}:${gamepad.id}`;
       description = `Controller · ${gamepad.id}`;
+    } else if (localDeck) {
+      description = bridgeStatus && now - lastBridgeAt < 400 && bridgeStatus.connected
+        ? `Touch controls · ${bridgeStatus.nativeReason || 'Open ArtBastard Deck from the launcher for native controls'}`
+        : 'Touch controls · use the ArtBastard Deck launcher for native buttons';
     }
   }
   if (source !== lastSource) {

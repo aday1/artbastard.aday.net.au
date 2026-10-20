@@ -9,9 +9,9 @@
 </head>
 <body>
   <header>
-    <a href="/" class="brand">ARTBASTARD <span>DECK CONTROLS</span></a>
+    <a href="/?sessionId=default#/fixture" target="artbastard-console" data-open-console class="brand">ARTBASTARD <span>DECK CONTROLS</span></a>
     <div id="network" role="status">Connecting to server…</div>
-    <a href="/">Full console ↗</a>
+    <a href="/?sessionId=default#/fixture" target="artbastard-console" data-open-console>Full console ↗</a>
   </header>
   <main>
     <section class="statusbar" aria-label="Controller status">
@@ -58,5 +58,6 @@
     <p id="notice" role="status" aria-live="polite">Controls start disarmed. Select a channel, then arm when ready.</p>
   </main>
   <script type="module" src="/deck-control.mjs"></script>
+  <script type="module" src="/kefka-navigation.mjs"></script>
 </body>
 </html>

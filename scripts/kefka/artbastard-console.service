@@ -1,0 +1,17 @@
+[Unit]
+Description=ArtBastard full console
+PartOf=graphical-session.target
+After=graphical-session.target artbastard.service
+Wants=artbastard.service
+
+[Service]
+Type=simple
+RuntimeDirectory=artbastard-console
+RuntimeDirectoryMode=0700
+ExecCondition=/usr/bin/pgrep -u %U -x Hyprland
+# Match the Deck lifecycle while keeping the full console's profile independent.
+ExecStart=/bin/sh -c 'exec /usr/bin/flatpak run --die-with-parent --instance-id-fd=3 --persist=.local/share/artbastard-console-browser --filesystem=/run/udev:ro com.google.Chrome --app=http://127.0.0.1:3030/kefka-console?sessionId=default#/fixture --start-fullscreen --ozone-platform=wayland --user-data-dir="%h/.local/share/artbastard-console-browser" --no-first-run --noerrdialogs --disable-session-crashed-bubble --disable-features=TranslateUI 3>"%t/artbastard-console/instance"'
+ExecStop=-/bin/sh -c 'test -s "%t/artbastard-console/instance" || exit 0; instance=$$(cat "%t/artbastard-console/instance"); case "$$instance" in ""|*[!0-9]*) exit 1;; esac; exec /usr/bin/flatpak kill "$$instance"'
+TimeoutStopSec=10
+Restart=no
+Environment=GDK_BACKEND=wayland

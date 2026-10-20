@@ -11,6 +11,7 @@ import { useRouter } from '../../context/RouterContext'
 import { toast } from 'react-toastify'
 import { NAV_ITEMS as SHARED_NAV_ITEMS, NavItem } from './navItems'
 import { openMobileSurface } from '../../utils/openPopupSurface'
+import { useKefkaSurface } from '../../hooks/useKefkaSurface'
 
 // Active navigation items used by both desktop sidebar and drawer.
 const navItems: NavItem[] = SHARED_NAV_ITEMS
@@ -32,6 +33,7 @@ export interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ variant = 'sidebar', onItemSelected }) => {
+  const openDeck = useKefkaSurface('deck')
   const { theme, setTheme } = useTheme()
   const { currentView, setCurrentView } = useRouter()
   const [isCollapsed, setIsCollapsed] = useState(() => {
@@ -172,7 +174,7 @@ export const Navbar: React.FC<NavbarProps> = ({ variant = 'sidebar', onItemSelec
         </ul>
 
         <div className={styles.drawerNavSection}>
-          <a href="/deck-control.html" className={styles.drawerNavItem}>
+          <a href="/deck-control.html" target="artbastard-deck-controls" onClick={openDeck} className={styles.drawerNavItem}>
             <span className={styles.drawerNavIcon} aria-hidden="true">
               <LucideIcon name="Gamepad2" size={20} />
             </span>
@@ -308,6 +310,8 @@ export const Navbar: React.FC<NavbarProps> = ({ variant = 'sidebar', onItemSelec
           <div className={styles.navItemContainer}>
             <a
               href="/deck-control.html"
+              target="artbastard-deck-controls"
+              onClick={openDeck}
               className={styles.navButton}
               title="Steam Deck and gamepad controls for channels, scenes and blackout"
             >

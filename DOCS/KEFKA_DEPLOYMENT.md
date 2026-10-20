@@ -11,6 +11,7 @@ and the installed checkout is `~/Work/artbastard` on Kefka.
 | Use | Address |
 | --- | --- |
 | Full web console, home LAN | `http://kefka.lan:3030/` |
+| Dedicated local console | `http://127.0.0.1:3030/kefka-console?sessionId=default#/fixture` |
 | Deck controls | `http://kefka.lan:3030/deck-control.html` |
 | Tailnet web console | Kefka's Tailscale address, port 3030 |
 | Lighting LAN web console | `http://192.168.1.20:3030/` |
@@ -49,6 +50,8 @@ npm run build-backend-fast
 npm run build-frontend
 bash scripts/kefka-install-server.sh
 bash scripts/kefka/install-controls.sh
+# Apply updated code/environment when upgrading an already-running service:
+systemctl --user restart artbastard.service
 ```
 
 The server installer preserves existing `data/config.json`. It initially seeds
@@ -61,12 +64,35 @@ systemctl --user status artbastard.service
 journalctl --user -u artbastard.service -f
 systemctl --user restart artbastard.service
 ~/.local/bin/artbastard-deck-open
-systemctl --user stop artbastard-deck.service
+~/.local/bin/artbastard-console-open
+systemctl --user stop artbastard-deck.service artbastard-input.service
+systemctl --user stop artbastard-console.service
 ```
 
-`artbastard.service` is enabled for user login. The browser opens on demand via
-the **ArtBastard Deck** launcher entry. The input helper is loopback-only,
-read-only, and starts with the browser. See [Deck controls](KEFKA_CONTROLS.md).
+`artbastard.service` is enabled for user login. **ArtBastard Deck** and
+**ArtBastard Console** are separate, on-demand launcher entries and user units;
+neither browser unit is enabled at boot. Their launchers reuse/focus an existing
+window. Profiles live at `~/.local/share/artbastard-browser` and
+`~/.local/share/artbastard-console-browser` inside the persistent Flatpak home
+(host backing directory: `~/.var/app/com.google.Chrome/.local/share/`).
+Each unit tracks and stops its exact Flatpak instance, since Flatpak moves the
+browser into a separate scope. Launcher calls focus an existing window before
+starting one.
+
+The local **Full console** / **Deck Controls** links switch between these
+windows without unloading the console's APC40 workflow state. The console's
+different app URL gives it a different window class, so it keeps ordinary
+`deckhypr` desktop buttons. Of the two ArtBastard windows, only the exact Deck
+control app class enters GAME mode. The read-only, loopback input helper starts
+with the Deck window and permits native controls only while the live mapper is
+in GAME mode and that exact window is focused. An ownership change disarms
+controls and requires neutral input again. See [Deck controls](KEFKA_CONTROLS.md).
+
+The backend's `ARTBASTARD_KEFKA=1` environment setting opts into
+`/api/kefka/surfaces`. Its POST launch routes require a loopback request and
+matching exact local `Host`/`Origin` (`127.0.0.1:3030` or `localhost:3030`,
+adjusted by `PORT`). They invoke fixed Deck/Console launchers only. LAN clients
+receive ordinary separate-window navigation, not local desktop launch access.
 The existing NYX desk and Yggdrasil kiosk are independent.
 
 ## Checks
@@ -74,14 +100,24 @@ The existing NYX desk and Yggdrasil kiosk are independent.
 ```sh
 curl -fsS http://127.0.0.1:3030/api/health
 curl -fsS http://127.0.0.1:3030/api/state
+curl -fsS http://127.0.0.1:3030/api/midi/active
+curl -fsS http://127.0.0.1:3030/api/kefka/surfaces
+curl -fsS -H 'Origin: http://127.0.0.1:3030' http://127.0.0.1:18782/health
 node scripts/dmx-osc-integration-smoke.js
 node scripts/kefka/test-controller.mjs
 python3 scripts/kefka/test-input.py
+node scripts/kefka/test-surface.mjs
+node scripts/kefka/test-launcher.js
 ```
 
 The integration smoke creates temporary data and private loopback UDP receivers;
 it does not send output to the fixtures. Do not run the older fixed-port API
 smoke against the live show server.
+The native reader's `connected` field is separate from `nativeAllowed`:
+connected proves device access, while allowed additionally requires live mapper
+ownership and the exact focused Deck window. A running input service alone is
+not proof that lighting controls are permitted. The automated checks do not
+prove physical button presses, APC40 operation or fixture response.
 
 Initial verification on 2026-10-20, before moving to the dedicated USB adapter:
 DOREMiDi answered ping and ARP; packet capture
@@ -99,12 +135,54 @@ packet capture confirmed the same zeroed 512-channel ArtDMX on
 The attached APC40 is detected as `Akai APC40:Akai APC40 MIDI 1 24:0`.
 Use `/api/midi/active` to check the backend's open input list.
 Its existing Artbastard integration uses the full React console's fixture
-selection and SuperControl logic. Open one full console on the Deck at
-`http://127.0.0.1:3030/?sessionId=default#/fixture`, patch the real fixtures,
-then select the fixtures to control.
+selection and SuperControl logic. Use **ArtBastard Console** or
+`~/.local/bin/artbastard-console-open` to open
+`http://127.0.0.1:3030/kefka-console?sessionId=default#/fixture`, patch the real
+fixtures, then select the fixtures to control. Navigating to the separate Deck
+window preserves the running console's in-memory selection and APC40 state.
+The standalone Deck surface itself does not run the APC40 workflow.
 
 Keep one full console processing the APC40: the existing app broadcasts its
 MIDI events to every full-console client and has no operator-owner election.
 Additional clients can use the standalone Deck surface, which does not process
-APC40 MIDI. Fixture selection is not automatically restored after a relaunch.
-No fixture patch or light response has yet been verified.
+APC40 MIDI. Separate window launchers preserve a running console; they do not
+add operator-owner election. Fixture selection is not automatically restored
+after closing or relaunching the console. A hidden console can also activate the
+existing APC40 screensaver, so this setup is not an unattended headless APC40
+driver. Physical controller operation and light response have not yet been
+verified.
+
+The user subsequently identified the connected fixture as the MiniBeam at
+DMX address 1. Its existing documented 18-channel profile was patched as
+`fixture-kefka-minibeam-1` / `MINIBEAM 1` on channels 1–18. Readback confirmed
+the fixture metadata and unchanged all-zero output. The 18-channel mode is
+inferred from the project's user-supplied manual and remains to be checked
+against the fixture display. Physical button and light response are pending.
+
+The local surface-launch routes were exercised on Kefka: the dedicated console
+class is `chrome-127.0.0.1__kefka-console-Default`. Native input health changed
+from allowed in the focused Deck window to denied in the console and back.
+After installing persistent Flatpak profiles and instance tracking, a real
+Deck-service restart removed the previous instance and left exactly one Deck
+window, one full console, and the existing Yggdrasil Deck window. Repeated
+launcher calls also retained one window per surface.
+
+During webcam attachment the external USB hub disconnected, removing the
+APC40 and both Ethernet adapters together. The kernel briefly identified a
+Microsoft LifeCam Studio (`045e:0811`) before disconnecting it. This is a live
+cabling state, not a change to the saved DMX network profile; recheck USB
+enumeration and the dedicated route before resuming physical tests.
+
+## Rollback of the control windows
+
+Stop `artbastard-deck.service`, `artbastard-input.service` and
+`artbastard-console.service`. Restore the timestamped pre-install unit/launcher
+backups, or remove only newly installed units, launchers and desktop entries.
+Remove only the dedicated Deck game-class rule from
+`~/.config/kefka/game-classes`, preserving all other entries. Reload the user
+manager and restart `deckhypr` after changing its class file.
+
+Set `ARTBASTARD_KEFKA=0` in the backend service environment and restart
+`artbastard.service` to disable window launching. Preserve the backend's
+`data/` directory and both browser profiles. Network rollback is separate and
+is described above.

@@ -4,7 +4,9 @@ import fcntl
 import glob
 import json
 import os
+from pathlib import Path
 import select
+import socket
 import struct
 import threading
 import time
@@ -19,6 +21,119 @@ ORIGINS = frozenset(os.environ.get(
 PORT = int(os.environ.get("ARTBASTARD_DECK_INPUT_PORT", "18782"))
 LOCK = threading.Lock()
 STATE = {"pad": None}
+DECK_CLASS = "chrome-127.0.0.1__deck-control.html-Default"
+
+
+class NativeInputGate:
+    """Read desktop ownership without changing the mapper or compositor."""
+
+    def __init__(self, runtime=None, proc=None, uid=None):
+        self.uid = os.getuid() if uid is None else uid
+        self.runtime = Path(runtime or os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{self.uid}"))
+        self.proc = Path(proc or "/proc")
+        self.lock = threading.Lock()
+        self.allowed = False
+        self.reason = "Checking Deck desktop input mode"
+        self.checked_at = 0
+        self.generation = 0
+        self.identity = None
+
+    def live_process(self, pid, name):
+        """A PID file or old mode timestamp alone does not prove a live mapper."""
+        try:
+            process = self.proc / str(int(pid))
+            if int(pid) <= 1 or process.stat().st_uid != self.uid:
+                return None
+            if (process / "comm").read_text().strip() != name:
+                return None
+            fields = (process / "stat").read_text().rsplit(")", 1)[1].split()
+            if fields[0] in ("Z", "X", "x", "T", "t"):
+                return None
+            return str(pid), fields[19]  # PID + start time protects against reuse.
+        except (OSError, ValueError, IndexError):
+            return None
+
+    def mapper_state(self):
+        try:
+            mapper = self.runtime / "deckhypr"
+            identity = self.live_process((mapper / "pid").read_text().strip(), "deckhypr")
+            if identity is None:
+                return None, "Deck desktop mapper is not running"
+            state = json.loads((mapper / "state.json").read_text())
+            if state.get("mode") != "game":
+                return None, "Open ArtBastard Deck from the launcher for native controls"
+            if state.get("pad") != "kernel" or state.get("launcher") != "closed":
+                return None, "Deck desktop mapper is not ready for native controls"
+            # deckhypr writes only on transitions: an old ts is valid while
+            # this same live process remains in GAME mode.
+            return identity, None
+        except (OSError, ValueError, AttributeError):
+            return None, "Deck desktop mapper state is unavailable"
+
+    def active_window(self):
+        """Query a live compositor directly, ignoring stale manager signatures."""
+        candidates = []
+        for path in (self.runtime / "hypr").glob("*/.socket.sock"):
+            try:
+                pid = (path.parent / "hyprland.lock").read_text().splitlines()[0]
+                if self.live_process(pid, "Hyprland"):
+                    candidates.append(path)
+            except (OSError, IndexError):
+                continue
+        # Normally there is one live session. Decline ambiguous sessions rather
+        # than accepting a game window on a different desktop.
+        if len(candidates) != 1:
+            return None
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
+            connection.settimeout(0.1)
+            connection.connect(str(candidates[0]))
+            connection.sendall(b"j/activewindow")
+            data = bytearray()
+            while len(data) < 65536:
+                chunk = connection.recv(65536 - len(data))
+                if not chunk:
+                    break
+                data.extend(chunk)
+            return json.loads(data)
+
+    def check(self):
+        identity, reason = self.mapper_state()
+        if identity:
+            try:
+                active = self.active_window()
+                if not isinstance(active, dict) or active.get("class") != DECK_CLASS or not active.get("address"):
+                    identity, reason = None, "Focus the ArtBastard Deck launcher window for native controls"
+                else:
+                    identity = (*identity, active["address"])
+            except (OSError, ValueError):
+                identity, reason = None, "Deck window focus is unavailable"
+        with self.lock:
+            if identity != self.identity:
+                self.generation += 1
+            self.identity = identity
+            self.allowed = identity is not None
+            self.reason = reason
+            self.checked_at = time.monotonic()
+
+    def run(self):
+        while True:
+            self.check()
+            time.sleep(0.2)
+
+    def snapshot(self, pad):
+        with self.lock:
+            allowed = self.allowed and time.monotonic() - self.checked_at < 0.5
+            reason = self.reason if allowed or not self.allowed else "Deck desktop input check is stale"
+            generation = self.generation
+        return {
+            "connected": pad is not None,
+            "nativeAllowed": allowed,
+            "nativeReason": reason,
+            "pad": {**pad, "connection": f"{pad['connection']}:{generation}"} if allowed and pad else None,
+        }
+
+
+GATE = NativeInputGate()
 
 
 def device_name(fd):
@@ -130,13 +245,14 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         if self.path == "/health":
             with LOCK:
-                payload = {"connected": STATE["pad"] is not None}
+                payload = GATE.snapshot(STATE["pad"])
+            del payload["pad"]
             self.wfile.write(json.dumps(payload).encode())
             return
         try:
             while True:
                 with LOCK:
-                    payload = json.dumps(STATE, separators=(",", ":"))
+                    payload = json.dumps(GATE.snapshot(STATE["pad"]), separators=(",", ":"))
                 self.wfile.write(("data: " + payload + "\n\n").encode())
                 self.wfile.flush()
                 time.sleep(0.025)
@@ -146,4 +262,5 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     threading.Thread(target=reader, daemon=True).start()
+    threading.Thread(target=GATE.run, daemon=True).start()
     ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()

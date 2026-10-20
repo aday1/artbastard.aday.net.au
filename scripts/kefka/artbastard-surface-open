@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+set -euo pipefail
+case "$(basename -- "$0")" in
+  artbastard-deck-open)
+    unit=artbastard-deck.service
+    app_class='chrome-127.0.0.1__deck-control.html-Default'
+    ;;
+  artbastard-console-open)
+    unit=artbastard-console.service
+    app_class='chrome-127.0.0.1__kefka-console-Default'
+    ;;
+  *) exit 2 ;;
+esac
+# The backend and user manager can retain an old compositor signature.
+# Select the single live compositor by its owned lock and process instead.
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+HYPRLAND_INSTANCE_SIGNATURE=$(python3 - <<'PY'
+import os
+from pathlib import Path
+instances = []
+for lock in (Path(os.environ["XDG_RUNTIME_DIR"]) / "hypr").glob("*/hyprland.lock"):
+    try:
+        pid = int(lock.read_text().splitlines()[0])
+        process = Path("/proc") / str(pid)
+        state = (process / "stat").read_text().rsplit(")", 1)[1].split()[0]
+        if (pid > 1 and process.stat().st_uid == os.getuid()
+                and (process / "comm").read_text().strip() == "Hyprland"
+                and state not in ("Z", "X", "x", "T", "t")
+                and (lock.parent / ".socket.sock").exists()):
+            instances.append(lock.parent.name)
+    except (OSError, ValueError, IndexError):
+        pass
+if len(instances) != 1:
+    raise SystemExit("No unambiguous live Hyprland session")
+print(instances[0])
+PY
+)
+export HYPRLAND_INSTANCE_SIGNATURE
+# Serialize clicks before checking for a window; overlapping launcher requests
+# must not both decide that the surface needs to be started.
+exec 9>"$XDG_RUNTIME_DIR/$unit.launch.lock"
+flock -w 2 9
+focus_existing() {
+  local address
+  address=$(hyprctl clients -j | python3 -c '
+import json, sys
+matches = [client for client in json.load(sys.stdin) if client.get("class") == sys.argv[1]]
+if matches:
+    print(matches[0]["address"])
+' "$app_class") || return 1
+  [[ -n "$address" ]] || return 1
+  hyprctl dispatch focuswindow "address:$address" >/dev/null
+}
+if focus_existing; then
+  exit 0
+fi
+# Chrome may remain running without a window. Restart only this recorded
+# instance in that case; ordinary repeated opens just focus the existing window.
+if systemctl --user is-active --quiet "$unit"; then
+  systemctl --user restart "$unit"
+else
+  systemctl --user start "$unit"
+fi
+for _ in {1..60}; do
+  if focus_existing; then
+    exit 0
+  fi
+  sleep 0.1
+done
+exit 1

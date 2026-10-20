@@ -58,6 +58,7 @@ import {
 import { mintBridgeToken, revokeBridgeToken, hashTokenForDisplay } from './bridgeAuth';
 import { getBridgeStatusPayload, getSessionsOverview } from './bridgeRegistry';
 import { DEFAULT_SESSION_ID, createSession, ensureSession } from './sessionManager';
+import { createKefkaSurfaceRouter } from './kefkaLauncher';
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const EXPORT_FILE = path.join(DATA_DIR, 'all_settings.json');
@@ -145,6 +146,7 @@ apiRouter.use((req, res, next) => {
 
 // Middleware to parse JSON
 apiRouter.use(express.json({ limit: '10mb' }));
+apiRouter.use('/kefka/surfaces', createKefkaSurfaceRouter());
 
 // Add global error handler for API routes
 apiRouter.use((err: Error, req: Request, res: Response, next: NextFunction) => {

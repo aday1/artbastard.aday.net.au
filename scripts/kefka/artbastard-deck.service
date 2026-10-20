@@ -6,7 +6,13 @@ Wants=artbastard.service artbastard-input.service
 
 [Service]
 Type=simple
+RuntimeDirectory=artbastard-deck
+RuntimeDirectoryMode=0700
 ExecCondition=/usr/bin/pgrep -u %U -x Hyprland
-ExecStart=/usr/bin/flatpak run --filesystem=/run/udev:ro com.google.Chrome --app=http://127.0.0.1:3030/deck-control.html --start-fullscreen --ozone-platform=wayland --class=artbastard-deck --user-data-dir=%h/.local/share/artbastard-browser --no-first-run --noerrdialogs --disable-session-crashed-bubble --disable-features=TranslateUI
+# Flatpak moves Chrome into its own scope. Record and stop this exact instance.
+# Persist the sandbox home subpath so Chrome's profile lock is shared on relaunch.
+ExecStart=/bin/sh -c 'exec /usr/bin/flatpak run --die-with-parent --instance-id-fd=3 --persist=.local/share/artbastard-browser --filesystem=/run/udev:ro com.google.Chrome --app=http://127.0.0.1:3030/deck-control.html --start-fullscreen --ozone-platform=wayland --class=artbastard-deck --user-data-dir="%h/.local/share/artbastard-browser" --no-first-run --noerrdialogs --disable-session-crashed-bubble --disable-features=TranslateUI 3>"%t/artbastard-deck/instance"'
+ExecStop=-/bin/sh -c 'test -s "%t/artbastard-deck/instance" || exit 0; instance=$$(cat "%t/artbastard-deck/instance"); case "$$instance" in ""|*[!0-9]*) exit 1;; esac; exec /usr/bin/flatpak kill "$$instance"'
+TimeoutStopSec=10
 Restart=no
 Environment=GDK_BACKEND=wayland
