@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d0f16">
+<title>Kefka bench</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0d0f16; --panel: #161925; --line: #2a2f42; --ink: #f2f3f8; --mute: #9aa1b8;
+    --accent: #7cf0d6; --warn: #ffcc66; --danger: #ff5a6a; --ok: #6ee7a0;
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4; }
+  main { max-width: 760px; margin: 0 auto; padding: 16px 16px 40px; }
+  header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  h1 { font-size: 20px; letter-spacing: .04em; margin: 0; flex: 1; }
+  h1 small { display: block; color: var(--mute); font-size: 13px; font-weight: 500; letter-spacing: 0; }
+  #blackout {
+    font: inherit; font-weight: 800; font-size: 18px; letter-spacing: .06em;
+    min-height: 56px; padding: 0 22px; border-radius: 14px; border: 2px solid #ff8f9a;
+    background: #5a1520; color: #fff; cursor: pointer;
+  }
+  #blackout:active { background: var(--danger); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .chip { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 6px 12px; font-size: 14px; color: var(--mute); }
+  .chip b { color: var(--ink); font-weight: 650; }
+  .chip.ok b { color: var(--ok); } .chip.bad b { color: var(--danger); }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin-bottom: 14px; }
+  .task { border-color: #3d6f66; box-shadow: 0 0 0 1px #3d6f66 inset; }
+  .eyebrow { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; display: flex; justify-content: space-between; }
+  .eyebrow span { color: var(--mute); letter-spacing: .04em; text-transform: none; }
+  #task-title { font-size: 24px; font-weight: 800; margin: 0 0 8px; }
+  #task-body { white-space: pre-wrap; margin: 0; }
+  #task-ask { margin: 12px 0 0; padding: 10px 12px; border-radius: 10px; background: #1f2a2a; color: var(--accent); font-weight: 650; }
+  #task-ask:empty { display: none; }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 6px 4px; border-top: 1px solid var(--line); vertical-align: middle; }
+  td.addr { color: var(--mute); width: 34px; font-variant-numeric: tabular-nums; }
+  td.name { font-weight: 600; }
+  td.name small { display: block; color: var(--mute); font-weight: 400; font-size: 13px; }
+  td.val { width: 120px; text-align: right; font-variant-numeric: tabular-nums; }
+  td.val b { font-size: 20px; }
+  .bar { height: 6px; background: #232839; border-radius: 4px; overflow: hidden; margin-top: 4px; }
+  .bar i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .2s; }
+  tr.live td.name { color: var(--warn); }
+  #midi { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; margin: 0; min-height: 3em; white-space: pre-wrap; color: #cfd6ea; }
+  .foot { color: var(--mute); font-size: 13px; }
+  #msg { min-height: 1.4em; color: var(--warn); font-weight: 600; margin: 0 0 12px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>KEFKA BENCH <small>ArtBastard on the Steam Deck · live view</small></h1>
+    <button id="blackout" type="button">BLACKOUT</button>
+  </header>
+  <p id="msg" role="status"></p>
+  <div class="chips">
+    <span class="chip" id="c-server">Server <b>…</b></span>
+    <span class="chip" id="c-artnet">Art-Net <b>…</b></span>
+    <span class="chip" id="c-apc">APC40 <b>…</b></span>
+    <span class="chip" id="c-out">Output <b>…</b></span>
+  </div>
+  <section class="card task" aria-live="polite">
+    <div class="eyebrow">Now <span id="task-step"></span></div>
+    <h2 id="task-title">Waiting for Claude…</h2>
+    <p id="task-body">Claude posts the current test here. Answer in the chat.</p>
+    <p id="task-ask"></p>
+  </section>
+  <section class="card">
+    <div class="eyebrow"><span id="fx-name" style="color:var(--accent);letter-spacing:.14em;text-transform:uppercase">Fixture</span><span id="fx-meta"></span></div>
+    <table><tbody id="fx"></tbody></table>
+  </section>
+  <section class="card">
+    <div class="eyebrow">APC40 · last messages <span>newest first</span></div>
+    <pre id="midi">Move a fader or press a button…</pre>
+  </section>
+  <p class="foot">BLACKOUT sets all 512 DMX channels to zero once. It does not stop the APC40 or the console from sending new values afterwards.</p>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+let state = null, lastOk = 0;
+const midiLines = [];
+
+async function getJSON(path) {
+  const r = await fetch(path, { cache: 'no-store', signal: AbortSignal.timeout(4000) });
+  if (!r.ok) throw new Error(r.status);
+  return r.json();
+}
+function chip(id, text, good) {
+  const el = $(id); el.querySelector('b').textContent = text;
+  el.classList.toggle('ok', good === true); el.classList.toggle('bad', good === false);
+}
+function bandFor(ch, value) {
+  const ranges = Array.isArray(ch.ranges) ? ch.ranges : [];
+  const hit = ranges.find(r => value >= r.min && value <= r.max && ranges.length > 1);
+  return hit ? hit.description : (ranges[0]?.description || '');
+}
+function render() {
+  if (!state) return;
+  const fx = (state.fixtures || [])[0];
+  const dmx = state.dmxChannels || [];
+  const live = dmx.filter(v => v > 0).length;
+  chip('c-out', live ? `${live} channel${live > 1 ? 's' : ''} on` : 'all zero', live ? undefined : true);
+  if (!fx) { $('fx-name').textContent = 'No fixture patched'; $('fx').innerHTML = ''; return; }
+  $('fx-name').textContent = fx.name;
+  $('fx-meta').textContent = `${fx.mode || ''} · DMX ${fx.startAddress}–${fx.startAddress + fx.channels.length - 1}`;
+  const rows = fx.channels.map((ch, i) => {
+    const addr = fx.startAddress + i, v = dmx[addr - 1] || 0;
+    return `<tr class="${v ? 'live' : ''}"><td class="addr">${addr}</td><td class="name">${ch.name}<small>${v ? bandFor(ch, v) : ''}</small></td>` +
+      `<td class="val"><b>${v}</b> <span style="color:var(--mute)">${Math.round(v / 2.55)}%</span><div class="bar"><i style="width:${v / 2.55}%"></i></div></td></tr>`;
+  });
+  $('fx').innerHTML = rows.join('');
+}
+async function pollState() {
+  try {
+    state = await getJSON('/api/state'); lastOk = Date.now();
+    chip('c-server', 'online', true);
+    // Full-detail ranges live in the fixture template when the patch only carries a summary.
+    const tpl = (state.fixtureTemplates || []).find(t => t.id === state.fixtures?.[0]?.templateId);
+    if (tpl?.channels && state.fixtures?.[0]) state.fixtures[0].channels = state.fixtures[0].channels.map((c, i) => ({ ...c, ranges: tpl.channels[i]?.ranges || c.ranges }));
+    render();
+  } catch { if (Date.now() - lastOk > 3000) chip('c-server', 'offline', false); }
+}
+async function pollHealth() {
+  try {
+    const h = await getJSON('/api/health');
+    const ip = h.artnetLastPing?.ip || '';
+    chip('c-artnet', `${h.artnetStatus || '?'}${ip ? ' · ' + ip : ''}`, h.artnetStatus === 'alive');
+  } catch {}
+  try {
+    const m = await getJSON('/api/midi/active');
+    const n = (m.inputs || []).length;
+    chip('c-apc', n ? 'connected' : 'not connected', n > 0);
+  } catch {}
+}
+async function pollTask() {
+  try {
+    const t = await getJSON('/kefka-bench-task.json');
+    $('task-step').textContent = [t.step, t.updated].filter(Boolean).join(' · ');
+    $('task-title').textContent = t.title || '';
+    $('task-body').textContent = t.body || '';
+    $('task-ask').textContent = t.ask || '';
+  } catch {}
+}
+$('blackout').onclick = async () => {
+  $('msg').textContent = 'Sending blackout…';
+  try {
+    const body = Object.fromEntries(Array.from({ length: 512 }, (_, i) => [i, 0]));
+    const r = await fetch('/api/dmx/batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(4000) });
+    $('msg').textContent = r.ok ? `Blackout sent ${new Date().toLocaleTimeString()}.` : `Blackout failed: server ${r.status}`;
+    pollState();
+  } catch (e) { $('msg').textContent = 'Blackout failed: ' + e.message; }
+};
+function midiText(m) {
+  const t = new Date().toLocaleTimeString();
+  if (m._type === 'cc' || m.controller !== undefined) return `${t}  CC${m.controller} ch${(m.channel ?? 0) + 1} = ${m.value}`;
+  if (m.note !== undefined) return `${t}  note ${m.note} ch${(m.channel ?? 0) + 1} ${m._type || ''} vel ${m.velocity ?? ''}`;
+  return `${t}  ${JSON.stringify(m).slice(0, 80)}`;
+}
+const s = document.createElement('script');
+s.src = '/socket.io/socket.io.js';
+s.onload = () => {
+  const sock = window.io({ transports: ['websocket', 'polling'] });
+  sock.on('midiMessage', m => { midiLines.unshift(midiText(m)); midiLines.length = Math.min(midiLines.length, 12); $('midi').textContent = midiLines.join('\n'); });
+};
+document.head.appendChild(s);
+pollState(); pollHealth(); pollTask();
+setInterval(pollState, 700); setInterval(pollHealth, 3000); setInterval(pollTask, 2000);
+</script>
+</body>
+</html>
