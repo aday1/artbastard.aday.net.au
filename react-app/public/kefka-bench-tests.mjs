@@ -14,6 +14,7 @@ const css = `
 .bt-row button { font: inherit; font-weight: 800; min-height: 56px; padding: 0 18px; border-radius: 14px; cursor: pointer; flex: 1 1 140px; }
 #bt-full { background: #f5f0d0; color: #111; border: 2px solid #fff; }
 #bt-random { background: #23324a; color: #fff; border: 2px solid #5b7bb0; }
+#bt-finder { display: block; margin-top: 10px; padding: 14px 16px; border-radius: 14px; background: #2a2440; border: 2px solid #9c86ff; color: #fff; font-weight: 800; text-decoration: none; text-align: center; }
 #bt-log { font: 14px ui-monospace, SFMono-Regular, Menlo, monospace; color: #9aa1b8; margin: 12px 0 0; white-space: pre-wrap; }
 #blackout[data-mode="undo"] { background: #1d3b2c; border-color: #6ee7a0; }
 #blackout:disabled { opacity: .55; cursor: default; }
@@ -31,6 +32,7 @@ card.innerHTML = `
     <button id="bt-full" type="button">FULL ON · test</button>
     <button id="bt-random" type="button">RANDOM · test</button>
   </div>
+  <a id="bt-finder" href="/kefka-channels.html">CHANNEL FINDER · fix which channel does what →</a>
   <pre id="bt-log"></pre>`;
 const anchor = $('msg') || document.querySelector('header');
 anchor.after(card);

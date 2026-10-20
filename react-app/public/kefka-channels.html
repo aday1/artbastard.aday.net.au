@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d0f16">
+<title>Channel finder</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0d0f16; --panel: #161925; --panel2: #1c2030; --line: #2a2f42; --ink: #f2f3f8; --mute: #9aa1b8;
+    --accent: #7cf0d6; --warn: #ffcc66; --danger: #ff5a6a; --ok: #6ee7a0; --diff: #ffb057;
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4; }
+  main { max-width: 980px; margin: 0 auto; padding: 14px 14px 140px; }
+  header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  header h1 { margin: 0; font-size: 20px; letter-spacing: .04em; flex: 1 1 200px; }
+  header h1 small { display: block; color: var(--mute); font-size: 13px; font-weight: 500; letter-spacing: 0; }
+  a.back { color: var(--accent); text-decoration: none; font-weight: 650; padding: 10px 4px; }
+  button, select, input { font: inherit; color: inherit; }
+  button { min-height: 48px; padding: 0 16px; border-radius: 12px; border: 1px solid #3a4058; background: #22273a; cursor: pointer; font-weight: 700; }
+  button:active { transform: translateY(1px); }
+  button:disabled { opacity: .5; cursor: default; }
+  #blackout { background: #5a1520; border: 2px solid #ff8f9a; color: #fff; letter-spacing: .05em; }
+  #blackout.dark { background: #2a1015; color: #ff8f9a; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px; margin-bottom: 12px; }
+  .eyebrow { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; display: flex; justify-content: space-between; gap: 8px; }
+  .eyebrow span { color: var(--mute); letter-spacing: .03em; text-transform: none; }
+  .row-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+  .row-btns button { flex: 1 1 130px; }
+  #start-full { background: #f5f0d0; color: #111; border-color: #fff; }
+  .hint { color: var(--mute); font-size: 14px; margin: 8px 0 0; }
+  #status { min-height: 1.4em; color: var(--warn); font-weight: 650; margin: 0 0 10px; }
+  .fxsel { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .fxsel select { min-height: 48px; border-radius: 12px; background: var(--panel2); border: 1px solid var(--line); padding: 0 12px; flex: 1 1 220px; }
+  .ch { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 12px; margin-bottom: 10px; display: grid; gap: 10px;
+        grid-template-columns: 74px 1fr; grid-template-areas: "addr head" "addr slide" "quick quick" "role role"; }
+  .ch.live { border-color: #4b5a3a; }
+  .ch.differs { border-color: var(--diff); box-shadow: 0 0 0 1px var(--diff) inset; }
+  .addr { grid-area: addr; text-align: center; background: var(--panel2); border-radius: 12px; padding: 8px 4px; align-self: start; }
+  .addr b { display: block; font-size: 30px; line-height: 1; }
+  .addr small { color: var(--mute); font-size: 12px; letter-spacing: .1em; }
+  .head { grid-area: head; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .head .patch { color: var(--mute); font-size: 14px; }
+  .head .patch b { color: var(--ink); font-size: 17px; }
+  .head .val { margin-left: auto; font-variant-numeric: tabular-nums; }
+  .head .val b { font-size: 26px; }
+  .slide { grid-area: slide; }
+  .slide input { width: 100%; height: 44px; margin: 0; accent-color: var(--accent); touch-action: none; }
+  .quick { grid-area: quick; display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+  .quick button { padding: 0 4px; min-height: 46px; font-variant-numeric: tabular-nums; }
+  .quick button.sweep { background: #23324a; border-color: #5b7bb0; }
+  .role { grid-area: role; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .role label { color: var(--mute); font-size: 14px; }
+  .role select { flex: 1 1 220px; min-height: 48px; border-radius: 12px; background: var(--panel2); border: 1px solid var(--line); padding: 0 10px; }
+  .badge { font-size: 12px; font-weight: 800; letter-spacing: .08em; padding: 3px 8px; border-radius: 999px; }
+  .badge.diff { background: #3a2a14; color: var(--diff); }
+  .badge.same { background: #13291f; color: var(--ok); }
+  .dock { position: fixed; left: 0; right: 0; bottom: 0; background: rgba(13,15,22,.96); border-top: 1px solid var(--line); padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); }
+  .dock .inner { max-width: 980px; margin: 0 auto; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .dock p { margin: 0; flex: 1 1 260px; font-size: 15px; color: #cfd6ea; }
+  #apply { background: #1d3b2c; border: 2px solid var(--ok); }
+  #apply.confirm { background: var(--ok); color: #0b1a12; }
+  #restore { background: #2b2433; }
+  #preview { font: 14px ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; color: #cfd6ea; margin: 0; }
+  @media (min-width: 760px) {
+    .ch { grid-template-columns: 74px 1fr 1fr; grid-template-areas: "addr head head" "addr slide quick" "addr role role"; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <a class="back" href="/kefka-bench.html">← Bench</a>
+    <h1>CHANNEL FINDER <small id="sub">Loading the patch…</small></h1>
+    <button id="blackout" type="button">BLACKOUT</button>
+  </header>
+  <p id="status" role="status"></p>
+
+  <section class="card">
+    <div class="eyebrow">How to use <span id="fxmeta"></span></div>
+    <div class="fxsel">
+      <select id="fx" aria-label="Fixture"></select>
+      <select id="span" aria-label="How many channels to show">
+        <option value="16">Show 16 channels</option>
+        <option value="18" selected>Show 18 channels</option>
+        <option value="20">Show 20 channels</option>
+        <option value="24">Show 24 channels</option>
+      </select>
+    </div>
+    <p class="hint">1. Pick a starting point. FULL ON makes everything visible (it moves the head); then drop one channel at a time to 0 and watch what stops.
+      2. On each channel, say what it really does. Orange cards differ from the current patch.
+      3. Apply as new patch: the pad, colour wheel, APC40 and console all follow it. Restore puts the original back.</p>
+    <div class="row-btns" style="margin-top:10px">
+      <button id="start-zero" type="button">Start: all 0</button>
+      <button id="start-full" type="button">Start: FULL ON</button>
+      <button id="start-half" type="button">Start: all 128</button>
+    </div>
+    <p class="hint">Sweep runs 0→255→0 in 4 s, too fast to trigger 3-second lamp or reset commands. Holding a slider at 26–100 for 3 s on the real lamp channel switches the lamp off.</p>
+  </section>
+
+  <div id="rows"></div>
+
+  <section class="card">
+    <div class="eyebrow">New patch preview <span id="pv-count"></span></div>
+    <pre id="preview"></pre>
+  </section>
+</main>
+
+<div class="dock">
+  <div class="inner">
+    <p id="summary">Say what each channel does.</p>
+    <button id="restore" type="button">Restore original</button>
+    <button id="apply" type="button">Apply as new patch</button>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const GENERIC = [
+  ['Dimmer', 'dimmer'], ['Shutter / strobe', 'strobe'], ['Pan', 'pan'], ['Pan fine', 'pan_fine'], ['Tilt', 'tilt'], ['Tilt fine', 'tilt_fine'],
+  ['Colour wheel', 'color_wheel'], ['Gobo', 'gobo'], ['Gobo rotation', 'gobo_rotation'], ['Prism', 'prism'], ['Prism rotation', 'other'],
+  ['Frost', 'other'], ['Focus', 'focus'], ['Zoom', 'zoom'], ['Iris', 'other'], ['Effect', 'other'], ['Macro', 'macro'],
+  ['Pan/Tilt speed', 'speed'], ['Effect speed', 'speed'], ['Reset', 'reset'], ['Lamp', 'lamp'],
+  ['Red', 'red'], ['Green', 'green'], ['Blue', 'blue'], ['White', 'white'], ['Amber', 'amber'], ['UV', 'uv'],
+];
+let state = null, fixtures = [], fxIndex = 0, original = null, roles = {}, picks = {}, applyArmed = 0;
+const dragging = new Set(), queue = new Map(), inflight = new Set();
+const now = () => new Date().toLocaleTimeString();
+const say = t => { $('status').textContent = `${now()} · ${t}`; };
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fx = () => fixtures[fxIndex];
+const key = f => `kefka-finder:${f.id}`;
+
+async function api(path, body) {
+  const r = await fetch('/api' + path, body === undefined ? { cache: 'no-store', signal: AbortSignal.timeout(4000) } :
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(5000) });
+  if (!r.ok) throw new Error('server ' + r.status);
+  return r.json();
+}
+// Latest value wins per channel; one request in flight per channel.
+async function send(index, value) {
+  value = Math.max(0, Math.min(255, Math.round(value)));
+  if (inflight.has(index)) { queue.set(index, value); return; }
+  inflight.add(index);
+  try { await api('/dmx', { channel: index, value }); }
+  catch (e) { say(`DMX ${index + 1} failed: ${e.message}`); }
+  finally {
+    inflight.delete(index);
+    if (queue.has(index)) { const v = queue.get(index); queue.delete(index); send(index, v); }
+  }
+}
+async function sendAll(values, label) {
+  try { await api('/dmx/batch', Object.fromEntries(values.map((v, i) => [i, v]))); say(label); poll(); }
+  catch (e) { say(`${label} failed: ${e.message}`); }
+}
+function roleCatalog() {
+  // The fixture's original channel definitions first (full value ranges), then generic roles.
+  const list = [], seen = new Set();
+  for (const c of (original?.channels || [])) if (!seen.has(c.name)) { seen.add(c.name); list.push({ name: c.name, def: c }); }
+  for (const [name, type] of GENERIC) if (!seen.has(name)) { seen.add(name); list.push({ name, def: { name, type, ranges: [{ min: 0, max: 255, description: name }] } }); }
+  return list;
+}
+function loadPicks() {
+  try { picks = JSON.parse(localStorage.getItem(key(fx()) + ':picks') || '{}'); } catch { picks = {}; }
+}
+function savePicks() { try { localStorage.setItem(key(fx()) + ':picks', JSON.stringify(picks)); } catch {} }
+function rememberOriginal() {
+  const f = fx(); let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(key(f) + ':original') || 'null'); } catch {}
+  if (!saved) { saved = JSON.parse(JSON.stringify(f)); try { localStorage.setItem(key(f) + ':original', JSON.stringify(saved)); } catch {} }
+  original = saved;
+}
+function span() { return +$('span').value; }
+function addrOf(k) { return (fx().startAddress || 1) + k; }
+function patchName(k) { return fx().channels[k]?.name || '—'; }
+
+function buildRows() {
+  const f = fx(); if (!f) { $('rows').innerHTML = '<div class="card">No fixtures are patched.</div>'; return; }
+  const cat = roleCatalog();
+  const opts = ['<option value="">— not checked yet —</option>', '<option value="__nothing">Nothing visible happens</option>',
+    ...cat.map(r => `<option value="${esc(r.name)}">${esc(r.name)}</option>`)].join('');
+  let html = '';
+  for (let k = 0; k < span(); k++) {
+    html += `<article class="ch" data-k="${k}">
+      <div class="addr"><small>DMX</small><b>${addrOf(k)}</b><small>CH ${k + 1}</small></div>
+      <div class="head"><span class="patch">patch says <b>${esc(patchName(k))}</b></span><span class="badge" hidden></span>
+        <span class="val"><b>0</b> <span style="color:var(--mute)">0%</span></span></div>
+      <div class="slide"><input type="range" min="0" max="255" value="0" aria-label="DMX ${addrOf(k)} value"></div>
+      <div class="quick">${[0, 20, 128, 200, 255].map(v => `<button type="button" data-v="${v}">${v}</button>`).join('')}<button type="button" class="sweep">Sweep</button></div>
+      <div class="role"><label>It really does</label><select aria-label="What DMX ${addrOf(k)} does">${opts}</select></div>
+    </article>`;
+  }
+  $('rows').innerHTML = html;
+  $('rows').querySelectorAll('.ch').forEach(el => {
+    const k = +el.dataset.k, idx = addrOf(k) - 1, input = el.querySelector('input'), sel = el.querySelector('select');
+    sel.value = picks[addrOf(k)] || '';
+    input.addEventListener('pointerdown', () => dragging.add(idx));
+    const up = () => dragging.delete(idx);
+    input.addEventListener('pointerup', up); input.addEventListener('pointercancel', up); input.addEventListener('blur', up);
+    input.addEventListener('input', () => { paintVal(el, +input.value); send(idx, +input.value); });
+    el.querySelectorAll('[data-v]').forEach(b => b.addEventListener('click', () => { send(idx, +b.dataset.v); say(`DMX ${idx + 1} = ${b.dataset.v}`); }));
+    el.querySelector('.sweep').addEventListener('click', () => sweep(idx, el));
+    sel.addEventListener('change', () => { if (sel.value) picks[addrOf(k)] = sel.value; else delete picks[addrOf(k)]; savePicks(); refreshDiffs(); });
+  });
+  refreshDiffs(); render();
+}
+function paintVal(el, v) {
+  el.querySelector('.val b').textContent = v;
+  el.querySelector('.val span').textContent = Math.round(v / 2.55) + '%';
+  el.classList.toggle('live', v > 0);
+}
+async function sweep(idx, el) {
+  const b = el.querySelector('.sweep'); b.disabled = true; dragging.add(idx);
+  const steps = [...Array.from({ length: 18 }, (_, i) => i * 15), 255, ...Array.from({ length: 18 }, (_, i) => 255 - i * 15), 0];
+  for (const v of steps) { el.querySelector('input').value = v; paintVal(el, v); send(idx, v); await new Promise(r => setTimeout(r, 105)); }
+  dragging.delete(idx); b.disabled = false; say(`Swept DMX ${idx + 1} 0→255→0`);
+}
+function newChannels() {
+  // Unchecked channels keep their current patch definition; trailing "Nothing" channels shrink the footprint.
+  const cat = Object.fromEntries(roleCatalog().map(r => [r.name, r.def]));
+  const cur = fx().channels || [];
+  const addrs = Object.keys(picks).map(Number).filter(a => a >= addrOf(0));
+  if (!addrs.length) return null;
+  let n = Math.max(cur.length, Math.max(...addrs) - addrOf(0) + 1);
+  while (n > 1 && picks[addrOf(n - 1)] === '__nothing') n--;
+  return Array.from({ length: n }, (_, k) => {
+    const p = picks[addrOf(k)];
+    if (p && p !== '__nothing' && cat[p]) return JSON.parse(JSON.stringify(cat[p]));
+    if (p === '__nothing') return { name: `Unused ${k + 1}`, type: 'other', ranges: [{ min: 0, max: 255, description: 'No visible effect when tested' }] };
+    if (cur[k]) return JSON.parse(JSON.stringify(cur[k]));
+    return { name: `Channel ${k + 1}`, type: 'other', ranges: [{ min: 0, max: 255, description: 'Not identified yet' }] };
+  });
+}
+function refreshDiffs() {
+  let checked = 0, diff = 0;
+  $('rows').querySelectorAll('.ch').forEach(el => {
+    const k = +el.dataset.k, p = picks[addrOf(k)], badge = el.querySelector('.badge');
+    if (!p) { badge.hidden = true; el.classList.remove('differs'); return; }
+    checked++;
+    const same = (p === '__nothing' ? false : p === patchName(k));
+    if (!same) diff++;
+    badge.hidden = false; badge.className = 'badge ' + (same ? 'same' : 'diff'); badge.textContent = same ? 'MATCHES' : 'DIFFERENT';
+    el.classList.toggle('differs', !same);
+  });
+  const nc = newChannels();
+  $('summary').textContent = checked ? `${checked} checked · ${diff} different from the patch${nc ? ` · new patch: ${nc.length} channels` : ''}` : 'Say what each channel does.';
+  $('pv-count').textContent = nc ? `${nc.length} channels from DMX ${addrOf(0)}` : '';
+  $('preview').textContent = nc ? nc.map((c, k) => `${String(addrOf(k)).padStart(3)}  ${c.name.padEnd(18)} ${c.type}${c.name !== patchName(k) ? '   (was ' + patchName(k) + ')' : ''}`).join('\n') : 'Nothing identified yet.';
+  $('apply').disabled = !nc;
+}
+function render() {
+  if (!state) return;
+  const dmx = state.dmxChannels, dark = dmx.every(v => !v);
+  $('blackout').textContent = dark ? 'BLACKOUT ON' : 'BLACKOUT';
+  $('blackout').classList.toggle('dark', dark);
+  $('rows').querySelectorAll('.ch').forEach(el => {
+    const idx = addrOf(+el.dataset.k) - 1; if (dragging.has(idx)) return;
+    const v = dmx[idx] || 0; el.querySelector('input').value = v; paintVal(el, v);
+  });
+}
+async function poll() {
+  try {
+    state = await api('/state');
+    const first = !fixtures.length;
+    fixtures = state.fixtures || [];
+    if (first) {
+      $('fx').innerHTML = fixtures.map((f, i) => `<option value="${i}">${esc(f.name)} · DMX ${f.startAddress}</option>`).join('') || '<option>No fixtures</option>';
+      const keep = fxIndex < fixtures.length ? fxIndex : 0;
+      $('fx').value = String(keep);
+      if (fixtures.length) selectFixture(keep);
+    } else render();
+  } catch (e) { say('Server unreachable: ' + e.message); }
+}
+function selectFixture(i) {
+  fxIndex = i; rememberOriginal(); loadPicks();
+  const f = fx();
+  $('sub').textContent = `${f.name} · ${f.mode || f.channels.length + ' channels'} · patch DMX ${f.startAddress}–${f.startAddress + f.channels.length - 1}`;
+  $('fxmeta').textContent = `original saved on this phone: ${original.channels.length} ch`;
+  $('span').value = String([16, 18, 20, 24].find(n => n >= f.channels.length) || 24);
+  buildRows();
+}
+$('fx').addEventListener('change', e => selectFixture(+e.target.value));
+$('span').addEventListener('change', buildRows);
+function guarded(fill) {
+  // Lamp/reset channels per the ORIGINAL patch stay safe during the start presets.
+  const special = new Map();
+  (original?.channels || []).forEach((c, k) => { if (c.type === 'reset') special.set(addrOf(k) - 1, 0); if (c.type === 'lamp') special.set(addrOf(k) - 1, 200); });
+  return Array.from({ length: 512 }, (_, i) => special.has(i) ? special.get(i) : fill(i));
+}
+$('start-zero').addEventListener('click', () => sendAll(Array(512).fill(0), 'All channels at 0'));
+$('start-full').addEventListener('click', () => sendAll(guarded(() => 255), 'FULL ON (original reset at 0, lamp at 200)'));
+$('start-half').addEventListener('click', () => sendAll(guarded(() => 128), 'All channels at 128 (original reset at 0, lamp at 200)'));
+$('blackout').addEventListener('click', () => sendAll(Array(512).fill(0), 'BLACKOUT sent: all 512 channels at 0'));
+$('apply').addEventListener('click', async () => {
+  const nc = newChannels(); if (!nc) return;
+  if (Date.now() > applyArmed) { applyArmed = Date.now() + 4000; $('apply').classList.add('confirm'); $('apply').textContent = 'Tap again to apply'; setTimeout(() => { $('apply').classList.remove('confirm'); $('apply').textContent = 'Apply as new patch'; }, 4000); return; }
+  applyArmed = 0; $('apply').classList.remove('confirm'); $('apply').textContent = 'Apply as new patch';
+  const f = fx();
+  const updated = { ...f, channels: nc, mode: `${nc.length}-channel mode (identified ${new Date().toISOString().slice(0, 10)})` };
+  try {
+    await api('/fixtures', { fixtures: fixtures.map((x, i) => i === fxIndex ? updated : x) });
+    say(`New patch applied: ${nc.length} channels. The pad, wheel, APC40 and console now follow it.`);
+    fixtures = []; poll();
+  } catch (e) { say('Apply failed: ' + e.message); }
+});
+$('restore').addEventListener('click', async () => {
+  if (!original) return;
+  try { await api('/fixtures', { fixtures: fixtures.map((x, i) => i === fxIndex ? original : x) }); say('Original patch restored.'); fixtures = []; poll(); }
+  catch (e) { say('Restore failed: ' + e.message); }
+});
+poll(); setInterval(poll, 800);
+</script>
+</body>
+</html>
