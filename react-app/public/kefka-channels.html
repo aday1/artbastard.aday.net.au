@@ -65,6 +65,18 @@
   #apply.confirm { background: var(--ok); color: #0b1a12; }
   #restore { background: #2b2433; }
   #preview { font: 14px ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; color: #cfd6ea; margin: 0; }
+  #walk { position: sticky; top: 0; z-index: 5; border: 2px solid #9c86ff; background: #17142a; box-shadow: 0 8px 24px rgba(0,0,0,.45); }
+  #walk-now { font-size: 24px; font-weight: 900; margin: 0; }
+  #walk-now small { display: block; font-size: 14px; font-weight: 600; color: var(--mute); }
+  #walk-expect { margin: 6px 0 10px; color: #e6e1ff; font-size: 18px; }
+  .walk-btns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .walk-btns.judge { grid-template-columns: 1fr 1fr; margin-top: 8px; }
+  #walk-yes { background: #13291f; border: 2px solid var(--ok); color: var(--ok); font-size: 19px; }
+  #walk-no { background: #3a1a20; border: 2px solid var(--danger); color: #ff9aa5; font-size: 19px; }
+  #walk-play { background: #2a2440; border: 2px solid #9c86ff; }
+  #walk-tally { margin: 8px 0 0; color: var(--mute); font-size: 14px; }
+  .ch.current { outline: 3px solid #9c86ff; outline-offset: 2px; }
+  .ch.wrong .addr { background: #3a1a20; }
   @media (min-width: 760px) {
     .ch { grid-template-columns: 74px 1fr 1fr; grid-template-areas: "addr head head" "addr slide quick" "addr role role"; }
   }
@@ -78,6 +90,21 @@
     <button id="blackout" type="button">BLACKOUT</button>
   </header>
   <p id="status" role="status"></p>
+  <section class="card" id="walk">
+    <div class="eyebrow">Guided walk <span id="walk-step">not started</span></div>
+    <p id="walk-now">Tap Start. Watch the light.<small>Base look first: shutter open, dimmer 70%, white, no gobo, head centred.</small></p>
+    <p id="walk-expect"></p>
+    <div class="walk-btns">
+      <button id="walk-prev" type="button">◀ Prev</button>
+      <button id="walk-play" type="button">▶ Start</button>
+      <button id="walk-next" type="button">Next ▶</button>
+    </div>
+    <div class="walk-btns judge">
+      <button id="walk-yes" type="button">✓ Matches</button>
+      <button id="walk-no" type="button">✗ Wrong</button>
+    </div>
+    <p id="walk-tally"></p>
+  </section>
 
   <section class="card">
     <div class="eyebrow">How to use <span id="fxmeta"></span></div>
@@ -311,6 +338,97 @@ $('restore').addEventListener('click', async () => {
   try { await api('/fixtures', { fixtures: fixtures.map((x, i) => i === fxIndex ? original : x) }); say('Original patch restored.'); fixtures = []; poll(); }
   catch (e) { say('Restore failed: ' + e.message); }
 });
+// ---- Guided walk: base look, then one channel at a time with what the patch says it should do.
+let walkK = -1, walkPlaying = false, walkToken = 0, wrong = new Set();
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function loadWrong() { try { wrong = new Set(JSON.parse(localStorage.getItem(key(fx()) + ':wrong') || '[]')); } catch { wrong = new Set(); } }
+function saveWrong() { try { localStorage.setItem(key(fx()) + ':wrong', JSON.stringify([...wrong])); } catch {} }
+function expectFor(c) {
+  const n = (c?.name || '').toLowerCase(), t = c?.type || '';
+  if (t === 'pan') return 'Head turns LEFT ↔ RIGHT (big move)';
+  if (t === 'tilt') return 'Head tilts UP ↔ DOWN (big move)';
+  if (t === 'pan_fine' || t === 'tilt_fine') return 'Tiny movement only, may be invisible';
+  if (t === 'dimmer') return 'Beam fades dark ↔ bright';
+  if (t === 'strobe') return 'Beam goes dark, flashes faster and faster, opens again';
+  if (t === 'color_wheel') return 'Colour steps through the wheel, then the wheel spins';
+  if (t === 'gobo') return 'Pattern changes through the gobos, then the gobo wheel spins';
+  if (t === 'prism') return 'Beam splits into several beams in the top half';
+  if (n.includes('prism')) return 'Prism angle changes / prism spins (only visible if prism is in)';
+  if (n.includes('frost')) return 'Beam goes soft and wide in the top half';
+  if (n.includes('effect') && !n.includes('speed')) return 'Colourful effect drops in, in the top half';
+  if (t === 'focus') return 'Beam edge goes sharp ↔ blurry';
+  if (t === 'macro') return 'Automatic movement/colour programs kick in';
+  if (t === 'speed') return 'Nothing by itself (changes how fast other things move)';
+  if (t === 'lamp' || t === 'reset') return 'Skipped: timed command (would switch the lamp off or reset the fixture)';
+  return c?.ranges?.[0]?.description || 'Watch for any change';
+}
+function baseLook() {
+  const v = Array(512).fill(0);
+  (original?.channels || []).forEach((c, k) => {
+    const i = addrOf(k) - 1;
+    v[i] = { strobe: 255, dimmer: 180, pan: 128, tilt: 128, lamp: 200 }[c.type] ?? 0;
+  });
+  return v;
+}
+function walkPaint() {
+  const f = fx(), c = original?.channels?.[walkK];
+  $('walk-play').textContent = walkPlaying ? '❚❚ Pause' : '▶ Play';
+  $('rows').querySelectorAll('.ch').forEach(el => {
+    const k = +el.dataset.k;
+    el.classList.toggle('current', k === walkK);
+    el.classList.toggle('wrong', wrong.has(addrOf(k)));
+  });
+  if (walkK >= 0 && c) {
+    $('walk-step').textContent = `${walkK + 1} of ${original.channels.length}`;
+    $('walk-now').innerHTML = `DMX ${addrOf(walkK)} · manual says ${esc(c.name)}<small>${picks[addrOf(walkK)] ? 'you said: ' + esc(picks[addrOf(walkK)] === '__nothing' ? 'nothing visible' : picks[addrOf(walkK)]) : wrong.has(addrOf(walkK)) ? 'you marked this WRONG' : 'not judged yet'}</small>`;
+    $('walk-expect').textContent = 'Expect: ' + expectFor(c);
+  }
+  const ok = Object.entries(picks).filter(([a, p]) => p && p === (original?.channels?.[a - addrOf(0)]?.name)).length;
+  $('walk-tally').textContent = `✓ ${ok} matched · ✗ ${wrong.size} wrong${wrong.size ? ': DMX ' + [...wrong].sort((a, b) => a - b).join(', ') + ' (pick what each really does on its card)' : ''}`;
+}
+async function walkRun(k) {
+  const token = ++walkToken, c = original?.channels?.[k]; if (!c) return;
+  walkK = k; walkPaint();
+  const el = $('rows').querySelector(`.ch[data-k="${k}"]`);
+  el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  await sendAll(baseLook(), `Base look, then DMX ${addrOf(k)} (${c.name})`);
+  if (c.type === 'lamp' || c.type === 'reset') { await sleep(2500); if (token === walkToken && walkPlaying && k + 1 < original.channels.length) walkRun(k + 1); return; }
+  const idx = addrOf(k) - 1, start = baseLook()[idx];
+  const path = c.type === 'pan' || c.type === 'tilt'
+    ? [...Array.from({ length: 13 }, (_, i) => 128 + i * 10), 255, ...Array.from({ length: 26 }, (_, i) => 250 - i * 10), 0, ...Array.from({ length: 13 }, (_, i) => i * 10)]
+    : [...Array.from({ length: 18 }, (_, i) => i * 15), 255, ...Array.from({ length: 18 }, (_, i) => 255 - i * 15), 0];
+  dragging.add(idx);
+  for (const v of path) {
+    if (token !== walkToken) { dragging.delete(idx); return; }
+    send(idx, v); if (el) { el.querySelector('input').value = v; paintVal(el, v); }
+    await sleep(c.type === 'pan' || c.type === 'tilt' ? 120 : 110);
+  }
+  send(idx, start); dragging.delete(idx);
+  await sleep(2500);
+  if (token !== walkToken || !walkPlaying) return;
+  if (k + 1 < original.channels.length) walkRun(k + 1);
+  else { walkPlaying = false; walkPaint(); say('Walk finished. Wrong ones are listed in the walk card.'); }
+}
+$('walk-play').addEventListener('click', () => {
+  walkPlaying = !walkPlaying;
+  if (walkPlaying) walkRun(walkK < 0 ? 0 : walkK); else { walkToken++; walkPaint(); }
+});
+$('walk-next').addEventListener('click', () => walkRun(Math.min((original?.channels?.length || 1) - 1, walkK + 1)));
+$('walk-prev').addEventListener('click', () => walkRun(Math.max(0, walkK - 1)));
+$('walk-yes').addEventListener('click', () => {
+  if (walkK < 0) return;
+  const a = addrOf(walkK); picks[a] = original.channels[walkK].name; wrong.delete(a); savePicks(); saveWrong(); refreshDiffs();
+  const sel = $('rows').querySelector(`.ch[data-k="${walkK}"] select`); if (sel) sel.value = picks[a];
+  walkPaint(); if (walkK + 1 < original.channels.length) walkRun(walkK + 1);
+});
+$('walk-no').addEventListener('click', () => {
+  if (walkK < 0) return;
+  const a = addrOf(walkK); wrong.add(a); if (picks[a] === original.channels[walkK].name) delete picks[a];
+  savePicks(); saveWrong(); refreshDiffs(); walkPaint();
+  if (walkK + 1 < original.channels.length) walkRun(walkK + 1);
+});
+const _select = selectFixture;
+selectFixture = i => { _select(i); loadWrong(); walkPaint(); };
 poll(); setInterval(poll, 800);
 </script>
 </body>
