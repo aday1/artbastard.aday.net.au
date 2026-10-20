@@ -265,7 +265,7 @@ try {
     
     try {
       // Import save functions from core
-      const { saveConfig, saveScenes, saveActs, saveFixtures, saveGroups, getDmxChannels } = require('./core');
+      const { saveConfig, saveScenes, saveActs, getDmxChannels } = require('./core');
       
       // Get current state counts before saving
       const currentDmxState = getDmxChannels();
@@ -292,9 +292,10 @@ try {
       // Save current acts
       saveActs();
       
-      // Save current fixtures and groups
-      saveFixtures();
-      saveGroups();
+      // Fixture/group mutations persist immediately through fixturesPersistence.
+      // The legacy core caches are not hydrated on startup and are not updated
+      // by single-fixture edits or project imports. Saving them here can erase
+      // the authoritative catalogue (or resurrect an intentionally deleted item).
       
       // Save current DMX state to a state file
       if (currentDmxState && currentDmxState.length > 0) {
