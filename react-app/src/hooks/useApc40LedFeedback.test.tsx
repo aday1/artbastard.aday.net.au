@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { act as reactAct, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Act, Scene } from '../store';
 import { useStore } from '../store';
@@ -79,6 +79,46 @@ describe('useApc40LedFeedback', () => {
   });
 
   const sent = () => output.send.mock.calls.map(([message]) => message as number[]);
+
+  it('mirrors fixture selection in both MK1 rows and clears both after UI deselection', async () => {
+    useStore.setState({
+      fixtures: Array.from({ length: 8 }, (_, index) => ({
+        id: `beam-${index}`, name: `MiniBeam ${index + 1}`, type: 'Moving Head',
+        startAddress: index + 1, channels: [{ name: 'Colour Wheel', type: 'color_wheel' }],
+      })),
+      selectedFixtures: ['beam-0', 'beam-7'],
+      dmxChannels: new Array(512).fill(0),
+    });
+    renderHook(() => useApc40LedFeedback());
+    await waitFor(() => expect(sent()).toContainEqual([0x97, 0x33, 1]));
+    for (let channel = 0; channel < 8; channel += 1) {
+      for (const note of [0x31, 0x33]) {
+        expect(sent()).toContainEqual([0x90 + channel, note, channel === 0 || channel === 7 ? 1 : 0]);
+      }
+    }
+    output.send.mockClear();
+    reactAct(() => useStore.getState().setSelectedFixtures([]));
+    await waitFor(() => expect(sent()).toContainEqual([0x97, 0x33, 0]));
+    expect(sent()).toContainEqual([0x90, 0x33, 0]);
+    expect(sent()).toContainEqual([0x90, 0x31, 0]);
+    expect(sent()).toContainEqual([0x97, 0x31, 0]);
+  });
+
+  it('keeps MK2 Track Select colour-slot feedback', async () => {
+    output.name = 'Akai APC40 MK2 Output';
+    useStore.setState({
+      fixtures: [{
+        id: 'beam', name: 'MiniBeam', type: 'Moving Head', startAddress: 1,
+        channels: [{ name: 'Colour Wheel', type: 'color_wheel' }],
+      }],
+      selectedFixtures: [],
+      dmxChannels: new Array(512).fill(0),
+    });
+    renderHook(() => useApc40LedFeedback());
+    await waitFor(() => expect(sent()).toContainEqual([0x90, 0x33, 1]));
+    expect(sent()).toContainEqual([0x91, 0x33, 5]);
+    expect(sent()).toContainEqual([0x90, 0x31, 0]);
+  });
 
   it('paints saved, active, armed, record, and ACT LEDs with APC40 blink velocities', async () => {
     useStore.setState({

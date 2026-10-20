@@ -91,7 +91,7 @@ function groupSelected(groupFixtureIds: string[], selectedIds: Set<string>): boo
  *   - Scene Launch 1-5: ACT 1-5. Green = saved act, orange-blink = current act.
  *   - Record Arm 1-8: red-blink while its Solo Group latch is active.
  *   - Activator 1-8: green when that group is fully selected.
- *   - Track Select 1-8: intentionally off/unmapped.
+ *   - MK1 Track Select and Solo/Cue 1-8: lit only when fixture N is selected.
  *   - Master Track Select: red while DMX FREEZE is latched.
  */
 export function useApc40LedFeedback() {
@@ -162,6 +162,7 @@ export function useApc40LedFeedback() {
   };
 
   const paintOutput = (out: WebMidi.MIDIOutput) => {
+    const mk2 = /\b(mk2|mkii|mk\s?ii|apc40ii)\b/i.test(out.name || '');
     const state = useStore.getState();
     const {
       scenes,
@@ -244,12 +245,13 @@ export function useApc40LedFeedback() {
       // Activator row = toggle GROUP in multi-selection. On = all fixtures in group selected.
       sendLed(out, column, ACTIVATOR_NOTE, groupAllSelected ? LED_GREEN : LED_OFF);
       const colorSlot = colorWheelSlotForTrackSelect(colorWheelSlots, column);
-      const trackSelectVelocity = colorSlot
+      const colorSlotVelocity = colorSlot
         ? activeColorWheelValue !== null && activeColorWheelValue >= colorSlot.min && activeColorWheelValue <= colorSlot.max
           ? LED_GREEN
           : LED_ORANGE
         : LED_OFF;
-      sendLed(out, column, TRACK_SELECT_NOTE, trackSelectVelocity);
+      // Both MK1 selection rows reflect the same state, including UI changes.
+      sendLed(out, column, TRACK_SELECT_NOTE, mk2 ? colorSlotVelocity : fixtureSelected ? LED_GREEN : LED_OFF);
       sendLed(out, column, TRACK_STOP_NOTE, activeDeckName ? LED_RED : LED_OFF);
     }
 

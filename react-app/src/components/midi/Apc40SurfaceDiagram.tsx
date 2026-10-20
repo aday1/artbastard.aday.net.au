@@ -113,8 +113,9 @@ export const Apc40SurfaceDiagram: React.FC<Props> = ({
   const currentActId = useStore((s) => s.actPlaybackState.currentActId);
   const playAct = useStore((s) => s.playAct);
   const groups = useStore((s) => s.groups);
+  const fixtures = useStore((s) => s.fixtures);
   const selectedFixtures = useStore((s) => s.selectedFixtures);
-  const selectFixtureGroup = useStore((s) => s.selectFixtureGroup);
+  const toggleFixtureSelection = useStore((s) => s.toggleFixtureSelection);
   const apc40State = useStore((s) => s.apc40CrossfaderState);
   const superControlBindings = useStore((s) => s.superControlMidiMappings);
   const latestMidi = useStore((s) => s.midiMessages[s.midiMessages.length - 1]);
@@ -133,20 +134,6 @@ export const Apc40SurfaceDiagram: React.FC<Props> = ({
     .sort((a, b) => a - b)
     .map((column) => column + 1)
     .join(', ');
-
-  // Inverse lookup: which group (if any) is currently selected? A group is
-  // "selected" when selectedFixtures matches the group's fixture set exactly.
-  const selectedGroupIdx = useMemo(() => {
-    if (selectedFixtures.length === 0) return -1;
-    const sel = new Set(selectedFixtures);
-    return groups.findIndex((group) => {
-      const ids = group.fixtureIndices
-        .map((i) => useStore.getState().fixtures[i]?.id)
-        .filter((id): id is string => Boolean(id));
-      if (ids.length !== sel.size) return false;
-      return ids.every((id) => sel.has(id));
-    });
-  }, [selectedFixtures, groups]);
 
   // Faders bound via superControlMidiMappings: track-fader binding has
   // controller=7 + channel=col → that fader drives a SuperControl slot.
@@ -218,8 +205,8 @@ export const Apc40SurfaceDiagram: React.FC<Props> = ({
 
     const trackSelect = Array.from({ length: 8 }, (_, idx) => ({
       control: `Track Select ${idx + 1}`,
-      action: 'Unmapped (hardware CC bleed)',
-      assigned: false,
+      action: fixtures[idx] ? `Toggle fixture ${idx + 1}: ${fixtures[idx].name} (same as Solo/Cue)` : `Fixture ${idx + 1} unpatched`,
+      assigned: Boolean(fixtures[idx]),
     }));
 
     const quick = [
@@ -231,7 +218,7 @@ export const Apc40SurfaceDiagram: React.FC<Props> = ({
     ];
 
     return { device, faders, trackSelect, quick };
-  }, [deviceKnobBindings, deviceKnobFallbackBySlot, faderBindings, groups, acts.length, deckSlotStats.A, deckSlotStats.B, masterFaderBinding, hasLiveSuperControlMappings]);
+  }, [deviceKnobBindings, deviceKnobFallbackBySlot, faderBindings, fixtures, acts.length, deckSlotStats.A, deckSlotStats.B, masterFaderBinding, hasLiveSuperControlMappings]);
 
   // Live flash on incoming MIDI: track which on-screen key is flashing.
   const [flashing, setFlashing] = useState<Record<string, number>>({});
@@ -272,7 +259,9 @@ export const Apc40SurfaceDiagram: React.FC<Props> = ({
         flash(`scene-${action.sceneIndex}`);
         break;
       case 'select-fixture':
-        flash(`solo-${action.trackIndex}`);
+        flash(action.model === 'apc40-mk1' && latestMidi.note === 0x33
+          ? `track-select-${action.trackIndex}`
+          : `solo-${action.trackIndex}`);
         break;
       case 'solo-group':
         flash(`record-arm-${action.trackIndex}`);
@@ -376,20 +365,21 @@ export const Apc40SurfaceDiagram: React.FC<Props> = ({
     if (act) playAct(act.id);
   };
 
-  const onTrackSelectClick = (col: number) => {
+  const onFixtureSelectClick = (col: number, row: 'track-select' | 'solo') => {
     if (mode !== 'fixtures' && mode !== 'view') return;
-    flash(`track-select-${col}`);
-    const group = groups[col];
-    if (group) selectFixtureGroup(group.id);
+    const fixture = fixtures[col];
+    if (!fixture) return;
+    flash(`${row}-${col}`);
+    toggleFixtureSelection(fixture.id);
   };
 
   return (
     <div
       className={`${styles.surface} ${compact ? styles.compact : ''} ${saveMode ? styles.saveMode : ''} ${styles[`mode_${mode}`] ?? ''}`}
-      aria-label={title ?? 'APC40 surface diagram'}
+      aria-label={title ?? 'APC40 MK1 surface diagram'}
     >
       <div className={styles.title}>
-        <strong>APC40</strong>
+        <strong>APC40 MK1</strong>
         <span>
           {title ?? `mode: ${mode}`} · deck {activeDeck}
           {saveMode ? ' · SAVE MODE' : ''}
@@ -469,7 +459,7 @@ export const Apc40SurfaceDiagram: React.FC<Props> = ({
             </div>
           </div>
           <div className={styles.assignmentCard}>
-            <h4>Track Select Buttons</h4>
+            <h4>Track Select / Solo/Cue — fixture toggles</h4>
             {mappingSummary.trackSelect.map((item) => (
               <div key={item.control} className={styles.assignmentRow}>
                 <span>{item.control}</span>
@@ -609,11 +599,11 @@ export const Apc40SurfaceDiagram: React.FC<Props> = ({
               <span className={styles.rowLabel}>{rowName}</span>
               {Array.from({ length: 8 }, (_, col) => {
                 const isSel = rowName === 'SEL';
+                const isFixtureRow = isSel || rowName === 'SOLO';
                 const isAutoArmed = rowName === 'AUTO' && apc40State?.autoGroups?.includes(col);
                 const isArmed = rowName === 'ARM' && soloedGroupSet.has(col);
-                const group = groups[col];
-                const isApcTrackSelected = isSel && apc40State?.activeTrackIndex === col;
-                const isGroupSelected = isSel && group && selectedGroupIdx === col;
+                const fixture = fixtures[col];
+                const isFixtureSelected = isFixtureRow && Boolean(fixture && selectedFixtures.includes(fixture.id));
                 const flashKey =
                   rowName === 'ARM'
                     ? `record-arm-${col}`
@@ -625,15 +615,19 @@ export const Apc40SurfaceDiagram: React.FC<Props> = ({
                           ? `track-select-${col}`
                           : `track-stop-${col}`;
                 const isFlashing = !!flashing[flashKey];
-                const label = isSel ? (group?.name ?? `T${col + 1}`) : rowName.charAt(0);
+                const label = isFixtureRow ? (fixture?.name ?? `F${col + 1}`) : rowName.charAt(0);
+                const fixtureTitle = `${isSel ? 'Track Select' : 'Solo/Cue'} ${col + 1}: ${fixture
+                  ? `tap to ${isFixtureSelected ? 'remove' : 'add'} fixture ${col + 1} (${fixture.name}); release keeps selection; no SHIFT needed`
+                  : 'no patched fixture; no selection change'}`;
                 return (
                   <button
                     key={`${rowName}-${col}`}
                     type="button"
-                    className={`${styles.stripBtn} ${styles[`row_${rowName}`]} ${isGroupSelected || isApcTrackSelected || isArmed || isAutoArmed ? styles.active : ''} ${isApcTrackSelected ? styles.apcSelected : ''} ${isArmed ? styles.saveArmed : ''} ${isFlashing ? styles.flash : ''} ${isSel && group ? styles.bound : styles.unbound} ${lastTouched?.key === flashKey ? styles.lastTouched : ''}`}
-                    onClick={() => isSel && onTrackSelectClick(col)}
-                    disabled={!isSel || (mode !== 'fixtures' && mode !== 'view')}
-                    title={isSel ? (apc40State?.activeTargetLabel && apc40State.activeTrackIndex === col ? `APC selected: ${apc40State.activeTargetLabel}` : group ? `Select group "${group.name}"` : `Track Select ${col + 1}`) : rowName === 'ARM' ? `Solo Group ${col + 1}${groups[col] ? ` (${groups[col].name})` : ' (no group)'}` : `${rowName} col ${col + 1}`}
+                    className={`${styles.stripBtn} ${styles[`row_${rowName}`]} ${isFixtureSelected || isArmed || isAutoArmed ? styles.active : ''} ${isArmed ? styles.saveArmed : ''} ${isFlashing ? styles.flash : ''} ${isFixtureRow && fixture ? styles.bound : styles.unbound} ${lastTouched?.key === flashKey ? styles.lastTouched : ''}`}
+                    onClick={() => isFixtureRow && onFixtureSelectClick(col, isSel ? 'track-select' : 'solo')}
+                    disabled={!isFixtureRow || !fixture || (mode !== 'fixtures' && mode !== 'view')}
+                    aria-pressed={isFixtureRow ? isFixtureSelected : undefined}
+                    title={isFixtureRow ? fixtureTitle : rowName === 'ARM' ? `Solo Group ${col + 1}${groups[col] ? ` (${groups[col].name})` : ' (no group)'}` : `${rowName} col ${col + 1}`}
                   >
                     <span className={styles.cellLabel}>{label}</span>
                   </button>

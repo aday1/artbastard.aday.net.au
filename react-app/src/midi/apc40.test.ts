@@ -2,6 +2,24 @@ import { describe, expect, it } from 'vitest';
 import { decodeApc40Message, isApc40Source } from './apc40';
 
 describe('APC40 workflow decoder', () => {
+  it.each(Array.from({ length: 8 }, (_, i) => i))('decodes MK1 Track Select %i press and release as fixture selection', (channel) => {
+    for (const [type, velocity, pressed] of [
+      ['noteon', 127, true],
+      ['noteoff', 127, false],
+      ['noteon', 0, false],
+    ] as const) {
+      expect(decodeApc40Message({
+        _type: type, source: 'Akai APC40', channel, note: 0x33, velocity,
+      })).toEqual({ type: 'select-fixture', model: 'apc40-mk1', trackIndex: channel, pressed });
+    }
+  });
+
+  it('preserves MK2 Track Select colour slots', () => {
+    expect(decodeApc40Message({
+      _type: 'noteon', source: 'Akai APC40 MK2', channel: 3, note: 0x33, velocity: 127,
+    })).toEqual({ type: 'color-wheel-slot', model: 'apc40-mk2', trackIndex: 3 });
+  });
+
   it('detects APC40 browser or server MIDI source names', () => {
     expect(isApc40Source('Akai APC40')).toBe(true);
     expect(isApc40Source('APC 40 mkII Control')).toBe(true);
@@ -128,9 +146,10 @@ describe('APC40 workflow decoder', () => {
       note: 0x33,
       velocity: 127,
     })).toEqual({
-      type: 'color-wheel-slot',
+      type: 'select-fixture',
       model: 'apc40-mk1',
       trackIndex: 6,
+      pressed: true,
     });
 
     expect(decodeApc40Message({

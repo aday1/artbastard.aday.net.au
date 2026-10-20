@@ -44,7 +44,7 @@ conditions, in priority order (top-most matching condition wins).
 | recordArm      | soloed=LED_RED_BLINK; else=LED_OFF                                                                           |
 | selectFixture  | selected=LED_GREEN; else=LED_OFF                                                                             |
 | selectGroup    | selected=LED_GREEN; else=LED_OFF                                                                             |
-| trackSelect    | always=LED_OFF                                                                                               |
+| trackSelect    | selected=LED_GREEN; else=LED_OFF                                                                             |
 | trackStop      | anyActiveScene=LED_RED; else=LED_OFF                                                                         |
 | masterButton   | dmxFrozen=LED_RED; else=LED_OFF                                                                              |
 | stopAll        | anyActiveScene=LED_RED; else=LED_OFF                                                                         |
@@ -57,6 +57,11 @@ conditions, in priority order (top-most matching condition wins).
 | sendC          | effectsAutoEnabled=LED_ORANGE_BLINK; else=LED_OFF                                                            |
 
 ## Hardware constraint: single-color rows
+
+On MK1, Track Select and Solo/Cue in each column both mirror the corresponding
+patched fixture's selection. They stay lit after release, turn off when either
+button removes that fixture, and remain off for unpatched positions. These
+MK1 rules do not change MK2's Track Select colour-wheel feedback.
 
 On APC40 MK1, only the 8×5 **clip grid** is multi-color (green/red/orange).
 The **Solo/Cue**, **Activator**, **Record Arm**, and **Track Select** rows are

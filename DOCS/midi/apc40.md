@@ -53,10 +53,18 @@ file describes *what the bytes mean*; those describe *what the operator sees*.
 
 Both server MIDI and Web MIDI initialize the MK1 to Alternate Ableton Live
 Mode 2 (`0x42`): unbanked Device controls, momentary buttons, host LED feedback.
-The software latches Solo/Cue, Activator, Record Arm, PAN/SEND and utility
+The software latches Track Select, Solo/Cue, Activator, Record Arm, PAN/SEND and utility
 buttons on each positive press. Releasing a button never unlatches it, even
 after a long hold. SHIFT and the CC64 footswitch remain momentary. MK2 handling
 retains its prior behavior; this MK1 introduction uses product ID `0x73`.
+
+On MK1, **Track Select 1–8** (note `0x33`, channels 0–7) and **Solo/Cue 1–8**
+(note `0x31`, channels 0–7) both toggle the corresponding patched fixture in
+multi-selection. Each positive press adds/removes only `fixtures[channel]`;
+release keeps the selection. No SHIFT is required. Both rows' LEDs mirror
+the same selected-fixture state, and an unpatched position has no effect.
+Colour-wheel control remains on the Device Control `color_wheel` role knob.
+MK2 retains its existing Track Select colour-wheel-slot behavior.
 
 Generic Mode 0 (`0x40`) sends all eight Device knob values when Track Select
 changes bank, without sending a Track Select note. The input gate discards
@@ -84,6 +92,7 @@ must match a variant of `Apc40Action` (see `react-app/src/midi/apc40.ts`).
 | record-arm      | 0..7     | 0x30   | solo-group      | press-release |
 | select-fixture  | 0..7     | 0x31   | select-fixture  | press-release |
 | select-group    | 0..7     | 0x32   | select-group    | press-release |
+| track-select-mk1 | 0..7    | 0x33   | select-fixture  | press-release |
 | track-stop      | 0..7     | 0x34   | track-stop      | gt0           |
 | full-on         | 0        | 0x3a   | full-on         | press-release |
 | blackout        | 0        | 0x3b   | blackout        | press-release |
@@ -121,6 +130,8 @@ The two `clip-mk1` overloads describe the MK1 grid layout (note `0x35 + row`,
 channel = column). For MK2 the grid lives at note `0x00..0x27` on channel 0 —
 encoded by the model-specific decoder rather than table rows because the
 mapping is purely arithmetic.
+The `track-select-mk1` row applies only to MK1; the model-specific decoder
+keeps MK2 note `0x33` on channels 0–7 as `color-wheel-slot` on positive press.
 
 ## CC bindings
 
@@ -170,9 +181,9 @@ The track-control encoder ring LEDs (0x38-0x3f) are output-only. The
 hardware also emits CC presses on these same addresses when the encoders
 are pushed, but we intentionally do **not** map the push CC aliases: the
 APC40's mode behavior in that range is unreliable and would silently
-rewrite DMX. Fixture/group selection lives on the Solo/Cue and Activator
-rows instead. The physical Track Select note row selects fixed Color Wheel
-slots for the selected color-wheel fixture.
+rewrite DMX. On MK1, fixture selection lives on both Solo/Cue and Track Select;
+Activator selects groups. Colour-wheel values use the Device Control role
+knob. MK2 keeps its existing Track Select colour-wheel-slot mapping.
 
 ## Device knob role assignments (default)
 
@@ -200,9 +211,9 @@ is in effect. `controlName` must be a SuperControl role name from
 | clipGrid       | scene      | Clip Grid / Session View (8x5)       | Launch 40 Deck A scene slots. Hold SHIFT to launch/save the matching 40 Deck B scene slots.                                                          |
 | sceneLaunch    | scene      | Scene Launch (1-5)                   | Launch ACT 1-5. Stop All Clips stops any currently playing ACT.                                                                                      |
 | recordArm      | selection  | Record Arm row \u2014 SOLO GROUP (1-8)  | Latch: solo group N. Snapshots DMX on first solo, blacks out fixtures not in soloed groups, restores snapshot when last solo released.            |
-| selectFixture  | selection  | Solo/Cue (1-8) \u2014 select FIXTURE      | Select fixture N (positional). Each column maps to `fixtures[N]`.                                                                                    |
+| selectFixture  | selection  | Solo/Cue (1-8) \u2014 select FIXTURE      | MK1: tap to add/remove the corresponding patched fixture; release keeps selection. Mirrors Track Select LEDs. Unpatched positions do nothing. MK2 retains explicit ON/OFF handling. |
 | selectGroup    | selection  | Activator (1-8) \u2014 select GROUP       | Select fixture group N (positional). Each column maps to `groups[N]`.                                                                                |
-| trackSelect    | effect     | Track Select (1-8) \u2014 Color Wheel slots | Select fixed color-wheel slots for the selected MiniBeam / color-wheel fixture. Buttons spread across the fixture's available fixed wheel colours.    |
+| trackSelect    | selection  | Track Select (1-8) \u2014 MK1 fixture toggle | MK1: tap to add/remove only the corresponding patched fixture, like Solo/Cue; release keeps selection. Both rows mirror selection; no SHIFT needed. Unpatched positions do nothing. MK2 keeps colour-wheel slots. |
 | trackStop      | utility    | Clip Stop row                        | Stop/unselect the active scene in that column for the current deck.                                                                                  |
 | stopAll        | utility    | Stop All Clips                       | Stop all Deck A/B scenes and ACT playback.                                                                                                           |
 | masterButton   | utility    | Master Select \u2014 FREEZE DMX           | Press once to freeze DMX output and light the Master LED; press again to unfreeze and flush current store state. MK1 sends Note 0x50; Generic Mode CC bank snapshots are not button presses. |

@@ -133,7 +133,11 @@ export const LED_BEHAVIOR: LedBehavior[] = [
     "controlKey": "trackSelect",
     "rules": [
       {
-        "condition": "always",
+        "condition": "selected",
+        "velocity": "LED_GREEN"
+      },
+      {
+        "condition": "else",
         "velocity": "LED_OFF"
       }
     ]

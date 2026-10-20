@@ -1026,7 +1026,8 @@ export function useApc40Workflow() {
     }
 
     if (action.type === 'select-fixture') {
-      // Solo/Cue presses toggle selection; release never removes the fixture.
+      // MK1 Track Select and Solo/Cue toggle the same fixture membership.
+      // Release never removes the fixture.
       suppressTrackControlUntilRef.current = Date.now() + TRACK_SELECT_ENCODER_SUPPRESSION_MS;
       const fixture = state.fixtures[action.trackIndex];
       if (fixture) {
@@ -1050,7 +1051,9 @@ export function useApc40Workflow() {
             action.pressed
               ? `Added fixture "${fixture.name}" to selection (${nextSelection.length} now selected)`
               : `Deselected fixture "${fixture.name}" (${nextSelection.length} now selected)`,
-            'Press Solo/Cue to add or remove a fixture. Selection persists after release.',
+            action.model === 'apc40-mk1'
+              ? 'Tap Track Select or Solo/Cue to add or remove a fixture. Selection persists after release.'
+              : 'Use Solo/Cue to add or remove a fixture.',
             { fixtureNames: [fixture.name] }
           ),
         });

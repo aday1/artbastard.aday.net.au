@@ -135,6 +135,7 @@ describe('useApc40Workflow', () => {
   });
 
   it.each([
+    ['Track Select fixture', 0x33, (s: any) => s.selectedFixtures.includes('fixture-a')],
     ['Solo/Cue fixture', 0x31, (s: any) => s.selectedFixtures.includes('fixture-a')],
     ['Activator group', 0x32, (s: any) => s.selectedFixtures.length === 2],
     ['Record Arm solo', 0x30, (s: any) => s.apc40CrossfaderState.soloedGroups.includes(0)],
@@ -158,6 +159,43 @@ describe('useApc40Workflow', () => {
     expect(enabled(useStore.getState())).toBe(false);
     apcMessage({ channel: 0, note, velocity: 0, timestamp: 6500 });
     expect(enabled(useStore.getState())).toBe(false);
+  });
+
+  it('adds fixtures 1–8 with Track Select and toggles the same membership from Solo/Cue without DMX changes', () => {
+    const fixtures = Array.from({ length: 8 }, (_, index) => ({
+      ...miniBeam, id: `beam-${index + 1}`, name: `MiniBeam ${index + 1}`, startAddress: index * 18 + 1,
+    }));
+    const originalDmx = Array.from({ length: 512 }, (_, index) => (index * 7 + 41) % 256);
+    useStore.setState({ fixtures, groups: [], dmxChannels: originalDmx });
+    renderHook(() => useApc40Workflow());
+    for (let channel = 0; channel < 8; channel += 1) {
+      apcMessage({ channel, note: 0x33, timestamp: 1000 + channel * 100 });
+      apcMessage({ _type: 'noteoff', channel, note: 0x33, timestamp: 1050 + channel * 100 });
+      expect(useStore.getState().selectedFixtures).toEqual(fixtures.slice(0, channel + 1).map(f => f.id));
+      expect(useStore.getState().dmxChannels).toEqual(originalDmx);
+    }
+    // The alternate row removes only fixture 3, preserving the other seven.
+    apcMessage({ channel: 2, note: 0x31, timestamp: 2000 });
+    apcMessage({ _type: 'noteoff', channel: 2, note: 0x31, timestamp: 2050 });
+    expect(useStore.getState().selectedFixtures).toEqual(fixtures.filter((_, i) => i !== 2).map(f => f.id));
+    apcMessage({ channel: 2, note: 0x33, timestamp: 2100 });
+    apcMessage({ channel: 2, note: 0x33, velocity: 0, timestamp: 2150 });
+    expect(new Set(useStore.getState().selectedFixtures)).toEqual(new Set(fixtures.map(f => f.id)));
+    expect(useStore.getState().dmxChannels).toEqual(originalDmx);
+
+    // An empty numbered slot leaves the existing selection alone.
+    act(() => useStore.getState().setSelectedFixtures(['beam-1']));
+    act(() => useStore.setState({ fixtures: [fixtures[0]] }));
+    apcMessage({ channel: 7, note: 0x33, timestamp: 2200 });
+    apcMessage({ _type: 'noteoff', channel: 7, note: 0x33, timestamp: 2250 });
+    expect(useStore.getState().selectedFixtures).toEqual(['beam-1']);
+    expect(useStore.getState().dmxChannels).toEqual(originalDmx);
+
+    // The existing first selected-slot dimmer mapping still works after release.
+    apcMessage({ _type: 'cc', channel: 0, controller: 7, value: 12, timestamp: 2300 });
+    const expected = [...originalDmx];
+    expected[2] = Math.round(12 * 255 / 127);
+    expect(useStore.getState().dmxChannels).toEqual(expected);
   });
 
   it('derives latch changes from current UI state and preserves SHIFT+SEND pattern cycling', () => {

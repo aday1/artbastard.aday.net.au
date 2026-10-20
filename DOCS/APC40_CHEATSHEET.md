@@ -5,7 +5,7 @@ and `react-app/src/hooks/useApc40LedFeedback.ts`. Browser MIDI and the server
 initialize the AKAI APC40 MK1 to **Alternate Ableton Live Mode 2 (`0x42`)**.
 The dedicated integration works without manually applying a MIDI template.
 
-**Tap to toggle:** Solo/Cue, Activator, Record Arm, PAN, SEND A/B/C, FULL ON,
+**Tap to toggle:** Track Select, Solo/Cue, Activator, Record Arm, PAN, SEND A/B/C, FULL ON,
 BLACKOUT, Master Select, and Detail View keep their state after release.
 Press again to toggle them back; holding a button longer does not change this.
 SHIFT and the CC64 footswitch remain momentary.
@@ -24,9 +24,9 @@ explains initialization and the bounded bank-snapshot guard.
                 speed                      focus, zoom, effects
 
   RECORD ARM   [solo grp1] ... [solo grp8]   latched Solo-Group blackout of non-soloed fixtures
-  SOLO/CUE     [fixture 1] ... [fixture 8]   select fixture N (positional)
+  SOLO/CUE     [fixture 1] ... [fixture 8]   toggle fixture N in multi-selection
   ACTIVATOR    [group 1]   ... [group 8]     select fixture group N (positional)
-  TRACK SELECT [colour 1] ... [colour 8]    fixed colour-wheel slots
+  TRACK SELECT [fixture 1] ... [fixture 8]   same selection as Solo/Cue; no SHIFT needed
   CLIP STOP    [stop col1] ... [stop col8]   release current deck scene
 
   FADERS       [slot 1] ... [slot 8]         SuperControl dimmer per selected slot
@@ -70,13 +70,13 @@ explains initialization and the bounded bank-snapshot guard.
 | **Scene Launch 1-5** | Launch ACT 1-5 | green = ACT exists, orange-blink = playing ACT |
 | **Clip Stop row** | Stop/unselect the active scene for that column in the current deck | red while a deck scene is active |
 | **Stop All Clips** | Stop Deck A scene, Deck B scene, scene timeline playback, and ACT playback | red while a deck scene or ACT is active |
-| **Track Select 1-8** | Choose fixed colour-wheel slots. Targets selected colour-wheel fixtures, or all patched colour-wheel fixtures when the selection contains none. | available slots lit; MK1 single-color LEDs do not distinguish current from other available slots |
+| **Track Select 1-8** | Tap to add/remove the corresponding patched fixture, like Solo/Cue. Release keeps selection. No SHIFT needed; an unpatched position does nothing. | lit when that fixture is selected; mirrors Solo/Cue in the same column |
 | **Master Track Select** | **FREEZE DMX latch** — tap to freeze rig output; tap again to unfreeze and flush current store state. MK1 input and LED use note `0x50`. Release keeps the state. | lit while frozen, off while live |
 | **Faders 1-8** | SuperControl dimmer for selected fixture slot 1-8 | n/a |
 | **Master fader** | SuperControl `masterDimmer`/DIMMER for current selection | n/a |
 | **Device Control knobs 1-8** | Dynamic fixture role controls, prioritizing gobo/effects roles for the selected fixture/group | in-app APC40 manual labels current roles |
 | **Cue Level** | **AUTOMATION DIRECTION** — endless rotary encoder. CW = forward, CCW = reverse. Inverts step direction in AutoScene index advance and pan/tilt autopilot track. Modular color/dimmer/effects phases run on wall-clock and are not affected. | n/a |
-| **Solo/Cue 1-8** | Tap to add fixture N to multi-selection; tap again to remove it. Release keeps the selection. | lit when fixture is selected, off otherwise (MK1: single-color row) |
+| **Solo/Cue 1-8** | Tap to add fixture N to multi-selection; tap again to remove it. Release keeps the selection. An unpatched position does nothing. | lit when fixture is selected; mirrors Track Select in the same column (MK1: single-color row) |
 | **Activator 1-8** | Tap to add fixture group N; tap again to remove it. Release keeps the selection. | lit when every fixture in the group is selected, off otherwise (MK1: single-color row) |
 | **Crossfader** | Linear DMX blend between active Deck A and active Deck B scenes | n/a |
 | **Nav up/down** | Previous/next fixture | n/a |
@@ -146,10 +146,16 @@ delete scenes.
 
 ### Selection first
 
-Tap **Solo/Cue 1-8** to add an individual fixture, or **Activator 1-8** to add
-a fixture group. Release the button before moving a fader; selection stays
-latched. Tap the same button again to remove its fixture or group.
-**Track Select 1-8** chooses colour-wheel slots, not fixture selection.
+Tap **Track Select 1-8** or **Solo/Cue 1-8** to add an individual fixture,
+or **Activator 1-8** to add a fixture group. Selection stays latched after
+release. Both individual-fixture rows address the same patched positions:
+button 1 toggles fixture 1, button 2 toggles fixture 2, and so on. A press
+adds/removes only that fixture and preserves the rest of the selection.
+No SHIFT is needed. Press either row's corresponding button to remove the
+fixture again; both LEDs mirror its selected state. Unpatched positions do
+nothing.
+
+Use the **Device Control `color_wheel` role knob** for colour-wheel changes.
 Track Control ring CCs are LED feedback, not selection-button aliases.
 Faders and role knobs require a fixture/group selection.
 

@@ -163,6 +163,11 @@ export function decodeApc40Message(message: MidiLikeMessage): Apc40Action | null
   if (note === 0x30 && (pressed || released)) return { type: 'solo-group', model, trackIndex, pressed };
   // Solo/Cue row selects FIXTURES (formerly solo-isolation).
   if (note === 0x31 && (pressed || released)) return { type: 'select-fixture', model, trackIndex, pressed };
+  // MK1 Track Select is the same fixture multi-selection toggle as Solo/Cue.
+  // Keep releases so the workflow can clear its held-button guard.
+  if (model === 'apc40-mk1' && note === 0x33
+    && (message.channel ?? 0) >= 0 && (message.channel ?? 0) <= 7
+    && (pressed || released)) return { type: 'select-fixture', model, trackIndex, pressed };
   // Activator row selects GROUPS (formerly auto-control toggle).
   if (note === 0x32 && (pressed || released)) return { type: 'select-group', model, trackIndex, pressed };
   // Device Control block stateful buttons.
@@ -183,7 +188,7 @@ export function decodeApc40Message(message: MidiLikeMessage): Apc40Action | null
   const scene = sceneLaunch(model, note);
   if (scene) return scene;
 
-  if (note === 0x33 && (message.channel ?? 0) >= 0 && (message.channel ?? 0) <= 7) return { type: 'color-wheel-slot', model, trackIndex };
+  if (model === 'apc40-mk2' && note === 0x33 && (message.channel ?? 0) >= 0 && (message.channel ?? 0) <= 7) return { type: 'color-wheel-slot', model, trackIndex };
   if (note === 0x34) return { type: 'track-stop', model, trackIndex };
   // Device Control cluster (right side of APC40, channel 0):
   // 0x3A = Clip/Track toggle  → Full On latch

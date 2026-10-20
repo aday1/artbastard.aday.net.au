@@ -408,7 +408,7 @@ export const Apc40Manual: React.FC = () => {
 
           {/* Tracks 1-8 + master */}
           <div className={`${styles.cluster} ${styles.tracks}`}>
-            <div className={styles.clusterLabel}>Tracks 1–8: solo-group, group-auto, fixture/group select, slot dimmer (Track Select row unmapped — hardware CC bleed)</div>
+            <div className={styles.clusterLabel}>Tracks 1–8: Solo/Cue and Track Select toggle fixture selection · no SHIFT needed · release keeps selection</div>
             <div className={styles.trackRow}>
               {Array.from({ length: 8 }).map((_, trackIdx) => {
                 const armKey = `note:${trackIdx}:48`;
@@ -416,6 +416,12 @@ export const Apc40Manual: React.FC = () => {
                 const autoKey = `note:${trackIdx}:50`;
                 const selectKey = `note:${trackIdx}:51`;
                 const stopKey = `note:${trackIdx}:52`;
+                const fixture = fixtures[trackIdx];
+                const fixtureSelected = Boolean(fixture && selectedFixtures.includes(fixture.id));
+                const fixtureTarget = fixture ? `fixture ${trackIdx + 1} (${fixture.name})` : `fixture ${trackIdx + 1} (unpatched)`;
+                const fixtureSelectionTitle = fixture
+                  ? `tap to ${fixtureSelected ? 'remove' : 'add'} ${fixtureTarget}; release keeps selection; no SHIFT needed`
+                  : `${fixtureTarget}; no selection change`;
                 const b = trackFaderBinding(trackIdx);
                 const faderKey = b?.controller !== undefined
                   ? `cc:${b.channel}:${b.controller}`
@@ -436,15 +442,15 @@ export const Apc40Manual: React.FC = () => {
                       title={`Activator ${trackIdx + 1} → select fixture group ${trackIdx + 1}`}
                     >GRP</div>
                     <div
-                      className={`${styles.trackButton} ${activeKey === soloKey ? styles.active : ''} ${shouldMuteControl(soloKey, false) ? styles.focusMuted : ''}`}
-                      style={{ background: APC40_CATEGORY_COLORS.selection }}
-                      title={`Solo/Cue ${trackIdx + 1} → select fixture ${trackIdx + 1}`}
+                      className={`${styles.trackButton} ${activeKey === soloKey ? styles.active : ''} ${shouldMuteControl(soloKey, Boolean(fixture)) ? styles.focusMuted : ''}`}
+                      style={{ background: fixtureSelected ? '#f59e0b' : '#475569' }}
+                      title={`Solo/Cue ${trackIdx + 1} → ${fixtureSelectionTitle}`}
                     >FIX</div>
                     <div
-                      className={`${styles.trackButton} ${activeKey === selectKey ? styles.active : ''} ${shouldMuteControl(selectKey, false) ? styles.focusMuted : ''}`}
-                      style={{ background: '#475569' }}
-                      title={`Track Select ${trackIdx + 1} → UNMAPPED (APC40 hardware CC bleed)`}
-                    >—</div>
+                      className={`${styles.trackButton} ${activeKey === selectKey ? styles.active : ''} ${shouldMuteControl(selectKey, Boolean(fixture)) ? styles.focusMuted : ''}`}
+                      style={{ background: fixtureSelected ? '#f59e0b' : '#475569' }}
+                      title={`Track Select ${trackIdx + 1} → ${fixtureSelectionTitle}`}
+                    >FIX</div>
                     <div
                       className={`${styles.trackButton} ${activeKey === stopKey ? styles.active : ''} ${shouldMuteControl(stopKey, false) ? styles.focusMuted : ''}`}
                       style={{ background: APC40_CATEGORY_COLORS.utility }}

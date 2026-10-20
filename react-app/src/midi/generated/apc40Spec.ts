@@ -171,6 +171,17 @@ export const APC40_NOTE_BINDINGS: Apc40NoteBinding[] = [
     "velocityCheck": "press-release"
   },
   {
+    "controlKey": "track-select-mk1",
+    "channels": {
+      "kind": "range",
+      "from": 0,
+      "to": 7
+    },
+    "note": 51,
+    "action": "select-fixture",
+    "velocityCheck": "press-release"
+  },
+  {
     "controlKey": "track-stop",
     "channels": {
       "kind": "range",
@@ -867,7 +878,7 @@ export const APC40_CATALOG: Apc40CatalogEntry[] = [
     "key": "selectFixture",
     "category": "selection",
     "label": "Solo/Cue (1-8) \\u2014 select FIXTURE",
-    "description": "Select fixture N (positional). Each column maps to `fixtures[N]`."
+    "description": "MK1: tap to add/remove the corresponding patched fixture; release keeps selection. Mirrors Track Select LEDs. Unpatched positions do nothing. MK2 retains explicit ON/OFF handling."
   },
   {
     "key": "selectGroup",
@@ -877,9 +888,9 @@ export const APC40_CATALOG: Apc40CatalogEntry[] = [
   },
   {
     "key": "trackSelect",
-    "category": "effect",
-    "label": "Track Select (1-8) \\u2014 Color Wheel slots",
-    "description": "Select fixed color-wheel slots for the selected MiniBeam / color-wheel fixture. Buttons spread across the fixture's available fixed wheel colours."
+    "category": "selection",
+    "label": "Track Select (1-8) \\u2014 MK1 fixture toggle",
+    "description": "MK1: tap to add/remove only the corresponding patched fixture, like Solo/Cue; release keeps selection. Both rows mirror selection; no SHIFT needed. Unpatched positions do nothing. MK2 keeps colour-wheel slots."
   },
   {
     "key": "trackStop",
