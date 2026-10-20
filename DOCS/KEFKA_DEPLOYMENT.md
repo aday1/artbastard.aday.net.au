@@ -422,3 +422,27 @@ Set `ARTBASTARD_KEFKA=0` in the backend service environment and restart
 `artbastard.service` to disable window launching. Preserve the backend's
 `data/` directory and both browser profiles. Network rollback is separate and
 is described above.
+
+## Physical verification (2026-10-20, evening)
+
+aday confirmed on the hardware, around 22:45 local time:
+
+- The MiniBeam produces visible light from ArtBastard's Art-Net output.
+- The fixture's own menu shows 18-channel mode, and every channel's function
+  matches the `minibeam-moving-head` 18-channel profile (checked with the
+  channel finder's guided walk).
+- APC40 control reaches the fixture.
+
+The earlier "no light" results had a physical cause: the DMX cable was in the
+wrong DOREMiDi port. Before that was found, Kefka's wire carried correct ArtDMX
+(protocol 14, universe 0, 512 channels, UDP 6454 to 6454, one refresh per
+second) and a 30 Hz stream changed nothing. The DOREMiDi's ArtPollReply
+GoodOutput "output active" flag stayed `0x0` throughout, including while it was
+driving the fixture, so that flag is not evidence either way.
+
+Phone tools served by the backend (no Deck GUI needed):
+`/kefka-bench.html` (live fixture values, APC40 messages, output state with
+blackout and undo, FULL ON and RANDOM tests) and `/kefka-channels.html`
+(per-address tests, guided walk, re-patch from findings with restore). The
+full console window must be running for APC40 mapping; it does not start at
+boot (`~/.local/bin/artbastard-console-open`).
