@@ -65,7 +65,7 @@ export const miniBeamMovingHead: FixtureLibraryEntry = {
             { min: 0, max: 3, description: 'Closed / dark' },
             { min: 4, max: 103, description: 'Pulse strobe, slow to fast' },
             { min: 104, max: 107, description: 'Open' },
-            { min: 108, max: 207, description: 'Pulse strobe, slow to fast' },
+            { min: 108, max: 207, description: 'Fade strobe, slow to fast' },
             { min: 208, max: 212, description: 'Open' },
             { min: 213, max: 251, description: 'Random strobe, slow to fast' },
             { min: 252, max: 255, description: 'Open' },
@@ -116,7 +116,7 @@ export const miniBeamMovingHead: FixtureLibraryEntry = {
           type: 'prism_rotation',
           ticksOnly: true,
           ranges: [
-            { min: 0, max: 127, description: 'Indexed prism angle, manual notes 5-60 degrees' },
+            { min: 0, max: 127, description: 'Prism index, 0-360 degrees' },
             { min: 128, max: 190, description: 'Rotate forward, fast to slow' },
             { min: 191, max: 192, description: 'Stop' },
             { min: 193, max: 255, description: 'Rotate reverse, slow to fast' },
@@ -226,3 +226,13 @@ export const miniBeamMovingHead: FixtureLibraryEntry = {
     },
   ],
 };
+
+// The fixture menu (MODE > WorkMode > Channel Qty) offers "Simple" 16 channels (factory default) and
+// "Expand". Simple is channels 1-16 of the 18-channel table: no pan/tilt or colour speed channels.
+// Source: Blue Sea Lighting BM295B "Mini Super Beam 295" manual, table 3.1 and section 2.3.2, the only
+// manual found whose 18-channel table matches this fixture channel for channel.
+miniBeamMovingHead.modes.push({
+  name: '16-channel mode (Simple, factory default)',
+  channels: 16,
+  channelData: miniBeamMovingHead.modes[0].channelData.slice(0, 16),
+});

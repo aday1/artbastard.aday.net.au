@@ -712,7 +712,7 @@ export const mdFixtureLibraryEntries: FixtureLibraryEntry[] = [
               {
                 "min": 0,
                 "max": 255,
-                "description": "Pulse, open, random strobe bands"
+                "description": "Pulse, open, fade, random strobe bands"
               }
             ]
           },
@@ -756,7 +756,7 @@ export const mdFixtureLibraryEntries: FixtureLibraryEntry[] = [
               {
                 "min": 0,
                 "max": 255,
-                "description": "0-127 indexed angle, 128-190 fwd rotation, 191-192 stop, 193-255 rev rotation"
+                "description": "0-127 index 0-360 deg, 128-190 fwd rotation, 191-192 stop, 193-255 rev rotation"
               }
             ]
           },
@@ -889,6 +889,188 @@ export const mdFixtureLibraryEntries: FixtureLibraryEntry[] = [
                 "min": 0,
                 "max": 255,
                 "description": "Colour / effect speed"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "16-channel mode (Simple, factory default)",
+        "channels": 16,
+        "channelData": [
+          {
+            "name": "Colour Wheel",
+            "type": "color_wheel",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "0-3 white, 4-127 14 colours / split, 128-191 rotate fwd, 192-255 rotate rev"
+              }
+            ]
+          },
+          {
+            "name": "Strobe",
+            "type": "strobe",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Pulse, open, fade, random strobe bands"
+              }
+            ]
+          },
+          {
+            "name": "Dimmer",
+            "type": "dimmer",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Master dimmer"
+              }
+            ]
+          },
+          {
+            "name": "Gobo",
+            "type": "gobo",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "0-7 open, 8-127 14 gobos, 128-191 reverse rotation, 192-255 forward rotation"
+              }
+            ]
+          },
+          {
+            "name": "Prism",
+            "type": "prism",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "0-127 none, 128-255 insert prism"
+              }
+            ]
+          },
+          {
+            "name": "Prism Rotation",
+            "type": "other",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "0-127 index 0-360 deg, 128-190 fwd rotation, 191-192 stop, 193-255 rev rotation"
+              }
+            ]
+          },
+          {
+            "name": "Effect",
+            "type": "other",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "0-127 none, 128-255 colourful effect insert"
+              }
+            ]
+          },
+          {
+            "name": "Frost",
+            "type": "other",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "0-127 none, 128-255 frost insert"
+              }
+            ]
+          },
+          {
+            "name": "Focus",
+            "type": "focus",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Lens focus, far to near"
+              }
+            ]
+          },
+          {
+            "name": "Pan",
+            "type": "pan",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Coarse pan, 0-540 degrees"
+              }
+            ]
+          },
+          {
+            "name": "Pan Fine",
+            "type": "pan_fine",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Fine pan, 0-2 degrees"
+              }
+            ]
+          },
+          {
+            "name": "Tilt",
+            "type": "tilt",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Coarse tilt, 0-270 degrees"
+              }
+            ]
+          },
+          {
+            "name": "Tilt Fine",
+            "type": "tilt_fine",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Fine tilt, 0-1 degree"
+              }
+            ]
+          },
+          {
+            "name": "Macro",
+            "type": "macro",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "0-14 none, 15-255 effects in 5-value steps"
+              }
+            ]
+          },
+          {
+            "name": "Reset",
+            "type": "reset",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "Effect/pan-tilt/fixture reset bands (3 s)"
+              }
+            ]
+          },
+          {
+            "name": "Lamp",
+            "type": "lamp",
+            "ranges": [
+              {
+                "min": 0,
+                "max": 255,
+                "description": "0-25 none, 26-100 lamp off (3 s), 101-255 lamp on (3 s)"
               }
             ]
           }

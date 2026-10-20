@@ -24,11 +24,11 @@ the Twinkling Laser, so no DIP-switch map is attached to this profile.
 | Channel | ArtBastard role | Function | DMX values |
 | --- | --- | --- | --- |
 | 1 | Colour wheel | Colour wheel and colour rotation | 0-3 white; 4-127 split/solid colours 1-14; 128-191 rotate forward fast to slow; 192-255 rotate reverse slow to fast |
-| 2 | Strobe | Shutter and strobe | 0-3 dark; 4-103 pulse strobe slow to fast; 104-107 open; 108-207 pulse strobe slow to fast; 208-212 open; 213-251 random strobe slow to fast; 252-255 open |
+| 2 | Strobe | Shutter and strobe | 0-3 dark; 4-103 pulse strobe slow to fast; 104-107 open; 108-207 fade strobe slow to fast; 208-212 open; 213-251 random strobe slow to fast; 252-255 open |
 | 3 | Dimmer | Master dimmer | 0-255 = 0-100% |
 | 4 | Gobo | Gobo wheel and gobo rotation | 0-7 open; 8-127 gobos 1-14; 128-191 reverse rotation fast to slow; 192-255 forward rotation slow to fast |
 | 5 | Prism | Prism insert | 0-127 none; 128-255 insert prism |
-| 6 | Prism rotation | Prism angle and rotation | 0-127 indexed prism angle, manual notes 5-60 degrees; 128-190 rotate forward fast to slow; 191-192 stop; 193-255 rotate reverse slow to fast |
+| 6 | Prism rotation | Prism angle and rotation | 0-127 prism index 0-360 degrees; 128-190 rotate forward fast to slow; 191-192 stop; 193-255 rotate reverse slow to fast |
 | 7 | Effect | Colourful effect insert | 0-127 none; 128-255 insert colourful effect |
 | 8 | Frost | Frost insert | 0-127 none; 128-255 insert frost |
 | 9 | Focus | Lens focus | 0-255 far to near |
@@ -41,6 +41,23 @@ the Twinkling Laser, so no DIP-switch map is attached to this profile.
 | 16 | Lamp | Lamp control | 0-25 none; 26-100 turn lamp off over 3 seconds; 101-255 turn lamp on over 3 seconds |
 | 17 | Speed | Pan/tilt movement speed | 0-255 fast to slow |
 | 18 | Speed | Colour/effect speed | 0-255, manual gives range but no further function text |
+
+### Other modes (fixture menu: MODE > WorkMode > Channel Qty)
+
+- **16-channel "Simple" (factory default):** channels 1-16 of the table above,
+  without pan/tilt speed (17) and colour/effect speed (18).
+- **20-channel "Expand":** listed in the menu but no table is printed. Sharpy-family
+  manuals with the same channel 1-16 order use 17 pan/tilt time, 18 colour time,
+  19 beam time, 20 gobo time; unverified for this fixture.
+
+aday confirmed on 2026-10-20 that this unit is set to the 18-channel mode and
+that all 18 channels behave as documented here.
+
+Source for the other modes and for the channel 2 / channel 6 wording: Blue Sea
+Lighting "Mini Super Beam 295" (BM295B) user manual, table 3.1 and section 2.3.2,
+https://yunpan.cdn.site.joinf.com/5014585045798901/aXQHT3NRAH.pdf ,
+the only manual found whose 18-channel table matches this fixture channel for
+channel. That manual says channels 17-18 exist only on units with an LED ring.
 
 ## Colour Wheel Detail
 
