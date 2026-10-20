@@ -10,8 +10,8 @@ import unittest
 
 SOURCE = Path(__file__).resolve().parent
 CLASSES = {
-    "deck": "chrome-127.0.0.1__deck-control.html-Default",
-    "console": "chrome-127.0.0.1__kefka-console-Default",
+    "deck": "artbastard-deck",
+    "console": "artbastard-console",
 }
 
 
@@ -49,9 +49,8 @@ if "is-active" in args:
     raise SystemExit(0 if (r / "active").exists() else 3)
 with (r / "actions").open("a") as f: f.write(json.dumps(args) + "\\n")
 surface = "console" if "console" in args[-1] else "deck"
-name = "kefka-console" if surface == "console" else "deck-control.html"
 clients = json.loads((r / "clients.json").read_text())
-clients.append({"class": "chrome-127.0.0.1__" + name + "-Default", "address": "0x123"})
+clients.append({"class": "artbastard-" + surface, "address": "0x123"})
 (r / "clients.json").write_text(json.dumps(clients))
 (r / "active").touch()
 """)
@@ -94,8 +93,14 @@ if sys.argv[1] == "run":
     def test_concurrent_opens_start_only_one_window(self):
         processes = [subprocess.Popen(["bash", str(self.bin / "artbastard-deck-open")], env=self.env)
                      for _ in range(3)]
-        for process in processes:
-            self.assertEqual(process.wait(timeout=8), 0)
+        try:
+            results = [process.wait(timeout=8) for process in processes]
+        finally:
+            for process in processes:
+                if process.poll() is None:
+                    process.kill()
+                    process.wait()
+        self.assertEqual(results, [0, 0, 0])
         self.assertEqual(sum("start" in action for action in self.actions()), 1)
         self.assertEqual(len(json.loads((self.root / "clients.json").read_text())), 1)
 
@@ -124,6 +129,8 @@ if sys.argv[1] == "run":
                 profile = "artbastard-browser" if surface == "deck" else "artbastard-console-browser"
                 self.assertIn(f"--persist=.local/share/{profile}", start)
                 self.assertIn("--die-with-parent", start)
+                self.assertIn("--ozone-platform=x11", start)
+                self.assertIn("--class=" + CLASSES[surface], start)
                 self.assertEqual((runtime / "instance").read_text(), "987654")
                 subprocess.run(commands["ExecStop"], env=self.env, check=True)
                 self.assertEqual(self.actions("flatpak-actions")[-1], ["kill", "987654"])

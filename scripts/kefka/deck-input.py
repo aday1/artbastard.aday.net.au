@@ -21,7 +21,7 @@ ORIGINS = frozenset(os.environ.get(
 PORT = int(os.environ.get("ARTBASTARD_DECK_INPUT_PORT", "18782"))
 LOCK = threading.Lock()
 STATE = {"pad": None}
-DECK_CLASS = "chrome-127.0.0.1__deck-control.html-Default"
+DECK_CLASS = "artbastard-deck"
 
 
 class NativeInputGate:

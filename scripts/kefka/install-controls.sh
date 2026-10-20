@@ -11,10 +11,20 @@ for name in artbastard-input.service artbastard-deck.service artbastard-console.
 done
 install -m 644 "$here/deck-input.py" "$HOME/.local/share/artbastard/deck-input.py"
 classes="$HOME/.config/kefka/game-classes"
-pattern='^chrome-127\.0\.0\.1__deck-control\.html-Default$'
-if ! grep -Fxq "$pattern" "$classes" 2>/dev/null; then
+pattern='^artbastard-deck$'
+legacy_pattern='^chrome-127\.0\.0\.1__deck-control\.html-Default$'
+if ! grep -Fxq "$pattern" "$classes" 2>/dev/null || grep -Fxq "$legacy_pattern" "$classes" 2>/dev/null; then
   if [[ -f "$classes" ]]; then cp -a "$classes" "$classes.bak.$stamp"; fi
-  printf '\n# Artbastard native Deck buttons.\n%s\n' "$pattern" >> "$classes"
+  python3 - "$classes" "$pattern" "$legacy_pattern" <<'PY'
+from pathlib import Path
+import sys
+path, pattern, legacy = Path(sys.argv[1]), sys.argv[2], sys.argv[3]
+lines = path.read_text().splitlines() if path.exists() else []
+lines = [line for line in lines if line != legacy]
+if pattern not in lines:
+    lines.extend(["", "# Artbastard native Deck buttons.", pattern])
+path.write_text("\n".join(lines) + "\n")
+PY
   if systemctl --user is-active --quiet deckhypr.service; then
     systemctl --user restart deckhypr.service
   fi

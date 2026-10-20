@@ -65,12 +65,12 @@ checks that:
 - The current user's `deckhypr` process is live, owns the kernel pad, reports
   `game` mode, and has its launcher closed.
 - One live Hyprland session reports the exact Deck app class
-  `chrome-127.0.0.1__deck-control.html-Default` as the focused window.
+  `artbastard-deck` as the focused window.
 - The ownership check is current. A missing, stale or ambiguous check closes
   the native-input gate.
 
 The full console uses a different class,
-`chrome-127.0.0.1__kefka-console-Default`. It is deliberately absent from
+`artbastard-console`. It is deliberately absent from
 `game-classes`: the Deck's normal desktop pointer/buttons work there, and
 native lighting controls remain unavailable. An ordinary browser tab also
 does not qualify as the dedicated Deck window. When the native gate closes,
@@ -85,18 +85,21 @@ bash scripts/kefka/install-controls.sh
 
 The installer backs up existing unit/launcher files, installs the three user
 units and two application entries, and adds the exact Deck-only game-class rule
-when missing. It restarts an active `deckhypr` only when adding that rule.
+when missing, replacing the former generated Wayland class. It restarts an
+active `deckhypr` only when changing that rule.
 The existing `deckhypr` must remain running and the session user must already
 have read access to the Deck's input device. Do not grant broad input permissions
 or stop `deckhypr`.
 
 The installed rule in `~/.config/kefka/game-classes` suppresses desktop
-mouse/key emulation only while the Deck control window is focused. Chrome on
-Wayland derives this class from its app URL, despite `--class`; verify with
-`hyprctl clients -j` on the installed version.
+mouse/key emulation only while the Deck control window is focused. Both
+dedicated surfaces use XWayland with distinct explicit classes. Chrome's
+Wayland backend crashed on Kefka when focused after HDMI connection, reporting
+`Custom primaries aren't supported`; XWayland also serves the existing NYX
+projector. Verify the classes with `hyprctl clients -j` on the installed version.
 
 ```text
-^chrome-127\.0\.0\.1__deck-control\.html-Default$
+^artbastard-deck$
 ```
 
 Preserve all existing classes, paddle mappings, services and shortcuts.

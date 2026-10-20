@@ -3,11 +3,11 @@ set -euo pipefail
 case "$(basename -- "$0")" in
   artbastard-deck-open)
     unit=artbastard-deck.service
-    app_class='chrome-127.0.0.1__deck-control.html-Default'
+    app_class='artbastard-deck'
     ;;
   artbastard-console-open)
     unit=artbastard-console.service
-    app_class='chrome-127.0.0.1__kefka-console-Default'
+    app_class='artbastard-console'
     ;;
   *) exit 2 ;;
 esac
@@ -39,7 +39,7 @@ export HYPRLAND_INSTANCE_SIGNATURE
 # Serialize clicks before checking for a window; overlapping launcher requests
 # must not both decide that the surface needs to be started.
 exec 9>"$XDG_RUNTIME_DIR/$unit.launch.lock"
-flock -w 2 9
+flock -w 5 9
 focus_existing() {
   local address
   address=$(hyprctl clients -j | python3 -c '

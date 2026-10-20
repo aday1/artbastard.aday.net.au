@@ -114,6 +114,15 @@ class NativeGateTests(unittest.TestCase):
         self.assertFalse(self.gate.snapshot(self.pad)["nativeAllowed"])
         self.assertIsNone(self.gate.snapshot(self.pad)["pad"])
 
+    def test_console_legacy_browser_and_similarly_named_windows_cannot_drive_lights(self):
+        for app_class in ("artbastard-console", "artbastard-deck-other",
+                          "chrome-127.0.0.1__deck-control.html-Default"):
+            with self.subTest(app_class=app_class):
+                self.active = {"class": app_class, "address": "0xdef"}
+                state = self.check()
+                self.assertFalse(state["nativeAllowed"])
+                self.assertIsNone(state["pad"])
+
     def test_active_window_query_ignores_stale_signatures(self):
         self.process(456, "Hyprland")
         live = self.runtime / "hypr" / "live"
