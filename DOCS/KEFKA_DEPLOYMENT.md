@@ -186,8 +186,9 @@ APC40 MIDI. Separate window launchers preserve a running console; they do not
 add operator-owner election. Fixture selection is not automatically restored
 after closing or relaunching the console. A hidden console can also activate the
 existing APC40 screensaver, so this setup is not an unattended headless APC40
-driver. Real APC40 input and native Deck blackout have been verified; mapped
-APC40 fader control and visible MiniBeam output remain unverified.
+driver. Real APC40 input, mapped first-fader dimmer control and native Deck
+blackout have been verified. Selection persistence after physical button
+release and visible MiniBeam output remain unverified.
 
 The user subsequently identified the connected fixture as the MiniBeam at
 DMX address 1. Its existing documented 18-channel profile was patched as
@@ -235,8 +236,8 @@ fake-hardware test covers unplugged health, throwing stale-handle cleanup,
 ALSA rename recovery, incoming MIDI forwarding and persistent Forget.
 After restarting the live server, health was `ok`, the absent APC40 correctly
 reported zero connected inputs, Art-Net was alive, and all 512 DMX values were
-zero. Later physical reconnections and real CC input were observed, as recorded
-below; a mapped physical fader test remains unverified.
+zero. Later physical reconnections and mapped first-fader input were observed,
+as recorded below.
 
 Live checks subsequently found EasyMIDI retaining native ALSA clients after
 enumeration. `closePort()` disconnects the port; `destroy()` releases the
@@ -269,6 +270,48 @@ subsequent healthy seconds showed no extra reconnects and exactly two retained
 sequencer descriptors. All 512 DMX values and catalogue hashes stayed unchanged;
 final health was OK with one MIDI input, Art-Net alive and OSC bound on 8000.
 The probe sent no MIDI messages or DMX writes.
+
+The first physical mapping check exposed a separate APC40 protocol bug. The
+old initializer selected Generic Mode 0, which sends an eight-knob snapshot on
+track selection. A captured snapshot changed MiniBeam DMX 5 and 7, and the
+old long-release handling removed fixture selection. Later real CC7 fader input
+did reach DMX 3; this was not an input-device failure. The console was paused
+and all channels restored to zero before correction.
+
+MK1 startup and reconnect now send Alternate Ableton Live Mode 2 (`0x42`).
+Software latch buttons toggle on a press and ignore releases; SHIFT and the
+footswitch remain momentary. Master Select uses its documented note `0x50`.
+A narrow guard discards only a complete ordered eight-knob bank snapshot,
+while ordinary knobs and faders pass through. MK2 retains its prior semantics.
+See [APC40 instructions](APC40_CHEATSHEET.md). A mode command being sent is not
+a hardware acknowledgement.
+
+The exact final deployment bundle passed 56 focused tests, backend compilation,
+frontend type-checking and a full production build, with source hashes checked
+before and afterward. An earlier candidate failed production type-checking
+because a required import had been removed after its initial checks; that
+candidate was never activated. The corrected bundle was built and activated
+on Kefka, then one full console reopened. Health was OK, one MIDI input was
+connected, the catalogue hashes matched, and all 512 DMX values stayed zero.
+Original rollback backup:
+`/tmp/artbastard-apc40-upgrade-1792493043257616730/before.tar.gz`.
+Final deployment backup:
+`/tmp/artbastard-apc40-upgrade-1792493335469073962/before.tar.gz`.
+After Mode 2 initialization at 21:49:48.611 local time, the real Solo/Cue 1
+press arrived at 21:49:53.336. Channel-1 CC7 fader input moved from 124 to 0,
+then from 3 to 125; the last CC7 arrived at 21:49:54.078, before the button
+release at 21:49:54.128. API readback showed only DMX 3 at 251, matching
+`round(125 * 255 / 127)`; shutter channel 2 and every other channel were zero.
+No eight-knob bank snapshot appeared in that input sequence.
+
+This verifies real fader-to-dimmer control while selected. It does not yet
+verify selection persistence after button release: the subsequent bounded
+120-second passive observation received no new MIDI. That observer restored
+DMX 3 to zero using the direct-map batch API and verified all 512 channels
+zero. Its metadata is `/tmp/kefka-physical-fader-v3-result.json` on Kefka.
+The preceding physical input sequence is preserved as timestamped metadata in
+`/tmp/kefka-apc40-postdeploy-journal.json` on Kefka.
+The requested tap/release, fader-up, fader-down check remains pending.
 
 Server shutdown also overwrote the fixture catalogue using an unhydrated legacy
 cache. Fixture/group API writes already persist immediately, so shutdown now
@@ -312,6 +355,9 @@ After deployment, passive Ethernet capture verified three complete zeroed
 frames from `192.168.1.20:6454` to `192.168.1.199:6454`, universe 0. The server
 remained healthy, OSC listened on 8000, and its API still showed all zeros.
 See [discovery and packet evidence](kefka-artpoll-2026-10-20.json).
+Another read-only poll at 21:25 local time confirmed the same output mapping
+and `Works well`; both activity flags still read zero. Those flags alone do
+not resolve whether the fixture receives DMX.
 
 ## Projector and camera mapping
 

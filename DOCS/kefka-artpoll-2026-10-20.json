@@ -76,6 +76,16 @@
     "declared_channels_each": 512,
     "nonzero_channels_each": 0
   },
+  "post_fix_poll_evidence": {
+    "utc": "2026-10-20T10:25:13.126249+00:00",
+    "query": "ArtPoll only, while all 512 server channels were zero",
+    "node_report": "Works well",
+    "net": 0,
+    "subnet": 0,
+    "output_port_addresses": [0, 1],
+    "good_output_hex": ["0x0", "0x0"],
+    "interpretation": "The activity flags remain zero after the source-port correction; physical fixture receipt is still unverified."
+  },
   "interpretation_limits": [
     "These are the node's currently advertised output addresses; they do not establish factory defaults.",
     "Raw firmware bytes are not a verified vendor semantic version.",
