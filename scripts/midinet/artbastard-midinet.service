@@ -1,0 +1,14 @@
+[Unit]
+Description=Network MIDI receiver (keyboards on other machines appear as ALSA MIDI ports on Kefka)
+After=network-online.target
+
+[Service]
+Environment=MIDINET_ALLOW=127.0.0.1,::1
+# Local allow-list (not in git): MIDINET_ALLOW=127.0.0.1,::1,<bridge machine addresses>
+EnvironmentFile=-%h/.config/artbastard/midinet.env
+ExecStart=%h/.local/opt/node-v22.23.3-linux-x64/bin/node %h/Work/artbastard/scripts/midinet/midinet-server.js
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target

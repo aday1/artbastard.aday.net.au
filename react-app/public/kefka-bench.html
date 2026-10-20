@@ -130,7 +130,7 @@
     <table><tbody id="fx"></tbody></table>
   </section>
   <section class="card">
-    <div class="eyebrow">APC40 · last messages <span>newest first</span></div>
+    <div class="eyebrow">MIDI · APC40 + Launchkey <span>newest first</span></div>
     <pre id="midi">Move a fader or press a button…</pre>
   </section>
   <p class="foot">Each slider sets that DMX channel and leaves it there. BLACKOUT sets all 512 channels to zero once. It does not stop the APC40, these sliders, or the console from sending new values afterwards.</p>
@@ -429,11 +429,17 @@ $('blackout').onclick = async () => {
     pollState();
   } catch (e) { $('msg').textContent = 'Blackout failed: ' + e.message; }
 };
+function midiSource(m) {
+  // "RtMidi Output Client:Launchkey 49 (ULTIMA) 132:0" -> "Launchkey 49 (ULTIMA)"; "Akai APC40:Akai APC40 MIDI 1 28:0" -> "APC40"
+  const raw = String(m.source || '').replace(/\s+\d+:\d+$/, '');
+  const name = raw.includes(':') ? raw.slice(raw.indexOf(':') + 1) : raw;
+  return /apc40/i.test(name) ? 'APC40' : name.replace(/ MIDI 1$/, '') || 'MIDI';
+}
 function midiText(m) {
-  const t = new Date().toLocaleTimeString();
-  if (m._type === 'cc' || m.controller !== undefined) return `${t}  CC${m.controller} ch${(m.channel ?? 0) + 1} = ${m.value}`;
-  if (m.note !== undefined) return `${t}  note ${m.note} ch${(m.channel ?? 0) + 1} ${m._type || ''} vel ${m.velocity ?? ''}`;
-  return `${t}  ${JSON.stringify(m).slice(0, 80)}`;
+  const t = new Date().toLocaleTimeString(), src = midiSource(m).padEnd(14).slice(0, 26);
+  if (m._type === 'cc' || m.controller !== undefined) return `${t}  ${src}  CC${m.controller} ch${(m.channel ?? 0) + 1} = ${m.value}`;
+  if (m.note !== undefined) return `${t}  ${src}  note ${m.note} ch${(m.channel ?? 0) + 1} ${m._type || ''} vel ${m.velocity ?? ''}`;
+  return `${t}  ${src}  ${JSON.stringify(m).slice(0, 80)}`;
 }
 const s = document.createElement('script');
 s.src = '/socket.io/socket.io.js';
