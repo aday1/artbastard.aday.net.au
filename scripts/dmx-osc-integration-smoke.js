@@ -37,13 +37,14 @@ async function waitFor(check, label, timeoutMs = 12000) {
 async function udpReceiver() {
   const socket = dgram.createSocket('udp4');
   const frames = [];
-  socket.on('message', (packet) => {
+  socket.on('message', (packet, source) => {
     if (packet.length < 18 || packet.toString('ascii', 0, 8) !== 'Art-Net\0') return;
     if (packet.readUInt16LE(8) !== 0x5000) return;
     const length = packet.readUInt16BE(16);
     if (packet.length < 18 + length) return;
     frames.push({
       universe: packet.readUInt16LE(14),
+      sourcePort: source.port,
       values: [...packet.subarray(18, 18 + length)],
     });
   });
@@ -120,6 +121,21 @@ async function main() {
     await fs.writeFile(preload, `
 const Module = require('node:module');
 const originalLoad = Module._load;
+// Keep this child away from the production Art-Net listener. The adapter's
+// source6454 contract is tested separately; this test checks real routing.
+const dgram = require('node:dgram');
+const originalCreateSocket = dgram.createSocket;
+dgram.createSocket = function(...args) {
+  const socket = originalCreateSocket.apply(this, args);
+  const bind = socket.bind;
+  socket.bind = function(...binding) {
+    if (binding[0]?.port === 6454 && binding[0]?.address === '0.0.0.0') {
+      binding[0] = { ...binding[0], port: 0, address: '127.0.0.1' };
+    }
+    return bind.apply(this, binding);
+  };
+  return socket;
+};
 class UnavailableMidiPort {
   constructor() { throw new Error('Physical MIDI is disabled in this DMX/OSC test'); }
 }
@@ -191,6 +207,33 @@ Module._load = function(request, parent, isMain) {
     await waitFor(() => replacement.frames.some((frame) =>
       frame.universe === 0x123 && frame.values[0] === 73
     ), 'REST DMX on the new Art-Net destination and universe');
+    const sourcePort = initial.frames[0].sourcePort;
+    assert.ok(replacement.frames.every((frame) => frame.sourcePort === sourcePort), 'configuration must reuse the bound socket');
+    const oldCount = initial.frames.length;
+    await sleep(350);
+    assert.equal(initial.frames.length, oldCount, 'old destination must not retain a sender refresh loop');
+    for (const destination of [initial, replacement, initial, replacement]) {
+      await request('/api/config/artnet', 'POST', { port: destination.port });
+      await waitFor(() => destination.frames.at(-1)?.values[0] === 73, 'reconfigured output preserves values');
+      await sleep(150);
+      const inactive = destination === initial ? replacement : initial;
+      const inactiveCount = inactive.frames.length;
+      await sleep(250);
+      assert.equal(inactive.frames.length, inactiveCount, 'repeated reconfiguration must not leave stale senders');
+      assert.ok(destination.frames.every((frame) => frame.sourcePort === sourcePort));
+    }
+    // Large batches use setDmxChannels: there must be no partially staged frame.
+    const beforeBatch = replacement.frames.length;
+    const batchValues = Array.from({ length: 512 }, (_, channel) => (channel * 13) % 256);
+    await request('/api/dmx/batch', 'POST', Object.fromEntries(batchValues.map((value, channel) => [channel, value])));
+    await waitFor(() => replacement.frames.slice(beforeBatch).some((frame) =>
+      frame.values.every((value, channel) => value === batchValues[channel])
+    ), 'complete512-channel batch');
+    assert.ok(replacement.frames.slice(beforeBatch).every((frame) =>
+      frame.values.every((value, channel) => value === batchValues[channel])
+      || frame.values.every((value, channel) => value === (channel === 0 ? 73 : 0))
+    ), 'only whole before/after buffers may be transmitted');
+    await request('/api/dmx/batch', 'POST', Object.fromEntries(batchValues.map((_, channel) => [channel, 0])));
 
     // Normalized OSC is unambiguous; its public channel number is one-based.
     oscSender = dgram.createSocket('udp4');

@@ -12,6 +12,7 @@ import ping from 'ping';
 import { loadFixturesData, saveFixturesData } from './fixturesPersistence';
 import { recordArtNetPingSample, getArtNetPingHistory, getLastArtNetPing } from './artnetMonitor';
 import { MidiHotplugMonitor, forgetMidiInputIdentity } from './midiHotplug';
+import { ArtNetOutput } from './artnetOutput';
 
 // Import our separate logger to avoid circular dependencies
 import { log } from './logger';
@@ -34,9 +35,6 @@ import {
   setDmxChannels as setSessionDmxChannels,
   initSessions,
 } from './sessionManager';
-
-// Import dmxnet using ES6 import syntax
-import dmxnet from 'dmxnet';
 
 export interface MidiMessage {
     _type: string;
@@ -217,7 +215,7 @@ let isConsoleLoggingEnabled = true;
 let artNetConfig: ArtNetConfig = createDefaultArtNetConfig();
 
 // ArtNet sender
-let artnetSender: any;
+let artnetSender: ArtNetOutput | undefined;
 
 // Keep track of ArtNet ping status to reduce log noise
 let lastArtNetStatus = 'unknown';
@@ -1034,40 +1032,14 @@ function initOsc(io: Server) {
 
 function initializeArtNet() {
     try {
-        const dmxnetInstance = new dmxnet.dmxnet({
-            oem: 0,
-            sName: "LaserTime",
-            lName: "LaserTime DMX Controller",
-            log: { level: 'none' } // Use proper log configuration instead of verbose
-        });
-
-        // Clean up existing sender if it exists
-        if (artnetSender && typeof artnetSender.close === 'function') {
-            artnetSender.close();
-        }
-
-        artnetSender = dmxnetInstance.newSender({
-            ip: artNetConfig.ip,
-            subnet: artNetConfig.subnet,
-            universe: artNetConfig.universe,
-            net: artNetConfig.net,
-            port: artNetConfig.port,
-            base_refresh_interval: artNetConfig.base_refresh_interval
-        });
-
-        // Setup error handlers for the sender
-        if (artnetSender.on) {
+        if (artnetSender && !artnetSender.isClosed) {
+            artnetSender.configure(artNetConfig);
+        } else {
+            artnetSender = new ArtNetOutput(artNetConfig);
             artnetSender.on('error', (err: Error) => {
                 log('ArtNet sender error', 'ARTNET', { message: err.message }); (global as any).io?.emit('artnetStatus', {
                     status: 'error',
                     message: err.message
-                });
-            });
-
-            artnetSender.on('timeout', () => {
-                log('ArtNet sender timeout - will retry', 'ARTNET'); (global as any).io?.emit('artnetStatus', {
-                    status: 'timeout',
-                    message: 'Connection timed out - retrying'
                 });
             });
         }
@@ -2539,19 +2511,8 @@ function updateArtNetConfig(config: Partial<ArtNetConfig>, sessionId: string = D
         pushArtNetConfigToBridge(sessionId);
         return;
     }
-    // Re-initialize ArtNet with new config if needed
-    if (artnetSender) {
-        try {
-            // Close the existing sender if possible
-            if (typeof artnetSender.close === 'function') {
-                artnetSender.close();
-            }
-            // Re-initialize with new config
-            initializeArtNet();
-        } catch (error) {
-            log('Error reinitializing ArtNet with new config', 'ERROR', { error });
-        }
-    }
+    // Reuse the bound output socket and replace its refresh timer/configuration.
+    initializeArtNet();
 }
 
 // Create an updateOscConfig function

@@ -71,6 +71,19 @@ const Module = require('node:module');
 const fs = require('node:fs');
 const EventEmitter = require('node:events');
 const originalLoad = Module._load;
+const dgram = require('node:dgram');
+const originalCreateSocket = dgram.createSocket;
+dgram.createSocket = function(...args) {
+  const socket = originalCreateSocket.apply(this, args);
+  const bind = socket.bind;
+  socket.bind = function(...binding) {
+    if (binding[0]?.port === 6454 && binding[0]?.address === '0.0.0.0') {
+      binding[0] = { ...binding[0], port: 0, address: '127.0.0.1' };
+    }
+    return bind.apply(this, binding);
+  };
+  return socket;
+};
 const inputs = new Map();
 const available = () => JSON.parse(fs.readFileSync(${JSON.stringify(portsPath)}, 'utf8'));
 const record = (event) => fs.appendFileSync(${JSON.stringify(eventsPath)}, JSON.stringify(event) + '\\n');

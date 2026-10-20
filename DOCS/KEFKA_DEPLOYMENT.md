@@ -18,6 +18,13 @@ and the installed checkout is `~/Work/artbastard` on Kefka.
 | OSC input | Kefka's address, UDP 8000 |
 | DOREMiDi ATD-1024 | `192.168.1.199:6454`, Art-Net net/subnet/universe 0/0/0 |
 
+Read-only ArtPoll discovery on 2026-10-20 confirmed the actual node's mapping:
+DMX output 1 is universe 0; output 2 is universe 1, both on net/subnet 0.
+The reply identified `DOREMiDi Art-Net DMX-1024`, MAC `84:c2:e4:xx:xx:xx`,
+and reported `Works well`. This confirms the address mapping, not fixture output.
+The probe used source and destination UDP 6454 and the lighting subnet's
+directed broadcast; an earlier probe from an ephemeral source port was invalid.
+
 The shared Realtek Ethernet device `enp4s0f3u1u4` keeps DHCP on the home LAN
 and also carries `192.168.1.20/24`. The alias is saved in NetworkManager's
 `Wired connection 1`, UUID `c7daf2f9-8cd1-3281-9b72-febca050784e`.
@@ -64,7 +71,9 @@ systemctl --user restart artbastard.service
 The server installer preserves existing `data/config.json`. It initially seeds
 the addresses above only when no config exists. Persistent fixtures, mappings,
 scenes and saved output live in `~/Work/artbastard/data/`.
-Artbastard restores its saved channel state on subsequent restarts.
+Artbastard loads its saved channel state into the API on subsequent restarts.
+The physical Art-Net sender starts with zeros; a saved API value by itself is
+not proof of emitted output. Explicit control/scene commands update the sender.
 
 ```sh
 systemctl --user status artbastard.service
@@ -111,6 +120,7 @@ curl -fsS http://127.0.0.1:3030/api/midi/active
 curl -fsS http://127.0.0.1:3030/api/kefka/surfaces
 curl -fsS -H 'Origin: http://127.0.0.1:3030' http://127.0.0.1:18782/health
 node scripts/dmx-osc-integration-smoke.js
+ARTBASTARD_TEST_SOURCE_PORT=0 node scripts/artnet-output.test.js
 node scripts/midi-hotplug.test.js
 node scripts/midi-hotplug-integration-smoke.js
 node scripts/kefka/test-controller.mjs
@@ -122,6 +132,9 @@ node scripts/kefka/test-launcher.js
 The integration smoke creates temporary data and private loopback UDP receivers;
 it does not send output to the fixtures. Do not run the older fixed-port API
 smoke against the live show server.
+The adapter test uses a private source port with the command above so it can
+run beside the live server. On an isolated workstation, its default source
+port is 6454 and was verified with actual loopback packets.
 The native reader's `connected` field is separate from `nativeAllowed`:
 connected proves device access, while allowed additionally requires live mapper
 ownership and the exact focused Deck window. A running input service alone is
@@ -212,6 +225,63 @@ ALSA rename recovery, incoming MIDI forwarding and persistent Forget.
 After restarting the live server, health was `ok`, the absent APC40 correctly
 reported zero connected inputs, Art-Net was alive, and all 512 DMX values were
 zero. A real APC40 unplug/replug and physical fader test remain unverified.
+
+## Art-Net source port
+
+The original `dmxnet` sender emitted from an ephemeral UDP port despite having
+a separate listener on 6454. Its sender lacked the `close()` method called by
+the app, so configuration changes could also leave stale sender refresh loops.
+The backend now uses one output socket bound to UDP 6454, matching the
+[Art-Net specification](https://art-net.org.uk/downloads/art-net.pdf), with
+one refresh timer. Configuration changes preserve the staged 512 values and
+update that socket's destination, universe and interval. No automatic
+controller-discovery advertisement is provided by this output-only adapter.
+
+The six adapter tests cover packet encoding/source port, complete staged
+frames, sequence wrap, repeated reconfiguration and cleanup, and bind/send
+errors. The extended DMX/OSC integration also checks that old destinations
+stop receiving frames and a complete 512-channel update reaches the new one.
+Backend compilation and the MIDI regressions passed before deployment.
+After deployment, passive Ethernet capture verified three complete zeroed
+frames from `192.168.1.20:6454` to `192.168.1.199:6454`, universe 0. The server
+remained healthy, OSC listened on 8000, and its API still showed all zeros.
+See [discovery and packet evidence](kefka-artpoll-2026-10-20.json).
+
+## Projector and camera mapping
+
+Reseating HDMI made Kefka's `DP-1` identify the Dell S500wi at 1920×1080,
+60 Hz. The existing internal display rotation and touchscreen mapping were
+preserved. `nyx-desk.service` serves the local operator app on 3910;
+`nyx-console.service` provides the projector helper on 3919. Its runtime-only
+`zz-projector-only.conf` override adds `--no-operator` to avoid opening another
+operator window over the Deck. One fullscreen `nyxproj` window uses `DP-1`.
+
+After the user moved and re-keystoned the projector, a new camera-only NYX
+workspace **Garage projector 2026-10-20** was saved as
+`venue-ef22649050c8`. Open on Kefka:
+`http://127.0.0.1:3910/alignment?workspace=venue-ef22649050c8`.
+Its metadata report is
+`~/nyx-desk/.runtime/calibration/projection-only-20261020.json` on Kefka.
+No camera frames were persisted; inspection frames remained in RAM.
+
+The saved fit uses five markers, 19 of 20 corners and 1.46 px RMS error.
+An independent frame passed with four markers, 14 of 16 corners and 1.22 px
+RMS. This is partial centre/right support: folds prevent decoding the
+remaining edge markers. The two fits differ by up to 4.42 px at observed
+centres and 11.52 px across all nine centres, so the outer field is not
+verified. The draft contains no laser anchors and is not applied; the prior
+default workspace, applied calibration and PANIC state remain unchanged.
+Pulling the cloth flat is necessary before trusting a full-screen planar fit.
+
+Retained picture settings are zoom 0.5, x −4, y 10, brightness 20, rotation 0
+and no flip. The custom nine-marker sheet uses x positions −0.45/0/0.45,
+y positions −0.5/0/0.5 and size 0.1875. The LifeCam uses 1920×1080,
+manual exposure 167 (about 16.7 ms), manual focus 12 and autofocus off.
+These settings reduce short-exposure projector banding and give readable
+markers. They are runtime adjustments; camera auto-exposure can be restored
+with `auto_exposure=3`, and autofocus with `focus_automatic_continuous=1`.
+The pre-refit wall state is saved on Kefka at
+`/tmp/nyx-wall-before-refit-20261020-200229.json`.
 
 ## Rollback of the control windows
 
