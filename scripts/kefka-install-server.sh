@@ -6,6 +6,7 @@ node_bin=${ARTBASTARD_NODE:-"$HOME/.local/opt/node-v22.23.3-linux-x64/bin/node"}
 test -x "$node_bin"
 test -f "$repo/dist/server.js"
 test -f "$repo/react-app/dist/index.html"
+"$node_bin" "$repo/scripts/patch-easymidi-lifecycle.js"
 mkdir -p "$repo/data" "$HOME/.config/systemd/user"
 if [[ ! -f "$repo/data/config.json" ]]; then
   cat > "$repo/data/config.json" <<'JSON'

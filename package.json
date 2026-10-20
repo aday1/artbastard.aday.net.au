@@ -41,9 +41,13 @@
     "LICENSE",
     "start.sh",
     "start.ps1",
+    "scripts/patch-easymidi-lifecycle.js",
     "DOCS"
   ],
   "scripts": {
+    "postinstall": "node scripts/patch-easymidi-lifecycle.js",
+    "test:midi-lifecycle": "node --test scripts/midi-lifecycle.test.js",
+    "test:midi-native-lifecycle": "node scripts/midi-native-lifecycle-stress.js",
     "build": "npm run build-specs && npm run build-backend && npm run build-frontend",
     "build-backend": "npm run build-specs && node build-backend.js",
     "build-backend-fast": "npm run build-specs && node build-backend-fast.js",
