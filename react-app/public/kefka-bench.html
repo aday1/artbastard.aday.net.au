@@ -14,7 +14,7 @@
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4; }
-  main { max-width: 760px; margin: 0 auto; padding: 16px 16px 40px; }
+  main { max-width: 960px; margin: 0 auto; padding: 16px 16px 40px; }
   header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
   h1 { font-size: 20px; letter-spacing: .04em; margin: 0; flex: 1; }
   h1 small { display: block; color: var(--mute); font-size: 13px; font-weight: 500; letter-spacing: 0; }
@@ -41,14 +41,54 @@
   td.addr { color: var(--mute); width: 34px; font-variant-numeric: tabular-nums; }
   td.name { font-weight: 600; }
   td.name small { display: block; color: var(--mute); font-weight: 400; font-size: 13px; }
-  td.val { width: 120px; text-align: right; font-variant-numeric: tabular-nums; }
+  td.val { width: 108px; text-align: right; font-variant-numeric: tabular-nums; }
   td.val b { font-size: 20px; }
+  td.ctrl { width: 42%; }
+  input[type=range] {
+    width: 100%; height: 44px; margin: 0; accent-color: var(--accent); touch-action: none; cursor: pointer;
+  }
   .bar { height: 6px; background: #232839; border-radius: 4px; overflow: hidden; margin-top: 4px; }
-  .bar i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .2s; }
+  .bar i { display: block; height: 100%; background: var(--accent); width: 0; }
   tr.live td.name { color: var(--warn); }
   #midi { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; margin: 0; min-height: 3em; white-space: pre-wrap; color: #cfd6ea; }
   .foot { color: var(--mute); font-size: 13px; }
   #msg { min-height: 1.4em; color: var(--warn); font-weight: 600; margin: 0 0 12px; }
+  .pads { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+  @media (max-width: 720px) { .pads { grid-template-columns: 1fr; } }
+  .xy, .wheel { touch-action: none; user-select: none; }
+  .xy {
+    position: relative; width: 100%; aspect-ratio: 1; border-radius: 16px; border: 1px solid var(--line); cursor: crosshair;
+    background:
+      linear-gradient(#2a2f42, #2a2f42) center / 100% 1px no-repeat,
+      linear-gradient(#2a2f42, #2a2f42) center / 1px 100% no-repeat,
+      radial-gradient(circle at center, #22283a, #10131c 72%);
+  }
+  #xy-dot {
+    position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%;
+    background: var(--accent); border: 2px solid #04110e; pointer-events: none; left: 0; top: 100%;
+  }
+  .pad-actions { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+  .pad-actions button, #xy-center {
+    font: inherit; font-weight: 700; min-height: 44px; padding: 0 14px; border-radius: 12px;
+    border: 1px solid var(--line); background: #22283a; color: var(--ink); cursor: pointer;
+  }
+  .wheel {
+    position: relative; width: min(100%, 340px); aspect-ratio: 1; margin: 0 auto; border-radius: 50%;
+    border: 1px solid var(--line); background: #10131c; cursor: pointer;
+  }
+  .wheel button {
+    position: absolute; width: 36px; height: 36px; margin: -18px 0 0 -18px; border-radius: 50%;
+    border: 2px solid #0d0f16; padding: 0; cursor: pointer;
+  }
+  .wheel button.on { outline: 3px solid var(--ink); z-index: 1; }
+  #wheel-hub {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: 42%; aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center;
+    text-align: center; font-size: 14px; font-weight: 750; line-height: 1.2; pointer-events: none;
+    background: #161925; border: 1px solid var(--line); padding: 8px;
+  }
+  #wheel-hub small { display: block; color: var(--mute); font-weight: 500; font-size: 12px; }
+  .wheel-read, #xy-read { color: var(--mute); font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>
@@ -70,6 +110,21 @@
     <p id="task-body">Claude posts the current test here. Answer in the chat.</p>
     <p id="task-ask"></p>
   </section>
+  <section class="card pads">
+    <div>
+      <div class="eyebrow">Pan / Tilt <span>top is full tilt</span></div>
+      <div id="xy" class="xy" role="application" aria-label="Pan and tilt pad"><i id="xy-dot"></i></div>
+      <div class="pad-actions">
+        <button id="xy-center" type="button">Center</button>
+        <span id="xy-read">Pan 0 · Tilt 0</span>
+      </div>
+    </div>
+    <div>
+      <div class="eyebrow">Colour wheel <span>fixed MiniBeam colours</span></div>
+      <div id="wheel" class="wheel" aria-label="Colour wheel"></div>
+      <p id="wheel-read" class="wheel-read">White · DMX 0</p>
+    </div>
+  </section>
   <section class="card">
     <div class="eyebrow"><span id="fx-name" style="color:var(--accent);letter-spacing:.14em;text-transform:uppercase">Fixture</span><span id="fx-meta"></span></div>
     <table><tbody id="fx"></tbody></table>
@@ -78,7 +133,7 @@
     <div class="eyebrow">APC40 · last messages <span>newest first</span></div>
     <pre id="midi">Move a fader or press a button…</pre>
   </section>
-  <p class="foot">BLACKOUT sets all 512 DMX channels to zero once. It does not stop the APC40 or the console from sending new values afterwards.</p>
+  <p class="foot">Each slider sets that DMX channel and leaves it there. BLACKOUT sets all 512 channels to zero once. It does not stop the APC40, these sliders, or the console from sending new values afterwards.</p>
 </main>
 <script>
 const $ = id => document.getElementById(id);
@@ -99,21 +154,240 @@ function bandFor(ch, value) {
   const hit = ranges.find(r => value >= r.min && value <= r.max && ranges.length > 1);
   return hit ? hit.description : (ranges[0]?.description || '');
 }
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+const dragging = new Set();
+const inflight = new Map();
+const queued = new Map();
+function paint(tr, ch, value) {
+  tr.classList.toggle('live', value > 0);
+  tr.querySelector('small').textContent = value ? bandFor(ch, value) : '';
+  tr.querySelector('b').textContent = String(value);
+  tr.querySelector('.pct').textContent = Math.round(value / 2.55) + '%';
+  tr.querySelector('.bar i').style.width = (value / 2.55) + '%';
+}
+async function push(index, value, quiet) {
+  if (index < 0) return;
+  if (inflight.has(index)) { queued.set(index, { value, quiet: !!quiet }); return; }
+  inflight.set(index, true);
+  try {
+    const r = await fetch('/api/dmx', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channel: index, value }),
+      signal: AbortSignal.timeout(4000)
+    });
+    if (!r.ok) $('msg').textContent = `DMX ${index + 1} failed: server ${r.status}`;
+    else if (!quiet) $('msg').textContent = `DMX ${index + 1} = ${value} sent ${new Date().toLocaleTimeString()}.`;
+  } catch (e) {
+    $('msg').textContent = 'DMX failed: ' + e.message;
+  } finally {
+    inflight.delete(index);
+    if (queued.has(index)) {
+      const next = queued.get(index);
+      queued.delete(index);
+      if (next.value !== value) push(index, next.value, next.quiet);
+    }
+  }
+}
+const WHEEL = [
+  ['White', 0, 3, '#ffffff'],
+  ['Red', 9, 12, '#ff1717'],
+  ['Orange', 18, 21, '#ff7a00'],
+  ['Amber', 27, 31, '#ffbf00'],
+  ['Yellow', 36, 40, '#fff000'],
+  ['Lime', 45, 49, '#92ff00'],
+  ['Green', 54, 58, '#00e85b'],
+  ['Cyan', 64, 67, '#00ffd5'],
+  ['Sky', 73, 76, '#00a2ff'],
+  ['Blue', 82, 85, '#004dff'],
+  ['Indigo', 91, 95, '#3f00ff'],
+  ['Violet', 100, 104, '#8a00ff'],
+  ['Magenta', 109, 113, '#ff00d4'],
+  ['Pink', 118, 122, '#ff4f8b'],
+  ['Warm', 123, 127, '#ffd0a0']
+].map(([label, min, max, hex]) => ({ label, min, max, hex, value: Math.round((min + max) / 2) }));
+let padDrag = '';
+function channelIndex(type) {
+  const fx = state?.fixtures?.[0];
+  if (!fx) return -1;
+  const slot = fx.channels.findIndex(ch => String(ch.type || '').toLowerCase() === type);
+  return slot < 0 ? -1 : fx.startAddress - 1 + slot;
+}
+function holdDrag(indexes, on) {
+  indexes.forEach(i => {
+    if (i < 0) return;
+    if (on) dragging.add(String(i));
+    else dragging.delete(String(i));
+  });
+}
+function placeDot(nx, ny) {
+  const dot = $('xy-dot');
+  dot.style.left = (Math.max(0, Math.min(1, nx)) * 100) + '%';
+  dot.style.top = (Math.max(0, Math.min(1, ny)) * 100) + '%';
+}
+function inkFor(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  return (r * 299 + g * 587 + b * 114) / 1000 > 160 ? '#111' : '#fff';
+}
+function markWheel(value) {
+  const slot = WHEEL.find(s => value >= s.min && value <= s.max) || null;
+  $('wheel').querySelectorAll('button').forEach(btn => btn.classList.toggle('on', slot && Number(btn.dataset.value) === slot.value));
+  $('wheel-hub').innerHTML = slot
+    ? `${esc(slot.label)}<small>DMX ${value}</small>`
+    : `DMX ${value}<small>between colours</small>`;
+  $('wheel-hub').style.background = slot ? slot.hex : '#161925';
+  $('wheel-hub').style.color = slot ? inkFor(slot.hex) : 'var(--ink)';
+  $('wheel-read').textContent = slot ? `${slot.label} · DMX ${value}` : `Colour channel ${value}`;
+}
+function syncPads() {
+  const dmx = state?.dmxChannels || [];
+  const panI = channelIndex('pan');
+  const tiltI = channelIndex('tilt');
+  const colorI = channelIndex('color_wheel');
+  if (padDrag !== 'xy' && panI >= 0 && tiltI >= 0) {
+    const pan = dmx[panI] || 0, tilt = dmx[tiltI] || 0;
+    placeDot(pan / 255, 1 - tilt / 255);
+    $('xy-read').textContent = `Pan ${pan} · Tilt ${tilt}`;
+  }
+  if (padDrag !== 'wheel' && colorI >= 0) markWheel(dmx[colorI] || 0);
+}
+let xyFrame = 0, xyPending = null;
+function queueXY(pan, tilt) {
+  xyPending = { pan, tilt };
+  placeDot(pan / 255, 1 - tilt / 255);
+  $('xy-read').textContent = `Pan ${pan} · Tilt ${tilt}`;
+  if (xyFrame) return;
+  xyFrame = requestAnimationFrame(() => {
+    xyFrame = 0;
+    const next = xyPending;
+    xyPending = null;
+    if (!next) return;
+    push(channelIndex('pan'), next.pan, true);
+    push(channelIndex('tilt'), next.tilt, true);
+    $('msg').textContent = `Pan ${next.pan} · Tilt ${next.tilt} sent ${new Date().toLocaleTimeString()}.`;
+  });
+}
+function xyFromEvent(e) {
+  const rect = $('xy').getBoundingClientRect();
+  const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+  return { pan: Math.round(x * 255), tilt: Math.round((1 - y) * 255) };
+}
+function beginXY(e) {
+  padDrag = 'xy';
+  holdDrag([channelIndex('pan'), channelIndex('tilt')], true);
+  try { $('xy').setPointerCapture(e.pointerId); } catch {}
+  const pos = xyFromEvent(e);
+  queueXY(pos.pan, pos.tilt);
+}
+$('xy').addEventListener('pointerdown', beginXY);
+$('xy').addEventListener('pointermove', e => { if (padDrag === 'xy') { const pos = xyFromEvent(e); queueXY(pos.pan, pos.tilt); } });
+function endXY() {
+  if (padDrag !== 'xy') return;
+  padDrag = '';
+  holdDrag([channelIndex('pan'), channelIndex('tilt')], false);
+}
+$('xy').addEventListener('pointerup', endXY);
+$('xy').addEventListener('pointercancel', endXY);
+$('xy-center').onclick = () => {
+  queueXY(128, 128);
+  $('msg').textContent = 'Pan 128 · Tilt 128 sent.';
+};
+let lastSlot = -1;
+function slotFromEvent(e) {
+  const btn = e.target.closest && e.target.closest('button');
+  if (btn && btn.dataset.value) return WHEEL.find(s => s.value === Number(btn.dataset.value));
+  const rect = $('wheel').getBoundingClientRect();
+  const ang = Math.atan2(e.clientY - (rect.top + rect.height / 2), e.clientX - (rect.left + rect.width / 2));
+  let turn = (ang + Math.PI / 2) / (Math.PI * 2);
+  if (turn < 0) turn += 1;
+  return WHEEL[Math.round(turn * WHEEL.length) % WHEEL.length];
+}
+function applySlot(slot) {
+  if (!slot) return;
+  markWheel(slot.value);
+  if (lastSlot === slot.value) return;
+  lastSlot = slot.value;
+  push(channelIndex('color_wheel'), slot.value, true);
+  $('msg').textContent = `${slot.label} · colour DMX ${slot.value} sent ${new Date().toLocaleTimeString()}.`;
+}
+function beginWheel(e) {
+  padDrag = 'wheel';
+  holdDrag([channelIndex('color_wheel')], true);
+  try { $('wheel').setPointerCapture(e.pointerId); } catch {}
+  applySlot(slotFromEvent(e));
+}
+$('wheel').addEventListener('pointerdown', beginWheel);
+$('wheel').addEventListener('pointermove', e => { if (padDrag === 'wheel') applySlot(slotFromEvent(e)); });
+function endWheel() {
+  if (padDrag !== 'wheel') return;
+  padDrag = '';
+  lastSlot = -1;
+  holdDrag([channelIndex('color_wheel')], false);
+}
+$('wheel').addEventListener('pointerup', endWheel);
+$('wheel').addEventListener('pointercancel', endWheel);
+$('wheel').innerHTML = WHEEL.map((slot, i) => {
+  const ang = (i / WHEEL.length) * Math.PI * 2 - Math.PI / 2;
+  const x = 50 + Math.cos(ang) * 38;
+  const y = 50 + Math.sin(ang) * 38;
+  return `<button type="button" data-value="${slot.value}" title="${esc(slot.label)} DMX ${slot.value}" aria-label="${esc(slot.label)}" style="left:${x}%;top:${y}%;background:${slot.hex}"></button>`;
+}).join('') + '<div id="wheel-hub">White<small>DMX 2</small></div>';
+$('wheel').querySelectorAll('button').forEach(btn => {
+  btn.addEventListener('pointerdown', e => { e.stopPropagation(); beginWheel(e); });
+});
+function bindSlider(input) {
+  const index = () => Number(input.dataset.i);
+  const send = () => push(index(), Number(input.value));
+  input.addEventListener('pointerdown', e => {
+    dragging.add(input.dataset.i);
+    try { input.setPointerCapture(e.pointerId); } catch {}
+  });
+  const release = () => { dragging.delete(input.dataset.i); send(); };
+  input.addEventListener('pointerup', release);
+  input.addEventListener('pointercancel', release);
+  input.addEventListener('input', () => {
+    const tr = input.closest('tr');
+    const ch = state?.fixtures?.[0]?.channels?.[Number(input.dataset.slot)];
+    if (tr && ch) paint(tr, ch, Number(input.value));
+    send();
+  });
+}
 function render() {
   if (!state) return;
   const fx = (state.fixtures || [])[0];
   const dmx = state.dmxChannels || [];
   const live = dmx.filter(v => v > 0).length;
   chip('c-out', live ? `${live} channel${live > 1 ? 's' : ''} on` : 'all zero', live ? undefined : true);
-  if (!fx) { $('fx-name').textContent = 'No fixture patched'; $('fx').innerHTML = ''; return; }
+  const body = $('fx');
+  if (!fx) { $('fx-name').textContent = 'No fixture patched'; body.innerHTML = ''; body.dataset.key = ''; return; }
   $('fx-name').textContent = fx.name;
   $('fx-meta').textContent = `${fx.mode || ''} · DMX ${fx.startAddress}–${fx.startAddress + fx.channels.length - 1}`;
-  const rows = fx.channels.map((ch, i) => {
-    const addr = fx.startAddress + i, v = dmx[addr - 1] || 0;
-    return `<tr class="${v ? 'live' : ''}"><td class="addr">${addr}</td><td class="name">${ch.name}<small>${v ? bandFor(ch, v) : ''}</small></td>` +
-      `<td class="val"><b>${v}</b> <span style="color:var(--mute)">${Math.round(v / 2.55)}%</span><div class="bar"><i style="width:${v / 2.55}%"></i></div></td></tr>`;
+  const key = `${fx.id}:${fx.startAddress}:${fx.channels.length}`;
+  if (body.dataset.key !== key) {
+    body.dataset.key = key;
+    body.innerHTML = fx.channels.map((ch, i) => {
+      const addr = fx.startAddress + i;
+      const index = addr - 1;
+      return `<tr data-i="${index}"><td class="addr">${addr}</td><td class="name">${esc(ch.name)}<small></small></td>` +
+        `<td class="ctrl"><input type="range" min="0" max="255" step="1" value="0" data-i="${index}" data-slot="${i}" aria-label="${esc(ch.name)}"></td>` +
+        `<td class="val"><b>0</b> <span class="pct" style="color:var(--mute)">0%</span><div class="bar"><i></i></div></td></tr>`;
+    }).join('');
+    body.querySelectorAll('input').forEach(bindSlider);
+  }
+  fx.channels.forEach((ch, i) => {
+    const index = fx.startAddress + i - 1;
+    const tr = body.querySelector(`tr[data-i="${index}"]`);
+    const input = tr?.querySelector('input');
+    if (!tr || !input || dragging.has(String(index))) return;
+    const v = dmx[index] || 0;
+    if (Number(input.value) !== v) input.value = String(v);
+    paint(tr, ch, v);
   });
-  $('fx').innerHTML = rows.join('');
+  syncPads();
 }
 async function pollState() {
   try {
@@ -171,5 +445,6 @@ document.head.appendChild(s);
 pollState(); pollHealth(); pollTask();
 setInterval(pollState, 700); setInterval(pollHealth, 3000); setInterval(pollTask, 2000);
 </script>
+<script type="module" src="/kefka-bench-tests.mjs"></script>
 </body>
 </html>
