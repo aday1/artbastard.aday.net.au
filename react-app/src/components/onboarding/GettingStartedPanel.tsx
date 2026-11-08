@@ -9,13 +9,11 @@ export const GettingStartedPanel: React.FC = () => {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    try {
-      const dismissed = window.localStorage.getItem(ONBOARDING_DISMISSED_KEY) === '1';
-      const explicitRoute = window.location.hash && window.location.hash !== '#/';
-      setVisible(!dismissed && !explicitRoute);
-    } catch {
-      setVisible(true);
-    }
+    // NYX / Kefka: never auto-show the welcome overlay. Storage gets wiped by
+    // Edge --app / kiosk profiles, so the old "dismiss once" key kept coming back.
+    // Full help remains on Ctrl+H.
+    try { window.localStorage.setItem(ONBOARDING_DISMISSED_KEY, '1'); } catch {}
+    setVisible(false);
   }, []);
 
   const dismiss = () => {
