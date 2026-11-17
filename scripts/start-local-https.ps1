@@ -10,8 +10,6 @@ $rootCertificatePath = Join-Path $sslDir "artbastard-local-root-ca.cer"
 
 $ips = New-Object System.Collections.Generic.List[string]
 $ips.Add("127.0.0.1")
-$ips.Add("100.73.20.4")
-$ips.Add("10.13.37.54")
 
 Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
   Where-Object { $_.IPAddress -and $_.IPAddress -ne "127.0.0.1" -and $_.IPAddress -notlike "169.254.*" } |

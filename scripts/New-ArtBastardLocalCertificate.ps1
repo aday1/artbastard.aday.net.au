@@ -1,7 +1,7 @@
 param(
   [string]$OutDir = ".local-ssl",
   [string[]]$DnsNames = @("localhost", "holybell10", "holybell10.local", "artbastard.local"),
-  [string[]]$IpAddresses = @("127.0.0.1", "192.168.1.10", "192.168.1.11", "100.73.20.4", "10.13.37.54")
+  [string[]]$IpAddresses = @("127.0.0.1")
 )
 
 $ErrorActionPreference = "Stop"
